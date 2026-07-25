@@ -1,0 +1,33 @@
+{
+  "profile": {
+    "name": "Jane Doe",
+    "title": "Mechanical Engineer",
+    "bio": "I'm a passionate mechanical engineering student with a drive for innovation. I specialize in CAD design, rapid prototyping, and structural analysis. I love turning complex problems into elegant, functional designs.",
+    "email": "hello@example.com",
+    "github": "https://github.com/TheTheAloe",
+    "linkedin": "https://linkedin.com/in/yourprofile"
+  },
+  "skills": [
+    "SolidWorks", "AutoCAD", "MATLAB", "Python", "ANSYS", "3D Printing", "Machining (CNC)", "Thermodynamics"
+  ],
+  "projects": [
+    {
+      "title": "6-Axis Robotic Arm",
+      "description": "Designed and prototyped a 6-axis industrial robotic arm. Utilized carbon fiber and brushed aluminum for structural integrity while maintaining a lightweight profile. Programmed the inverse kinematics engine in Python.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Robotics", "CAD", "Python", "Prototyping"]
+    },
+    {
+      "title": "FSAE Racecar Chassis",
+      "description": "Led the design and manufacturing of a tubular spaceframe chassis for a Formula SAE race car. Performed rigorous FEA to ensure driver safety and optimize torsional rigidity, resulting in a 15% weight reduction from the previous year.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Automotive", "FEA", "Welding", "Design"]
+    },
+    {
+      "title": "Wind Turbine Blade Analysis",
+      "description": "Conducted a comprehensive finite element analysis on modern wind turbine blades under extreme aerodynamic stress. The results contributed to a more resilient blade design, improving energy efficiency by 5%.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["Renewable Energy", "ANSYS", "Simulation", "Fluid Dynamics"]
+    }
+  ]
+}

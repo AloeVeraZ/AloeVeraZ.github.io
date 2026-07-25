@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mechanical Engineering Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-content">
+            <h1 class="logo" id="nav-name">Portfolio</h1>
+            <ul class="nav-links">
+                <li><a href="#about">About</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header id="hero" class="hero-section">
+        <div class="hero-content">
+            <p class="greeting">Hello, I'm</p>
+            <h1 id="hero-name" class="hero-name">Loading...</h1>
+            <h2 id="hero-title" class="hero-title"></h2>
+            <div class="social-links" id="hero-social">
+                <!-- Dynamically populated -->
+            </div>
+            <a href="#projects" class="btn primary-btn">View My Work</a>
+        </div>
+        <div class="scroll-indicator">
+            <i class="fa-solid fa-chevron-down"></i>
+        </div>
+    </header>
+
+    <main>
+        <section id="about" class="section glass-panel">
+            <h2 class="section-title">About Me</h2>
+            <p id="about-bio" class="bio-text">Loading...</p>
+        </section>
+
+        <section id="skills" class="section">
+            <h2 class="section-title">Core Skills</h2>
+            <div class="skills-grid" id="skills-container">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <section id="projects" class="section">
+            <h2 class="section-title">Featured Projects</h2>
+            <div class="projects-grid" id="projects-container">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <section id="contact" class="section glass-panel">
+            <h2 class="section-title">Get In Touch</h2>
+            <p>I'm currently looking for new opportunities and collaborations.</p>
+            <a id="contact-email" href="#" class="btn secondary-btn"><i class="fa-solid fa-envelope"></i> Say Hello</a>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; <span id="current-year"></span> <span id="footer-name"></span>. Built for Mechanical Engineering.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
