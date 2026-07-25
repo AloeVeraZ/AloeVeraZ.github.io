@@ -1,51 +1,80 @@
 {
   "profile": {
     "name": "Angelo James",
-    "title": "Mechanical Engineering Student",
-    "bio": "I am an aspiring mechanical engineer with a passion for robotics, 3D printing, and industrial design. My portfolio showcases hands-on experience in CAD design, programming, and technical problem-solving through various personal, academic, and competitive robotics projects.",
-    "email": "hello@angelojamesny.com",
+    "title": "Mechanical Engineering Major",
+    "tagline": "Robotics • CAD Design • Prototyping • Autonomous Systems",
+    "bio": "UPDATE THIS — Write your about me bio here. Example: Mechanical engineering student with hands-on experience in CAD modeling, rapid prototyping, and FTC competition robotics.",
+    "email": "UPDATE THIS — your@email.com",
     "github": "https://github.com/AloeVeraZ",
-    "linkedin": "https://linkedin.com/in/yourprofile"
+    "linkedin": "UPDATE THIS — https://linkedin.com/in/your-actual-profile",
+    "grabcad": "UPDATE THIS — https://grabcad.com/your-actual-profile"
   },
-  "skills": [
-    "Robotics", "3D Printing", "CAD Design", "Programming", "Industrial Design", "Rapid Prototyping", "Mechanical Engineering", "Problem Solving"
+  "skillCategories": [
+    {
+      "name": "CAD & Design",
+      "skills": ["SolidWorks", "AutoCAD", "Onshape", "Fusion 360", "FEA / Simulation", "GD&T"]
+    },
+    {
+      "name": "Manufacturing & Fabrication",
+      "skills": ["3D Printing (FDM/SLA)", "CNC Machining", "Laser Cutting", "Soldering & Wiring", "Rapid Prototyping"]
+    },
+    {
+      "name": "Software & Controls",
+      "skills": ["Python", "MATLAB", "Arduino", "Raspberry Pi", "Git", "Klipper"]
+    }
+  ],
+  "projectCategories": [
+    "All",
+    "Robotics & FTC",
+    "3D Printing",
+    "Industrial Design",
+    "Software"
   ],
   "projects": [
     {
-      "title": "Zero-G-Hydra",
-      "description": "Printer build focused on advanced motion system upgrades, structural rigidity, and precision improvements to enhance speed, stability, and overall 3D printing performance.",
-      "image": "assets/fsae_chassis.jpg",
-      "tags": ["3D Printing", "Hardware", "Upgrades"]
-    },
-    {
-      "title": "Voron V0.2900",
-      "description": "Built a compact high-performance 3D printer platform emphasizing precision, speed, and reliability through advanced motion systems and custom assembly.",
+      "id": "project-1",
+      "title": "UPDATE — Project 1 Title",
+      "category": "Robotics & FTC",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details, what you designed, what tools you used, and results.",
       "image": "assets/robotic_arm.jpg",
-      "tags": ["Voron", "3D Printing", "Assembly"]
+      "tags": ["Tag1", "Tag2", "Tag3"],
+      "links": {
+        "github": "",
+        "grabcad": "",
+        "video": "",
+        "projectUrl": ""
+      }
     },
     {
-      "title": "FTC Coaxial Swerve",
-      "description": "Designed a compact holonomic drivetrain combining steering and drive in a single axis, improving maneuverability, control precision, and mechanical efficiency for competition robotics.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["Robotics", "FTC", "Drivetrain", "CAD"]
-    },
-    {
-      "title": "CrabCrawler (Robotic Eye)",
-      "description": "Developed a robotic eye system focused on servo-controlled movement and synchronization to create expressive, responsive behavior for interactive robotics and human-machine interaction.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Robotics", "Servos", "Interactive"]
-    },
-    {
-      "title": "Delta Printer",
-      "description": "Delta printer build and experience focused on precision motion systems, calibration, and rapid prototyping using a kinematics-based 3D printing design for high speed and smooth operation.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["3D Printing", "Kinematics", "Calibration"]
-    },
-    {
-      "title": "AI Chatbot",
-      "description": "Project focused on building conversational systems with speech interaction, natural language processing, and hardware integration to create responsive and interactive user experiences.",
+      "id": "project-2",
+      "title": "UPDATE — Project 2 Title",
+      "category": "3D Printing",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
       "image": "assets/fsae_chassis.jpg",
-      "tags": ["Software", "AI", "NLP", "Hardware"]
+      "tags": ["Tag1", "Tag2"],
+      "links": {
+        "github": "",
+        "grabcad": "",
+        "video": "",
+        "projectUrl": ""
+      }
+    },
+    {
+      "id": "project-3",
+      "title": "UPDATE — Project 3 Title",
+      "category": "Industrial Design",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["Tag1", "Tag2"],
+      "links": {
+        "github": "",
+        "grabcad": "",
+        "video": "",
+        "projectUrl": ""
+      }
     }
   ]
 }

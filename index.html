@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Triggering GitHub Pages Build -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mechanical Engineering Portfolio</title>
+    <title>Angelo James | Mechanical Engineering Portfolio</title>
+    <meta name="description" content="Mechanical Engineering & Robotics Portfolio featuring CAD design, 3D printing, swerve drivetrains, and hardware projects.">
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 icons for GitHub, GrabCAD, CAD, Video, External Links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
+    <!-- Header / Navigation -->
     <nav class="navbar">
         <div class="nav-content">
-            <h1 class="logo" id="nav-name">Portfolio</h1>
+            <a href="#" class="logo" id="nav-name">Angelo James</a>
             <ul class="nav-links">
                 <li><a href="#about">About</a></li>
                 <li><a href="#skills">Skills</a></li>
@@ -24,50 +25,101 @@
         </div>
     </nav>
 
+    <!-- Hero Section -->
     <header id="hero" class="hero-section">
         <div class="hero-content">
-            <p class="greeting">Hello, I'm</p>
-            <h1 id="hero-name" class="hero-name">Loading...</h1>
-            <h2 id="hero-title" class="hero-title"></h2>
+            <span class="badge hero-badge"><i class="fa-solid fa-gear"></i> Mechanical Engineering & Robotics</span>
+            <h1 id="hero-name" class="hero-name">Angelo James</h1>
+            <p id="hero-tagline" class="hero-tagline">Robotics • CAD Design • Prototyping • Autonomous Systems</p>
             <div class="social-links" id="hero-social">
-                <!-- Dynamically populated -->
+                <!-- Populated dynamically -->
             </div>
-            <a href="#projects" class="btn primary-btn">View My Work</a>
+            <div class="hero-buttons">
+                <a href="#projects" class="btn primary-btn"><i class="fa-solid fa-cubes"></i> Explore Projects</a>
+                <a href="#contact" class="btn secondary-btn"><i class="fa-solid fa-paper-plane"></i> Get in Touch</a>
+            </div>
         </div>
         <div class="scroll-indicator">
-            <i class="fa-solid fa-chevron-down"></i>
+            <a href="#about" aria-label="Scroll down"><i class="fa-solid fa-chevron-down"></i></a>
         </div>
     </header>
 
     <main>
+        <!-- About Section -->
         <section id="about" class="section glass-panel">
-            <h2 class="section-title">About Me</h2>
-            <p id="about-bio" class="bio-text">Loading...</p>
+            <div class="section-header">
+                <span class="section-label">Overview</span>
+                <h2 class="section-title">About Me</h2>
+            </div>
+            <p id="about-bio" class="bio-text">
+                Mechanical engineering student focused on CAD modeling, rapid prototyping, robotics motion systems, and finite element analysis. Experienced in bringing physical products from initial design concepts through machining, 3D printing, and testing.
+            </p>
         </section>
 
+        <!-- Skills Section -->
         <section id="skills" class="section">
-            <h2 class="section-title">Core Skills</h2>
-            <div class="skills-grid" id="skills-container">
-                <!-- Dynamically populated -->
+            <div class="section-header">
+                <span class="section-label">Toolkit</span>
+                <h2 class="section-title">Skills & Expertise</h2>
+            </div>
+            <div class="skills-categories" id="skills-container">
+                <!-- Populated dynamically -->
             </div>
         </section>
 
+        <!-- Projects Section -->
         <section id="projects" class="section">
-            <h2 class="section-title">Featured Projects</h2>
+            <div class="section-header">
+                <span class="section-label">Portfolio</span>
+                <h2 class="section-title">Featured Projects</h2>
+                <p class="section-subtitle">Filter by category to view CAD models, code, and documentation links.</p>
+            </div>
+
+            <!-- Category Filters -->
+            <div class="category-filters" id="category-filters">
+                <!-- Filter buttons rendered dynamically -->
+            </div>
+
+            <!-- Projects Grid -->
             <div class="projects-grid" id="projects-container">
-                <!-- Dynamically populated -->
+                <!-- Project cards rendered dynamically -->
             </div>
         </section>
 
-        <section id="contact" class="section glass-panel">
-            <h2 class="section-title">Get In Touch</h2>
-            <p>I'm currently looking for new opportunities and collaborations.</p>
-            <a id="contact-email" href="#" class="btn secondary-btn"><i class="fa-solid fa-envelope"></i> Say Hello</a>
+        <!-- Contact Section -->
+        <section id="contact" class="section glass-panel contact-section">
+            <div class="section-header">
+                <span class="section-label">Connect</span>
+                <h2 class="section-title">Contact & Links</h2>
+            </div>
+            <p class="contact-desc">Interested in collaborating or discussing engineering projects? Feel free to reach out directly or check out my repositories and CAD designs.</p>
+            <div class="contact-links" id="contact-links-container">
+                <!-- Populated dynamically -->
+            </div>
         </section>
     </main>
 
+    <!-- Project Details Modal -->
+    <div id="project-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-card glass-panel">
+            <button class="modal-close" id="modal-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h3 id="modal-title" class="modal-title">Project Title</h3>
+                <span id="modal-category" class="tag">Category</span>
+            </div>
+            <img id="modal-image" src="" alt="Project Image" class="modal-image">
+            <p id="modal-summary" class="modal-summary"></p>
+            <p id="modal-details" class="modal-details"></p>
+            <div id="modal-tags" class="project-tags"></div>
+            <div id="modal-links" class="project-action-links"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <footer>
-        <p>&copy; <span id="current-year"></span> <span id="footer-name"></span>. Built for Mechanical Engineering.</p>
+        <div class="footer-content">
+            <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo James</span>. Mechanical Engineering Portfolio.</p>
+        </div>
     </footer>
 
     <script src="app.js"></script>
