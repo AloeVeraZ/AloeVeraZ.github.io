@@ -1,33 +1,51 @@
 {
   "profile": {
-    "name": "Jane Doe",
-    "title": "Mechanical Engineer",
-    "bio": "I'm a passionate mechanical engineering student with a drive for innovation. I specialize in CAD design, rapid prototyping, and structural analysis. I love turning complex problems into elegant, functional designs.",
-    "email": "hello@example.com",
+    "name": "Angelo James",
+    "title": "Mechanical Engineering Student",
+    "bio": "I am an aspiring mechanical engineer with a passion for robotics, 3D printing, and industrial design. My portfolio showcases hands-on experience in CAD design, programming, and technical problem-solving through various personal, academic, and competitive robotics projects.",
+    "email": "hello@angelojamesny.com",
     "github": "https://github.com/AloeVeraZ",
     "linkedin": "https://linkedin.com/in/yourprofile"
   },
   "skills": [
-    "SolidWorks", "AutoCAD", "MATLAB", "Python", "ANSYS", "3D Printing", "Machining (CNC)", "Thermodynamics"
+    "Robotics", "3D Printing", "CAD Design", "Programming", "Industrial Design", "Rapid Prototyping", "Mechanical Engineering", "Problem Solving"
   ],
   "projects": [
     {
-      "title": "6-Axis Robotic Arm",
-      "description": "Designed and prototyped a 6-axis industrial robotic arm. Utilized carbon fiber and brushed aluminum for structural integrity while maintaining a lightweight profile. Programmed the inverse kinematics engine in Python.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Robotics", "CAD", "Python", "Prototyping"]
-    },
-    {
-      "title": "FSAE Racecar Chassis",
-      "description": "Led the design and manufacturing of a tubular spaceframe chassis for a Formula SAE race car. Performed rigorous FEA to ensure driver safety and optimize torsional rigidity, resulting in a 15% weight reduction from the previous year.",
+      "title": "Zero-G-Hydra",
+      "description": "Printer build focused on advanced motion system upgrades, structural rigidity, and precision improvements to enhance speed, stability, and overall 3D printing performance.",
       "image": "assets/fsae_chassis.jpg",
-      "tags": ["Automotive", "FEA", "Welding", "Design"]
+      "tags": ["3D Printing", "Hardware", "Upgrades"]
     },
     {
-      "title": "Wind Turbine Blade Analysis",
-      "description": "Conducted a comprehensive finite element analysis on modern wind turbine blades under extreme aerodynamic stress. The results contributed to a more resilient blade design, improving energy efficiency by 5%.",
+      "title": "Voron V0.2900",
+      "description": "Built a compact high-performance 3D printer platform emphasizing precision, speed, and reliability through advanced motion systems and custom assembly.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Voron", "3D Printing", "Assembly"]
+    },
+    {
+      "title": "FTC Coaxial Swerve",
+      "description": "Designed a compact holonomic drivetrain combining steering and drive in a single axis, improving maneuverability, control precision, and mechanical efficiency for competition robotics.",
       "image": "assets/wind_turbine.jpg",
-      "tags": ["Renewable Energy", "ANSYS", "Simulation", "Fluid Dynamics"]
+      "tags": ["Robotics", "FTC", "Drivetrain", "CAD"]
+    },
+    {
+      "title": "CrabCrawler (Robotic Eye)",
+      "description": "Developed a robotic eye system focused on servo-controlled movement and synchronization to create expressive, responsive behavior for interactive robotics and human-machine interaction.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Robotics", "Servos", "Interactive"]
+    },
+    {
+      "title": "Delta Printer",
+      "description": "Delta printer build and experience focused on precision motion systems, calibration, and rapid prototyping using a kinematics-based 3D printing design for high speed and smooth operation.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["3D Printing", "Kinematics", "Calibration"]
+    },
+    {
+      "title": "AI Chatbot",
+      "description": "Project focused on building conversational systems with speech interaction, natural language processing, and hardware integration to create responsive and interactive user experiences.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Software", "AI", "NLP", "Hardware"]
     }
   ]
 }
