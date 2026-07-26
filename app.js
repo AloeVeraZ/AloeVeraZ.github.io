@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const ambientGlow = document.createElement('div');
+    ambientGlow.className = 'ambient-glow';
+    ambientGlow.setAttribute('aria-hidden', 'true');
+    document.body.prepend(ambientGlow);
+    window.addEventListener('pointermove', event => {
+        document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
+        document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
+    });
     document.getElementById('current-year').textContent = new Date().getFullYear();
     fetch('data.json')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
@@ -73,7 +81,20 @@ function renderProjectCollections(collections, projects) {
 
 function setupCarousel(carousel, controls) {
     let direction = 1;
-    const move = direction => carousel.scrollBy({ left: direction * Math.min(320, carousel.clientWidth * 0.8), behavior: 'smooth' });
+    const move = step => {
+        const card = carousel.querySelector('.project-card');
+        if (!card) return;
+        const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
+        const distance = card.getBoundingClientRect().width + gap;
+        const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+        let target = carousel.scrollLeft + (step * distance);
+        if (target > maxScroll - 2) target = 0;
+        if (target < 2) target = maxScroll;
+        carousel.scrollTo({ left: target, behavior: 'smooth' });
+        controls.classList.remove('carousel-nudge');
+        void controls.offsetWidth;
+        controls.classList.add('carousel-nudge');
+    };
     controls.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
     controls.querySelector('.carousel-next').addEventListener('click', () => move(1));
     const drift = () => {

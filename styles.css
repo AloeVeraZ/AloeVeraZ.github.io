@@ -367,7 +367,7 @@ body { background: var(--bg-color); color: var(--text-main); }
 .carousel-arrow:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
 .project-carousel { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 2.5rem; }
 .project-carousel::-webkit-scrollbar { display: none; }
-.project-carousel .project-card { flex: 0 0 min(290px, 78vw); scroll-snap-align: start; }
+.project-carousel .project-card { flex: 0 0 calc((100% - 2.5rem) / 3); min-width: 0; scroll-snap-align: start; }
 .project-carousel .project-image-wrapper { height: 185px; }
 .project-carousel .project-info { padding: 1.35rem; }
 .project-carousel .project-action-links { display: none; }
@@ -402,6 +402,12 @@ body { background: var(--bg-color); color: var(--text-main); }
 .modal-card .modal-details { color: #6e6e73; }
 .modal-card .tag { color: #0071e3; background: rgba(0,113,227,.1); }
 .modal-close { background: #e8e8ed; color: #1d1d1f; }
+
+/* Cursor-responsive ambient light */
+.ambient-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(520px circle at var(--pointer-x, 50%) var(--pointer-y, 20%), rgba(41,151,255,.12), transparent 64%); transition: background .08s linear; }
+.navbar, .hero-section, main, footer { position: relative; z-index: 1; }
+.carousel-nudge .carousel-arrow { animation: arrow-nudge .32s ease; }
+@keyframes arrow-nudge { 50% { transform: scale(.88); } }
 
 .project-image-wrapper {
     position: relative;
@@ -688,4 +694,5 @@ footer {
     .collection-content { padding-left: 0; }
     .project-category-row { grid-template-columns: 1fr auto 18px; }
     .carousel-controls span { display: none; }
+    .project-carousel .project-card { flex-basis: min(290px, 78vw); }
 }
