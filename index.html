@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angelo James | Mechanical Engineering Portfolio</title>
+    <title>Angelo Demetroulakos | Mechanical Engineering Portfolio</title>
     <meta name="description" content="Mechanical Engineering & Robotics Portfolio featuring CAD design, 3D printing, swerve drivetrains, and hardware projects.">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
     <!-- Header / Navigation -->
     <nav class="navbar">
         <div class="nav-content">
-            <a href="#" class="logo" id="nav-name">Angelo James</a>
+            <a href="#" class="logo" id="nav-name">Angelo Demetroulakos</a>
             <ul class="nav-links">
                 <li><a href="#about">About</a></li>
                 <li><a href="#skills">Skills</a></li>
@@ -29,7 +29,7 @@
     <header id="hero" class="hero-section">
         <div class="hero-content">
             <span class="badge hero-badge"><i class="fa-solid fa-gear"></i> Mechanical Engineering & Robotics</span>
-            <h1 id="hero-name" class="hero-name">Angelo James</h1>
+            <h1 id="hero-name" class="hero-name">Angelo Demetroulakos</h1>
             <p id="hero-tagline" class="hero-tagline">Robotics • CAD Design • Prototyping • Autonomous Systems</p>
             <div class="social-links" id="hero-social">
                 <!-- Populated dynamically -->
@@ -72,17 +72,19 @@
             <div class="section-header">
                 <span class="section-label">Portfolio</span>
                 <h2 class="section-title">Featured Projects</h2>
-                <p class="section-subtitle">Filter by category to view CAD models, code, and documentation links.</p>
+                <p class="section-subtitle">A small selection of work. Select a project to see the full build, tools, and links.</p>
             </div>
 
-            <!-- Category Filters -->
-            <div class="category-filters" id="category-filters">
-                <!-- Filter buttons rendered dynamically -->
-            </div>
-
-            <!-- Projects Grid -->
-            <div class="projects-grid" id="projects-container">
+            <div class="projects-grid featured-grid" id="featured-projects-container">
                 <!-- Project cards rendered dynamically -->
+            </div>
+            <div class="project-library">
+                <div class="library-heading">
+                    <span class="section-label">Archive</span>
+                    <h3>My Projects</h3>
+                    <p>Browse work by context, then open a category to explore the projects inside.</p>
+                </div>
+                <div class="project-collections" id="project-collections"></div>
             </div>
         </section>
 
@@ -118,7 +120,7 @@
     <!-- Footer -->
     <footer>
         <div class="footer-content">
-            <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo James</span>. Mechanical Engineering Portfolio.</p>
+            <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo Demetroulakos</span>. Mechanical Engineering Portfolio.</p>
         </div>
     </footer>
 

@@ -1,6 +1,6 @@
 {
   "profile": {
-    "name": "Angelo James",
+    "name": "Angelo Demetroulakos",
     "title": "Mechanical Engineering Major",
     "tagline": "Robotics • CAD Design • Prototyping • Autonomous Systems",
     "bio": "UPDATE THIS — Write your about me bio here. Example: Mechanical engineering student with hands-on experience in CAD modeling, rapid prototyping, and FTC competition robotics.",
@@ -23,18 +23,17 @@
       "skills": ["Python", "MATLAB", "Arduino", "Raspberry Pi", "Git", "Klipper"]
     }
   ],
-  "projectCategories": [
-    "All",
-    "Robotics & FTC",
-    "3D Printing",
-    "Industrial Design",
-    "Software"
+  "projectCollections": [
+    {"name": "Personal Projects", "description": "Independent builds, competition work, and experiments.", "categories": ["Robotics & FTC", "3D Printing", "Industrial Design", "Software"]},
+    {"name": "Internship Projects", "description": "Engineering work completed in a professional setting.", "categories": ["Internship Robotics"]},
+    {"name": "College Projects & Awards", "description": "Academic work, campus involvement, and recognition.", "categories": ["Awards & Certificates", "Club Projects", "Classwork"]}
   ],
   "projects": [
     {
       "id": "project-1",
       "title": "UPDATE — Project 1 Title",
       "category": "Robotics & FTC",
+      "featured": true,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details, what you designed, what tools you used, and results.",
       "image": "assets/robotic_arm.jpg",
@@ -50,6 +49,7 @@
       "id": "project-2",
       "title": "UPDATE — Project 2 Title",
       "category": "3D Printing",
+      "featured": true,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details.",
       "image": "assets/fsae_chassis.jpg",
@@ -65,6 +65,7 @@
       "id": "project-3",
       "title": "UPDATE — Project 3 Title",
       "category": "Industrial Design",
+      "featured": true,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details.",
       "image": "assets/wind_turbine.jpg",
