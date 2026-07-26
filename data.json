@@ -26,7 +26,8 @@
   "projectCollections": [
     {"name": "Personal Projects", "description": "Independent builds, competition work, and experiments.", "categories": ["Robotics & FTC", "3D Printing", "Industrial Design", "Software"]},
     {"name": "Internship Projects", "description": "Engineering work completed in a professional setting.", "categories": ["Internship Robotics"]},
-    {"name": "College Projects & Awards", "description": "Academic work, campus involvement, and recognition.", "categories": ["Awards & Certificates", "Club Projects", "Classwork"]}
+    {"name": "Club Projects", "description": "Hands-on builds created with campus organizations.", "categories": ["Club Projects"]},
+    {"name": "Awards", "description": "Recognition, credentials, and certificates.", "categories": ["Awards & Certificates"]}
   ],
   "projects": [
     {
@@ -103,6 +104,26 @@
       "category": "Awards & Certificates",
       "summary": "UPDATE — One sentence summary of this award or certificate.",
       "details": "UPDATE — Add issuer, date, and relevant details.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-9",
+      "title": "UPDATE — Internship Project Title 2",
+      "category": "Internship Robotics",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-10",
+      "title": "UPDATE — Internship Project Title 3",
+      "category": "Internship Robotics",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
       "image": "assets/wind_turbine.jpg",
       "tags": ["Tag 1", "Tag 2", "Tag 3"],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}

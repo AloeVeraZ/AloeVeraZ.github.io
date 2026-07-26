@@ -40,6 +40,7 @@ function createProjectCard(project) {
     card.innerHTML = `<div class="project-image-wrapper"><img src="${project.image}" alt="${project.title}" class="project-image" onerror="this.style.display='none'"><span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     card.querySelector('.project-image-wrapper').addEventListener('click', () => openModal(project));
     card.querySelector('.project-title').addEventListener('click', () => openModal(project));
+    card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
     return card;
 }
 
@@ -49,27 +50,35 @@ function renderProjectCollections(collections, projects) {
     collections.forEach((collection, index) => {
         const group = document.createElement('section');
         group.className = 'project-collection';
-        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden><div class="carousel-controls"><span>Drag, scroll, or use the arrows</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div></div></div>`;
+        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
-        gallery.className = 'project-carousel';
+        const collectionProjects = collection.categories.flatMap(category => projects.filter(project => project.category === category));
+        const useCarousel = collectionProjects.length > 3;
+        gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collection.categories.forEach(category => projects.filter(project => project.category === category).forEach(project => gallery.appendChild(createProjectCard(project))));
         content.appendChild(gallery);
-        setupCarousel(gallery, group);
+        if (useCarousel) {
+            const controls = document.createElement('div');
+            controls.className = 'carousel-controls';
+            controls.innerHTML = '<span>Drag, scroll, or use the arrows</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
+            content.prepend(controls);
+            setupCarousel(gallery, controls);
+        }
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
         container.appendChild(group);
     });
 }
 
-function setupCarousel(carousel, group) {
+function setupCarousel(carousel, controls) {
     let paused = false;
     let dragging = false;
     let startX = 0;
     let startScroll = 0;
     const move = direction => carousel.scrollBy({ left: direction * Math.min(320, carousel.clientWidth * 0.8), behavior: 'smooth' });
-    group.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
-    group.querySelector('.carousel-next').addEventListener('click', () => move(1));
+    controls.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
+    controls.querySelector('.carousel-next').addEventListener('click', () => move(1));
     carousel.addEventListener('mouseenter', () => paused = true);
     carousel.addEventListener('mouseleave', () => { paused = false; dragging = false; });
     carousel.addEventListener('pointerdown', event => { dragging = true; paused = true; startX = event.clientX; startScroll = carousel.scrollLeft; carousel.setPointerCapture(event.pointerId); });
