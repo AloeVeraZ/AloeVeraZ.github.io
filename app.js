@@ -51,26 +51,30 @@ function renderProjectCollections(collections, projects) {
         group.className = 'project-collection';
         group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
+        const gallery = document.createElement('div');
+        gallery.className = 'category-projects projects-grid';
         collection.categories.forEach((category, categoryIndex) => {
             const matches = projects.filter(project => project.category === category);
-            const row = document.createElement('div');
-            row.className = 'project-category-row'; row.tabIndex = 0; row.setAttribute('role', 'button');
-            row.innerHTML = `<div><span class="category-number">${String(categoryIndex + 1).padStart(2, '0')}</span><h4>${category}</h4></div><span class="project-count">${matches.length} ${matches.length === 1 ? 'project' : 'projects'}</span><i class="fa-solid fa-arrow-up-right-from-square"></i>`;
-            const gallery = document.createElement('div');
-            gallery.className = 'category-projects projects-grid';
-            gallery.hidden = true;
-            matches.forEach(project => gallery.appendChild(createProjectCard(project)));
-            if (!matches.length) gallery.innerHTML = '<p class="empty-category">Projects for this category will be added soon.</p>';
-            const show = () => { const opening = gallery.hidden; gallery.hidden = !opening; row.classList.toggle('expanded', opening); };
-            row.addEventListener('click', show);
-            row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(); } });
-            content.appendChild(row);
-            content.appendChild(gallery);
+            gallery.appendChild(createCategoryCard(category, matches, categoryIndex));
         });
+        gallery.hidden = true;
+        content.appendChild(gallery);
         const toggle = group.querySelector('.collection-toggle');
-        toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
+        toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; gallery.hidden = !opening; });
         container.appendChild(group);
     });
+}
+
+function createCategoryCard(category, projects, index) {
+    const project = projects[0];
+    const images = ['assets/robotic_arm.jpg', 'assets/fsae_chassis.jpg', 'assets/wind_turbine.jpg'];
+    const card = document.createElement('article');
+    card.className = 'project-card category-card';
+    card.innerHTML = `<div class="project-image-wrapper"><img src="${project ? project.image : images[index % images.length]}" alt="${category}" class="project-image"><span class="project-category-badge">${String(index + 1).padStart(2, '0')}</span></div><div class="project-info"><h3 class="project-title">${category}</h3><p class="project-summary">${projects.length ? `${projects.length} ${projects.length === 1 ? 'project' : 'projects'} to explore.` : 'Projects coming soon.'}</p><div class="project-action-links"><span class="link-btn">Explore <i class="fa-solid fa-arrow-up-right-from-square"></i></span></div></div>`;
+    const open = () => openModal(project || { title: category, category: 'Project archive', summary: 'This section is ready for projects to be added.', details: 'Add projects in data.json with this category and they will appear here automatically.', tags: [], links: {}, image: images[index % images.length] });
+    card.querySelector('.project-image-wrapper').addEventListener('click', open);
+    card.querySelector('.project-title').addEventListener('click', open);
+    return card;
 }
 
 function buildLinkButtons(links = {}) {
