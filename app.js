@@ -7,6 +7,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
     });
+    const updateScrollMotion = () => {
+        const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        document.documentElement.style.setProperty('--scroll-progress', window.scrollY / maxScroll);
+        document.documentElement.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
+        document.documentElement.style.setProperty('--scroll-shift-reverse', `${Math.min(window.scrollY * -0.04, 35)}px`);
+        document.body.classList.toggle('has-scrolled', window.scrollY > 18);
+    };
+    window.addEventListener('scroll', updateScrollMotion, { passive: true });
+    updateScrollMotion();
+    const revealObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('in-view'); });
+    }, { threshold: .12 });
+    document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
     fetch('data.json')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
@@ -46,8 +59,6 @@ function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
     card.innerHTML = `<div class="project-image-wrapper"><img src="${project.image}" alt="${project.title}" class="project-image" onerror="this.style.display='none'"><span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
-    card.querySelector('.project-image-wrapper').addEventListener('click', () => openModal(project));
-    card.querySelector('.project-title').addEventListener('click', () => openModal(project));
     card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
     return card;
 }
