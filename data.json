@@ -76,6 +76,56 @@
         "video": "",
         "projectUrl": ""
       }
+    },
+    {
+      "id": "project-4",
+      "title": "UPDATE — Project 4 Title",
+      "category": "Software",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-5",
+      "title": "UPDATE — Internship Project Title",
+      "category": "Internship Robotics",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-6",
+      "title": "UPDATE — Award or Certificate Title",
+      "category": "Awards & Certificates",
+      "summary": "UPDATE — One sentence summary of this award or certificate.",
+      "details": "UPDATE — Add issuer, date, and relevant details.",
+      "image": "assets/wind_turbine.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-7",
+      "title": "UPDATE — Club Project Title",
+      "category": "Club Projects",
+      "summary": "UPDATE — One sentence summary of this project.",
+      "details": "UPDATE — Longer description with technical details.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "project-8",
+      "title": "UPDATE — Classwork Title",
+      "category": "Classwork",
+      "summary": "UPDATE — One sentence summary of this classwork.",
+      "details": "UPDATE — Course, project brief, tools, and result.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     }
   ]
 }

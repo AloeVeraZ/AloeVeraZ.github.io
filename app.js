@@ -49,32 +49,35 @@ function renderProjectCollections(collections, projects) {
     collections.forEach((collection, index) => {
         const group = document.createElement('section');
         group.className = 'project-collection';
-        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
+        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden><div class="carousel-controls"><span>Drag, scroll, or use the arrows</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div></div></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
-        gallery.className = 'category-projects projects-grid';
-        collection.categories.forEach((category, categoryIndex) => {
-            const matches = projects.filter(project => project.category === category);
-            gallery.appendChild(createCategoryCard(category, matches, categoryIndex));
-        });
-        gallery.hidden = true;
+        gallery.className = 'project-carousel';
+        collection.categories.forEach(category => projects.filter(project => project.category === category).forEach(project => gallery.appendChild(createProjectCard(project))));
         content.appendChild(gallery);
+        setupCarousel(gallery, group);
         const toggle = group.querySelector('.collection-toggle');
-        toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; gallery.hidden = !opening; });
+        toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
         container.appendChild(group);
     });
 }
 
-function createCategoryCard(category, projects, index) {
-    const project = projects[0];
-    const images = ['assets/robotic_arm.jpg', 'assets/fsae_chassis.jpg', 'assets/wind_turbine.jpg'];
-    const card = document.createElement('article');
-    card.className = 'project-card category-card';
-    card.innerHTML = `<div class="project-image-wrapper"><img src="${project ? project.image : images[index % images.length]}" alt="${category}" class="project-image"><span class="project-category-badge">${String(index + 1).padStart(2, '0')}</span></div><div class="project-info"><h3 class="project-title">${category}</h3><p class="project-summary">${projects.length ? `${projects.length} ${projects.length === 1 ? 'project' : 'projects'} to explore.` : 'Projects coming soon.'}</p><div class="project-action-links"><span class="link-btn">Explore <i class="fa-solid fa-arrow-up-right-from-square"></i></span></div></div>`;
-    const open = () => openModal(project || { title: category, category: 'Project archive', summary: 'This section is ready for projects to be added.', details: 'Add projects in data.json with this category and they will appear here automatically.', tags: [], links: {}, image: images[index % images.length] });
-    card.querySelector('.project-image-wrapper').addEventListener('click', open);
-    card.querySelector('.project-title').addEventListener('click', open);
-    return card;
+function setupCarousel(carousel, group) {
+    let paused = false;
+    let dragging = false;
+    let startX = 0;
+    let startScroll = 0;
+    const move = direction => carousel.scrollBy({ left: direction * Math.min(320, carousel.clientWidth * 0.8), behavior: 'smooth' });
+    group.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
+    group.querySelector('.carousel-next').addEventListener('click', () => move(1));
+    carousel.addEventListener('mouseenter', () => paused = true);
+    carousel.addEventListener('mouseleave', () => { paused = false; dragging = false; });
+    carousel.addEventListener('pointerdown', event => { dragging = true; paused = true; startX = event.clientX; startScroll = carousel.scrollLeft; carousel.setPointerCapture(event.pointerId); });
+    carousel.addEventListener('pointermove', event => { if (dragging) carousel.scrollLeft = startScroll - (event.clientX - startX); });
+    carousel.addEventListener('pointerup', () => { dragging = false; paused = false; });
+    carousel.addEventListener('wheel', event => { if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) { event.preventDefault(); carousel.scrollLeft += event.deltaY; } }, { passive: false });
+    const drift = () => { if (!paused && !carousel.closest('[hidden]') && carousel.scrollWidth > carousel.clientWidth) { carousel.scrollLeft += 0.22; if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 1) carousel.scrollLeft = 0; } requestAnimationFrame(drift); };
+    requestAnimationFrame(drift);
 }
 
 function buildLinkButtons(links = {}) {
