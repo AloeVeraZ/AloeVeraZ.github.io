@@ -72,20 +72,19 @@ function renderProjectCollections(collections, projects) {
 }
 
 function setupCarousel(carousel, controls) {
-    let paused = false;
-    let dragging = false;
-    let startX = 0;
-    let startScroll = 0;
+    let direction = 1;
     const move = direction => carousel.scrollBy({ left: direction * Math.min(320, carousel.clientWidth * 0.8), behavior: 'smooth' });
     controls.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
     controls.querySelector('.carousel-next').addEventListener('click', () => move(1));
-    carousel.addEventListener('mouseenter', () => paused = true);
-    carousel.addEventListener('mouseleave', () => { paused = false; dragging = false; });
-    carousel.addEventListener('pointerdown', event => { dragging = true; paused = true; startX = event.clientX; startScroll = carousel.scrollLeft; carousel.setPointerCapture(event.pointerId); });
-    carousel.addEventListener('pointermove', event => { if (dragging) carousel.scrollLeft = startScroll - (event.clientX - startX); });
-    carousel.addEventListener('pointerup', () => { dragging = false; paused = false; });
-    carousel.addEventListener('wheel', event => { if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) { event.preventDefault(); carousel.scrollLeft += event.deltaY; } }, { passive: false });
-    const drift = () => { if (!paused && !carousel.closest('[hidden]') && carousel.scrollWidth > carousel.clientWidth) { carousel.scrollLeft += 0.22; if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 1) carousel.scrollLeft = 0; } requestAnimationFrame(drift); };
+    const drift = () => {
+        const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+        if (!carousel.closest('[hidden]') && maxScroll > 0) {
+            carousel.scrollLeft += 0.22 * direction;
+            if (carousel.scrollLeft >= maxScroll - 1) direction = -1;
+            if (carousel.scrollLeft <= 1) direction = 1;
+        }
+        requestAnimationFrame(drift);
+    };
     requestAnimationFrame(drift);
 }
 

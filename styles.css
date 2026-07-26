@@ -365,9 +365,8 @@ body { background: var(--bg-color); color: var(--text-main); }
 .carousel-controls > div { display: flex; gap: .5rem; }
 .carousel-arrow { width: 36px; height: 36px; border: 1px solid var(--panel-border); border-radius: 50%; color: var(--text-main); background: #fff; cursor: pointer; transition: var(--transition); }
 .carousel-arrow:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
-.project-carousel { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 2.5rem; cursor: grab; }
+.project-carousel { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 2.5rem; }
 .project-carousel::-webkit-scrollbar { display: none; }
-.project-carousel:active { cursor: grabbing; }
 .project-carousel .project-card { flex: 0 0 min(290px, 78vw); scroll-snap-align: start; }
 .project-carousel .project-image-wrapper { height: 185px; }
 .project-carousel .project-info { padding: 1.35rem; }
