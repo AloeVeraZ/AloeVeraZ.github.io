@@ -49,9 +49,9 @@
       ],
       "media": [
         {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"},
-        {"type": "video", "src": "https://www.youtube.com/embed/B4kNNsTJaLg?autoplay=1&mute=1&loop=1&playlist=B4kNNsTJaLg&playsinline=1&rel=0", "label": "Driving video"},
+        {"type": "video", "src": "https://www.youtube.com/embed/B4kNNsTJaLg?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=B4kNNsTJaLg&playsinline=1&rel=0", "label": "Driving video"},
         {"type": "gif", "src": "assets/kiwi-swerve-drive.gif", "label": "Drive test GIF"},
-        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"}
+        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"}
       ],
       "links": {
         "github": "",

@@ -156,7 +156,11 @@ function openModal(project) {
 function setupModal() {
     const modal = document.getElementById('project-modal');
     const close = () => {
-        modal.querySelectorAll('iframe').forEach(video => { video.src = 'about:blank'; });
+        modal.querySelectorAll('iframe').forEach(video => {
+            video.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }), '*');
+            video.src = 'about:blank';
+            video.remove();
+        });
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
     };
