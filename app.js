@@ -155,7 +155,11 @@ function openModal(project) {
 
 function setupModal() {
     const modal = document.getElementById('project-modal');
-    const close = () => { modal.classList.remove('active'); modal.setAttribute('aria-hidden', 'true'); };
+    const close = () => {
+        modal.querySelectorAll('iframe').forEach(video => { video.src = 'about:blank'; });
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    };
     document.getElementById('modal-close').addEventListener('click', close);
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('active')) close(); });
