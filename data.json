@@ -40,15 +40,18 @@
       "image": "assets/kiwi-swerve-drive.gif",
       "tags": ["Kiwi Drive", "Raspberry Pi", "Python", "3D Printing"],
       "sections": [
+        {"heading": "First Robot", "body": "This first prototype established the low-cost, three-module Kiwi swerve concept and provided the foundation for the next version."},
         {"heading": "Overview", "body": "The Kiwi swerve drivetrain is a low-power, affordable, and easy-to-maintain omnidirectional drive system for robotics competitions and real-world robotic applications. Using three modules instead of four, continuous-rotation servos with encoder feedback, and general-purpose mechanical components reduces cost and complexity while maintaining smooth, capable motion. A custom electronics stack and Python control system replace expensive hardware solutions and make the platform practical for teaching robotics design and programming."},
         {"heading": "First Prototype — Build", "body": "The first prototype uses general-purpose gears and bearings sourced from Amazon and ServoCity, making its pods less expensive and easier to replace. Its structure combines 3D-printed parts, CNC-machined plates, and standard hardware. Each module uses a continuous-rotation servo with an encoder for closed-loop steering; an HTD5 belt connects the servo to the pod. The drive motor uses a longer, lighter HTD2 belt, allowing the motor and steering servo to remain stationary while the pod turns freely."},
         {"heading": "Electronics", "body": "A Raspberry Pi anchors the custom electronics stack. Each drive motor is powered by a 10-amp motor driver, steering is managed through a servo HAT, and a 12-bit encoder board provides precise steering-angle feedback for every module. These generic, maintainable components keep the system accessible and easy to modify."},
-        {"heading": "Programming", "body": "Python software running on the Raspberry Pi implements Kiwi swerve kinematics, translating driver or autonomous commands into coordinated three-module motion. Closed-loop steering continuously compares encoder feedback with the target angle, correcting the continuous-rotation servos in real time for smooth, predictable movement. The software also synchronizes steering and drive motion to keep modules aligned and minimize unnecessary power draw."}
+        {"heading": "Programming", "body": "Python software running on the Raspberry Pi implements Kiwi swerve kinematics, translating driver or autonomous commands into coordinated three-module motion. Closed-loop steering continuously compares encoder feedback with the target angle, correcting the continuous-rotation servos in real time for smooth, predictable movement. The software also synchronizes steering and drive motion to keep modules aligned and minimize unnecessary power draw."},
+        {"heading": "Second Robot — V2 in Progress", "body": "The second Kiwi swerve robot is currently in development. This next version will build on the first prototype’s mechanical design, electronics, and software control system."}
       ],
       "media": [
+        {"type": "video", "src": "https://www.youtube.com/embed/B4kNNsTJaLg?autoplay=1&mute=1&loop=1&playlist=B4kNNsTJaLg&playsinline=1&rel=0", "label": "Driving video"},
         {"type": "gif", "src": "assets/kiwi-swerve-drive.gif", "label": "Drive test GIF"},
-        {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"},
-        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"}
+        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"},
+        {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"}
       ],
       "links": {
         "github": "",
