@@ -65,6 +65,11 @@ main { width: min(1240px, calc(100% - 3rem)); margin: auto; padding: 2rem 0 6rem
 .section-subtitle, .library-heading p, .contact-desc { margin-top: .8rem; color: var(--muted); max-width: 610px; }
 .glass-panel { background: var(--surface); border: 1px solid var(--line); padding: clamp(1.5rem, 5vw, 3.7rem); }
 .bio-text { max-width: 860px; color: #dedee0; font-size: clamp(1.05rem, 2vw, 1.35rem); }
+.about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 2.4rem; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.about-highlight { min-height: 180px; padding: 1.35rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.about-highlight > span { display: block; margin-bottom: .6rem; color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-highlight h3 { margin-bottom: .55rem; font-size: 1.1rem; letter-spacing: -.035em; line-height: 1.05; }
+.about-highlight p { color: var(--muted); font-size: .87rem; }
 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { min-height: 220px; padding: 1.65rem; background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background .3s var(--ease); }
@@ -157,6 +162,7 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
     .hero-section::before { width: 260px; right: -110px; }
     .hero-section::after { width: 100px; left: -30px; }
     .skills-categories { grid-template-columns: 1fr; }
+    .about-highlights { grid-template-columns: 1fr; }
     .projects-grid, .compact-project-grid { grid-template-columns: 1fr; }
     .featured-grid { margin-bottom: 4.5rem; }
     .project-carousel .project-card { flex-basis: min(290px, 78vw); }

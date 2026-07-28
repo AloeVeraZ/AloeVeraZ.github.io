@@ -37,6 +37,10 @@ function renderProfile(profile) {
     ['nav-name', 'footer-name', 'hero-name'].forEach(id => document.getElementById(id).textContent = profile.name);
     document.getElementById('hero-tagline').textContent = profile.tagline || profile.title;
     document.getElementById('about-bio').textContent = profile.bio;
+    const highlights = document.getElementById('about-highlights');
+    if (highlights) {
+        highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => `<article class="about-highlight"><span>${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p></article>`).join('');
+    }
     const links = [
         [profile.github, 'fa-brands fa-github', 'GitHub'], [profile.linkedin, 'fa-brands fa-linkedin', 'LinkedIn'],
         [profile.grabcad, 'fa-solid fa-cube', 'GrabCAD'], [profile.email && `mailto:${profile.email}`, 'fa-solid fa-envelope', 'Email']

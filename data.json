@@ -3,7 +3,12 @@
     "name": "Angelo Demetroulakos",
     "title": "Mechanical Engineering Major",
     "tagline": "Robotics • CAD Design • Prototyping • Autonomous Systems",
-    "bio": "UPDATE THIS — Write your about me bio here. Example: Mechanical engineering student with hands-on experience in CAD modeling, rapid prototyping, and FTC competition robotics.",
+    "bio": "I’m Angelo, a Mechanical Engineering Technology major at City Tech in New York City. I’m passionate about robotics and 3D printing, with a focus on turning ideas into real, working machines through design, prototyping, and programming.",
+    "aboutHighlights": [
+      {"label": "Education", "title": "City Tech — New York City College of Technology", "body": "Mechanical Engineering Technology, 2024–present. Previously attended John Dewey High School in Brooklyn, NY from 2020–2024."},
+      {"label": "Robotics Experience", "title": "FIRST Robotics teams FTC 9384 & FRC 333", "body": "Participated in FTC Team 9384 from 2022–2024 and FRC Team 333 from 2021–2024. Captain of Team 9384 during the 2022–2023 season and co-captain during 2023–2024."},
+      {"label": "Hands-On Work", "title": "Robotics, 3D printers & prototyping", "body": "Since middle school, I’ve built and configured multiple 3D printers with different motion systems, designed omnidirectional robots, and grown my CAD, electronics, and programming skills through hands-on projects."}
+    ],
     "email": "UPDATE THIS — your@email.com",
     "github": "https://github.com/AloeVeraZ",
     "linkedin": "UPDATE THIS — https://linkedin.com/in/your-actual-profile",
