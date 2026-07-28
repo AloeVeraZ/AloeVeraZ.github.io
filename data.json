@@ -31,14 +31,24 @@
   ],
   "projects": [
     {
-      "id": "project-1",
-      "title": "UPDATE — Project 1 Title",
+      "id": "kiwi-swerve-drivetrain",
+      "title": "Kiwi Swerve Drivetrain",
       "category": "Robotics & FTC",
       "featured": true,
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details, what you designed, what tools you used, and results.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Tag1", "Tag2", "Tag3"],
+      "summary": "A low-power, affordable three-module omnidirectional drivetrain built for competition and teaching.",
+      "details": "",
+      "image": "",
+      "tags": ["Kiwi Drive", "Raspberry Pi", "Python", "3D Printing"],
+      "sections": [
+        {"heading": "Overview", "body": "The Kiwi swerve drivetrain is a low-power, affordable, and easy-to-maintain omnidirectional drive system for robotics competitions and real-world robotic applications. Using three modules instead of four, continuous-rotation servos with encoder feedback, and general-purpose mechanical components reduces cost and complexity while maintaining smooth, capable motion. A custom electronics stack and Python control system replace expensive hardware solutions and make the platform practical for teaching robotics design and programming."},
+        {"heading": "First Prototype — Build", "body": "The first prototype uses general-purpose gears and bearings sourced from Amazon and ServoCity, making its pods less expensive and easier to replace. Its structure combines 3D-printed parts, CNC-machined plates, and standard hardware. Each module uses a continuous-rotation servo with an encoder for closed-loop steering; an HTD5 belt connects the servo to the pod. The drive motor uses a longer, lighter HTD2 belt, allowing the motor and steering servo to remain stationary while the pod turns freely."},
+        {"heading": "Electronics", "body": "A Raspberry Pi anchors the custom electronics stack. Each drive motor is powered by a 10-amp motor driver, steering is managed through a servo HAT, and a 12-bit encoder board provides precise steering-angle feedback for every module. These generic, maintainable components keep the system accessible and easy to modify."},
+        {"heading": "Programming", "body": "Python software running on the Raspberry Pi implements Kiwi swerve kinematics, translating driver or autonomous commands into coordinated three-module motion. Closed-loop steering continuously compares encoder feedback with the target angle, correcting the continuous-rotation servos in real time for smooth, predictable movement. The software also synchronizes steering and drive motion to keep modules aligned and minimize unnecessary power draw."}
+      ],
+      "media": [
+        {"type": "gif", "src": "", "label": "Build GIF", "hint": "Insert a GIF showing the module or drivetrain in motion."},
+        {"type": "image", "src": "", "label": "Prototype image", "hint": "Insert a photo, CAD render, or wiring image."}
+      ],
       "links": {
         "github": "",
         "grabcad": "",

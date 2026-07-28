@@ -127,9 +127,22 @@ main { width: min(1240px, calc(100% - 3rem)); margin: auto; padding: 2rem 0 6rem
 .modal-header { display: flex; align-items: center; gap: .8rem; min-height: 42px; margin-bottom: 1.3rem; }
 .modal-title { max-width: 600px; font-size: clamp(1.8rem, 5vw, 3.5rem); letter-spacing: -.065em; line-height: .95; }
 .modal-header .tag { color: #115da9; border-color: rgba(17,93,169,.4); }
-.modal-image { width: 100%; max-height: 410px; margin-bottom: 1.4rem; object-fit: cover; }
+.modal-image { width: 100%; min-height: 240px; max-height: 410px; margin-bottom: 1.4rem; background: #e5e5e0; }
+.modal-image img { width: 100%; height: 100%; max-height: 410px; display: block; object-fit: cover; }
 .modal-summary { color: #24262b; font-size: 1.12rem; font-weight: 600; }
 .modal-details { margin: 1rem 0 1.5rem; color: #55575d; line-height: 1.75; }
+.modal-detail-section + .modal-detail-section { margin-top: 1.25rem; }
+.modal-detail-section h4 { margin-bottom: .35rem; color: #191a1e; font-size: 1.05rem; letter-spacing: -.025em; }
+.modal-media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 0 0 1.5rem; }
+.modal-media-item { min-height: 190px; margin: 0; background: #e5e5e0; overflow: hidden; }
+.modal-media-item img { width: 100%; height: 170px; display: block; object-fit: cover; }
+.modal-media-item figcaption { padding: .65rem .75rem; color: #55575d; font-size: .78rem; font-weight: 700; }
+.media-placeholder { display: grid; place-content: center; gap: .35rem; min-height: 100%; padding: 1rem; border: 1px dashed rgba(25,26,30,.28); color: #55575d; text-align: center; }
+.media-placeholder i { font-size: 1.35rem; color: #115da9; }
+.media-placeholder span { color: #191a1e; font-size: .83rem; font-weight: 800; }
+.media-placeholder small { max-width: 190px; font-size: .72rem; }
+.card-media-placeholder { height: 100%; color: #d6d7da; border-color: rgba(244,244,241,.25); }
+.card-media-placeholder i, .card-media-placeholder span { color: #f4f4f1; }
 .modal-card .tag { color: #115da9; border-color: rgba(17,93,169,.35); }
 .modal-card .project-action-links { border-color: rgba(25,26,30,.15); }
 .modal-card .link-btn { background: #e5e5e0; border-color: rgba(25,26,30,.13); color: #191a1e; }
@@ -150,4 +163,5 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
     .modal-overlay { align-items: flex-start; padding: .65rem; }
     .modal-card { max-height: 94vh; box-shadow: 6px 8px 0 var(--blue); }
     .modal-header { align-items: flex-start; flex-direction: column; }
+    .modal-media { grid-template-columns: 1fr; }
 }

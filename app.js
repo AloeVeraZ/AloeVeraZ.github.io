@@ -58,7 +58,10 @@ function renderFeaturedProjects(projects) {
 function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
-    card.innerHTML = `<div class="project-image-wrapper"><img src="${project.image}" alt="${project.title}" class="project-image" onerror="this.style.display='none'"><span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+    const cardMedia = project.image
+        ? `<img src="${project.image}" alt="${project.title}" class="project-image">`
+        : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
+    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
     return card;
 }
@@ -130,10 +133,21 @@ function openModal(project) {
     document.getElementById('modal-title').textContent = project.title;
     document.getElementById('modal-category').textContent = project.category;
     document.getElementById('modal-summary').textContent = project.summary;
-    document.getElementById('modal-details').textContent = project.details || '';
+    const details = document.getElementById('modal-details');
+    details.innerHTML = project.sections
+        ? project.sections.map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('')
+        : `<p>${project.details || ''}</p>`;
     document.getElementById('modal-tags').innerHTML = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
     document.getElementById('modal-links').innerHTML = buildLinkButtons(project.links);
-    const image = document.getElementById('modal-image'); image.src = project.image; image.alt = project.title;
+    const image = document.getElementById('modal-image');
+    image.innerHTML = project.image
+        ? `<img src="${project.image}" alt="${project.title}">`
+        : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Front GIF placeholder</span><small>Add your GIF at the project card when it is ready.</small></div>`;
+    const media = document.getElementById('modal-media');
+    media.innerHTML = (project.media || []).map(item => item.src
+        ? `<figure class="modal-media-item"><img src="${item.src}" alt="${item.alt || item.label}"><figcaption>${item.label}</figcaption></figure>`
+        : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
+    ).join('');
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
 }
 
