@@ -5,9 +5,9 @@
     --ink: #f7f4ed;
     --muted: #a7a49d;
     --line: rgba(247, 244, 237, .16);
-    --blue: #e1ff2d;
-    --red: #ff6a3d;
-    --yellow: #e1ff2d;
+    --blue: #7ba8d8;
+    --red: #b7b9be;
+    --yellow: #d4d5d8;
     --pointer-x: 50vw;
     --pointer-y: 20vh;
     --scroll-shift: 0px;
@@ -178,13 +178,14 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
 
 /* High-impact engineering portfolio direction */
 body { background-color: var(--bg); background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 48px 48px; }
-.ambient-glow { background: radial-gradient(720px circle at var(--pointer-x) var(--pointer-y), rgba(225,255,45,.075), transparent 64%); }
+.ambient-glow { background: radial-gradient(720px circle at var(--pointer-x) var(--pointer-y), rgba(123,168,216,.075), transparent 64%); }
 .navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.86); backdrop-filter: blur(18px); }
+.nav-content, main { width: min(1180px, calc(100% - 4rem)); }
 .nav-content { min-height: 78px; }
 .logo { font-family: "Barlow Condensed", sans-serif; font-size: 1.35rem; letter-spacing: .02em; text-transform: uppercase; }
 .logo::before { content: "+"; color: var(--blue); font-size: 1.25em; margin-right: .38rem; }
 .nav-links { gap: 1.35rem; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.hero-section { min-height: 100svh; place-items: end start; padding: 9.5rem max(1.5rem, calc((100vw - 1240px) / 2)) 5rem; }
+.hero-section { min-height: 100svh; place-items: end start; padding: 9.5rem max(2rem, calc((100vw - 1180px) / 2)) 5rem; }
 .hero-section::before { width: min(42vw, 680px); border-radius: 0; background: var(--blue); right: -13vw; top: 7%; opacity: .12; transform: rotate(45deg) translateY(var(--scroll-shift)); }
 .hero-section::after { width: clamp(90px, 12vw, 175px); background: var(--red); left: auto; right: 16%; bottom: 9%; opacity: .68; }
 .hero-content { max-width: 1080px; text-align: left; }
@@ -202,21 +203,23 @@ body { background-color: var(--bg); background-image: linear-gradient(rgba(255,2
 .secondary-btn { background: transparent; }
 main { padding-top: 0; }
 .section { padding: 8rem 0; }
+.section { transition-duration: .42s; }
 .section-label { color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .9rem; letter-spacing: .17em; }
 .section-title { font-size: clamp(3.7rem, 8vw, 7rem); letter-spacing: -.035em; line-height: .8; }
 .section-subtitle, .library-heading p, .contact-desc { font-size: .95rem; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
 .bio-text { font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: 1.45; }
-.about-highlight { background: rgba(255,255,255,.018); transition: background .25s ease; }
-.about-highlight:hover { background: rgba(225,255,45,.08); }
+.about-highlight { background: rgba(255,255,255,.018); transition: transform .2s var(--ease), background .2s ease; }
+.about-highlight:hover { background: rgba(123,168,216,.09); transform: translateY(-4px); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
 .skills-categories { border-color: var(--line); }
 .skill-group { min-height: 240px; background: rgba(17,17,17,.9); }
-.skill-group:hover { background: #191919; }
-.tag { border-color: rgba(225,255,45,.42); color: #efffa2; }
-.projects-grid { gap: 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.project-card { background: #101010; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; }
-.project-card:hover { border-color: var(--blue); box-shadow: none; transform: none; }
+.skill-group { transition: transform .2s var(--ease), background .2s ease; }
+.skill-group:hover { background: #191919; transform: translateY(-4px); }
+.tag { border-color: rgba(123,168,216,.5); color: #b9d6f5; }
+.projects-grid { gap: 1.25rem; border: 0; }
+.project-card { background: #101010; border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
+.project-card:hover { border-color: var(--blue); background: #151515; box-shadow: none; transform: translateY(-6px); }
 .project-image-wrapper { height: 270px; background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.05); filter: contrast(1.08) saturate(1.08); }
 .project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: "Barlow Condensed", sans-serif; font-size: .78rem; letter-spacing: .08em; }
@@ -226,20 +229,22 @@ main { padding-top: 0; }
 .link-btn { border-radius: 0; background: transparent; }
 .link-btn:hover { background: var(--blue); color: #080808; }
 .featured-grid { margin-bottom: 8rem; }
-.project-library { border-top: 2px solid var(--blue); }
+.project-library { border-top: 1px solid var(--blue); }
 .collection-toggle { padding: 1.7rem 0; }
+.collection-toggle { transition: padding .2s var(--ease), color .2s ease; }
+.collection-toggle:hover { padding-left: .6rem; }
 .collection-index { color: var(--blue); }
 .collection-copy strong { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.6rem, 3.2vw, 2.25rem); letter-spacing: .01em; text-transform: uppercase; }
 .carousel-arrow { border-radius: 0; }
-.modal-card { border: 1px solid rgba(225,255,45,.5); box-shadow: 10px 10px 0 rgba(225,255,45,.25); }
+.modal-card { border: 1px solid rgba(123,168,216,.5); box-shadow: 10px 10px 0 rgba(123,168,216,.2); }
 .modal-close { border-radius: 0; }
 .modal-close:hover { background: var(--blue); color: #080808; }
-.modal-header .tag, .modal-card .tag { color: #efffa2; border-color: rgba(225,255,45,.42); }
+.modal-header .tag, .modal-card .tag { color: #b9d6f5; border-color: rgba(123,168,216,.5); }
 .modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
 footer { background: #050505; }
 @media (max-width: 800px) {
+    .nav-content, main { width: min(100% - 2rem, 1180px); }
     .hero-section { padding: 8rem 1rem 3rem; }
     .hero-name { font-size: clamp(4.5rem, 22vw, 7rem); }
-    .projects-grid { border-right: 1px solid var(--line); }
-    .modal-card { box-shadow: 5px 5px 0 rgba(225,255,45,.25); }
+    .modal-card { box-shadow: 5px 5px 0 rgba(123,168,216,.2); }
 }
