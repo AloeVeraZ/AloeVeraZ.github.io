@@ -73,6 +73,9 @@ main { width: min(1240px, calc(100% - 3rem)); margin: auto; padding: 2rem 0 6rem
 .about-highlight > span { display: block; margin-bottom: .6rem; color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .about-highlight h3 { margin-bottom: .55rem; font-size: 1.1rem; letter-spacing: -.035em; line-height: 1.05; }
 .about-highlight p { color: var(--muted); font-size: .87rem; }
+#about, #contact { --panel-content-inset: clamp(1rem, 2vw, 1.35rem); }
+#about > .section-header, #about > .bio-text,
+#contact > .section-header, #contact > .contact-desc, #contact > .contact-links { margin-left: var(--panel-content-inset); }
 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { min-height: 220px; padding: 1.65rem; background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background .3s var(--ease); }
