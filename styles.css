@@ -68,8 +68,8 @@ main { width: min(1240px, calc(100% - 3rem)); margin: auto; padding: 2rem 0 6rem
 .section-subtitle, .library-heading p, .contact-desc { margin-top: .8rem; color: var(--muted); max-width: 610px; }
 .glass-panel { background: var(--surface); border: 1px solid var(--line); padding: clamp(1.5rem, 5vw, 3.7rem); }
 .bio-text { max-width: 860px; color: #dedee0; font-size: clamp(1.05rem, 2vw, 1.35rem); }
-.about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 2.4rem; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.about-highlight { min-height: 180px; padding: 1.35rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 1.7rem; background: var(--surface); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.about-highlight { position: relative; z-index: 0; min-height: 165px; padding: 1.35rem; background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .about-highlight > span { display: block; margin-bottom: .6rem; color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .about-highlight h3 { margin-bottom: .55rem; font-size: 1.1rem; letter-spacing: -.035em; line-height: 1.05; }
 .about-highlight p { color: var(--muted); font-size: .87rem; }
@@ -205,15 +205,15 @@ body { background-color: var(--bg); background-image: linear-gradient(rgba(255,2
 .primary-btn:hover { background: #f4ffab; }
 .secondary-btn { background: transparent; }
 main { padding-top: 0; }
-.section { padding: 8rem 0; }
+.section { padding: 5rem 0; }
 .section { transition-duration: .42s; }
 .section-label { color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .9rem; letter-spacing: .17em; }
 .section-title { font-size: clamp(3.7rem, 8vw, 7rem); letter-spacing: -.035em; line-height: .8; }
 .section-subtitle, .library-heading p, .contact-desc { font-size: .95rem; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
 .bio-text { font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: 1.45; }
-.about-highlight { background: rgba(255,255,255,.018); transition: transform .2s var(--ease), background .2s ease; }
-.about-highlight:hover { background: rgba(123,168,216,.09); transform: translateY(-4px); }
+.about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.about-highlight:hover { z-index: 2; background: #191b1f; border: 1px solid var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); transform: translateY(-6px); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
 .skills-categories { border-color: var(--line); }
 .skill-group { min-height: 240px; background: rgba(17,17,17,.9); }
@@ -245,6 +245,12 @@ main { padding-top: 0; }
 .modal-header .tag, .modal-card .tag { color: #b9d6f5; border-color: rgba(123,168,216,.5); }
 .modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
 footer { background: #050505; }
+#about { padding: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 5vw, 3.7rem) 0; }
+#about .section-header { margin-bottom: 1.5rem; }
+#contact { padding: clamp(1.75rem, 3vw, 2.5rem); margin-top: 0; }
+#contact .section-header { margin-bottom: 1.25rem; }
+#contact .contact-desc { margin-top: .45rem; }
+#contact .contact-links { margin-top: 1rem; }
 @media (max-width: 800px) {
     .nav-content, main { width: min(100% - 2rem, 1180px); }
     .hero-section { padding: 8rem 1rem 3rem; }
