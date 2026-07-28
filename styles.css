@@ -45,11 +45,14 @@ button { font: inherit; }
 .social-links { display: flex; justify-content: center; gap: .65rem; margin: 2rem 0; }
 .social-links a { display: grid; place-items: center; width: 40px; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
 .social-links a:hover { background: var(--surface-raised); color: var(--ink); transform: translateY(-2px); }
+.resume-icon-unavailable { display: grid; place-items: center; width: 40px; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; opacity: .65; }
 .hero-buttons, .contact-links { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: .55rem; padding: .78rem 1.05rem; font-size: .86rem; font-weight: 700; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
 .btn:hover { transform: translateY(-3px); }
 .primary-btn { background: #e4e5e7; color: #161619; border-color: #e4e5e7; }
 .primary-btn:hover { background: #fff; }
+.resume-unavailable { cursor: not-allowed; opacity: .65; }
+.resume-unavailable:hover { background: #e4e5e7; transform: none; }
 .secondary-btn { background: var(--surface); }
 .secondary-btn:hover { background: var(--surface-raised); }
 .scroll-indicator { position: absolute; bottom: 2rem; animation: bounce 2.2s infinite; }
