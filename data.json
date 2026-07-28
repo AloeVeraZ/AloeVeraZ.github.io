@@ -24,7 +24,7 @@
     }
   ],
   "projectCollections": [
-    {"name": "Personal Projects", "description": "Independent builds, competition work, and experiments.", "categories": ["Robotics & FTC", "3D Printing", "Industrial Design", "Software"]},
+    {"name": "Personal Projects", "description": "Independent builds, competition work, and experiments.", "categories": ["Robotics", "3D Printing", "Industrial Design", "Software"]},
     {"name": "Internship Projects", "description": "Engineering work completed in a professional setting.", "categories": ["Internship Robotics"]},
     {"name": "Club Projects", "description": "Hands-on builds created with campus organizations.", "categories": ["Club Projects"]},
     {"name": "Awards", "description": "Recognition, credentials, and certificates.", "categories": ["Awards & Certificates"]}
@@ -33,11 +33,11 @@
     {
       "id": "kiwi-swerve-drivetrain",
       "title": "Kiwi Swerve Drivetrain",
-      "category": "Robotics & FTC",
+      "category": "Robotics",
       "featured": true,
       "summary": "A low-power, affordable three-module omnidirectional drivetrain built for competition and teaching.",
       "details": "",
-      "image": "",
+      "image": "assets/kiwi-swerve-drive.gif",
       "tags": ["Kiwi Drive", "Raspberry Pi", "Python", "3D Printing"],
       "sections": [
         {"heading": "Overview", "body": "The Kiwi swerve drivetrain is a low-power, affordable, and easy-to-maintain omnidirectional drive system for robotics competitions and real-world robotic applications. Using three modules instead of four, continuous-rotation servos with encoder feedback, and general-purpose mechanical components reduces cost and complexity while maintaining smooth, capable motion. A custom electronics stack and Python control system replace expensive hardware solutions and make the platform practical for teaching robotics design and programming."},
@@ -46,8 +46,9 @@
         {"heading": "Programming", "body": "Python software running on the Raspberry Pi implements Kiwi swerve kinematics, translating driver or autonomous commands into coordinated three-module motion. Closed-loop steering continuously compares encoder feedback with the target angle, correcting the continuous-rotation servos in real time for smooth, predictable movement. The software also synchronizes steering and drive motion to keep modules aligned and minimize unnecessary power draw."}
       ],
       "media": [
-        {"type": "gif", "src": "", "label": "Build GIF", "hint": "Insert a GIF showing the module or drivetrain in motion."},
-        {"type": "image", "src": "", "label": "Prototype image", "hint": "Insert a photo, CAD render, or wiring image."}
+        {"type": "gif", "src": "assets/kiwi-swerve-drive.gif", "label": "Drive test GIF"},
+        {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"},
+        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"}
       ],
       "links": {
         "github": "",

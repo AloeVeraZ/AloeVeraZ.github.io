@@ -144,7 +144,9 @@ function openModal(project) {
         ? `<img src="${project.image}" alt="${project.title}">`
         : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Front GIF placeholder</span><small>Add your GIF at the project card when it is ready.</small></div>`;
     const media = document.getElementById('modal-media');
-    media.innerHTML = (project.media || []).map(item => item.src
+    media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
+        ? `<figure class="modal-media-item modal-video"><iframe src="${item.src}" title="${item.label}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><figcaption>${item.label}</figcaption></figure>`
+        : item.src
         ? `<figure class="modal-media-item"><img src="${item.src}" alt="${item.alt || item.label}"><figcaption>${item.label}</figcaption></figure>`
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
