@@ -38,7 +38,7 @@
       "summary": "A low-power, affordable three-module omnidirectional drivetrain built for competition and teaching.",
       "details": "",
       "image": "assets/kiwi-swerve-drive.gif",
-      "tags": ["Kiwi Drive", "Raspberry Pi", "Python", "3D Printing"],
+      "tags": ["Swerve Drive", "Raspberry Pi", "Python", "3D Printing"],
       "sections": [
         {"heading": "First Robot", "body": "This first prototype established the low-cost, three-module Kiwi swerve concept and provided the foundation for the next version."},
         {"heading": "Overview", "body": "The Kiwi swerve drivetrain is a low-power, affordable, and easy-to-maintain omnidirectional drive system for robotics competitions and real-world robotic applications. Using three modules instead of four, continuous-rotation servos with encoder feedback, and general-purpose mechanical components reduces cost and complexity while maintaining smooth, capable motion. A custom electronics stack and Python control system replace expensive hardware solutions and make the platform practical for teaching robotics design and programming."},
@@ -48,10 +48,10 @@
         {"heading": "Second Robot — V2 in Progress", "body": "The second Kiwi swerve robot is currently in development. This next version will build on the first prototype’s mechanical design, electronics, and software control system."}
       ],
       "media": [
+        {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"},
         {"type": "video", "src": "https://www.youtube.com/embed/B4kNNsTJaLg?autoplay=1&mute=1&loop=1&playlist=B4kNNsTJaLg&playsinline=1&rel=0", "label": "Driving video"},
         {"type": "gif", "src": "assets/kiwi-swerve-drive.gif", "label": "Drive test GIF"},
-        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"},
-        {"type": "image", "src": "assets/kiwi-swerve-prototype.jpg", "label": "First prototype"}
+        {"type": "video", "src": "https://www.youtube.com/embed/usliYLL-PGs?autoplay=1&mute=1&loop=1&playlist=usliYLL-PGs&playsinline=1&rel=0", "label": "Driving video"}
       ],
       "links": {
         "github": "",

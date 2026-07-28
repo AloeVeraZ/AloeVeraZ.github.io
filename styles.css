@@ -137,7 +137,7 @@ main { width: min(1240px, calc(100% - 3rem)); margin: auto; padding: 2rem 0 6rem
 .modal-media-item { min-height: 190px; margin: 0; background: #34363d; overflow: hidden; }
 .modal-media-item img { width: 100%; height: 170px; display: block; object-fit: cover; }
 .modal-media-item figcaption { padding: .65rem .75rem; color: var(--muted); font-size: .78rem; font-weight: 700; }
-.modal-video iframe { width: 100%; height: 170px; display: block; border: 0; }
+.modal-video iframe { width: 100%; height: 220px; display: block; border: 0; }
 .media-placeholder { display: grid; place-content: center; gap: .35rem; min-height: 100%; padding: 1rem; border: 1px dashed rgba(244,244,241,.28); color: var(--muted); text-align: center; }
 .media-placeholder i { font-size: 1.35rem; color: #9dccff; }
 .media-placeholder span { color: var(--ink); font-size: .83rem; font-weight: 800; }
