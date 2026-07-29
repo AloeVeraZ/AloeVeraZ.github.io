@@ -19,19 +19,98 @@ body::-webkit-scrollbar { display: none; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
-.ambient-glow {
+.galaxy-field {
     position: fixed;
     inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: .78;
+    transform-origin: center;
+    backface-visibility: hidden;
+    will-change: transform;
+    contain: strict;
+}
+.cursor-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 4000;
+    display: none;
+    width: 8px;
+    height: 8px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: #91c8ff;
+    box-shadow: 0 0 7px rgba(145,200,255,.9), 0 0 18px rgba(123,168,216,.34);
+    opacity: 0;
+    transition: width .12s var(--ease), height .12s var(--ease), opacity .12s ease, background .12s ease;
+    will-change: transform;
+}
+.cursor-dot::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 72px;
+    height: 72px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(145,200,255,.1), transparent 70%);
+    transform: translate(-50%, -50%);
+}
+.enhanced-pointer .cursor-dot { display: block; }
+.cursor-dot.is-visible { opacity: 1; }
+.cursor-dot.is-interactive { width: 12px; height: 12px; background: #b8dcff; }
+.cursor-dot.is-pressed { width: 5px; height: 5px; }
+.cursor-ripple {
+    position: fixed;
+    z-index: 3999;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    border: 1px solid rgba(145,200,255,.75);
+    border-radius: 50%;
+    animation: cursor-ring .42s var(--ease) forwards;
+}
+.cursor-spark {
+    position: fixed;
+    z-index: 3998;
+    width: var(--spark-size, 2px);
+    height: var(--spark-size, 2px);
+    pointer-events: none;
+    border-radius: 50%;
+    background: rgba(190,192,197,.88);
+    animation: cursor-spark-out .58s cubic-bezier(.15,.7,.25,1) forwards;
+}
+@keyframes cursor-ring {
+    from { opacity: .8; transform: translate(-50%, -50%) scale(.55); }
+    to { opacity: 0; transform: translate(-50%, -50%) scale(4); }
+}
+@keyframes cursor-spark-out {
+    from { opacity: .82; transform: translate(-50%, -50%); }
+    to { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
+}
+.ambient-glow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 420px;
+    height: 420px;
     pointer-events: none;
     z-index: 0;
-    background:
-        radial-gradient(circle at 76% 18%, rgba(123,168,216,.12), transparent 28rem),
+    background-image:
         linear-gradient(rgba(123,168,216,.085) 1px, transparent 1px),
         linear-gradient(90deg, rgba(123,168,216,.085) 1px, transparent 1px);
-    background-size: 100% 100%, 48px 48px, 48px 48px;
-    background-repeat: no-repeat, repeat, repeat;
-    opacity: .34;
-    contain: paint;
+    background-size: 48px 48px;
+    border-radius: 50%;
+    -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.7) 38%, transparent 72%);
+    mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.7) 38%, transparent 72%);
+    opacity: .9;
+    transform: translate3d(calc(50vw - 210px), calc(20vh - 210px), 0);
+    will-change: transform;
+    contain: strict;
 }
 
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
@@ -338,6 +417,8 @@ footer { background: #050505; }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
+    .galaxy-field { transform: none !important; }
+    .cursor-spark, .cursor-ripple { display: none; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @media (max-width: 800px) {
@@ -413,6 +494,21 @@ footer { background: #050505; }
     border-color: var(--blue);
     box-shadow: 0 6px 0 rgba(123,168,216,.22);
     transform: translateY(-6px);
+}
+.tilt-card {
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+    --tilt-lift: 0px;
+    transform: perspective(950px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(var(--tilt-lift));
+    transform-style: preserve-3d;
+}
+.tilt-card:hover {
+    --tilt-lift: -6px;
+    transform: perspective(950px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(var(--tilt-lift));
+}
+.tilt-card > * {
+    position: relative;
+    transform: translateZ(8px);
 }
 @media (max-width: 800px) {
     .about-highlights,

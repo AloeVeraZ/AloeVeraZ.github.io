@@ -1,13 +1,40 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const galaxyCanvas = document.createElement('canvas');
+    galaxyCanvas.className = 'galaxy-field';
+    galaxyCanvas.setAttribute('aria-hidden', 'true');
     const ambientGlow = document.createElement('div');
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
-    document.body.prepend(ambientGlow);
+    document.body.prepend(galaxyCanvas);
+    galaxyCanvas.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
     pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
     ambientGlow.after(pageScrollProgress);
+    const cursorDot = document.createElement('span');
+    cursorDot.className = 'cursor-dot';
+    cursorDot.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cursorDot);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const galaxy = setupGalaxyField(galaxyCanvas, reducedMotion);
+    const cursor = setupCursorEffects(cursorDot, reducedMotion);
+    let pointerEffectFrame = 0;
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight * .2;
+
+    window.addEventListener('pointermove', event => {
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        cursor.move(event);
+        galaxy.move(event);
+        if (pointerEffectFrame) return;
+        pointerEffectFrame = requestAnimationFrame(() => {
+            ambientGlow.style.transform = `translate3d(${pointerX - 210}px, ${pointerY - 210}px, 0)`;
+            pointerEffectFrame = 0;
+        });
+    }, { passive: true });
+
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
     let scrollFrame = 0;
     const updateScrollMotion = () => {
@@ -33,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             renderProfile(data.profile);
             renderSkills(data.skillCategories);
+            setupInteractiveTilt(reducedMotion);
             renderFeaturedProjects(data.projects);
             renderProjectCollections(data.projectCollections, data.projects);
             setupModal();
@@ -40,6 +68,257 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => console.error('Error loading portfolio data:', error));
 });
+
+function setupGalaxyField(canvas, reducedMotion) {
+    const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    if (!context) return { move() {} };
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let stars = [];
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    let lastDrawTime = 0;
+    let previousScrollY = window.scrollY;
+    let scrollEnergy = 0;
+    let frameInterval = width < 700 ? 1000 / 24 : 1000 / 30;
+    const pointer = {
+        x: width / 2,
+        y: height / 2,
+        targetX: width / 2,
+        targetY: height / 2,
+        rotateX: 0,
+        rotateY: 0,
+        targetRotateX: 0,
+        targetRotateY: 0,
+        velocityX: 0,
+        velocityY: 0,
+        active: false
+    };
+    const colors = ['123,168,216', '178,211,239', '240,246,252'];
+
+    const makeStar = () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        depth: .18 + Math.random() * .82,
+        radius: .3 + Math.random(),
+        driftX: (Math.random() - .5) * .06,
+        driftY: -.02 - Math.random() * .07,
+        phase: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)]
+    });
+
+    const draw = (time, force = false) => {
+        if (!force && time - lastDrawTime < frameInterval) {
+            animationFrame = requestAnimationFrame(draw);
+            return;
+        }
+
+        const delta = Math.min((time - previousTime) / 16.67, 2);
+        previousTime = time;
+        lastDrawTime = time;
+        context.clearRect(0, 0, width, height);
+        pointer.x += (pointer.targetX - pointer.x) * .16;
+        pointer.y += (pointer.targetY - pointer.y) * .16;
+        pointer.rotateX += (pointer.targetRotateX - pointer.rotateX) * .12;
+        pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .12;
+        pointer.velocityX *= .8;
+        pointer.velocityY *= .8;
+        canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.07)`;
+        scrollEnergy *= .84;
+
+        for (const star of stars) {
+            const oldY = star.y;
+            const speed = .55 + star.depth * 1.2;
+            star.x += star.driftX * speed * delta;
+            star.y += (star.driftY * speed - scrollEnergy * star.depth * .006) * delta;
+
+            if (pointer.active) {
+                const dx = star.x - pointer.x;
+                const dy = star.y - pointer.y;
+                const distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared > 1 && distanceSquared < 19600) {
+                    const distance = Math.sqrt(distanceSquared);
+                    const force = (1 - distance / 140) * star.depth * .38 * delta;
+                    star.x += dx / distance * force + pointer.velocityX * force * .018;
+                    star.y += dy / distance * force + pointer.velocityY * force * .018;
+                }
+            }
+
+            if (star.y < -8) star.y = height + 8;
+            else if (star.y > height + 8) star.y = -8;
+            if (star.x < -8) star.x = width + 8;
+            else if (star.x > width + 8) star.x = -8;
+
+            const alpha = (.12 + star.depth * .5) * (.62 + Math.sin(time * .0014 + star.phase) * .2);
+            const drawX = star.x + pointer.rotateY * star.depth * 1.35;
+            const drawY = star.y - pointer.rotateX * star.depth * 1.35;
+            context.beginPath();
+            context.fillStyle = `rgba(${star.color},${alpha})`;
+            context.arc(drawX, drawY, star.radius * (.65 + star.depth), 0, Math.PI * 2);
+            context.fill();
+
+            if (Math.abs(scrollEnergy) > 3 && star.depth > .68) {
+                context.beginPath();
+                context.strokeStyle = `rgba(${star.color},${Math.min(alpha * .28, .14)})`;
+                context.lineWidth = .5;
+                context.moveTo(drawX, drawY);
+                context.lineTo(drawX, oldY + scrollEnergy * star.depth * .55);
+                context.stroke();
+            }
+        }
+
+        if (!reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(draw);
+    };
+
+    const resize = () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        frameInterval = width < 700 ? 1000 / 24 : 1000 / 30;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        const starCount = Math.round(Math.min(76, Math.max(width < 700 ? 34 : 48, width * height / 22000)));
+        stars = Array.from({ length: starCount }, makeStar);
+        if (reducedMotion.matches) draw(performance.now(), true);
+    };
+
+    const start = () => {
+        cancelAnimationFrame(animationFrame);
+        previousTime = performance.now();
+        lastDrawTime = 0;
+        if (reducedMotion.matches) draw(previousTime, true);
+        else if (!document.hidden) animationFrame = requestAnimationFrame(draw);
+    };
+
+    const move = event => {
+        pointer.velocityX = Math.max(-28, Math.min(28, event.clientX - pointer.targetX));
+        pointer.velocityY = Math.max(-28, Math.min(28, event.clientY - pointer.targetY));
+        pointer.targetX = event.clientX;
+        pointer.targetY = event.clientY;
+        pointer.targetRotateX = -((event.clientY / height) - .5) * 4;
+        pointer.targetRotateY = ((event.clientX / width) - .5) * 5;
+        pointer.active = true;
+    };
+
+    document.documentElement.addEventListener('pointerleave', () => {
+        pointer.active = false;
+        pointer.targetRotateX = 0;
+        pointer.targetRotateY = 0;
+    });
+    window.addEventListener('scroll', () => {
+        const nextScrollY = window.scrollY;
+        scrollEnergy = Math.max(-15, Math.min(15, scrollEnergy + (nextScrollY - previousScrollY) * .1));
+        previousScrollY = nextScrollY;
+    }, { passive: true });
+    window.addEventListener('resize', resize, { passive: true });
+    document.addEventListener('visibilitychange', start);
+    reducedMotion.addEventListener('change', start);
+    resize();
+    start();
+    return { move };
+}
+
+function setupCursorEffects(cursorDot, reducedMotion) {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return { move() {} };
+
+    document.documentElement.classList.add('enhanced-pointer');
+    let previousX = window.innerWidth / 2;
+    let previousY = window.innerHeight / 2;
+    let hasMoved = false;
+    let lastSparkAt = 0;
+    let lastTarget = null;
+
+    const move = event => {
+        const movementX = event.clientX - previousX;
+        const movementY = event.clientY - previousY;
+        const movementSpeed = hasMoved ? Math.hypot(movementX, movementY) : 0;
+        previousX = event.clientX;
+        previousY = event.clientY;
+        hasMoved = true;
+        cursorDot.style.transform = `translate3d(${previousX}px, ${previousY}px, 0) translate(-50%, -50%)`;
+        cursorDot.classList.add('is-visible');
+
+        if (event.target !== lastTarget) {
+            lastTarget = event.target;
+            const interactive = event.target instanceof Element && event.target.closest('a, button, .project-card');
+            cursorDot.classList.toggle('is-interactive', Boolean(interactive));
+        }
+
+        const now = performance.now();
+        if (!reducedMotion.matches && movementSpeed > 4 && now - lastSparkAt > 90) {
+            const reverseAngle = Math.atan2(movementY, movementX) + Math.PI;
+            for (let index = 0; index < 2; index += 1) {
+                const spark = document.createElement('span');
+                const angle = reverseAngle + (Math.random() - .5) * 1.5;
+                const distance = 10 + Math.random() * 15;
+                spark.className = 'cursor-spark';
+                spark.style.left = `${previousX}px`;
+                spark.style.top = `${previousY}px`;
+                spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
+                spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+                spark.style.setProperty('--spark-size', `${1.5 + Math.random() * 1.5}px`);
+                spark.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(spark);
+                spark.addEventListener('animationend', () => spark.remove(), { once: true });
+            }
+            lastSparkAt = now;
+        }
+    };
+
+    window.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        cursorDot.classList.add('is-pressed');
+        if (reducedMotion.matches) return;
+        const ripple = document.createElement('span');
+        ripple.className = 'cursor-ripple';
+        ripple.style.left = `${event.clientX}px`;
+        ripple.style.top = `${event.clientY}px`;
+        ripple.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    });
+    window.addEventListener('pointerup', () => cursorDot.classList.remove('is-pressed'));
+    window.addEventListener('blur', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
+    document.documentElement.addEventListener('pointerleave', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
+    return { move };
+}
+
+function setupInteractiveTilt(reducedMotion) {
+    if (reducedMotion.matches || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    document.querySelectorAll('.about-highlight, .skill-group').forEach(card => {
+        let bounds;
+        let tiltFrame = 0;
+        let pointerX = 0;
+        let pointerY = 0;
+        card.classList.add('tilt-card');
+        card.addEventListener('pointerenter', () => {
+            bounds = card.getBoundingClientRect();
+            card.style.willChange = 'transform';
+        });
+        card.addEventListener('pointermove', event => {
+            pointerX = event.clientX;
+            pointerY = event.clientY;
+            if (tiltFrame) return;
+            tiltFrame = requestAnimationFrame(() => {
+                const horizontal = (pointerX - bounds.left) / bounds.width - .5;
+                const vertical = (pointerY - bounds.top) / bounds.height - .5;
+                card.style.setProperty('--tilt-x', `${(-vertical * 6).toFixed(2)}deg`);
+                card.style.setProperty('--tilt-y', `${(horizontal * 6).toFixed(2)}deg`);
+                tiltFrame = 0;
+            });
+        }, { passive: true });
+        card.addEventListener('pointerleave', () => {
+            cancelAnimationFrame(tiltFrame);
+            tiltFrame = 0;
+            card.style.setProperty('--tilt-x', '0deg');
+            card.style.setProperty('--tilt-y', '0deg');
+            card.style.willChange = '';
+        });
+    });
+}
 
 function renderProfile(profile) {
     ['nav-name', 'footer-name', 'hero-name'].forEach(id => document.getElementById(id).textContent = profile.name);
@@ -78,9 +357,14 @@ function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
     const cardMedia = project.image
-        ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async">`
+        ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
     card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+    const motionImage = card.querySelector('[data-motion-src]');
+    if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        card.addEventListener('pointerenter', () => { motionImage.src = motionImage.dataset.motionSrc; }, { passive: true });
+        card.addEventListener('pointerleave', () => { motionImage.src = project.image; }, { passive: true });
+    }
     card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
     return card;
 }
@@ -105,9 +389,9 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            controls.innerHTML = '<span>Browse with the arrows or swipe</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
+            controls.innerHTML = '<span>Browse with the arrows, swipe, or watch the projects advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
             content.prepend(controls);
-            initializeCarousel = setupCarousel(gallery, controls);
+            initializeCarousel = setupCarousel(gallery, controls, true);
         }
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => {
