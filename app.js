@@ -89,7 +89,7 @@ function renderProjectCollections(collections, projects) {
         const collectionProjects = projects
             .filter(project => collection.categories.includes(project.category))
             .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
-        const useCarousel = collectionProjects.length > 3;
+        const useCarousel = collection.name === 'Personal Projects' && collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
@@ -98,7 +98,7 @@ function renderProjectCollections(collections, projects) {
             controls.className = 'carousel-controls';
             controls.innerHTML = '<span>Browse with the arrows or watch the projects advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
             content.prepend(controls);
-            setupCarousel(gallery, controls, collection.name === 'Personal Projects');
+            setupCarousel(gallery, controls, true);
         }
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
@@ -109,6 +109,9 @@ function renderProjectCollections(collections, projects) {
 function setupCarousel(carousel, controls, autoplay = false) {
     let currentIndex = 0;
     let autoplayTimer;
+    let scrollAnimation;
+    let controlsHovered = false;
+    let controlsFocused = false;
     const autoplayEnabled = autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const getMetrics = () => {
         const card = carousel.querySelector('.project-card');
@@ -119,13 +122,27 @@ function setupCarousel(carousel, controls, autoplay = false) {
         const lastIndex = Math.max(Math.ceil((maxScroll - 2) / distance), 0);
         return { distance, maxScroll, lastIndex };
     };
+    const animateScroll = target => {
+        window.cancelAnimationFrame(scrollAnimation);
+        const start = carousel.scrollLeft;
+        const change = target - start;
+        const duration = 560;
+        const startedAt = performance.now();
+        const frame = now => {
+            const progress = Math.min((now - startedAt) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            carousel.scrollTo({ left: start + (change * eased), behavior: 'auto' });
+            if (progress < 1) scrollAnimation = window.requestAnimationFrame(frame);
+        };
+        scrollAnimation = window.requestAnimationFrame(frame);
+    };
     const move = (step, button) => {
         const metrics = getMetrics();
         if (!metrics || metrics.maxScroll <= 0) return;
         const positionCount = metrics.lastIndex + 1;
         currentIndex = (currentIndex + step + positionCount) % positionCount;
         const target = Math.min(currentIndex * metrics.distance, metrics.maxScroll);
-        carousel.scrollTo({ left: target, behavior: 'smooth' });
+        animateScroll(target);
         if (button) {
             controls.querySelectorAll('.carousel-arrow').forEach(arrow => arrow.classList.remove('is-nudging'));
             void button.offsetWidth;
@@ -135,13 +152,35 @@ function setupCarousel(carousel, controls, autoplay = false) {
     const previous = controls.querySelector('.carousel-prev');
     const next = controls.querySelector('.carousel-next');
     const scheduleAutoplay = () => {
-        if (!autoplayEnabled) return;
         window.clearTimeout(autoplayTimer);
+        if (!autoplayEnabled || controlsHovered || controlsFocused) return;
         autoplayTimer = window.setTimeout(() => {
             if (!document.hidden && !carousel.closest('[hidden]')) move(1);
             scheduleAutoplay();
         }, 5000);
     };
+    const arrowControls = controls.querySelector('div');
+    const cancelAutoplay = () => {
+        window.clearTimeout(autoplayTimer);
+    };
+    arrowControls.addEventListener('pointerenter', () => {
+        controlsHovered = true;
+        cancelAutoplay();
+    });
+    arrowControls.addEventListener('pointerleave', () => {
+        controlsHovered = false;
+        scheduleAutoplay();
+    });
+    arrowControls.addEventListener('focusin', () => {
+        controlsFocused = true;
+        cancelAutoplay();
+    });
+    arrowControls.addEventListener('focusout', () => {
+        controlsFocused = false;
+        scheduleAutoplay();
+    });
+    previous.addEventListener('pointerdown', cancelAutoplay);
+    next.addEventListener('pointerdown', cancelAutoplay);
     previous.addEventListener('click', () => {
         move(-1, previous);
         scheduleAutoplay();
