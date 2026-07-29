@@ -16,8 +16,10 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; }
+html { scroll-behavior: smooth; scrollbar-width: none; }
+body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; -ms-overflow-style: none; }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar { display: none; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
@@ -34,6 +36,56 @@ button { font: inherit; }
     mask-image: radial-gradient(260px circle at var(--pointer-x) var(--pointer-y), #000 0, rgba(0,0,0,.72) 35%, transparent 72%);
 }
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
+.page-scroll-progress {
+    position: fixed;
+    top: 18vh;
+    right: 18px;
+    z-index: 1200;
+    width: 15px;
+    height: 64vh;
+    pointer-events: none;
+}
+.page-scroll-progress::before,
+.page-scroll-progress::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 15px;
+    height: 1px;
+    background: rgba(123,168,216,.65);
+}
+.page-scroll-progress::before { top: 0; }
+.page-scroll-progress::after { bottom: 0; }
+.page-scroll-track {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 7px;
+    width: 1px;
+    background: rgba(247,244,237,.13);
+}
+.page-scroll-fill {
+    position: absolute;
+    inset: 0 -1px auto;
+    height: 100%;
+    background: var(--blue);
+    box-shadow: 0 0 8px rgba(123,168,216,.28);
+    transform: scaleY(var(--page-scroll-progress, 0));
+    transform-origin: top;
+    transition: transform .08s linear;
+}
+@media (max-width: 800px) {
+    .page-scroll-progress {
+        right: 6px;
+        width: 9px;
+        opacity: .72;
+    }
+    .page-scroll-progress::before,
+    .page-scroll-progress::after {
+        width: 9px;
+    }
+    .page-scroll-track { left: 4px; }
+}
 
 .navbar { position: fixed; inset: 0 0 auto; z-index: 1000; border-bottom: 1px solid transparent; transition: background .35s var(--ease), border-color .35s var(--ease), backdrop-filter .35s var(--ease); }
 .has-scrolled .navbar { background: rgba(21,22,25,.78); border-color: var(--line); backdrop-filter: blur(18px); }

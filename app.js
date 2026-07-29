@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(ambientGlow);
+    const pageScrollProgress = document.createElement('div');
+    pageScrollProgress.className = 'page-scroll-progress';
+    pageScrollProgress.setAttribute('aria-hidden', 'true');
+    pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
+    ambientGlow.after(pageScrollProgress);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
@@ -24,9 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
     });
     const updateScrollMotion = () => {
+        const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+        document.documentElement.style.setProperty('--page-scroll-progress', progress);
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
     };
     window.addEventListener('scroll', updateScrollMotion, { passive: true });
+    window.addEventListener('resize', updateScrollMotion, { passive: true });
     updateScrollMotion();
     const revealObserver = new IntersectionObserver(entries => {
         entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('in-view'); });
@@ -41,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFeaturedProjects(data.projects);
             renderProjectCollections(data.projectCollections, data.projects);
             setupModal();
+            updateScrollMotion();
         })
         .catch(error => console.error('Error loading portfolio data:', error));
 });
