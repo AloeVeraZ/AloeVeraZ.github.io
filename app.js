@@ -19,10 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     setupGalaxyField(galaxyCanvas, reducedMotion);
     setupCursorDot(cursorDot, reducedMotion);
-    window.addEventListener('pointermove', event => {
-        document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
-        document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
-    });
     const updateScrollMotion = () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
@@ -98,15 +94,6 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .065;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.15)`;
         scrollEnergy *= .91;
-
-        if (pointer.active) {
-            const halo = context.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, 190);
-            halo.addColorStop(0, 'rgba(123,168,216,.075)');
-            halo.addColorStop(.42, 'rgba(82,135,190,.025)');
-            halo.addColorStop(1, 'rgba(8,8,8,0)');
-            context.fillStyle = halo;
-            context.fillRect(pointer.x - 190, pointer.y - 190, 380, 380);
-        }
 
         stars.forEach(star => {
             const oldX = star.x;
@@ -218,6 +205,8 @@ function setupCursorDot(cursorDot, reducedMotion) {
         currentX += (targetX - currentX) * followSpeed;
         currentY += (targetY - currentY) * followSpeed;
         cursorDot.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+        document.documentElement.style.setProperty('--pointer-x', `${currentX}px`);
+        document.documentElement.style.setProperty('--pointer-y', `${currentY}px`);
         cursorFrame = requestAnimationFrame(positionDot);
     };
 
@@ -228,7 +217,18 @@ function setupCursorDot(cursorDot, reducedMotion) {
         const interactive = event.target instanceof Element && event.target.closest('a, button, .project-card');
         cursorDot.classList.toggle('is-interactive', Boolean(interactive));
     }, { passive: true });
-    window.addEventListener('pointerdown', () => cursorDot.classList.add('is-pressed'));
+    window.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        cursorDot.classList.add('is-pressed');
+        if (reducedMotion.matches) return;
+        const ripple = document.createElement('span');
+        ripple.className = 'cursor-ripple';
+        ripple.style.left = `${currentX}px`;
+        ripple.style.top = `${currentY}px`;
+        ripple.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    });
     window.addEventListener('pointerup', () => cursorDot.classList.remove('is-pressed'));
     window.addEventListener('blur', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
     document.documentElement.addEventListener('pointerleave', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
