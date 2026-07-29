@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const galaxyCanvas = document.createElement('canvas');
     galaxyCanvas.className = 'galaxy-field';
     galaxyCanvas.setAttribute('aria-hidden', 'true');
+    const galaxyNebula = document.createElement('div');
+    galaxyNebula.className = 'galaxy-nebula';
+    galaxyNebula.setAttribute('aria-hidden', 'true');
     const ambientGlow = document.createElement('div');
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(galaxyCanvas);
-    galaxyCanvas.after(ambientGlow);
+    galaxyCanvas.after(galaxyNebula);
+    galaxyNebula.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
@@ -32,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ambientGlow.style.setProperty('--glow-x', `${currentGlowX}px`);
         ambientGlow.style.setProperty('--glow-y', `${currentGlowY}px`);
         ambientGlow.style.transform = `translate3d(${currentGlowX - 210}px, ${currentGlowY - 210}px, 0)`;
+        const nebulaShiftX = ((currentGlowX / window.innerWidth) - .5) * -10;
+        const nebulaShiftY = ((currentGlowY / window.innerHeight) - .5) * -8;
+        galaxyNebula.style.transform = `translate3d(${nebulaShiftX}px, ${nebulaShiftY}px, 0) scale(1.04)`;
 
         const remainingDistance = Math.abs(targetGlowX - currentGlowX) + Math.abs(targetGlowY - currentGlowY);
         if (remainingDistance > .35) {
@@ -97,7 +104,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     let lastDrawTime = 0;
     let previousScrollY = window.scrollY;
     let scrollEnergy = 0;
-    let frameInterval = width < 700 ? 1000 / 24 : 1000 / 30;
+    const lowPowerDevice = (navigator.hardwareConcurrency || 4) <= 4
+        || ('deviceMemory' in navigator && navigator.deviceMemory <= 4);
+    let frameInterval = 1000 / (lowPowerDevice || width < 700 ? 24 : 30);
     const pointer = {
         x: width / 2,
         y: height / 2,
@@ -111,18 +120,28 @@ function setupGalaxyField(canvas, reducedMotion) {
         velocityY: 0,
         active: false
     };
-    const colors = ['123,168,216', '178,211,239', '240,246,252'];
+    const colors = ['123,168,216', '145,177,210', '178,211,239', '240,246,252', '157,143,190'];
 
-    const makeStar = () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        depth: .18 + Math.random() * .82,
-        radius: .3 + Math.random(),
-        driftX: (Math.random() - .5) * .06,
-        driftY: -.02 - Math.random() * .07,
-        phase: Math.random() * Math.PI * 2,
-        color: colors[Math.floor(Math.random() * colors.length)]
-    });
+    const makeStar = () => {
+        const depth = .18 + Math.random() * .82;
+        const x = Math.random() * width;
+        const inGalaxyBand = Math.random() < .34;
+        const bandY = height * (.2 + (x / Math.max(width, 1)) * .52);
+        return {
+            x,
+            y: inGalaxyBand
+                ? bandY + (Math.random() - .5) * height * .28
+                : Math.random() * height,
+            depth,
+            radius: .25 + Math.random() * (depth > .75 ? 1.35 : .85),
+            driftX: (Math.random() - .5) * .06,
+            driftY: -.02 - Math.random() * .07,
+            phase: Math.random() * Math.PI * 2,
+            twinkleSpeed: .0009 + Math.random() * .0011,
+            flare: depth > .78 && Math.random() < .09,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        };
+    };
 
     const draw = (time, force = false) => {
         if (!force && time - lastDrawTime < frameInterval) {
@@ -166,13 +185,25 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (star.x < -8) star.x = width + 8;
             else if (star.x > width + 8) star.x = -8;
 
-            const alpha = (.12 + star.depth * .5) * (.62 + Math.sin(time * .0014 + star.phase) * .2);
+            const alpha = (.1 + star.depth * .48) * (.64 + Math.sin(time * star.twinkleSpeed + star.phase) * .18);
             const drawX = star.x + pointer.rotateY * star.depth * 1.35;
             const drawY = star.y - pointer.rotateX * star.depth * 1.35;
             context.beginPath();
             context.fillStyle = `rgba(${star.color},${alpha})`;
             context.arc(drawX, drawY, star.radius * (.65 + star.depth), 0, Math.PI * 2);
             context.fill();
+
+            if (star.flare && alpha > .32) {
+                const flareSize = 2.5 + star.depth * 2.5;
+                context.beginPath();
+                context.strokeStyle = `rgba(${star.color},${alpha * .28})`;
+                context.lineWidth = .45;
+                context.moveTo(drawX - flareSize, drawY);
+                context.lineTo(drawX + flareSize, drawY);
+                context.moveTo(drawX, drawY - flareSize);
+                context.lineTo(drawX, drawY + flareSize);
+                context.stroke();
+            }
 
             if (Math.abs(scrollEnergy) > 3 && star.depth > .68) {
                 context.beginPath();
@@ -190,12 +221,14 @@ function setupGalaxyField(canvas, reducedMotion) {
     const resize = () => {
         width = window.innerWidth;
         height = window.innerHeight;
-        frameInterval = width < 700 ? 1000 / 24 : 1000 / 30;
+        frameInterval = 1000 / (lowPowerDevice || width < 700 ? 24 : 30);
         canvas.width = width;
         canvas.height = height;
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
-        const starCount = Math.round(Math.min(76, Math.max(width < 700 ? 34 : 48, width * height / 22000)));
+        const maximumStars = width < 700 ? 54 : lowPowerDevice ? 64 : 96;
+        const minimumStars = width < 700 ? 34 : lowPowerDevice ? 44 : 54;
+        const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, width * height / 19000)));
         stars = Array.from({ length: starCount }, makeStar);
         if (reducedMotion.matches) draw(performance.now(), true);
     };
