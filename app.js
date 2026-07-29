@@ -3,15 +3,49 @@ document.addEventListener('DOMContentLoaded', () => {
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(ambientGlow);
+    const kineticField = document.createElement('div');
+    kineticField.className = 'kinetic-field';
+    kineticField.setAttribute('aria-hidden', 'true');
+    kineticField.innerHTML = `
+        <span class="kinetic-object kinetic-orbit" style="--x: 4vw; --y: 18vh; --size: 92px;" data-depth=".72" data-phase=".4"></span>
+        <span class="kinetic-object kinetic-cross" style="--x: 91vw; --y: 24vh; --size: 62px;" data-depth=".45" data-phase="1.8"></span>
+        <span class="kinetic-object kinetic-ruler" style="--x: 2vw; --y: 48vh; --size: 118px;" data-depth=".3" data-phase="3.1" data-rotate="false"></span>
+        <span class="kinetic-object kinetic-bracket" style="--x: 92vw; --y: 54vh; --size: 76px;" data-depth=".62" data-phase="4.4"></span>
+        <span class="kinetic-object kinetic-dots" style="--x: 5vw; --y: 76vh; --size: 88px;" data-depth=".5" data-phase="5.7" data-rotate="false"></span>
+        <span class="kinetic-object kinetic-orbit kinetic-orbit-small" style="--x: 88vw; --y: 82vh; --size: 64px;" data-depth=".82" data-phase="2.5"></span>
+        <span class="kinetic-object kinetic-chevron" style="--x: 14vw; --y: 62vh; --size: 54px;" data-depth=".38" data-phase="6.8"></span>
+        <span class="kinetic-object kinetic-cross kinetic-cross-small" style="--x: 80vw; --y: 40vh; --size: 38px;" data-depth=".56" data-phase="7.9"></span>`;
+    ambientGlow.after(kineticField);
+    const kineticObjects = [...kineticField.querySelectorAll('.kinetic-object')];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
+    });
+    window.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || reducedMotion.matches) return;
+        const ripple = document.createElement('span');
+        ripple.className = 'click-ripple';
+        ripple.style.left = `${event.clientX}px`;
+        ripple.style.top = `${event.clientY}px`;
+        ripple.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
     });
     const updateScrollMotion = () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         document.documentElement.style.setProperty('--scroll-progress', window.scrollY / maxScroll);
         document.documentElement.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
         document.documentElement.style.setProperty('--scroll-shift-reverse', `${Math.min(window.scrollY * -0.04, 35)}px`);
+        kineticObjects.forEach(object => {
+            const depth = Number.parseFloat(object.dataset.depth) || .5;
+            const phase = Number.parseFloat(object.dataset.phase) || 0;
+            const range = 12 + (depth * 24);
+            const x = Math.sin((window.scrollY * .0032) + phase) * range;
+            const y = Math.cos((window.scrollY * .0024) + phase) * range * .65;
+            const rotation = object.dataset.rotate === 'false' ? 0 : (window.scrollY * depth * .035) + (phase * 8);
+            object.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+        });
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
     };
     window.addEventListener('scroll', updateScrollMotion, { passive: true });
