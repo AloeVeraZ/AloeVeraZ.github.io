@@ -8,8 +8,6 @@
     --blue: #7ba8d8;
     --red: #b7b9be;
     --yellow: #d4d5d8;
-    --pointer-x: 50vw;
-    --pointer-y: 20vh;
     --scroll-shift: 0px;
     --scroll-shift-reverse: 0px;
     --ease: cubic-bezier(.2,.75,.2,1);
@@ -21,7 +19,19 @@ body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-s
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
-.ambient-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(720px circle at var(--pointer-x) var(--pointer-y), rgba(123,168,216,.045), transparent 64%); transition: background .18s linear; }
+.ambient-glow {
+    position: fixed;
+    top: -360px;
+    left: -360px;
+    width: 720px;
+    height: 720px;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(circle, rgba(123,168,216,.075), transparent 64%);
+    transform: translate3d(50vw, 20vh, 0);
+    will-change: transform;
+    contain: strict;
+}
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
 
 .navbar { position: fixed; inset: 0 0 auto; z-index: 1000; border-bottom: 1px solid transparent; transition: background .35s var(--ease), border-color .35s var(--ease), backdrop-filter .35s var(--ease); }
@@ -182,8 +192,8 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
 
 /* High-impact engineering portfolio direction */
 body { background-color: var(--bg); background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 48px 48px; }
-.ambient-glow { background: radial-gradient(720px circle at var(--pointer-x) var(--pointer-y), rgba(123,168,216,.075), transparent 64%); }
-.navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.86); backdrop-filter: blur(18px); }
+.ambient-glow { background: radial-gradient(circle, rgba(123,168,216,.075), transparent 64%); }
+.navbar, .has-scrolled .navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.96); backdrop-filter: none; }
 .nav-content, main { width: min(1180px, calc(100% - 4rem)); }
 .nav-content { min-height: 78px; }
 .logo { font-family: "Barlow Condensed", sans-serif; font-size: 1.35rem; letter-spacing: .02em; text-transform: uppercase; }
@@ -258,4 +268,12 @@ footer { background: #050505; }
     .hero-name { font-size: clamp(4.5rem, 22vw, 7rem); }
     .modal-card { box-shadow: 5px 5px 0 rgba(123,168,216,.2); }
     .about-highlight + .about-highlight { margin-left: 0; margin-top: -1px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .ambient-glow { display: none; }
+    .scroll-indicator { animation: none; }
+    .section { opacity: 1; transform: none; transition: none; }
+    .hero-section::before, .hero-section::after { transition: none; }
 }

@@ -3,18 +3,33 @@ document.addEventListener('DOMContentLoaded', () => {
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(ambientGlow);
+
+    // Keep pointer motion on the compositor. Updating CSS variables on <html>
+    // made every pointer event invalidate styles and repaint the full viewport.
+    let pointerFrame = 0;
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight * .2;
     window.addEventListener('pointermove', event => {
-        document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
-        document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
-    });
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        if (pointerFrame) return;
+        pointerFrame = requestAnimationFrame(() => {
+            ambientGlow.style.transform = `translate3d(${pointerX}px, ${pointerY}px, 0)`;
+            pointerFrame = 0;
+        });
+    }, { passive: true });
+
+    const hero = document.getElementById('hero');
+    let scrollFrame = 0;
     const updateScrollMotion = () => {
-        const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-        document.documentElement.style.setProperty('--scroll-progress', window.scrollY / maxScroll);
-        document.documentElement.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
-        document.documentElement.style.setProperty('--scroll-shift-reverse', `${Math.min(window.scrollY * -0.04, 35)}px`);
+        hero.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
+        hero.style.setProperty('--scroll-shift-reverse', `${Math.max(window.scrollY * -0.04, -35)}px`);
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
+        scrollFrame = 0;
     };
-    window.addEventListener('scroll', updateScrollMotion, { passive: true });
+    window.addEventListener('scroll', () => {
+        if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollMotion);
+    }, { passive: true });
     updateScrollMotion();
     const revealObserver = new IntersectionObserver(entries => {
         entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('in-view'); });
@@ -70,7 +85,7 @@ function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
     const cardMedia = project.image
-        ? `<img src="${project.image}" alt="${project.title}" class="project-image">`
+        ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async">`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
     card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
@@ -105,7 +120,6 @@ function renderProjectCollections(collections, projects) {
 }
 
 function setupCarousel(carousel, controls) {
-    let direction = 1;
     const move = step => {
         const card = carousel.querySelector('.project-card');
         if (!card) return;
@@ -122,16 +136,6 @@ function setupCarousel(carousel, controls) {
     };
     controls.querySelector('.carousel-prev').addEventListener('click', () => move(-1));
     controls.querySelector('.carousel-next').addEventListener('click', () => move(1));
-    const drift = () => {
-        const maxScroll = carousel.scrollWidth - carousel.clientWidth;
-        if (!carousel.closest('[hidden]') && maxScroll > 0) {
-            carousel.scrollLeft += 0.22 * direction;
-            if (carousel.scrollLeft >= maxScroll - 1) direction = -1;
-            if (carousel.scrollLeft <= 1) direction = 1;
-        }
-        requestAnimationFrame(drift);
-    };
-    requestAnimationFrame(drift);
 }
 
 function buildLinkButtons(links = {}) {
@@ -152,13 +156,13 @@ function openModal(project) {
     document.getElementById('modal-links').innerHTML = buildLinkButtons(project.links);
     const image = document.getElementById('modal-image');
     image.innerHTML = project.image
-        ? `<img src="${project.image}" alt="${project.title}">`
+        ? `<img src="${project.image}" alt="${project.title}" decoding="async">`
         : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Front GIF placeholder</span><small>Add your GIF at the project card when it is ready.</small></div>`;
     const media = document.getElementById('modal-media');
     media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
         ? `<figure class="modal-media-item modal-video"><iframe src="${item.src}" title="${item.label}" loading="eager" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><figcaption>${item.label}</figcaption></figure>`
         : item.src
-        ? `<figure class="modal-media-item"><img src="${item.src}" alt="${item.alt || item.label}"><figcaption>${item.label}</figcaption></figure>`
+        ? `<figure class="modal-media-item"><img src="${item.src}" alt="${item.alt || item.label}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
