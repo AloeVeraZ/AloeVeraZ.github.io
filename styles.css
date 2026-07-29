@@ -31,6 +31,39 @@ button { font: inherit; }
     height: 100%;
     pointer-events: none;
     opacity: .82;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    will-change: transform;
+}
+.cursor-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 4000;
+    display: none;
+    width: 8px;
+    height: 8px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: #91c8ff;
+    box-shadow: 0 0 7px rgba(145,200,255,.9), 0 0 18px rgba(123,168,216,.34);
+    opacity: 0;
+    transition: width .16s var(--ease), height .16s var(--ease), opacity .14s ease, background .16s ease;
+    will-change: transform;
+}
+.custom-cursor-enabled,
+.custom-cursor-enabled * { cursor: none !important; }
+.custom-cursor-enabled .cursor-dot { display: block; }
+.cursor-dot.is-visible { opacity: 1; }
+.cursor-dot.is-interactive {
+    width: 11px;
+    height: 11px;
+    background: #a9d6ff;
+}
+.cursor-dot.is-pressed {
+    width: 5px;
+    height: 5px;
 }
 .ambient-glow {
     position: fixed;
@@ -717,11 +750,10 @@ footer { background: #050505; }
     .project-motif { opacity: .09; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .galaxy-field { opacity: .42; }
+    .galaxy-field { opacity: .42; transform: none !important; }
     .tilt-card,
     .tilt-card:hover { transform: none; }
-    .kinetic-field,
-    .click-ripple {
+    .kinetic-field {
         display: none;
     }
 }

@@ -12,26 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     pageScrollProgress.setAttribute('aria-hidden', 'true');
     pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
     ambientGlow.after(pageScrollProgress);
+    const cursorDot = document.createElement('span');
+    cursorDot.className = 'cursor-dot';
+    cursorDot.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cursorDot);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     setupGalaxyField(galaxyCanvas, reducedMotion);
+    setupCursorDot(cursorDot, reducedMotion);
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
-    });
-    window.addEventListener('pointerdown', event => {
-        if (event.button !== 0 || reducedMotion.matches) return;
-        const collectionOpen = document.querySelector('.collection-toggle[aria-expanded="true"]');
-        const modalOpen = document.getElementById('project-modal')?.classList.contains('active');
-        const importantTarget = event.target.closest('a, button, .project-card, .about-highlight, .skill-group, .collection-content, .modal-overlay, .contact-links, .social-links, .hero-content, .section-header, .bio-text, .contact-desc');
-        const blankSurface = event.target.matches('body, main, .section, .hero-section, .project-library');
-        if (collectionOpen || modalOpen || importantTarget || !blankSurface) return;
-        const ripple = document.createElement('span');
-        ripple.className = 'click-ripple';
-        ripple.style.left = `${event.clientX}px`;
-        ripple.style.top = `${event.clientY}px`;
-        ripple.setAttribute('aria-hidden', 'true');
-        document.body.appendChild(ripple);
-        ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
     });
     const updateScrollMotion = () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
@@ -73,7 +63,17 @@ function setupGalaxyField(canvas, reducedMotion) {
     let previousTime = performance.now();
     let previousScrollY = window.scrollY;
     let scrollEnergy = 0;
-    const pointer = { x: innerWidth / 2, y: innerHeight / 2, targetX: innerWidth / 2, targetY: innerHeight / 2, active: false };
+    const pointer = {
+        x: innerWidth / 2,
+        y: innerHeight / 2,
+        targetX: innerWidth / 2,
+        targetY: innerHeight / 2,
+        rotateX: 0,
+        rotateY: 0,
+        targetRotateX: 0,
+        targetRotateY: 0,
+        active: false
+    };
     const colors = ['123,168,216', '178,211,239', '240,246,252'];
 
     const makeStar = () => ({
@@ -94,6 +94,9 @@ function setupGalaxyField(canvas, reducedMotion) {
 
         pointer.x += (pointer.targetX - pointer.x) * .075;
         pointer.y += (pointer.targetY - pointer.y) * .075;
+        pointer.rotateX += (pointer.targetRotateX - pointer.rotateX) * .065;
+        pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .065;
+        canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.15)`;
         scrollEnergy *= .91;
 
         if (pointer.active) {
@@ -130,16 +133,20 @@ function setupGalaxyField(canvas, reducedMotion) {
 
             const pulse = .6 + Math.sin(time * .0014 + star.phase) * .22;
             const alpha = (.12 + star.depth * .5) * pulse;
+            const depthShiftX = pointer.rotateY * star.depth * 1.7;
+            const depthShiftY = -pointer.rotateX * star.depth * 1.7;
+            const drawX = star.x + depthShiftX;
+            const drawY = star.y + depthShiftY;
             context.beginPath();
             context.fillStyle = `rgba(${star.color},${alpha})`;
-            context.arc(star.x, star.y, star.radius * (.65 + star.depth), 0, Math.PI * 2);
+            context.arc(drawX, drawY, star.radius * (.65 + star.depth), 0, Math.PI * 2);
             context.fill();
 
             if (Math.abs(scrollEnergy) > 2.5 && star.depth > .62) {
                 context.beginPath();
                 context.strokeStyle = `rgba(${star.color},${Math.min(alpha * .32, .16)})`;
                 context.lineWidth = Math.max(.35, star.radius * .35);
-                context.moveTo(star.x, star.y);
+                context.moveTo(drawX, drawY);
                 context.lineTo(oldX, oldY + scrollEnergy * star.depth * .65);
                 context.stroke();
             }
@@ -174,9 +181,15 @@ function setupGalaxyField(canvas, reducedMotion) {
     window.addEventListener('pointermove', event => {
         pointer.targetX = event.clientX;
         pointer.targetY = event.clientY;
+        pointer.targetRotateX = -((event.clientY / height) - .5) * 9;
+        pointer.targetRotateY = ((event.clientX / width) - .5) * 11;
         pointer.active = true;
     }, { passive: true });
-    document.documentElement.addEventListener('pointerleave', () => { pointer.active = false; });
+    document.documentElement.addEventListener('pointerleave', () => {
+        pointer.active = false;
+        pointer.targetRotateX = 0;
+        pointer.targetRotateY = 0;
+    });
     window.addEventListener('scroll', () => {
         const nextScrollY = window.scrollY;
         scrollEnergy = Math.max(-18, Math.min(18, scrollEnergy + (nextScrollY - previousScrollY) * .12));
@@ -187,6 +200,39 @@ function setupGalaxyField(canvas, reducedMotion) {
     reducedMotion.addEventListener('change', start);
     resize();
     start();
+}
+
+function setupCursorDot(cursorDot, reducedMotion) {
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    if (!finePointer.matches) return;
+
+    document.documentElement.classList.add('custom-cursor-enabled');
+    let targetX = innerWidth / 2;
+    let targetY = innerHeight / 2;
+    let currentX = targetX;
+    let currentY = targetY;
+    let cursorFrame = 0;
+
+    const positionDot = () => {
+        const followSpeed = reducedMotion.matches ? 1 : .36;
+        currentX += (targetX - currentX) * followSpeed;
+        currentY += (targetY - currentY) * followSpeed;
+        cursorDot.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+        cursorFrame = requestAnimationFrame(positionDot);
+    };
+
+    window.addEventListener('pointermove', event => {
+        targetX = event.clientX;
+        targetY = event.clientY;
+        cursorDot.classList.add('is-visible');
+        const interactive = event.target instanceof Element && event.target.closest('a, button, .project-card');
+        cursorDot.classList.toggle('is-interactive', Boolean(interactive));
+    }, { passive: true });
+    window.addEventListener('pointerdown', () => cursorDot.classList.add('is-pressed'));
+    window.addEventListener('pointerup', () => cursorDot.classList.remove('is-pressed'));
+    window.addEventListener('blur', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
+    document.documentElement.addEventListener('pointerleave', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
+    cursorFrame = requestAnimationFrame(positionDot);
 }
 
 function setupInteractiveTilt(reducedMotion) {
