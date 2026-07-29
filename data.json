@@ -40,6 +40,7 @@
       "id": "kiwi-swerve-drivetrain",
       "title": "Kiwi Swerve Drivetrain",
       "category": "Robotics",
+      "collectionOrder": 1,
       "featured": true,
       "summary": "A low-power, affordable three-module omnidirectional drivetrain built for competition and teaching.",
       "details": "",
@@ -68,8 +69,9 @@
     },
     {
       "id": "project-2",
-      "title": "UPDATE — Project 2 Title",
+      "title": "Personal Project 2",
       "category": "3D Printing",
+      "collectionOrder": 2,
       "featured": true,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details.",
@@ -84,8 +86,9 @@
     },
     {
       "id": "project-3",
-      "title": "UPDATE — Project 3 Title",
+      "title": "Personal Project 3",
       "category": "Industrial Design",
+      "collectionOrder": 3,
       "featured": true,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details.",
@@ -100,12 +103,35 @@
     },
     {
       "id": "project-4",
-      "title": "UPDATE — Project 4 Title",
+      "title": "Personal Project 4",
       "category": "Software",
+      "collectionOrder": 4,
       "summary": "UPDATE — One sentence summary of this project.",
       "details": "UPDATE — Longer description with technical details.",
       "image": "assets/wind_turbine.jpg",
       "tags": ["Tag 1", "Tag 2", "Tag 3"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "personal-project-5",
+      "title": "Personal Project 5",
+      "category": "Robotics",
+      "collectionOrder": 5,
+      "summary": "UPDATE — One sentence summary of this personal project.",
+      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Robotics", "Prototyping"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "personal-project-6",
+      "title": "Personal Project 6",
+      "category": "Software",
+      "collectionOrder": 6,
+      "summary": "UPDATE — One sentence summary of this personal project.",
+      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Software", "Controls"],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
