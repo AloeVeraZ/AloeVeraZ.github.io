@@ -3,30 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(ambientGlow);
-    const kineticField = document.createElement('div');
-    kineticField.className = 'kinetic-field';
-    kineticField.setAttribute('aria-hidden', 'true');
-    kineticField.innerHTML = `
-        <span class="project-motif motif-swerve" style="--x: 3vw; --y: 17vh; --size: 108px;" data-depth=".72" data-phase=".4"><i></i><i></i><i></i></span>
-        <span class="project-motif motif-corexy" style="--x: 88vw; --y: 20vh; --size: 104px;" data-depth=".45" data-phase="1.8"><i></i></span>
-        <span class="project-motif motif-delta" style="--x: 3vw; --y: 45vh; --size: 116px;" data-depth=".3" data-phase="3.1" data-rotate="false"><i></i><i></i><i></i></span>
-        <span class="project-motif motif-cad" style="--x: 89vw; --y: 48vh; --size: 96px;" data-depth=".62" data-phase="4.4"></span>
-        <span class="project-motif motif-keyboard" style="--x: 4vw; --y: 74vh; --size: 106px;" data-depth=".5" data-phase="5.7" data-rotate="false"></span>
-        <span class="project-motif motif-eye" style="--x: 89vw; --y: 79vh; --size: 82px;" data-depth=".82" data-phase="2.5"><i></i><i></i></span>
-        <span class="project-motif motif-layers" style="--x: 14vw; --y: 61vh; --size: 76px;" data-depth=".38" data-phase="6.8"><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="project-motif motif-simple-swerve" style="--x: 79vw; --y: 36vh; --size: 96px;" data-depth=".56" data-phase="7.9"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="project-motif motif-linkage" style="--x: 17vw; --y: 34vh; --size: 82px;" data-depth=".42" data-phase="8.8"><i></i><i></i><i></i><i></i></span>
-        <span class="project-motif motif-belt" style="--x: 72vw; --y: 68vh; --size: 92px;" data-depth=".67" data-phase="9.6"><i></i><i></i></span>`;
-    ambientGlow.after(kineticField);
-    const kineticObjects = [...kineticField.querySelectorAll('.project-motif')];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
-        const pointerX = (event.clientX / Math.max(window.innerWidth, 1)) - .5;
-        const pointerY = (event.clientY / Math.max(window.innerHeight, 1)) - .5;
-        document.documentElement.style.setProperty('--parallax-x', `${pointerX * 14}px`);
-        document.documentElement.style.setProperty('--parallax-y', `${pointerY * 10}px`);
     });
     window.addEventListener('pointerdown', event => {
         if (event.button !== 0 || reducedMotion.matches) return;
@@ -44,20 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
     });
     const updateScrollMotion = () => {
-        const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-        const scrollProgress = window.scrollY / maxScroll;
-        document.documentElement.style.setProperty('--scroll-progress', scrollProgress);
-        document.documentElement.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
-        document.documentElement.style.setProperty('--scroll-shift-reverse', `${Math.min(window.scrollY * -0.04, 35)}px`);
-        kineticObjects.forEach(object => {
-            const depth = Number.parseFloat(object.dataset.depth) || .5;
-            const phase = Number.parseFloat(object.dataset.phase) || 0;
-            const range = 12 + (depth * 24);
-            const x = Math.sin((window.scrollY * .0032) + phase) * range;
-            const y = Math.cos((window.scrollY * .0024) + phase) * range * .65;
-            const rotation = object.dataset.rotate === 'false' ? 0 : (window.scrollY * depth * .035) + (phase * 8);
-            object.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
-        });
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
     };
     window.addEventListener('scroll', updateScrollMotion, { passive: true });
