@@ -169,18 +169,34 @@ function setupGalaxyField(canvas, reducedMotion) {
 
     const buildConstellationNodes = () => {
         const nodeCount = width < 700 ? 6 : lowPowerDevice ? 8 : 10;
-        constellationNodes = [
-            { x: .10, y: .18, radius: 18, phase: .4, speed: .00023 },
-            { x: .49, y: .12, radius: 29, phase: 1.1, speed: -.00017 },
-            { x: .88, y: .22, radius: 14, phase: 1.8, speed: .00028 },
-            { x: .25, y: .43, radius: 33, phase: 2.4, speed: -.00014 },
-            { x: .64, y: .39, radius: 20, phase: 3.1, speed: .0002 },
-            { x: .47, y: .65, radius: 12, phase: 3.7, speed: -.0003 },
-            { x: .86, y: .62, radius: 27, phase: 4.4, speed: .00016 },
-            { x: .14, y: .76, radius: 22, phase: 5.1, speed: -.00019 },
-            { x: .68, y: .86, radius: 35, phase: 5.8, speed: .00013 },
-            { x: .36, y: .91, radius: 16, phase: 6.4, speed: -.00025 }
-        ].slice(0, nodeCount);
+        const sizeScale = width < 700 ? .72 : 1;
+        const anchors = [
+            [.09, .17], [.48, .11], [.88, .2], [.23, .42], [.64, .38],
+            [.47, .64], [.87, .61], [.13, .77], [.69, .86], [.36, .91]
+        ];
+        const planetColors = ['114,159,204', '132,151,188', '148,132,177', '109,174,184', '170,158,140'];
+
+        constellationNodes = anchors.slice(0, nodeCount).map(([anchorX, anchorY], index) => {
+            const isBlackHole = index === 2 || index === 7 || (index > 4 && Math.random() < .12);
+            const radius = (isBlackHole ? 21 + Math.random() * 13 : 31 + Math.random() * 30) * sizeScale;
+            const orbiterCount = isBlackHole
+                ? (lowPowerDevice ? 3 : 5)
+                : (Math.random() < .55 ? 1 : 2);
+            return {
+                x: Math.min(.94, Math.max(.06, anchorX + (Math.random() - .5) * .055)),
+                y: Math.min(.93, Math.max(.07, anchorY + (Math.random() - .5) * .05)),
+                radius,
+                type: isBlackHole ? 'black-hole' : 'planet',
+                color: planetColors[Math.floor(Math.random() * planetColors.length)],
+                phase: Math.random() * Math.PI * 2,
+                orbiters: Array.from({ length: orbiterCount }, (_, orbiterIndex) => ({
+                    distance: 1.35 + orbiterIndex * .34 + Math.random() * .14,
+                    phase: Math.random() * Math.PI * 2,
+                    size: (isBlackHole ? 1.1 : 1.5) + Math.random() * (isBlackHole ? 1.3 : 1.8),
+                    speed: (isBlackHole ? .00028 : .0001) * (orbiterIndex % 2 ? -1 : 1) * (.78 + Math.random() * .45)
+                }))
+            };
+        });
 
         nodeLinks = [];
         const seenLinks = new Set();
@@ -256,7 +272,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             const proximity = pointer.active ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 270) : 0;
 
             context.beginPath();
-            context.strokeStyle = `rgba(123,168,216,${.045 + proximity * .2})`;
+            context.strokeStyle = `rgba(123,168,216,${.032 + proximity * .2})`;
             context.lineWidth = .45 + proximity * .65;
             context.moveTo(firstX, firstY);
             context.lineTo(secondX, secondY);
@@ -270,38 +286,76 @@ function setupGalaxyField(canvas, reducedMotion) {
             const dy = y - pointer.y;
             const proximity = pointer.active ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 260) : 0;
             const pulse = .84 + Math.sin(time * .001 + node.phase) * .12;
-            const alpha = (.05 + proximity * .3) * pulse;
+            const alpha = (.07 + proximity * .34) * pulse;
             const radius = node.radius * (1 + proximity * .18);
-            const orbitAngle = time * node.speed + node.phase;
 
             context.save();
             context.translate(x, y);
-            context.strokeStyle = `rgba(145,190,232,${alpha})`;
-            context.fillStyle = `rgba(178,211,239,${alpha * 1.25})`;
-            context.lineWidth = .55 + proximity * .7;
 
-            context.beginPath();
-            context.arc(0, 0, radius, 0, Math.PI * 2);
-            context.stroke();
+            if (node.type === 'black-hole') {
+                context.fillStyle = `rgba(1,2,5,${.78 + proximity * .16})`;
+                context.beginPath();
+                context.arc(0, 0, radius * .72, 0, Math.PI * 2);
+                context.fill();
 
-            context.beginPath();
-            context.arc(0, 0, radius * .58, 0, Math.PI * 2);
-            context.stroke();
-            context.beginPath();
-            context.arc(0, 0, 1.2 + proximity * 1.5, 0, Math.PI * 2);
-            context.fill();
-            context.beginPath();
-            context.arc(
-                Math.cos(orbitAngle) * radius * .8,
-                Math.sin(orbitAngle) * radius * .8,
-                1.1 + proximity,
-                0,
-                Math.PI * 2
-            );
-            context.fill();
-            context.beginPath();
-            context.arc(0, 0, radius * .8, orbitAngle - .75, orbitAngle + .75);
-            context.stroke();
+                for (let ringIndex = 0; ringIndex < 3; ringIndex += 1) {
+                    const ringRadius = radius * (1 + ringIndex * .24);
+                    const ringRotation = time * (.00009 + ringIndex * .000025) * (ringIndex % 2 ? -1 : 1) + node.phase;
+                    context.beginPath();
+                    context.strokeStyle = `rgba(${ringIndex === 1 ? '154,126,181' : '123,168,216'},${alpha * (.9 - ringIndex * .18)})`;
+                    context.lineWidth = 1.15 - ringIndex * .2 + proximity * .65;
+                    context.arc(0, 0, ringRadius, ringRotation, ringRotation + Math.PI * (1.15 + ringIndex * .18));
+                    context.stroke();
+                }
+
+                context.beginPath();
+                context.strokeStyle = `rgba(207,226,244,${alpha * .82})`;
+                context.lineWidth = .65 + proximity * .7;
+                context.arc(0, 0, radius * .76, 0, Math.PI * 2);
+                context.stroke();
+            } else {
+                context.fillStyle = `rgba(${node.color},${alpha * .42})`;
+                context.beginPath();
+                context.arc(0, 0, radius, 0, Math.PI * 2);
+                context.fill();
+
+                context.fillStyle = `rgba(4,7,11,${.18 + proximity * .04})`;
+                context.beginPath();
+                context.arc(radius * .22, radius * .08, radius * .92, 0, Math.PI * 2);
+                context.fill();
+
+                context.beginPath();
+                context.strokeStyle = `rgba(${node.color},${alpha * 1.18})`;
+                context.lineWidth = .75 + proximity * .8;
+                context.arc(0, 0, radius, 0, Math.PI * 2);
+                context.stroke();
+                context.beginPath();
+                context.strokeStyle = `rgba(210,229,245,${alpha * .38})`;
+                context.lineWidth = .45;
+                context.arc(0, 0, radius * .78, node.phase, node.phase + Math.PI * 1.15);
+                context.stroke();
+            }
+
+            for (const orbiter of node.orbiters) {
+                const orbitRadius = radius * orbiter.distance;
+                const orbitAngle = time * orbiter.speed + orbiter.phase;
+                const orbiterX = Math.cos(orbitAngle) * orbitRadius;
+                const orbiterY = Math.sin(orbitAngle) * orbitRadius;
+
+                context.beginPath();
+                context.strokeStyle = `rgba(145,190,232,${alpha * (node.type === 'black-hole' ? .35 : .2)})`;
+                context.lineWidth = .4;
+                context.arc(0, 0, orbitRadius, 0, Math.PI * 2);
+                context.stroke();
+                context.beginPath();
+                context.fillStyle = `rgba(198,222,243,${alpha * 1.45})`;
+                context.arc(orbiterX, orbiterY, orbiter.size * (1 + proximity * .4), 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.strokeStyle = `rgba(123,168,216,${alpha * .5})`;
+                context.arc(0, 0, orbitRadius, orbitAngle - .48, orbitAngle);
+                context.stroke();
+            }
             context.restore();
         }
     };
