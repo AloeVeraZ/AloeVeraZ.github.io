@@ -99,6 +99,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     let width = window.innerWidth;
     let height = window.innerHeight;
     let stars = [];
+    let constellationLinks = [];
+    let navigationBeacons = [];
     let animationFrame = 0;
     let previousTime = performance.now();
     let lastDrawTime = 0;
@@ -143,6 +145,114 @@ function setupGalaxyField(canvas, reducedMotion) {
         };
     };
 
+    const buildConstellationLinks = () => {
+        constellationLinks = [];
+        const maximumLinks = width < 700 ? 14 : lowPowerDevice ? 20 : 32;
+        const maximumDistanceSquared = Math.pow(width < 700 ? 145 : 190, 2);
+
+        for (let firstIndex = 0; firstIndex < stars.length && constellationLinks.length < maximumLinks; firstIndex += 2) {
+            let nearestIndex = -1;
+            let nearestDistanceSquared = maximumDistanceSquared;
+            for (let secondIndex = firstIndex + 1; secondIndex < stars.length; secondIndex += 1) {
+                const dx = stars[firstIndex].x - stars[secondIndex].x;
+                const dy = stars[firstIndex].y - stars[secondIndex].y;
+                const distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared < nearestDistanceSquared) {
+                    nearestDistanceSquared = distanceSquared;
+                    nearestIndex = secondIndex;
+                }
+            }
+            if (nearestIndex >= 0) constellationLinks.push([firstIndex, nearestIndex]);
+        }
+    };
+
+    const buildNavigationBeacons = () => {
+        const beaconCount = width < 700 || lowPowerDevice ? 2 : 4;
+        navigationBeacons = [
+            { x: .13, y: .32, radius: 22, sides: 6, phase: .4, speed: .00007 },
+            { x: .82, y: .24, radius: 29, sides: 4, phase: 1.7, speed: -.000055 },
+            { x: .74, y: .76, radius: 20, sides: 6, phase: 2.8, speed: .00009 },
+            { x: .28, y: .72, radius: 25, sides: 3, phase: 4.1, speed: -.000065 }
+        ].slice(0, beaconCount);
+    };
+
+    const drawConstellations = time => {
+        const maximumLinkLength = width < 700 ? 170 : 220;
+        for (const [firstIndex, secondIndex] of constellationLinks) {
+            const first = stars[firstIndex];
+            const second = stars[secondIndex];
+            if (!first || !second) continue;
+            const firstX = first.x + pointer.rotateY * first.depth * 1.35;
+            const firstY = first.y - pointer.rotateX * first.depth * 1.35;
+            const secondX = second.x + pointer.rotateY * second.depth * 1.35;
+            const secondY = second.y - pointer.rotateX * second.depth * 1.35;
+            const linkX = secondX - firstX;
+            const linkY = secondY - firstY;
+            if (linkX * linkX + linkY * linkY > maximumLinkLength * maximumLinkLength) continue;
+
+            let illumination = 0;
+            if (pointer.active) {
+                const midpointX = (firstX + secondX) / 2;
+                const midpointY = (firstY + secondY) / 2;
+                const dx = midpointX - pointer.x;
+                const dy = midpointY - pointer.y;
+                illumination = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 210);
+            }
+            const shimmer = .78 + Math.sin(time * .0008 + first.phase) * .16;
+            context.beginPath();
+            context.strokeStyle = `rgba(123,168,216,${(.035 + illumination * .22) * shimmer})`;
+            context.lineWidth = .4 + illumination * .8;
+            context.moveTo(firstX, firstY);
+            context.lineTo(secondX, secondY);
+            context.stroke();
+        }
+    };
+
+    const drawNavigationBeacons = time => {
+        for (const beacon of navigationBeacons) {
+            const x = beacon.x * width + pointer.rotateY * 2.2;
+            const y = beacon.y * height - pointer.rotateX * 2.2;
+            const dx = x - pointer.x;
+            const dy = y - pointer.y;
+            const proximity = pointer.active ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 240) : 0;
+            const pulse = .82 + Math.sin(time * .001 + beacon.phase) * .14;
+            const alpha = (.045 + proximity * .3) * pulse;
+            const radius = beacon.radius * (1 + proximity * .16);
+            const rotation = time * beacon.speed + beacon.phase;
+
+            context.save();
+            context.translate(x, y);
+            context.rotate(rotation);
+            context.strokeStyle = `rgba(145,190,232,${alpha})`;
+            context.fillStyle = `rgba(178,211,239,${alpha * 1.25})`;
+            context.lineWidth = .55 + proximity * .7;
+
+            context.beginPath();
+            for (let side = 0; side <= beacon.sides; side += 1) {
+                const angle = side / beacon.sides * Math.PI * 2 - Math.PI / 2;
+                const pointX = Math.cos(angle) * radius;
+                const pointY = Math.sin(angle) * radius;
+                if (side === 0) context.moveTo(pointX, pointY);
+                else context.lineTo(pointX, pointY);
+            }
+            context.stroke();
+
+            context.beginPath();
+            context.ellipse(0, 0, radius * .58, radius * .26, -rotation * .7, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(-radius * .32, 0);
+            context.lineTo(radius * .32, 0);
+            context.moveTo(0, -radius * .32);
+            context.lineTo(0, radius * .32);
+            context.stroke();
+            context.beginPath();
+            context.arc(Math.cos(time * .00045 + beacon.phase) * radius * .58, Math.sin(time * .00045 + beacon.phase) * radius * .26, 1 + proximity, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+        }
+    };
+
     const draw = (time, force = false) => {
         if (!force && time - lastDrawTime < frameInterval) {
             animationFrame = requestAnimationFrame(draw);
@@ -161,6 +271,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.velocityY *= .8;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.07)`;
         scrollEnergy *= .84;
+        drawConstellations(time);
+        drawNavigationBeacons(time);
 
         for (const star of stars) {
             const oldY = star.y;
@@ -168,10 +280,14 @@ function setupGalaxyField(canvas, reducedMotion) {
             star.x += star.driftX * speed * delta;
             star.y += (star.driftY * speed - scrollEnergy * star.depth * .006) * delta;
 
+            let illumination = 0;
             if (pointer.active) {
                 const dx = star.x - pointer.x;
                 const dy = star.y - pointer.y;
                 const distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared < 44100) {
+                    illumination = Math.max(0, 1 - Math.sqrt(distanceSquared) / 210);
+                }
                 if (distanceSquared > 1 && distanceSquared < 19600) {
                     const distance = Math.sqrt(distanceSquared);
                     const force = (1 - distance / 140) * star.depth * .38 * delta;
@@ -185,13 +301,21 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (star.x < -8) star.x = width + 8;
             else if (star.x > width + 8) star.x = -8;
 
-            const alpha = (.1 + star.depth * .48) * (.64 + Math.sin(time * star.twinkleSpeed + star.phase) * .18);
+            const alpha = Math.min(.92, (.1 + star.depth * .48) * (.64 + Math.sin(time * star.twinkleSpeed + star.phase) * .18) + illumination * .38);
             const drawX = star.x + pointer.rotateY * star.depth * 1.35;
             const drawY = star.y - pointer.rotateX * star.depth * 1.35;
             context.beginPath();
             context.fillStyle = `rgba(${star.color},${alpha})`;
-            context.arc(drawX, drawY, star.radius * (.65 + star.depth), 0, Math.PI * 2);
+            context.arc(drawX, drawY, star.radius * (.65 + star.depth) * (1 + illumination * .65), 0, Math.PI * 2);
             context.fill();
+
+            if (illumination > .28 && star.depth > .48) {
+                context.beginPath();
+                context.strokeStyle = `rgba(${star.color},${illumination * .2})`;
+                context.lineWidth = .45;
+                context.arc(drawX, drawY, 3 + illumination * 5, 0, Math.PI * 2);
+                context.stroke();
+            }
 
             if (star.flare && alpha > .32) {
                 const flareSize = 2.5 + star.depth * 2.5;
@@ -230,6 +354,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         const minimumStars = width < 700 ? 34 : lowPowerDevice ? 44 : 54;
         const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, width * height / 19000)));
         stars = Array.from({ length: starCount }, makeStar);
+        buildConstellationLinks();
+        buildNavigationBeacons();
         if (reducedMotion.matches) draw(performance.now(), true);
     };
 
