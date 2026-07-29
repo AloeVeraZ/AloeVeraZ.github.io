@@ -311,3 +311,56 @@ footer { background: #050505; }
     color: #080808;
     transform: translateY(-3px);
 }
+
+/* About and Skills use one identical three-card system. */
+.about-highlights,
+.skills-categories {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 0;
+    background: transparent;
+}
+.about-highlight,
+.skill-group {
+    position: relative;
+    z-index: 0;
+    width: 100%;
+    height: 240px;
+    min-height: 240px;
+    padding: 1.35rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition:
+        transform .2s var(--ease),
+        background .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease;
+}
+.about-highlight + .about-highlight,
+.skill-group + .skill-group {
+    margin-left: -1px;
+}
+.about-highlight:hover,
+.skill-group:hover {
+    z-index: 2;
+    background: #151d26;
+    border-color: var(--blue);
+    box-shadow: 0 6px 0 rgba(123,168,216,.22);
+    transform: translateY(-6px);
+}
+@media (max-width: 800px) {
+    .about-highlights,
+    .skills-categories {
+        grid-template-columns: 1fr;
+    }
+    .about-highlight,
+    .skill-group {
+        height: auto;
+        min-height: 240px;
+    }
+    .about-highlight + .about-highlight,
+    .skill-group + .skill-group {
+        margin-top: -1px;
+        margin-left: 0;
+    }
+}
