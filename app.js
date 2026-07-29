@@ -94,9 +94,9 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            controls.innerHTML = '<span>Use the arrows to browse projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
+            controls.innerHTML = '<span>Browse with the arrows or watch the projects advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
             content.prepend(controls);
-            setupCarousel(gallery, controls);
+            setupCarousel(gallery, controls, collection.name === 'Personal Projects');
         }
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
@@ -104,25 +104,53 @@ function renderProjectCollections(collections, projects) {
     });
 }
 
-function setupCarousel(carousel, controls) {
-    const move = (step, button) => {
+function setupCarousel(carousel, controls, autoplay = false) {
+    let currentIndex = 0;
+    let paused = false;
+    let scrollSyncTimer;
+    const getMetrics = () => {
         const card = carousel.querySelector('.project-card');
-        if (!card) return;
+        if (!card) return null;
         const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
         const distance = card.getBoundingClientRect().width + gap;
-        const maxScroll = carousel.scrollWidth - carousel.clientWidth;
-        let target = carousel.scrollLeft + (step * distance);
-        if (target > maxScroll - 2) target = 0;
-        if (target < 2) target = maxScroll;
+        const maxScroll = Math.max(carousel.scrollWidth - carousel.clientWidth, 0);
+        const lastIndex = Math.max(Math.ceil((maxScroll - 2) / distance), 0);
+        return { distance, maxScroll, lastIndex };
+    };
+    const move = (step, button) => {
+        const metrics = getMetrics();
+        if (!metrics || metrics.maxScroll <= 0) return;
+        const positionCount = metrics.lastIndex + 1;
+        currentIndex = (currentIndex + step + positionCount) % positionCount;
+        const target = Math.min(currentIndex * metrics.distance, metrics.maxScroll);
         carousel.scrollTo({ left: target, behavior: 'smooth' });
-        controls.querySelectorAll('.carousel-arrow').forEach(arrow => arrow.classList.remove('is-nudging'));
-        void button.offsetWidth;
-        button.classList.add('is-nudging');
+        if (button) {
+            controls.querySelectorAll('.carousel-arrow').forEach(arrow => arrow.classList.remove('is-nudging'));
+            void button.offsetWidth;
+            button.classList.add('is-nudging');
+        }
     };
     const previous = controls.querySelector('.carousel-prev');
     const next = controls.querySelector('.carousel-next');
     previous.addEventListener('click', () => move(-1, previous));
     next.addEventListener('click', () => move(1, next));
+    carousel.addEventListener('scroll', () => {
+        clearTimeout(scrollSyncTimer);
+        scrollSyncTimer = setTimeout(() => {
+            const metrics = getMetrics();
+            if (metrics) currentIndex = Math.min(Math.round(carousel.scrollLeft / metrics.distance), metrics.lastIndex);
+        }, 160);
+    }, { passive: true });
+    if (autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const interactionRegion = controls.parentElement;
+        interactionRegion.addEventListener('mouseenter', () => { paused = true; });
+        interactionRegion.addEventListener('mouseleave', () => { paused = false; });
+        interactionRegion.addEventListener('focusin', () => { paused = true; });
+        interactionRegion.addEventListener('focusout', () => { paused = false; });
+        window.setInterval(() => {
+            if (!paused && !document.hidden && !carousel.closest('[hidden]')) move(1);
+        }, 4500);
+    }
 }
 
 function buildLinkButtons(links = {}) {
