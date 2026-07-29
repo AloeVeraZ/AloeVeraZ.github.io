@@ -19,6 +19,18 @@ body::-webkit-scrollbar { display: none; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
+.background-grid {
+    position: fixed;
+    inset: -48px;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    will-change: transform;
+    contain: strict;
+}
 .galaxy-field {
     position: fixed;
     inset: 0;
@@ -352,7 +364,7 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
 }
 
 /* High-impact engineering portfolio direction */
-body { background-color: var(--bg); background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 48px 48px; background-attachment: fixed; }
+body { background-color: var(--bg); background-image: none; }
 .navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.96); }
 .nav-content, main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); }
 
@@ -450,6 +462,7 @@ footer { background: #050505; }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
+    .background-grid { transform: none !important; }
     .galaxy-field { transform: none !important; }
     .galaxy-nebula { transform: none !important; opacity: .54; }
     .cursor-spark, .cursor-ripple { display: none; }

@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const backgroundGrid = document.createElement('div');
+    backgroundGrid.className = 'background-grid';
+    backgroundGrid.setAttribute('aria-hidden', 'true');
     const galaxyCanvas = document.createElement('canvas');
     galaxyCanvas.className = 'galaxy-field';
     galaxyCanvas.setAttribute('aria-hidden', 'true');
@@ -8,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ambientGlow = document.createElement('div');
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
-    document.body.prepend(galaxyCanvas);
+    document.body.prepend(backgroundGrid);
+    backgroundGrid.after(galaxyCanvas);
     galaxyCanvas.after(galaxyNebula);
     galaxyNebula.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
@@ -28,6 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let targetGlowY = window.innerHeight * .2;
     let currentGlowX = targetGlowX;
     let currentGlowY = targetGlowY;
+    let nebulaPointerX = 0;
+    let nebulaPointerY = 0;
+    let nebulaScrollX = 0;
+    let nebulaScrollY = 0;
+
+    const renderNebulaTransform = () => {
+        galaxyNebula.style.transform = `translate3d(${nebulaPointerX + nebulaScrollX}px, ${nebulaPointerY + nebulaScrollY}px, 0) scale(1.04)`;
+    };
 
     const animatePointerEffect = () => {
         const followSpeed = reducedMotion.matches ? 1 : .14;
@@ -36,9 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ambientGlow.style.setProperty('--glow-x', `${currentGlowX}px`);
         ambientGlow.style.setProperty('--glow-y', `${currentGlowY}px`);
         ambientGlow.style.transform = `translate3d(${currentGlowX - 210}px, ${currentGlowY - 210}px, 0)`;
-        const nebulaShiftX = ((currentGlowX / window.innerWidth) - .5) * -10;
-        const nebulaShiftY = ((currentGlowY / window.innerHeight) - .5) * -8;
-        galaxyNebula.style.transform = `translate3d(${nebulaShiftX}px, ${nebulaShiftY}px, 0) scale(1.04)`;
+        nebulaPointerX = ((currentGlowX / window.innerWidth) - .5) * -10;
+        nebulaPointerY = ((currentGlowY / window.innerHeight) - .5) * -8;
+        renderNebulaTransform();
 
         const remainingDistance = Math.abs(targetGlowX - currentGlowX) + Math.abs(targetGlowY - currentGlowY);
         if (remainingDistance > .35) {
@@ -64,6 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
         pageScrollFill.style.transform = `scaleY(${progress})`;
+        if (!reducedMotion.matches) {
+            const gridOffset = -((window.scrollY * .12) % 48);
+            backgroundGrid.style.transform = `translate3d(0, ${gridOffset}px, 0)`;
+            nebulaScrollX = Math.sin(window.scrollY * .0008) * 12;
+            nebulaScrollY = Math.sin(window.scrollY * .00125) * -26;
+            renderNebulaTransform();
+            galaxy.scroll(window.scrollY);
+        }
 
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
@@ -94,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupGalaxyField(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    if (!context) return { move() {} };
+    if (!context) return { move() {}, scroll() {} };
 
     let width = window.innerWidth;
     let height = window.innerHeight;
@@ -106,6 +126,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     let previousTime = performance.now();
     let lastDrawTime = 0;
     let previousScrollY = window.scrollY;
+    let scrollPosition = window.scrollY;
+    let targetScrollPosition = window.scrollY;
     let scrollEnergy = 0;
     const lowPowerDevice = (navigator.hardwareConcurrency || 4) <= 4
         || ('deviceMemory' in navigator && navigator.deviceMemory <= 4);
@@ -189,6 +211,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 type: isBlackHole ? 'black-hole' : 'planet',
                 color: planetColors[Math.floor(Math.random() * planetColors.length)],
                 phase: Math.random() * Math.PI * 2,
+                scrollDepth: .035 + Math.random() * .075,
                 orbiters: Array.from({ length: orbiterCount }, (_, orbiterIndex) => ({
                     distance: 1.35 + orbiterIndex * .34 + Math.random() * .14,
                     phase: Math.random() * Math.PI * 2,
@@ -257,14 +280,26 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
 
     const drawCircularConstellation = time => {
+        for (const node of constellationNodes) {
+            const margin = node.radius * 2.8;
+            const verticalSpan = height + margin * 2;
+            const rawY = node.y * height - scrollPosition * node.scrollDepth;
+            node.screenX = node.x * width + pointer.rotateY * 2.2;
+            node.screenY = ((rawY + margin) % verticalSpan + verticalSpan) % verticalSpan - margin - pointer.rotateX * 2.2;
+        }
+
         for (const [firstIndex, secondIndex] of nodeLinks) {
             const first = constellationNodes[firstIndex];
             const second = constellationNodes[secondIndex];
             if (!first || !second) continue;
-            const firstX = first.x * width + pointer.rotateY * 2.2;
-            const firstY = first.y * height - pointer.rotateX * 2.2;
-            const secondX = second.x * width + pointer.rotateY * 2.2;
-            const secondY = second.y * height - pointer.rotateX * 2.2;
+            const firstX = first.screenX;
+            const firstY = first.screenY;
+            const secondX = second.screenX;
+            const secondY = second.screenY;
+            const linkX = secondX - firstX;
+            const linkY = secondY - firstY;
+            const maximumLinkLength = Math.max(260, Math.min(width, height) * .72);
+            if (linkX * linkX + linkY * linkY > maximumLinkLength * maximumLinkLength) continue;
             const midpointX = (firstX + secondX) / 2;
             const midpointY = (firstY + secondY) / 2;
             const dx = midpointX - pointer.x;
@@ -280,8 +315,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
 
         for (const node of constellationNodes) {
-            const x = node.x * width + pointer.rotateY * 2.2;
-            const y = node.y * height - pointer.rotateX * 2.2;
+            const x = node.screenX;
+            const y = node.screenY;
             const dx = x - pointer.x;
             const dy = y - pointer.y;
             const proximity = pointer.active ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 260) : 0;
@@ -376,6 +411,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .12;
         pointer.velocityX *= .8;
         pointer.velocityY *= .8;
+        scrollPosition += (targetScrollPosition - scrollPosition) * .2;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.07)`;
         scrollEnergy *= .84;
         drawConstellations(time);
@@ -484,22 +520,29 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.active = true;
     };
 
+    const scroll = scrollY => {
+        const scrollDelta = Math.max(-90, Math.min(90, scrollY - previousScrollY));
+        targetScrollPosition = scrollY;
+        scrollEnergy = Math.max(-18, Math.min(18, scrollEnergy + scrollDelta * .16));
+        for (const star of stars) {
+            star.y -= scrollDelta * (.025 + star.depth * .16);
+            if (star.y < -8) star.y = height + 8;
+            else if (star.y > height + 8) star.y = -8;
+        }
+        previousScrollY = scrollY;
+    };
+
     document.documentElement.addEventListener('pointerleave', () => {
         pointer.active = false;
         pointer.targetRotateX = 0;
         pointer.targetRotateY = 0;
     });
-    window.addEventListener('scroll', () => {
-        const nextScrollY = window.scrollY;
-        scrollEnergy = Math.max(-15, Math.min(15, scrollEnergy + (nextScrollY - previousScrollY) * .1));
-        previousScrollY = nextScrollY;
-    }, { passive: true });
     window.addEventListener('resize', resize, { passive: true });
     document.addEventListener('visibilitychange', start);
     reducedMotion.addEventListener('change', start);
     resize();
     start();
-    return { move };
+    return { move, scroll };
 }
 
 function setupCursorEffects(cursorDot, reducedMotion) {
