@@ -127,9 +127,10 @@ main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); margin: auto; pa
 .carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); transform: translateY(-1px); }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
 @keyframes nudge { 50% { transform: scale(.85); } }
-.project-carousel { display: flex; gap: 1.25rem; margin-top: -8px; padding-top: 8px; padding-bottom: 1.5rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.project-carousel { display: flex; gap: 1.25rem; margin-top: -8px; padding-top: 8px; padding-bottom: 1.5rem; overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; }
 .project-carousel::-webkit-scrollbar { display: none; }
 .project-carousel .project-card { flex: 0 0 calc((100% - 2.5rem) / 3); scroll-snap-align: start; }
+.project-carousel .carousel-clone { pointer-events: none; }
 .project-carousel .project-image-wrapper, .compact-project-grid .project-image-wrapper { height: 185px; }
 .project-carousel .project-action-links, .compact-project-grid .project-action-links { display: none; }
 .compact-project-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; padding-bottom: 1.5rem; }

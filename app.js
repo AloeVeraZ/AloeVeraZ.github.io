@@ -93,56 +93,114 @@ function renderProjectCollections(collections, projects) {
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
+        let initializeCarousel = () => {};
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
             controls.innerHTML = '<span>Browse with the arrows or watch the projects advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
             content.prepend(controls);
-            setupCarousel(gallery, controls, true);
+            initializeCarousel = setupCarousel(gallery, controls, true);
         }
         const toggle = group.querySelector('.collection-toggle');
-        toggle.addEventListener('click', () => { const opening = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(opening)); content.hidden = !opening; });
+        toggle.addEventListener('click', () => {
+            const opening = toggle.getAttribute('aria-expanded') !== 'true';
+            toggle.setAttribute('aria-expanded', String(opening));
+            content.hidden = !opening;
+            if (opening) window.requestAnimationFrame(initializeCarousel);
+        });
         container.appendChild(group);
     });
 }
 
 function setupCarousel(carousel, controls, autoplay = false) {
+    const originalCards = [...carousel.querySelectorAll('.project-card')];
+    const cloneCount = Math.min(3, originalCards.length);
+    const beforeClones = document.createDocumentFragment();
+    originalCards.slice(-cloneCount).forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.classList.add('carousel-clone');
+        clone.setAttribute('aria-hidden', 'true');
+        beforeClones.appendChild(clone);
+    });
+    carousel.prepend(beforeClones);
+    originalCards.slice(0, cloneCount).forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.classList.add('carousel-clone');
+        clone.setAttribute('aria-hidden', 'true');
+        carousel.appendChild(clone);
+    });
     let currentIndex = 0;
     let autoplayTimer;
     let scrollAnimation;
+    let initialized = false;
+    let isAnimating = false;
     let controlsHovered = false;
     let controlsFocused = false;
     const autoplayEnabled = autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const getMetrics = () => {
-        const card = carousel.querySelector('.project-card');
+        const card = originalCards[0];
         if (!card) return null;
         const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
         const distance = card.getBoundingClientRect().width + gap;
-        const maxScroll = Math.max(carousel.scrollWidth - carousel.clientWidth, 0);
-        const lastIndex = Math.max(Math.ceil((maxScroll - 2) / distance), 0);
-        return { distance, maxScroll, lastIndex };
+        const visibleCount = Math.max(Math.round(carousel.clientWidth / distance), 1);
+        const lastIndex = Math.max(originalCards.length - visibleCount, 0);
+        return { distance, lastIndex };
     };
-    const animateScroll = target => {
+    const initialize = () => {
+        const metrics = getMetrics();
+        if (!metrics || metrics.distance <= 0) return;
+        window.cancelAnimationFrame(scrollAnimation);
+        carousel.scrollTo({ left: cloneCount * metrics.distance, behavior: 'auto' });
+        currentIndex = 0;
+        initialized = true;
+        isAnimating = false;
+    };
+    const animateScroll = (target, onComplete) => {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
-        const duration = 560;
+        const duration = 520;
         const startedAt = performance.now();
+        isAnimating = true;
         const frame = now => {
             const progress = Math.min((now - startedAt) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
+            const eased = progress < .5
+                ? 4 * Math.pow(progress, 3)
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
             carousel.scrollTo({ left: start + (change * eased), behavior: 'auto' });
-            if (progress < 1) scrollAnimation = window.requestAnimationFrame(frame);
+            if (progress < 1) {
+                scrollAnimation = window.requestAnimationFrame(frame);
+            } else {
+                onComplete?.();
+                isAnimating = false;
+            }
         };
         scrollAnimation = window.requestAnimationFrame(frame);
     };
     const move = (step, button) => {
+        if (!initialized) initialize();
+        if (isAnimating) return;
         const metrics = getMetrics();
-        if (!metrics || metrics.maxScroll <= 0) return;
+        if (!metrics || metrics.lastIndex <= 0) return;
         const positionCount = metrics.lastIndex + 1;
-        currentIndex = (currentIndex + step + positionCount) % positionCount;
-        const target = Math.min(currentIndex * metrics.distance, metrics.maxScroll);
-        animateScroll(target);
+        const nextIndex = (currentIndex + step + positionCount) % positionCount;
+        const wrappingBackward = currentIndex === 0 && step < 0;
+        const wrappingForward = currentIndex === metrics.lastIndex && step > 0;
+        let physicalIndex = cloneCount + nextIndex;
+        let resetIndex = null;
+        if (wrappingBackward) {
+            physicalIndex = 0;
+            resetIndex = cloneCount + metrics.lastIndex;
+        } else if (wrappingForward) {
+            physicalIndex = cloneCount + originalCards.length;
+            resetIndex = cloneCount;
+        }
+        currentIndex = nextIndex;
+        animateScroll(physicalIndex * metrics.distance, () => {
+            if (resetIndex !== null) {
+                carousel.scrollTo({ left: resetIndex * metrics.distance, behavior: 'auto' });
+            }
+        });
         if (button) {
             controls.querySelectorAll('.carousel-arrow').forEach(arrow => arrow.classList.remove('is-nudging'));
             void button.offsetWidth;
@@ -190,6 +248,7 @@ function setupCarousel(carousel, controls, autoplay = false) {
         scheduleAutoplay();
     });
     scheduleAutoplay();
+    return initialize;
 }
 
 function buildLinkButtons(links = {}) {
