@@ -16,14 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="kinetic-object kinetic-chevron" style="--x: 14vw; --y: 62vh; --size: 54px;" data-depth=".38" data-phase="6.8"></span>
         <span class="kinetic-object kinetic-cross kinetic-cross-small" style="--x: 80vw; --y: 40vh; --size: 38px;" data-depth=".56" data-phase="7.9"></span>`;
     ambientGlow.after(kineticField);
+    const motionBackplate = document.createElement('div');
+    motionBackplate.className = 'motion-backplate';
+    motionBackplate.setAttribute('aria-hidden', 'true');
+    motionBackplate.innerHTML = `
+        <span class="motion-word motion-word-primary" data-phase=".2">MECHANICAL&nbsp;&nbsp;ROBOTICS&nbsp;&nbsp;DESIGN</span>
+        <span class="motion-word motion-word-secondary" data-phase="2.8">BUILD&nbsp;&nbsp;TEST&nbsp;&nbsp;ITERATE</span>
+        <span class="motion-arc motion-arc-one"></span>
+        <span class="motion-arc motion-arc-two"></span>
+        <span class="scroll-rail"><i class="scroll-rail-marker"></i></span>`;
+    kineticField.after(motionBackplate);
     const kineticObjects = [...kineticField.querySelectorAll('.kinetic-object')];
+    const motionWords = [...motionBackplate.querySelectorAll('.motion-word')];
+    const scrollRailMarker = motionBackplate.querySelector('.scroll-rail-marker');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--pointer-y', `${event.clientY}px`);
+        const pointerX = (event.clientX / Math.max(window.innerWidth, 1)) - .5;
+        const pointerY = (event.clientY / Math.max(window.innerHeight, 1)) - .5;
+        document.documentElement.style.setProperty('--parallax-x', `${pointerX * 14}px`);
+        document.documentElement.style.setProperty('--parallax-y', `${pointerY * 10}px`);
+        document.documentElement.style.setProperty('--parallax-x-reverse', `${pointerX * -8}px`);
+        document.documentElement.style.setProperty('--parallax-y-reverse', `${pointerY * -6}px`);
     });
     window.addEventListener('pointerdown', event => {
         if (event.button !== 0 || reducedMotion.matches) return;
+        const collectionOpen = document.querySelector('.collection-toggle[aria-expanded="true"]');
+        const modalOpen = document.getElementById('project-modal')?.classList.contains('active');
+        const importantTarget = event.target.closest('a, button, .project-card, .about-highlight, .skill-group, .collection-content, .modal-overlay, .contact-links, .social-links, .hero-content, .section-header, .bio-text, .contact-desc');
+        const blankSurface = event.target.matches('body, main, .section, .hero-section, .project-library');
+        if (collectionOpen || modalOpen || importantTarget || !blankSurface) return;
         const ripple = document.createElement('span');
         ripple.className = 'click-ripple';
         ripple.style.left = `${event.clientX}px`;
@@ -34,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const updateScrollMotion = () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-        document.documentElement.style.setProperty('--scroll-progress', window.scrollY / maxScroll);
+        const scrollProgress = window.scrollY / maxScroll;
+        document.documentElement.style.setProperty('--scroll-progress', scrollProgress);
         document.documentElement.style.setProperty('--scroll-shift', `${Math.min(window.scrollY * 0.08, 70)}px`);
         document.documentElement.style.setProperty('--scroll-shift-reverse', `${Math.min(window.scrollY * -0.04, 35)}px`);
         kineticObjects.forEach(object => {
@@ -46,6 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const rotation = object.dataset.rotate === 'false' ? 0 : (window.scrollY * depth * .035) + (phase * 8);
             object.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
         });
+        motionWords.forEach((word, index) => {
+            const phase = Number.parseFloat(word.dataset.phase) || 0;
+            const horizontal = Math.sin((window.scrollY * .00115) + phase) * (index === 0 ? 110 : 78);
+            const vertical = Math.cos((window.scrollY * .0017) + phase) * 14;
+            word.style.transform = `translate3d(${horizontal}px, ${vertical}px, 0)`;
+        });
+        scrollRailMarker.style.top = `${scrollProgress * 100}%`;
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
     };
     window.addEventListener('scroll', updateScrollMotion, { passive: true });
