@@ -7,28 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
     kineticField.className = 'kinetic-field';
     kineticField.setAttribute('aria-hidden', 'true');
     kineticField.innerHTML = `
-        <span class="kinetic-object kinetic-orbit" style="--x: 4vw; --y: 18vh; --size: 92px;" data-depth=".72" data-phase=".4"></span>
-        <span class="kinetic-object kinetic-cross" style="--x: 91vw; --y: 24vh; --size: 62px;" data-depth=".45" data-phase="1.8"></span>
-        <span class="kinetic-object kinetic-ruler" style="--x: 2vw; --y: 48vh; --size: 118px;" data-depth=".3" data-phase="3.1" data-rotate="false"></span>
-        <span class="kinetic-object kinetic-bracket" style="--x: 92vw; --y: 54vh; --size: 76px;" data-depth=".62" data-phase="4.4"></span>
-        <span class="kinetic-object kinetic-dots" style="--x: 5vw; --y: 76vh; --size: 88px;" data-depth=".5" data-phase="5.7" data-rotate="false"></span>
-        <span class="kinetic-object kinetic-orbit kinetic-orbit-small" style="--x: 88vw; --y: 82vh; --size: 64px;" data-depth=".82" data-phase="2.5"></span>
-        <span class="kinetic-object kinetic-chevron" style="--x: 14vw; --y: 62vh; --size: 54px;" data-depth=".38" data-phase="6.8"></span>
-        <span class="kinetic-object kinetic-cross kinetic-cross-small" style="--x: 80vw; --y: 40vh; --size: 38px;" data-depth=".56" data-phase="7.9"></span>`;
+        <span class="project-motif motif-swerve" style="--x: 3vw; --y: 17vh; --size: 108px;" data-depth=".72" data-phase=".4"><i></i><i></i><i></i></span>
+        <span class="project-motif motif-corexy" style="--x: 88vw; --y: 20vh; --size: 104px;" data-depth=".45" data-phase="1.8"><i></i></span>
+        <span class="project-motif motif-delta" style="--x: 3vw; --y: 45vh; --size: 116px;" data-depth=".3" data-phase="3.1" data-rotate="false"><i></i><i></i><i></i></span>
+        <span class="project-motif motif-cad" style="--x: 89vw; --y: 48vh; --size: 96px;" data-depth=".62" data-phase="4.4"></span>
+        <span class="project-motif motif-keyboard" style="--x: 4vw; --y: 74vh; --size: 106px;" data-depth=".5" data-phase="5.7" data-rotate="false"></span>
+        <span class="project-motif motif-balance" style="--x: 89vw; --y: 79vh; --size: 82px;" data-depth=".82" data-phase="2.5"><i></i></span>
+        <span class="project-motif motif-layers" style="--x: 14vw; --y: 61vh; --size: 76px;" data-depth=".38" data-phase="6.8"><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="project-motif motif-crawler" style="--x: 80vw; --y: 38vh; --size: 66px;" data-depth=".56" data-phase="7.9"><i></i><i></i></span>`;
     ambientGlow.after(kineticField);
-    const motionBackplate = document.createElement('div');
-    motionBackplate.className = 'motion-backplate';
-    motionBackplate.setAttribute('aria-hidden', 'true');
-    motionBackplate.innerHTML = `
-        <span class="motion-word motion-word-primary" data-phase=".2">MECHANICAL&nbsp;&nbsp;ROBOTICS&nbsp;&nbsp;DESIGN</span>
-        <span class="motion-word motion-word-secondary" data-phase="2.8">BUILD&nbsp;&nbsp;TEST&nbsp;&nbsp;ITERATE</span>
-        <span class="motion-arc motion-arc-one"></span>
-        <span class="motion-arc motion-arc-two"></span>
-        <span class="scroll-rail"><i class="scroll-rail-marker"></i></span>`;
-    kineticField.after(motionBackplate);
-    const kineticObjects = [...kineticField.querySelectorAll('.kinetic-object')];
-    const motionWords = [...motionBackplate.querySelectorAll('.motion-word')];
-    const scrollRailMarker = motionBackplate.querySelector('.scroll-rail-marker');
+    const kineticObjects = [...kineticField.querySelectorAll('.project-motif')];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     window.addEventListener('pointermove', event => {
         document.documentElement.style.setProperty('--pointer-x', `${event.clientX}px`);
@@ -37,8 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const pointerY = (event.clientY / Math.max(window.innerHeight, 1)) - .5;
         document.documentElement.style.setProperty('--parallax-x', `${pointerX * 14}px`);
         document.documentElement.style.setProperty('--parallax-y', `${pointerY * 10}px`);
-        document.documentElement.style.setProperty('--parallax-x-reverse', `${pointerX * -8}px`);
-        document.documentElement.style.setProperty('--parallax-y-reverse', `${pointerY * -6}px`);
     });
     window.addEventListener('pointerdown', event => {
         if (event.button !== 0 || reducedMotion.matches) return;
@@ -70,13 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const rotation = object.dataset.rotate === 'false' ? 0 : (window.scrollY * depth * .035) + (phase * 8);
             object.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
         });
-        motionWords.forEach((word, index) => {
-            const phase = Number.parseFloat(word.dataset.phase) || 0;
-            const horizontal = Math.sin((window.scrollY * .00115) + phase) * (index === 0 ? 110 : 78);
-            const vertical = Math.cos((window.scrollY * .0017) + phase) * 14;
-            word.style.transform = `translate3d(${horizontal}px, ${vertical}px, 0)`;
-        });
-        scrollRailMarker.style.top = `${scrollProgress * 100}%`;
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
     };
     window.addEventListener('scroll', updateScrollMotion, { passive: true });

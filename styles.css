@@ -380,155 +380,150 @@ footer { background: #050505; }
     transform: translate3d(var(--parallax-x, 0), var(--parallax-y, 0), 0);
     transition: transform .16s linear;
 }
-.kinetic-object {
-    --size: 70px;
+.project-motif {
+    --size: 88px;
     position: absolute;
     top: var(--y);
     left: var(--x);
     width: var(--size);
     height: var(--size);
     color: var(--blue);
-    opacity: .2;
+    opacity: .16;
     will-change: transform;
 }
-.kinetic-orbit {
+.motif-swerve::before {
+    content: "";
+    position: absolute;
+    inset: 24% 27%;
+    background: rgba(123,168,216,.12);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    box-shadow: inset 0 0 0 1px currentColor;
+}
+.motif-swerve i {
+    position: absolute;
+    width: 30px;
+    height: 12px;
     border: 1px solid currentColor;
-    border-radius: 50%;
+    border-radius: 8px;
 }
-.kinetic-orbit::before {
-    content: "";
-    position: absolute;
-    inset: 19%;
-    border: 1px dashed currentColor;
-    border-radius: inherit;
-}
-.kinetic-orbit::after {
-    content: "";
-    position: absolute;
-    top: -3px;
-    left: 50%;
-    width: 6px;
-    height: 6px;
-    background: currentColor;
-    border-radius: 50%;
-    transform: translateX(-50%);
-    box-shadow: 0 0 12px rgba(123,168,216,.7);
-}
-.kinetic-orbit-small { opacity: .14; }
-.kinetic-cross {
+.motif-swerve i:nth-child(1) { top: 4px; left: 39px; }
+.motif-swerve i:nth-child(2) { bottom: 10px; left: 5px; transform: rotate(-58deg); }
+.motif-swerve i:nth-child(3) { right: 5px; bottom: 10px; transform: rotate(58deg); }
+.motif-corexy {
+    border: 1px solid currentColor;
     background:
-        linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
-        linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
+        linear-gradient(42deg, transparent 49%, currentColor 50% 50.7%, transparent 51%),
+        linear-gradient(-42deg, transparent 49%, currentColor 50% 50.7%, transparent 51%);
 }
-.kinetic-cross::before {
+.motif-corexy::before {
     content: "";
     position: absolute;
-    inset: 28%;
+    inset: 13%;
+    border: 1px solid rgba(123,168,216,.45);
+}
+.motif-corexy i {
+    position: absolute;
+    top: 43%;
+    left: 43%;
+    width: 15%;
+    height: 18%;
+    background: currentColor;
+    box-shadow: 0 0 8px rgba(123,168,216,.28);
+}
+.motif-delta {
+    border-bottom: 1px solid currentColor;
+}
+.motif-delta i {
+    position: absolute;
+    top: 4%;
+    left: 50%;
+    width: 1px;
+    height: 92%;
+    background: currentColor;
+    transform-origin: top;
+}
+.motif-delta i:nth-child(1) { transform: rotate(28deg); }
+.motif-delta i:nth-child(2) { transform: rotate(-28deg); }
+.motif-delta i:nth-child(3) { height: 70%; box-shadow: 0 70px 0 currentColor; }
+.motif-delta::after {
+    content: "";
+    position: absolute;
+    left: 39%;
+    bottom: 18%;
+    width: 22%;
+    height: 7%;
+    border: 1px solid currentColor;
+}
+.motif-cad {
+    background: rgba(123,168,216,.055);
+    clip-path: polygon(0 16%, 26% 0, 100% 0, 100% 74%, 78% 100%, 0 100%);
+    box-shadow: inset 0 0 0 1px currentColor;
+}
+.motif-cad::before {
+    content: "";
+    position: absolute;
+    inset: 22%;
+    background:
+        radial-gradient(circle at 18% 22%, transparent 0 5px, currentColor 5.5px 6.5px, transparent 7px),
+        radial-gradient(circle at 80% 76%, transparent 0 7px, currentColor 7.5px 8.5px, transparent 9px);
+}
+.motif-keyboard {
+    height: calc(var(--size) * .58);
+    border: 1px solid currentColor;
+    transform: skewX(-8deg);
+    background:
+        repeating-linear-gradient(90deg, transparent 0 10px, rgba(123,168,216,.35) 10px 11px),
+        repeating-linear-gradient(0deg, transparent 0 10px, rgba(123,168,216,.35) 10px 11px);
+}
+.motif-balance i {
+    position: absolute;
+    top: 6%;
+    left: 36%;
+    width: 28%;
+    height: 68%;
+    border: 1px solid currentColor;
+    background: linear-gradient(to bottom, transparent 0 64%, rgba(123,168,216,.14) 65%);
+}
+.motif-balance::before,
+.motif-balance::after {
+    content: "";
+    position: absolute;
+    bottom: 8%;
+    width: 30%;
+    aspect-ratio: 1;
     border: 1px solid currentColor;
     border-radius: 50%;
 }
-.kinetic-cross-small { opacity: .12; }
-.kinetic-ruler {
-    width: 54px;
-    border-left: 1px solid currentColor;
-    background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 12px) left center / 32px 100% no-repeat;
+.motif-balance::before { left: 5%; }
+.motif-balance::after { right: 5%; }
+.motif-layers {
+    display: grid;
+    align-content: center;
+    gap: 7px;
 }
-.kinetic-bracket {
-    border-top: 1px solid currentColor;
-    border-right: 1px solid currentColor;
-}
-.kinetic-bracket::before,
-.kinetic-bracket::after {
-    content: "";
-    position: absolute;
+.motif-layers i {
+    height: 1px;
     background: currentColor;
 }
-.kinetic-bracket::before { top: -3px; left: 0; width: 6px; height: 6px; }
-.kinetic-bracket::after { right: -3px; bottom: 0; width: 6px; height: 6px; }
-.kinetic-dots {
-    background-image: radial-gradient(circle, currentColor 1px, transparent 1.5px);
-    background-size: 12px 12px;
-    opacity: .13;
+.motif-layers i:nth-child(1),
+.motif-layers i:nth-child(5) { width: 54%; margin-left: 23%; }
+.motif-layers i:nth-child(2),
+.motif-layers i:nth-child(4) { width: 78%; margin-left: 11%; }
+.motif-crawler {
+    height: calc(var(--size) * .62);
+    border: 1px solid currentColor;
+    background: rgba(123,168,216,.05);
 }
-.kinetic-chevron {
-    border-top: 1px solid currentColor;
-    border-right: 1px solid currentColor;
-    transform: rotate(45deg);
-    opacity: .14;
-}
-.motion-backplate {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
-    transform: translate3d(var(--parallax-x-reverse, 0), var(--parallax-y-reverse, 0), 0);
-    transition: transform .2s linear;
-}
-.motion-word {
+.motif-crawler i {
     position: absolute;
-    left: -10vw;
-    width: 120vw;
-    color: var(--ink);
-    font-family: "Barlow Condensed", Impact, sans-serif;
-    font-size: clamp(7rem, 17vw, 19rem);
-    font-weight: 800;
-    line-height: .75;
-    letter-spacing: -.055em;
-    white-space: nowrap;
-    opacity: .018;
-    will-change: transform;
-}
-.motion-word-primary { top: 28%; }
-.motion-word-secondary {
-    top: 72%;
-    color: var(--blue);
-    font-size: clamp(6rem, 14vw, 16rem);
-    opacity: .022;
-}
-.motion-arc {
-    position: absolute;
-    width: min(58vw, 760px);
-    aspect-ratio: 1;
-    border: 1px solid rgba(123,168,216,.055);
+    bottom: -10px;
+    width: 17px;
+    height: 17px;
+    border: 1px solid currentColor;
     border-radius: 50%;
 }
-.motion-arc::before,
-.motion-arc::after {
-    content: "";
-    position: absolute;
-    border: 1px dashed rgba(123,168,216,.045);
-    border-radius: inherit;
-}
-.motion-arc::before { inset: 14%; }
-.motion-arc::after { inset: 34%; }
-.motion-arc-one {
-    top: -28vw;
-    right: -16vw;
-}
-.motion-arc-two {
-    bottom: -36vw;
-    left: -22vw;
-}
-.scroll-rail {
-    position: absolute;
-    top: 18%;
-    right: 18px;
-    width: 1px;
-    height: 64%;
-    background: rgba(123,168,216,.1);
-}
-.scroll-rail-marker {
-    position: absolute;
-    left: 50%;
-    width: 7px;
-    height: 7px;
-    background: var(--blue);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(123,168,216,.35);
-    opacity: .55;
-    transform: translate(-50%, -50%);
-}
+.motif-crawler i:first-child { left: 4px; }
+.motif-crawler i:last-child { right: 4px; }
 .click-ripple {
     position: fixed;
     z-index: 2500;
@@ -556,18 +551,10 @@ footer { background: #050505; }
     100% { opacity: 0; transform: translate(-50%, -50%) scale(1.42); }
 }
 @media (max-width: 1100px) {
-    .kinetic-ruler,
-    .kinetic-chevron,
-    .kinetic-cross-small {
-        display: none;
-    }
-    .kinetic-object { opacity: .1; }
-    .motion-word { opacity: .012; }
-    .scroll-rail { display: none; }
+    .project-motif { opacity: .09; }
 }
 @media (prefers-reduced-motion: reduce) {
     .kinetic-field,
-    .motion-backplate,
     .click-ripple {
         display: none;
     }
