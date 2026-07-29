@@ -394,6 +394,11 @@ function setupCarousel(carousel, controls, autoplay = false) {
     let isAnimating = false;
     let controlsHovered = false;
     let controlsFocused = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchLastX = 0;
+    let touchDirection = null;
+    let suppressSwipeClick = false;
     const autoplayEnabled = autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const getMetrics = () => {
         const card = originalCards[0];
@@ -505,6 +510,45 @@ function setupCarousel(carousel, controls, autoplay = false) {
         move(1, next);
         scheduleAutoplay();
     });
+    carousel.addEventListener('touchstart', event => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchLastX = touch.clientX;
+        touchDirection = null;
+        cancelAutoplay();
+    }, { passive: true });
+    carousel.addEventListener('touchmove', event => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const horizontalDistance = touch.clientX - touchStartX;
+        const verticalDistance = touch.clientY - touchStartY;
+        touchLastX = touch.clientX;
+        if (!touchDirection && Math.hypot(horizontalDistance, verticalDistance) > 9) {
+            touchDirection = Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.15
+                ? 'horizontal'
+                : 'vertical';
+        }
+        if (touchDirection === 'horizontal') event.preventDefault();
+    }, { passive: false });
+    const finishSwipe = () => {
+        const horizontalDistance = touchLastX - touchStartX;
+        if (touchDirection === 'horizontal' && Math.abs(horizontalDistance) >= 42) {
+            suppressSwipeClick = true;
+            move(horizontalDistance < 0 ? 1 : -1);
+            window.setTimeout(() => { suppressSwipeClick = false; }, 420);
+        }
+        touchDirection = null;
+        scheduleAutoplay();
+    };
+    carousel.addEventListener('touchend', finishSwipe, { passive: true });
+    carousel.addEventListener('touchcancel', finishSwipe, { passive: true });
+    carousel.addEventListener('click', event => {
+        if (!suppressSwipeClick) return;
+        event.preventDefault();
+        event.stopPropagation();
+    }, true);
     scheduleAutoplay();
     return initialize;
 }
