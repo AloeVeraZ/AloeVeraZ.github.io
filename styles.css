@@ -219,6 +219,17 @@ body { background: #000; }
 .primary-btn { background: var(--blue); border-color: var(--blue); color: #080808; }
 .primary-btn:hover { background: #f4ffab; }
 .secondary-btn { background: transparent; }
+.hero-buttons .btn {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+}
+.hero-buttons .btn:hover,
+.hero-buttons .btn:active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #080808;
+}
 main { padding-top: 0; }
 .section { padding: 5.5rem 0; }
 .section { transition-duration: .42s; }
