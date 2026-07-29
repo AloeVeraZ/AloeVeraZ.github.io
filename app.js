@@ -108,6 +108,8 @@ function renderProjectCollections(collections, projects) {
 
 function setupCarousel(carousel, controls, autoplay = false) {
     let currentIndex = 0;
+    let autoplayTimer;
+    const autoplayEnabled = autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const getMetrics = () => {
         const card = carousel.querySelector('.project-card');
         if (!card) return null;
@@ -132,13 +134,23 @@ function setupCarousel(carousel, controls, autoplay = false) {
     };
     const previous = controls.querySelector('.carousel-prev');
     const next = controls.querySelector('.carousel-next');
-    previous.addEventListener('click', () => move(-1, previous));
-    next.addEventListener('click', () => move(1, next));
-    if (autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        window.setInterval(() => {
+    const scheduleAutoplay = () => {
+        if (!autoplayEnabled) return;
+        window.clearTimeout(autoplayTimer);
+        autoplayTimer = window.setTimeout(() => {
             if (!document.hidden && !carousel.closest('[hidden]')) move(1);
+            scheduleAutoplay();
         }, 5000);
-    }
+    };
+    previous.addEventListener('click', () => {
+        move(-1, previous);
+        scheduleAutoplay();
+    });
+    next.addEventListener('click', () => {
+        move(1, next);
+        scheduleAutoplay();
+    });
+    scheduleAutoplay();
 }
 
 function buildLinkButtons(links = {}) {
