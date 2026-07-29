@@ -296,3 +296,18 @@ footer { background: #050505; }
     .modal-card { box-shadow: 5px 5px 0 rgba(123,168,216,.2); }
     .about-highlight + .about-highlight { margin-left: 0; margin-top: -1px; }
 }
+
+/* Dedicated hero actions: identical at rest, cyan on interaction. */
+.hero-buttons > .hero-action {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+}
+.hero-buttons > .hero-action:hover,
+.hero-buttons > .hero-action:focus-visible,
+.hero-buttons > .hero-action:active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #080808;
+    transform: translateY(-3px);
+}
