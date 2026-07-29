@@ -93,6 +93,8 @@ button { font: inherit; }
     to { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
 }
 .ambient-glow {
+    --glow-x: 50vw;
+    --glow-y: 20vh;
     position: fixed;
     top: 0;
     left: 0;
@@ -101,13 +103,19 @@ button { font: inherit; }
     pointer-events: none;
     z-index: 0;
     background-image:
-        linear-gradient(rgba(123,168,216,.085) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(123,168,216,.085) 1px, transparent 1px);
-    background-size: 48px 48px;
-    border-radius: 50%;
+        radial-gradient(circle, rgba(123,168,216,.14), transparent 68%),
+        linear-gradient(rgba(123,168,216,.16) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(123,168,216,.16) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-position:
+        center,
+        calc(210px - var(--glow-x)) calc(210px - var(--glow-y)),
+        calc(210px - var(--glow-x)) calc(210px - var(--glow-y));
+    background-repeat: no-repeat, repeat, repeat;
+    clip-path: polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%);
     -webkit-mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.7) 38%, transparent 72%);
     mask-image: radial-gradient(circle, #000 0, rgba(0,0,0,.7) 38%, transparent 72%);
-    opacity: .9;
+    opacity: .92;
     transform: translate3d(calc(50vw - 210px), calc(20vh - 210px), 0);
     will-change: transform;
     contain: strict;
@@ -319,7 +327,7 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
 }
 
 /* High-impact engineering portfolio direction */
-body { background-color: var(--bg); background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 48px 48px; }
+body { background-color: var(--bg); background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 48px 48px; background-attachment: fixed; }
 .navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.96); }
 .nav-content, main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); }
 

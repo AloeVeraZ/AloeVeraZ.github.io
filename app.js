@@ -20,19 +20,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const galaxy = setupGalaxyField(galaxyCanvas, reducedMotion);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     let pointerEffectFrame = 0;
-    let pointerX = window.innerWidth / 2;
-    let pointerY = window.innerHeight * .2;
+    let targetGlowX = window.innerWidth / 2;
+    let targetGlowY = window.innerHeight * .2;
+    let currentGlowX = targetGlowX;
+    let currentGlowY = targetGlowY;
+
+    const animatePointerEffect = () => {
+        const followSpeed = reducedMotion.matches ? 1 : .14;
+        currentGlowX += (targetGlowX - currentGlowX) * followSpeed;
+        currentGlowY += (targetGlowY - currentGlowY) * followSpeed;
+        ambientGlow.style.setProperty('--glow-x', `${currentGlowX}px`);
+        ambientGlow.style.setProperty('--glow-y', `${currentGlowY}px`);
+        ambientGlow.style.transform = `translate3d(${currentGlowX - 210}px, ${currentGlowY - 210}px, 0)`;
+
+        const remainingDistance = Math.abs(targetGlowX - currentGlowX) + Math.abs(targetGlowY - currentGlowY);
+        if (remainingDistance > .35) {
+            pointerEffectFrame = requestAnimationFrame(animatePointerEffect);
+        } else {
+            currentGlowX = targetGlowX;
+            currentGlowY = targetGlowY;
+            pointerEffectFrame = 0;
+        }
+    };
 
     window.addEventListener('pointermove', event => {
-        pointerX = event.clientX;
-        pointerY = event.clientY;
+        targetGlowX = event.clientX;
+        targetGlowY = event.clientY;
         cursor.move(event);
         galaxy.move(event);
-        if (pointerEffectFrame) return;
-        pointerEffectFrame = requestAnimationFrame(() => {
-            ambientGlow.style.transform = `translate3d(${pointerX - 210}px, ${pointerY - 210}px, 0)`;
-            pointerEffectFrame = 0;
-        });
+        if (!pointerEffectFrame) pointerEffectFrame = requestAnimationFrame(animatePointerEffect);
     }, { passive: true });
 
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
