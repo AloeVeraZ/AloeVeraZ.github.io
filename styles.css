@@ -200,9 +200,9 @@ body { background: #000; }
     min-height: auto;
     place-items: start;
     padding:
-        calc(78px + 5.5rem)
+        calc(78px + 1.5rem)
         max(clamp(1rem, 3vw, 3.5rem), calc((100vw - 1440px) / 2))
-        5.5rem;
+        0;
 }
 .hero-section::before { width: min(42vw, 680px); border-radius: 0; background: var(--blue); right: -13vw; top: 7%; opacity: .12; transform: rotate(45deg) translateY(var(--scroll-shift)); }
 .hero-section::after { width: clamp(90px, 12vw, 175px); background: var(--red); left: auto; right: 16%; bottom: 9%; opacity: .68; }
@@ -261,9 +261,16 @@ main { padding-top: 0; }
 .modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
 footer { background: #050505; }
 #about, #contact { background: transparent; border: 0; }
+#contact { padding-bottom: 1.5rem; }
 #about .section-header, #contact .section-header { margin-bottom: 2.5rem; }
 #contact .contact-desc { margin-top: .8rem; }
 #contact .contact-links { margin-top: 1.5rem; }
+#contact .resume-unavailable {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+    opacity: 1;
+}
 #contact .btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; transform: translateY(-6px); }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
@@ -272,7 +279,7 @@ footer { background: #050505; }
 }
 @media (max-width: 800px) {
     .nav-content, main { width: min(100% - 2rem, 1440px); }
-    .hero-section { padding: calc(78px + 4rem) 1rem 4rem; }
+    .hero-section { padding: calc(78px + 1.5rem) 1rem 0; }
     .hero-name { font-size: clamp(4.5rem, 22vw, 7rem); }
     .contact-links { grid-template-columns: 1fr; }
     .modal-card { box-shadow: 5px 5px 0 rgba(123,168,216,.2); }
