@@ -12,9 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="project-motif motif-delta" style="--x: 3vw; --y: 45vh; --size: 116px;" data-depth=".3" data-phase="3.1" data-rotate="false"><i></i><i></i><i></i></span>
         <span class="project-motif motif-cad" style="--x: 89vw; --y: 48vh; --size: 96px;" data-depth=".62" data-phase="4.4"></span>
         <span class="project-motif motif-keyboard" style="--x: 4vw; --y: 74vh; --size: 106px;" data-depth=".5" data-phase="5.7" data-rotate="false"></span>
-        <span class="project-motif motif-balance" style="--x: 89vw; --y: 79vh; --size: 82px;" data-depth=".82" data-phase="2.5"><i></i></span>
+        <span class="project-motif motif-eye" style="--x: 89vw; --y: 79vh; --size: 82px;" data-depth=".82" data-phase="2.5"><i></i><i></i></span>
         <span class="project-motif motif-layers" style="--x: 14vw; --y: 61vh; --size: 76px;" data-depth=".38" data-phase="6.8"><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="project-motif motif-crawler" style="--x: 80vw; --y: 38vh; --size: 66px;" data-depth=".56" data-phase="7.9"><i></i><i></i></span>`;
+        <span class="project-motif motif-simple-swerve" style="--x: 79vw; --y: 36vh; --size: 96px;" data-depth=".56" data-phase="7.9"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="project-motif motif-linkage" style="--x: 17vw; --y: 34vh; --size: 82px;" data-depth=".42" data-phase="8.8"><i></i><i></i><i></i><i></i></span>
+        <span class="project-motif motif-belt" style="--x: 72vw; --y: 68vh; --size: 92px;" data-depth=".67" data-phase="9.6"><i></i><i></i></span>`;
     ambientGlow.after(kineticField);
     const kineticObjects = [...kineticField.querySelectorAll('.project-motif')];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');

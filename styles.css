@@ -394,21 +394,31 @@ footer { background: #050505; }
 .motif-swerve::before {
     content: "";
     position: absolute;
-    inset: 24% 27%;
-    background: rgba(123,168,216,.12);
+    inset: 12% 13% 9%;
+    background: currentColor;
     clip-path: polygon(50% 0, 100% 100%, 0 100%);
-    box-shadow: inset 0 0 0 1px currentColor;
+    opacity: .7;
+}
+.motif-swerve::after {
+    content: "";
+    position: absolute;
+    inset: 18% 21% 17%;
+    z-index: 1;
+    background: #000;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 .motif-swerve i {
     position: absolute;
+    z-index: 2;
     width: 30px;
     height: 12px;
     border: 1px solid currentColor;
     border-radius: 8px;
+    background: #000;
 }
-.motif-swerve i:nth-child(1) { top: 4px; left: 39px; }
-.motif-swerve i:nth-child(2) { bottom: 10px; left: 5px; transform: rotate(-58deg); }
-.motif-swerve i:nth-child(3) { right: 5px; bottom: 10px; transform: rotate(58deg); }
+.motif-swerve i:nth-child(1) { top: 42px; left: 9px; transform: rotate(-62deg); }
+.motif-swerve i:nth-child(2) { top: 42px; right: 9px; transform: rotate(62deg); }
+.motif-swerve i:nth-child(3) { bottom: 3px; left: 39px; }
 .motif-corexy {
     border: 1px solid currentColor;
     background:
@@ -475,27 +485,43 @@ footer { background: #050505; }
         repeating-linear-gradient(90deg, transparent 0 10px, rgba(123,168,216,.35) 10px 11px),
         repeating-linear-gradient(0deg, transparent 0 10px, rgba(123,168,216,.35) 10px 11px);
 }
-.motif-balance i {
-    position: absolute;
-    top: 6%;
-    left: 36%;
-    width: 28%;
-    height: 68%;
+.motif-eye {
     border: 1px solid currentColor;
-    background: linear-gradient(to bottom, transparent 0 64%, rgba(123,168,216,.14) 65%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 58%, rgba(123,168,216,.08), transparent 58%);
 }
-.motif-balance::before,
-.motif-balance::after {
+.motif-eye::before {
     content: "";
     position: absolute;
-    bottom: 8%;
-    width: 30%;
-    aspect-ratio: 1;
+    left: 34%;
+    bottom: 20%;
+    width: 32%;
+    height: 10%;
+    border-bottom: 1px solid currentColor;
+    border-radius: 50%;
+}
+.motif-eye i {
+    position: absolute;
+    top: 31%;
+    width: 26%;
+    height: 14%;
     border: 1px solid currentColor;
     border-radius: 50%;
 }
-.motif-balance::before { left: 5%; }
-.motif-balance::after { right: 5%; }
+.motif-eye i:first-child { left: 17%; transform: rotate(7deg); }
+.motif-eye i:last-child { right: 17%; transform: rotate(-7deg); }
+.motif-eye i::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: currentColor;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 6px rgba(123,168,216,.45);
+}
 .motif-layers {
     display: grid;
     align-content: center;
@@ -509,21 +535,81 @@ footer { background: #050505; }
 .motif-layers i:nth-child(5) { width: 54%; margin-left: 23%; }
 .motif-layers i:nth-child(2),
 .motif-layers i:nth-child(4) { width: 78%; margin-left: 11%; }
-.motif-crawler {
-    height: calc(var(--size) * .62);
-    border: 1px solid currentColor;
-    background: rgba(123,168,216,.05);
-}
-.motif-crawler i {
+.motif-simple-swerve::before {
+    content: "";
     position: absolute;
-    bottom: -10px;
-    width: 17px;
-    height: 17px;
+    inset: 19% 17%;
+    border: 1px solid currentColor;
+    background: rgba(123,168,216,.045);
+}
+.motif-simple-swerve::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 18%;
+    width: 64%;
+    height: 1px;
+    background: currentColor;
+}
+.motif-simple-swerve i {
+    position: absolute;
+    z-index: 1;
+    width: 21px;
+    height: 8px;
+    border: 1px solid currentColor;
+    border-radius: 7px;
+    background: #000;
+}
+.motif-simple-swerve i:nth-child(1) { top: 18%; left: 0; transform: rotate(90deg); }
+.motif-simple-swerve i:nth-child(2) { bottom: 18%; left: 0; transform: rotate(90deg); }
+.motif-simple-swerve i:nth-child(3) { top: 18%; right: 0; transform: rotate(90deg); }
+.motif-simple-swerve i:nth-child(4) { right: 0; bottom: 18%; transform: rotate(90deg); }
+.motif-simple-swerve i:nth-child(5) { top: 27%; left: 38%; outline: 1px solid rgba(123,168,216,.36); outline-offset: 5px; transform: rotate(24deg); }
+.motif-simple-swerve i:nth-child(6) { bottom: 27%; left: 38%; outline: 1px solid rgba(123,168,216,.36); outline-offset: 5px; transform: rotate(-24deg); }
+.motif-linkage i {
+    position: absolute;
+    left: 18%;
+    width: 48%;
+    height: 5px;
+    border: 1px solid currentColor;
+    border-radius: 5px;
+    transform-origin: left center;
+}
+.motif-linkage i::before,
+.motif-linkage i::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
     border: 1px solid currentColor;
     border-radius: 50%;
+    background: #000;
+    transform: translateY(-50%);
 }
-.motif-crawler i:first-child { left: 4px; }
-.motif-crawler i:last-child { right: 4px; }
+.motif-linkage i::before { left: -4px; }
+.motif-linkage i::after { right: -4px; }
+.motif-linkage i:nth-child(1) { top: 28%; transform: rotate(18deg); }
+.motif-linkage i:nth-child(2) { top: 54%; transform: rotate(-22deg); }
+.motif-linkage i:nth-child(3) { top: 30%; left: 55%; transform: rotate(102deg); }
+.motif-linkage i:nth-child(4) { top: 64%; left: 48%; transform: rotate(38deg); }
+.motif-belt {
+    height: calc(var(--size) * .58);
+    background:
+        linear-gradient(16deg, transparent 47%, currentColor 48% 48.8%, transparent 50%),
+        linear-gradient(-16deg, transparent 47%, currentColor 48% 48.8%, transparent 50%);
+}
+.motif-belt i {
+    position: absolute;
+    top: 13%;
+    width: 34%;
+    aspect-ratio: 1;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 8px rgba(123,168,216,.045);
+}
+.motif-belt i:first-child { left: 0; }
+.motif-belt i:last-child { right: 0; }
 .click-ripple {
     position: fixed;
     z-index: 2500;
