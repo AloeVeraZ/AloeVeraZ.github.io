@@ -59,8 +59,6 @@ function setupGalaxyField(canvas, reducedMotion) {
     let previousTime = performance.now();
     let previousScrollY = window.scrollY;
     let scrollEnergy = 0;
-    let trailSegments = [];
-    let lastTrailPoint = null;
     const pointer = {
         x: innerWidth / 2,
         y: innerHeight / 2,
@@ -100,26 +98,6 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.velocityY *= .88;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.15)`;
         scrollEnergy *= .91;
-
-        context.lineCap = 'round';
-        trailSegments = trailSegments.filter(segment => {
-            const progress = (time - segment.createdAt) / 3000;
-            if (progress >= 1) return false;
-            const fade = Math.pow(1 - progress, 1.65);
-            const drift = progress * segment.drift;
-            context.beginPath();
-            context.moveTo(segment.x1 + drift, segment.y1);
-            context.lineTo(segment.x2 + drift, segment.y2);
-            context.strokeStyle = `rgba(123,168,216,${fade * .13})`;
-            context.lineWidth = segment.width * (1 + progress * .35);
-            context.stroke();
-
-            context.beginPath();
-            context.fillStyle = `rgba(178,211,239,${fade * .22})`;
-            context.arc(segment.x2 + drift, segment.y2, Math.max(.45, segment.width * .18), 0, Math.PI * 2);
-            context.fill();
-            return true;
-        });
 
         stars.forEach(star => {
             const oldX = star.x;
@@ -201,29 +179,6 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.targetRotateX = -((event.clientY / height) - .5) * 9;
         pointer.targetRotateY = ((event.clientX / width) - .5) * 11;
         pointer.active = true;
-
-        const now = performance.now();
-        if (!reducedMotion.matches && (!lastTrailPoint || now - lastTrailPoint.time >= 34)) {
-            if (lastTrailPoint) {
-                const dx = event.clientX - lastTrailPoint.x;
-                const dy = event.clientY - lastTrailPoint.y;
-                const distance = Math.hypot(dx, dy);
-                if (distance > 4) {
-                    const length = Math.min(distance, 26);
-                    trailSegments.push({
-                        x1: event.clientX - dx / distance * length,
-                        y1: event.clientY - dy / distance * length,
-                        x2: event.clientX,
-                        y2: event.clientY,
-                        width: 1.6 + Math.min(distance, 30) * .055,
-                        drift: (Math.random() - .5) * 9,
-                        createdAt: now
-                    });
-                    if (trailSegments.length > 90) trailSegments.splice(0, trailSegments.length - 90);
-                }
-            }
-            lastTrailPoint = { x: event.clientX, y: event.clientY, time: now };
-        }
     }, { passive: true });
     document.documentElement.addEventListener('pointerleave', () => {
         pointer.active = false;
@@ -231,7 +186,6 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.targetRotateY = 0;
         pointer.velocityX = 0;
         pointer.velocityY = 0;
-        lastTrailPoint = null;
     });
     window.addEventListener('scroll', () => {
         const nextScrollY = window.scrollY;
@@ -255,6 +209,7 @@ function setupCursorDot(cursorDot, reducedMotion) {
     let currentX = targetX;
     let currentY = targetY;
     let cursorFrame = 0;
+    let lastSparkAt = 0;
 
     const positionDot = () => {
         const followSpeed = reducedMotion.matches ? 1 : .36;
@@ -267,11 +222,34 @@ function setupCursorDot(cursorDot, reducedMotion) {
     };
 
     window.addEventListener('pointermove', event => {
+        const movementX = event.clientX - targetX;
+        const movementY = event.clientY - targetY;
+        const movementSpeed = Math.hypot(movementX, movementY);
         targetX = event.clientX;
         targetY = event.clientY;
         cursorDot.classList.add('is-visible');
         const interactive = event.target instanceof Element && event.target.closest('a, button, .project-card');
         cursorDot.classList.toggle('is-interactive', Boolean(interactive));
+
+        const now = performance.now();
+        if (!reducedMotion.matches && movementSpeed > 3 && now - lastSparkAt > 45) {
+            const reverseAngle = Math.atan2(movementY, movementX) + Math.PI;
+            for (let index = 0; index < 3; index += 1) {
+                const spark = document.createElement('span');
+                const angle = reverseAngle + (Math.random() - .5) * 1.8;
+                const distance = 11 + Math.random() * 17 + Math.min(movementSpeed, 24) * .25;
+                spark.className = 'cursor-spark';
+                spark.style.left = `${currentX}px`;
+                spark.style.top = `${currentY}px`;
+                spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
+                spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+                spark.style.setProperty('--spark-size', `${1.5 + Math.random() * 2}px`);
+                spark.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(spark);
+                spark.addEventListener('animationend', () => spark.remove(), { once: true });
+            }
+            lastSparkAt = now;
+        }
     }, { passive: true });
     window.addEventListener('pointerdown', event => {
         if (event.button !== 0) return;

@@ -88,9 +88,25 @@ button { font: inherit; }
     box-shadow: 0 0 8px rgba(123,168,216,.2);
     animation: cursor-ring .48s var(--ease) forwards;
 }
+.cursor-spark {
+    position: fixed;
+    z-index: 3998;
+    width: var(--spark-size, 2px);
+    height: var(--spark-size, 2px);
+    pointer-events: none;
+    border-radius: 50%;
+    background: rgba(190,192,197,.88);
+    box-shadow: 0 0 5px rgba(183,185,190,.36);
+    animation: cursor-spark-out .72s cubic-bezier(.15,.7,.25,1) forwards;
+}
 @keyframes cursor-ring {
     0% { opacity: .8; transform: translate(-50%, -50%) scale(.55); }
     100% { opacity: 0; transform: translate(-50%, -50%) scale(4); }
+}
+@keyframes cursor-spark-out {
+    0% { opacity: .82; transform: translate(-50%, -50%) scale(1); }
+    55% { opacity: .36; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
 }
 .ambient-glow {
     position: fixed;
@@ -780,7 +796,8 @@ footer { background: #050505; }
     .galaxy-field { opacity: .42; transform: none !important; }
     .tilt-card,
     .tilt-card:hover { transform: none; }
-    .cursor-ripple { display: none; }
+    .cursor-ripple,
+    .cursor-spark { display: none; }
     .kinetic-field {
         display: none;
     }
