@@ -86,10 +86,12 @@ function renderProjectCollections(collections, projects) {
         group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
-        const collectionProjects = collection.categories.flatMap(category => projects.filter(project => project.category === category));
+        const collectionProjects = projects
+            .filter(project => collection.categories.includes(project.category))
+            .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
         const useCarousel = collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
-        collection.categories.forEach(category => projects.filter(project => project.category === category).forEach(project => gallery.appendChild(createProjectCard(project))));
+        collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
         if (useCarousel) {
             const controls = document.createElement('div');
@@ -106,8 +108,6 @@ function renderProjectCollections(collections, projects) {
 
 function setupCarousel(carousel, controls, autoplay = false) {
     let currentIndex = 0;
-    let paused = false;
-    let scrollSyncTimer;
     const getMetrics = () => {
         const card = carousel.querySelector('.project-card');
         if (!card) return null;
@@ -134,22 +134,10 @@ function setupCarousel(carousel, controls, autoplay = false) {
     const next = controls.querySelector('.carousel-next');
     previous.addEventListener('click', () => move(-1, previous));
     next.addEventListener('click', () => move(1, next));
-    carousel.addEventListener('scroll', () => {
-        clearTimeout(scrollSyncTimer);
-        scrollSyncTimer = setTimeout(() => {
-            const metrics = getMetrics();
-            if (metrics) currentIndex = Math.min(Math.round(carousel.scrollLeft / metrics.distance), metrics.lastIndex);
-        }, 160);
-    }, { passive: true });
     if (autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const interactionRegion = controls.parentElement;
-        interactionRegion.addEventListener('mouseenter', () => { paused = true; });
-        interactionRegion.addEventListener('mouseleave', () => { paused = false; });
-        interactionRegion.addEventListener('focusin', () => { paused = true; });
-        interactionRegion.addEventListener('focusout', () => { paused = false; });
         window.setInterval(() => {
-            if (!paused && !document.hidden && !carousel.closest('[hidden]')) move(1);
-        }, 4500);
+            if (!document.hidden && !carousel.closest('[hidden]')) move(1);
+        }, 5000);
     }
 }
 
