@@ -59,6 +59,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     let previousTime = performance.now();
     let previousScrollY = window.scrollY;
     let scrollEnergy = 0;
+    let trailSegments = [];
+    let lastTrailPoint = null;
     const pointer = {
         x: innerWidth / 2,
         y: innerHeight / 2,
@@ -68,6 +70,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         rotateY: 0,
         targetRotateX: 0,
         targetRotateY: 0,
+        velocityX: 0,
+        velocityY: 0,
         active: false
     };
     const colors = ['123,168,216', '178,211,239', '240,246,252'];
@@ -92,8 +96,30 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.y += (pointer.targetY - pointer.y) * .075;
         pointer.rotateX += (pointer.targetRotateX - pointer.rotateX) * .065;
         pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .065;
+        pointer.velocityX *= .88;
+        pointer.velocityY *= .88;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.15)`;
         scrollEnergy *= .91;
+
+        context.lineCap = 'round';
+        trailSegments = trailSegments.filter(segment => {
+            const progress = (time - segment.createdAt) / 3000;
+            if (progress >= 1) return false;
+            const fade = Math.pow(1 - progress, 1.65);
+            const drift = progress * segment.drift;
+            context.beginPath();
+            context.moveTo(segment.x1 + drift, segment.y1);
+            context.lineTo(segment.x2 + drift, segment.y2);
+            context.strokeStyle = `rgba(123,168,216,${fade * .13})`;
+            context.lineWidth = segment.width * (1 + progress * .35);
+            context.stroke();
+
+            context.beginPath();
+            context.fillStyle = `rgba(178,211,239,${fade * .22})`;
+            context.arc(segment.x2 + drift, segment.y2, Math.max(.45, segment.width * .18), 0, Math.PI * 2);
+            context.fill();
+            return true;
+        });
 
         stars.forEach(star => {
             const oldX = star.x;
@@ -110,6 +136,8 @@ function setupGalaxyField(canvas, reducedMotion) {
                     const force = (1 - distance / 155) * star.depth * .42 * delta;
                     star.x += dx / distance * force;
                     star.y += dy / distance * force;
+                    star.x += pointer.velocityX * force * .026;
+                    star.y += pointer.velocityY * force * .026;
                 }
             }
 
@@ -166,16 +194,44 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
 
     window.addEventListener('pointermove', event => {
+        pointer.velocityX = Math.max(-35, Math.min(35, event.clientX - pointer.targetX));
+        pointer.velocityY = Math.max(-35, Math.min(35, event.clientY - pointer.targetY));
         pointer.targetX = event.clientX;
         pointer.targetY = event.clientY;
         pointer.targetRotateX = -((event.clientY / height) - .5) * 9;
         pointer.targetRotateY = ((event.clientX / width) - .5) * 11;
         pointer.active = true;
+
+        const now = performance.now();
+        if (!reducedMotion.matches && (!lastTrailPoint || now - lastTrailPoint.time >= 34)) {
+            if (lastTrailPoint) {
+                const dx = event.clientX - lastTrailPoint.x;
+                const dy = event.clientY - lastTrailPoint.y;
+                const distance = Math.hypot(dx, dy);
+                if (distance > 4) {
+                    const length = Math.min(distance, 26);
+                    trailSegments.push({
+                        x1: event.clientX - dx / distance * length,
+                        y1: event.clientY - dy / distance * length,
+                        x2: event.clientX,
+                        y2: event.clientY,
+                        width: 1.6 + Math.min(distance, 30) * .055,
+                        drift: (Math.random() - .5) * 9,
+                        createdAt: now
+                    });
+                    if (trailSegments.length > 90) trailSegments.splice(0, trailSegments.length - 90);
+                }
+            }
+            lastTrailPoint = { x: event.clientX, y: event.clientY, time: now };
+        }
     }, { passive: true });
     document.documentElement.addEventListener('pointerleave', () => {
         pointer.active = false;
         pointer.targetRotateX = 0;
         pointer.targetRotateY = 0;
+        pointer.velocityX = 0;
+        pointer.velocityY = 0;
+        lastTrailPoint = null;
     });
     window.addEventListener('scroll', () => {
         const nextScrollY = window.scrollY;
