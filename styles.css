@@ -23,17 +23,26 @@ body::-webkit-scrollbar { display: none; }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
+.galaxy-field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: .82;
+}
 .ambient-glow {
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     background-image:
-        linear-gradient(rgba(123,168,216,.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(123,168,216,.12) 1px, transparent 1px);
+        linear-gradient(rgba(123,168,216,.085) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(123,168,216,.085) 1px, transparent 1px);
     background-size: 48px 48px;
-    -webkit-mask-image: radial-gradient(260px circle at var(--pointer-x) var(--pointer-y), #000 0, rgba(0,0,0,.72) 35%, transparent 72%);
-    mask-image: radial-gradient(260px circle at var(--pointer-x) var(--pointer-y), #000 0, rgba(0,0,0,.72) 35%, transparent 72%);
+    -webkit-mask-image: radial-gradient(210px circle at var(--pointer-x) var(--pointer-y), #000 0, rgba(0,0,0,.65) 34%, transparent 74%);
+    mask-image: radial-gradient(210px circle at var(--pointer-x) var(--pointer-y), #000 0, rgba(0,0,0,.65) 34%, transparent 74%);
 }
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
 .page-scroll-progress {
@@ -401,6 +410,22 @@ footer { background: #050505; }
     box-shadow: 0 6px 0 rgba(123,168,216,.22);
     transform: translateY(-6px);
 }
+.tilt-card {
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+    --tilt-lift: 0px;
+    transform: perspective(950px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(var(--tilt-lift));
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+.tilt-card:hover {
+    --tilt-lift: -6px;
+    transform: perspective(950px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(var(--tilt-lift));
+}
+.tilt-card > * {
+    position: relative;
+    transform: translateZ(10px);
+}
 @media (max-width: 800px) {
     .about-highlights,
     .skills-categories {
@@ -692,6 +717,9 @@ footer { background: #050505; }
     .project-motif { opacity: .09; }
 }
 @media (prefers-reduced-motion: reduce) {
+    .galaxy-field { opacity: .42; }
+    .tilt-card,
+    .tilt-card:hover { transform: none; }
     .kinetic-field,
     .click-ripple {
         display: none;
