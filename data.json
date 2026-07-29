@@ -109,6 +109,26 @@
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
+      "id": "personal-project-5",
+      "title": "UPDATE — Personal Project 5 Title",
+      "category": "Robotics",
+      "summary": "UPDATE — One sentence summary of this personal project.",
+      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
+      "image": "assets/robotic_arm.jpg",
+      "tags": ["Robotics", "Prototyping"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "personal-project-6",
+      "title": "UPDATE — Personal Project 6 Title",
+      "category": "Software",
+      "summary": "UPDATE — One sentence summary of this personal project.",
+      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
+      "image": "assets/fsae_chassis.jpg",
+      "tags": ["Software", "Controls"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
       "id": "project-5",
       "title": "UPDATE — Internship Project Title",
       "category": "Internship Robotics",
