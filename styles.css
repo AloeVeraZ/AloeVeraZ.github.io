@@ -94,6 +94,9 @@ button { font: inherit; }
     transform: translate(-50%, -50%);
 }
 .enhanced-pointer .cursor-dot { display: block; }
+.enhanced-pointer,
+.enhanced-pointer body,
+.enhanced-pointer body * { cursor: none !important; }
 .cursor-dot.is-visible { opacity: 1; }
 .cursor-dot.is-interactive { width: 12px; height: 12px; background: #b8dcff; }
 .cursor-dot.is-pressed { width: 5px; height: 5px; }
