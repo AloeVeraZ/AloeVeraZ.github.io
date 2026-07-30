@@ -120,6 +120,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     let height = window.innerHeight;
     let stars = [];
     let constellationLinks = [];
+    let meshNodes = [];
+    let meshLinks = [];
     let constellationNodes = [];
     let nodeLinks = [];
     let animationFrame = 0;
@@ -189,6 +191,42 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
     };
 
+    const buildVantaMesh = () => {
+        const columns = width < 700 ? 4 : lowPowerDevice ? 5 : 7;
+        const rows = width < 700 ? 6 : lowPowerDevice ? 5 : 6;
+        meshNodes = [];
+        meshLinks = [];
+
+        for (let row = 0; row < rows; row += 1) {
+            for (let column = 0; column < columns; column += 1) {
+                meshNodes.push({
+                    x: (column + .5 + (Math.random() - .5) * .28) / columns,
+                    y: (row + .5 + (Math.random() - .5) * .26) / rows,
+                    depth: .24 + Math.random() * .76,
+                    phase: Math.random() * Math.PI * 2,
+                    screenX: 0,
+                    screenY: 0,
+                    proximity: 0
+                });
+            }
+        }
+
+        const nodeIndex = (row, column) => row * columns + column;
+        for (let row = 0; row < rows; row += 1) {
+            for (let column = 0; column < columns; column += 1) {
+                const current = nodeIndex(row, column);
+                if (column + 1 < columns) meshLinks.push([current, nodeIndex(row, column + 1)]);
+                if (row + 1 < rows) meshLinks.push([current, nodeIndex(row + 1, column)]);
+                if (row + 1 < rows && column + 1 < columns && (row + column) % 2 === 0) {
+                    meshLinks.push([current, nodeIndex(row + 1, column + 1)]);
+                }
+                if (row + 1 < rows && column > 0 && (row + column) % 3 === 0) {
+                    meshLinks.push([current, nodeIndex(row + 1, column - 1)]);
+                }
+            }
+        }
+    };
+
     const buildConstellationNodes = () => {
         const nodeCount = width < 700 ? 6 : lowPowerDevice ? 8 : 10;
         const sizeScale = width < 700 ? .72 : 1;
@@ -212,6 +250,10 @@ function setupGalaxyField(canvas, reducedMotion) {
                 color: planetColors[Math.floor(Math.random() * planetColors.length)],
                 phase: Math.random() * Math.PI * 2,
                 scrollDepth: .035 + Math.random() * .075,
+                ringTilt: .28 + Math.random() * .3,
+                ringRotation: Math.random() * Math.PI,
+                ringSpeed: (.000025 + Math.random() * .000035) * (index % 2 ? -1 : 1),
+                ringBands: isBlackHole ? (lowPowerDevice ? 3 : 5) : (index % 3 === 0 ? 3 : 2),
                 offsetX: 0,
                 offsetY: 0,
                 velocityX: 0,
@@ -251,6 +293,63 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
     };
 
+    const drawVantaMesh = time => {
+        const verticalShift = scrollPosition * .045;
+
+        for (const node of meshNodes) {
+            const wave = Math.sin(time * .00042 + node.phase) * (3 + node.depth * 7);
+            let screenX = node.x * width + pointer.rotateY * node.depth * 3.4;
+            let screenY = node.y * height - verticalShift * (.45 + node.depth) + wave - pointer.rotateX * node.depth * 2.8;
+            const span = height + 140;
+            screenY = ((screenY + 70) % span + span) % span - 70;
+
+            let proximity = 0;
+            if (pointer.active) {
+                const dx = screenX - pointer.x;
+                const dy = screenY - pointer.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                proximity = Math.max(0, 1 - distance / 235);
+                if (distance > 1 && proximity > 0) {
+                    const deflection = proximity * proximity * (8 + node.depth * 13);
+                    screenX += dx / distance * deflection;
+                    screenY += dy / distance * deflection;
+                }
+            }
+
+            node.screenX = screenX;
+            node.screenY = screenY;
+            node.proximity = proximity;
+        }
+
+        for (const [firstIndex, secondIndex] of meshLinks) {
+            const first = meshNodes[firstIndex];
+            const second = meshNodes[secondIndex];
+            if (!first || !second) continue;
+            const dx = second.screenX - first.screenX;
+            const dy = second.screenY - first.screenY;
+            const distanceSquared = dx * dx + dy * dy;
+            const maximumLength = Math.max(width / 3.2, 245);
+            if (distanceSquared > maximumLength * maximumLength) continue;
+            const response = Math.max(first.proximity, second.proximity);
+            const depth = (first.depth + second.depth) / 2;
+
+            context.beginPath();
+            context.strokeStyle = `rgba(104,157,209,${.014 + depth * .024 + response * .15})`;
+            context.lineWidth = .32 + depth * .28 + response * .5;
+            context.moveTo(first.screenX, first.screenY);
+            context.lineTo(second.screenX, second.screenY);
+            context.stroke();
+        }
+
+        for (const node of meshNodes) {
+            const pointRadius = .45 + node.depth * .85 + node.proximity * .7;
+            context.beginPath();
+            context.fillStyle = `rgba(171,207,237,${.08 + node.depth * .13 + node.proximity * .32})`;
+            context.arc(node.screenX, node.screenY, pointRadius, 0, Math.PI * 2);
+            context.fill();
+        }
+    };
+
     const drawConstellations = time => {
         const maximumLinkLength = width < 700 ? 170 : 220;
         for (const [firstIndex, secondIndex] of constellationLinks) {
@@ -281,6 +380,27 @@ function setupGalaxyField(canvas, reducedMotion) {
             context.lineTo(secondX, secondY);
             context.stroke();
         }
+    };
+
+    const drawRingBands = (node, radius, time, alpha, frontHalf) => {
+        const rotation = node.ringRotation + time * node.ringSpeed + Math.sin(time * .00019 + node.phase) * .08;
+        context.save();
+        context.rotate(rotation);
+        context.scale(1, node.ringTilt);
+
+        for (let bandIndex = 0; bandIndex < node.ringBands; bandIndex += 1) {
+            const bandRadius = radius * (1.18 + bandIndex * .16);
+            const isAccent = bandIndex === Math.floor(node.ringBands / 2);
+            const color = isAccent ? '164,132,194' : node.color;
+            const startAngle = frontHalf ? 0 : Math.PI;
+            const endAngle = frontHalf ? Math.PI : Math.PI * 2;
+            context.beginPath();
+            context.strokeStyle = `rgba(${color},${alpha * (frontHalf ? .92 : .35) * (1 - bandIndex * .09)})`;
+            context.lineWidth = (frontHalf ? 1.1 : .65) - bandIndex * .08;
+            context.arc(0, 0, bandRadius, startAngle, endAngle);
+            context.stroke();
+        }
+        context.restore();
     };
 
     const drawCircularConstellation = (time, delta) => {
@@ -363,22 +483,13 @@ function setupGalaxyField(canvas, reducedMotion) {
 
             context.save();
             context.translate(x, y);
+            drawRingBands(node, radius, time, alpha, false);
 
             if (node.type === 'black-hole') {
                 context.fillStyle = 'rgba(1,2,5,.82)';
                 context.beginPath();
                 context.arc(0, 0, radius * .72, 0, Math.PI * 2);
                 context.fill();
-
-                for (let ringIndex = 0; ringIndex < 3; ringIndex += 1) {
-                    const ringRadius = radius * (1 + ringIndex * .24);
-                    const ringRotation = time * (.00009 + ringIndex * .000025) * (ringIndex % 2 ? -1 : 1) + node.phase;
-                    context.beginPath();
-                    context.strokeStyle = `rgba(${ringIndex === 1 ? '154,126,181' : '123,168,216'},${alpha * (.9 - ringIndex * .18)})`;
-                    context.lineWidth = 1.15 - ringIndex * .2;
-                    context.arc(0, 0, ringRadius, ringRotation, ringRotation + Math.PI * (1.15 + ringIndex * .18));
-                    context.stroke();
-                }
 
                 context.beginPath();
                 context.strokeStyle = `rgba(207,226,244,${alpha * .82})`;
@@ -408,16 +519,19 @@ function setupGalaxyField(canvas, reducedMotion) {
                 context.stroke();
             }
 
+            drawRingBands(node, radius, time, alpha, true);
+
             for (const orbiter of node.orbiters) {
                 const orbitRadius = radius * orbiter.distance;
                 const orbitAngle = time * orbiter.speed + orbiter.phase;
                 const orbiterX = Math.cos(orbitAngle) * orbitRadius;
-                const orbiterY = Math.sin(orbitAngle) * orbitRadius;
+                const orbitTilt = .58 + node.ringTilt * .32;
+                const orbiterY = Math.sin(orbitAngle) * orbitRadius * orbitTilt;
 
                 context.beginPath();
                 context.strokeStyle = `rgba(145,190,232,${alpha * (node.type === 'black-hole' ? .35 : .2)})`;
                 context.lineWidth = .4;
-                context.arc(0, 0, orbitRadius, 0, Math.PI * 2);
+                context.ellipse(0, 0, orbitRadius, orbitRadius * orbitTilt, 0, 0, Math.PI * 2);
                 context.stroke();
                 context.beginPath();
                 context.fillStyle = `rgba(198,222,243,${alpha * 1.45})`;
@@ -425,7 +539,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 context.fill();
                 context.beginPath();
                 context.strokeStyle = `rgba(123,168,216,${alpha * .5})`;
-                context.arc(0, 0, orbitRadius, orbitAngle - .48, orbitAngle);
+                context.ellipse(0, 0, orbitRadius, orbitRadius * orbitTilt, 0, orbitAngle - .48, orbitAngle);
                 context.stroke();
             }
             context.restore();
@@ -451,6 +565,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         scrollPosition += (targetScrollPosition - scrollPosition) * .2;
         canvas.style.transform = `perspective(850px) rotateX(${pointer.rotateX.toFixed(2)}deg) rotateY(${pointer.rotateY.toFixed(2)}deg) scale(1.07)`;
         scrollEnergy *= .84;
+        drawVantaMesh(time);
         drawConstellations(time);
         drawCircularConstellation(time, delta);
 
@@ -534,6 +649,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         const minimumStars = width < 700 ? 34 : lowPowerDevice ? 44 : 54;
         const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, width * height / 19000)));
         stars = Array.from({ length: starCount }, makeStar);
+        buildVantaMesh();
         buildConstellationLinks();
         buildConstellationNodes();
         if (reducedMotion.matches) draw(performance.now(), true);
