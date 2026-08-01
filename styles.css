@@ -12,7 +12,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; scrollbar-width: none; }
+html { scroll-behavior: smooth; scrollbar-width: none; background-color: var(--bg); }
 body { position: relative; isolation: isolate; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; -ms-overflow-style: none; }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar { display: none; }
@@ -46,11 +46,11 @@ button { font: inherit; }
     z-index: 0;
     pointer-events: none;
     background-image:
-        radial-gradient(ellipse 46% 38% at 18% 24%, rgba(75,121,171,.11), transparent 72%),
-        radial-gradient(ellipse 42% 34% at 80% 68%, rgba(119,91,151,.07), transparent 74%),
-        linear-gradient(124deg, transparent 25%, rgba(96,134,173,.025) 39%, rgba(134,162,190,.055) 48%, rgba(111,84,143,.038) 56%, transparent 71%);
-    background-size: 100% 900px;
-    background-repeat: repeat-y;
+        radial-gradient(ellipse 48% 30% at 18% 18%, rgba(75,121,171,.1), transparent 74%),
+        radial-gradient(ellipse 44% 28% at 82% 64%, rgba(119,91,151,.065), transparent 76%),
+        radial-gradient(ellipse 50% 24% at 36% 88%, rgba(96,134,173,.045), transparent 78%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
     opacity: .72;
 }
 .galaxy-nebula::after {
@@ -474,7 +474,7 @@ main { padding-top: 0; }
 .modal-close:hover { background: var(--blue); color: #080808; }
 .modal-header .tag, .modal-card .tag { color: #b9d6f5; border-color: rgba(123,168,216,.5); }
 .modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
-footer { background: #050505; }
+footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
 #contact { padding-bottom: 1.5rem; }
 #about .section-header, #contact .section-header { margin-bottom: 2.5rem; }
