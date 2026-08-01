@@ -211,6 +211,50 @@ button { font: inherit; }
 .nav-links { list-style: none; display: flex; gap: 1.7rem; color: var(--muted); font-size: .85rem; }
 .nav-links a { transition: color .2s ease; }
 .nav-links a:hover { color: var(--ink); }
+.performance-control { display: flex; align-items: center; }
+.performance-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+}
+.performance-toggle:hover,
+.performance-toggle:focus-visible { color: var(--ink); }
+.performance-toggle-track {
+    position: relative;
+    width: 30px;
+    height: 16px;
+    border: 1px solid rgba(247,244,237,.28);
+    border-radius: 999px;
+    background: #151515;
+    transition: background .2s ease, border-color .2s ease;
+}
+.performance-toggle-track i {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform .2s var(--ease), background .2s ease;
+}
+.performance-toggle[aria-checked="true"] .performance-toggle-track {
+    border-color: var(--blue);
+    background: rgba(123,168,216,.16);
+}
+.performance-toggle[aria-checked="true"] .performance-toggle-track i {
+    background: var(--blue);
+    transform: translateX(14px);
+}
 
 .hero-section { min-height: 92vh; display: grid; place-items: center; overflow: hidden; isolation: isolate; padding: 8rem 1.5rem 4rem; }
 .hero-section::before, .hero-section::after { content: ""; position: absolute; z-index: -1; transition: transform .5s var(--ease); }
@@ -588,3 +632,19 @@ main > .section + .section { margin-top: var(--content-section-gap); }
     padding-top: var(--content-section-gap);
 }
 main > #contact { padding-bottom: 1.5rem; }
+
+/* Low FX keeps the engineering grid and stops every continuous visual effect. */
+html[data-effects="low"] .galaxy-field,
+html[data-effects="low"] .galaxy-nebula,
+html[data-effects="low"] .ambient-glow,
+html[data-effects="low"] .cursor-dot,
+html[data-effects="low"] .cursor-spark,
+html[data-effects="low"] .cursor-ripple {
+    display: none !important;
+}
+
+@media (max-width: 800px) {
+    .nav-links { display: flex; }
+    .nav-links > li:not(.performance-control) { display: none; }
+    .performance-toggle { font-size: .68rem; }
+}

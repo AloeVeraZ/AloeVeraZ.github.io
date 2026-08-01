@@ -27,9 +27,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const galaxy = setupGalaxyField(galaxyField, reducedMotion);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
+    const performanceToggle = document.getElementById('performance-toggle');
+    const performanceToggleLabel = document.getElementById('performance-toggle-label');
+    const performanceStorageKey = 'portfolio-effects-mode';
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const automaticallyUseLowEffects = reducedMotion.matches
+        || Boolean(connection?.saveData)
+        || (navigator.hardwareConcurrency || 4) <= 4
+        || ('deviceMemory' in navigator && navigator.deviceMemory <= 4);
+    let savedEffectsMode = '';
+    try {
+        savedEffectsMode = localStorage.getItem(performanceStorageKey) || '';
+    } catch (error) {
+        savedEffectsMode = '';
+    }
+    let effectsMode = ['low', 'high'].includes(savedEffectsMode)
+        ? savedEffectsMode
+        : automaticallyUseLowEffects ? 'low' : 'high';
+    let hasManualEffectsPreference = ['low', 'high'].includes(savedEffectsMode);
+
+    const applyEffectsMode = (mode, remember = false) => {
+        effectsMode = mode;
+        const useHighEffects = mode === 'high';
+        document.documentElement.dataset.effects = mode;
+        galaxy.setEnabled(useHighEffects);
+        cursor.setEnabled(useHighEffects);
+        performanceToggle.setAttribute('aria-checked', String(useHighEffects));
+        performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
+        performanceToggleLabel.textContent = useHighEffects ? 'High FX' : 'Low FX';
+        if (!useHighEffects) {
+            document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
+        }
+        if (remember) {
+            hasManualEffectsPreference = true;
+            try {
+                localStorage.setItem(performanceStorageKey, mode);
+            } catch (error) {
+                // The visual mode still works when storage is unavailable.
+            }
+        }
+    };
+
+    performanceToggle.addEventListener('click', () => {
+        applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true);
+    });
+    applyEffectsMode(effectsMode);
+
+    if (!savedEffectsMode && effectsMode === 'high' && !document.hidden) {
+        const measurementStartedAt = performance.now();
+        let deliveredFrames = 0;
+        const measurePerformance = now => {
+            deliveredFrames += 1;
+            const elapsed = now - measurementStartedAt;
+            if (elapsed < 1400) {
+                requestAnimationFrame(measurePerformance);
+                return;
+            }
+            const deliveredFps = deliveredFrames / elapsed * 1000;
+            if (!hasManualEffectsPreference && deliveredFps < 42) applyEffectsMode('low');
+        };
+        requestAnimationFrame(measurePerformance);
+    }
+
     let pointerFrame = 0;
     let latestPointerEvent;
     window.addEventListener('pointermove', event => {
+        if (effectsMode !== 'high') return;
         latestPointerEvent = event;
         if (pointerFrame) return;
         pointerFrame = requestAnimationFrame(() => {
@@ -74,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupGalaxyField(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    if (!context) return { move() {}, scroll() {} };
+    if (!context) return { move() {}, scroll() {}, setEnabled() {} };
 
     let width = window.innerWidth;
     let height = window.innerHeight;
@@ -85,6 +148,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     let constellationNodes = [];
     let nodeLinks = [];
     let animationFrame = 0;
+    let enabled = true;
     let previousTime = performance.now();
     let lastDrawTime = 0;
     let previousScrollY = window.scrollY;
@@ -505,6 +569,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
 
     const draw = (time, force = false) => {
+        if (!enabled) return;
         if (!force && time - lastDrawTime < frameInterval) {
             animationFrame = requestAnimationFrame(draw);
             return;
@@ -591,7 +656,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
         }
 
-        if (!reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(draw);
+        if (enabled && !reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(draw);
     };
 
     const resize = () => {
@@ -614,6 +679,7 @@ function setupGalaxyField(canvas, reducedMotion) {
 
     const start = () => {
         cancelAnimationFrame(animationFrame);
+        if (!enabled) return;
         previousTime = performance.now();
         lastDrawTime = 0;
         if (reducedMotion.matches) draw(previousTime, true);
@@ -621,6 +687,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
 
     const move = event => {
+        if (!enabled) return;
         pointer.velocityX = Math.max(-28, Math.min(28, event.clientX - pointer.targetX));
         pointer.velocityY = Math.max(-28, Math.min(28, event.clientY - pointer.targetY));
         pointer.targetX = event.clientX;
@@ -631,6 +698,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
 
     const scroll = scrollY => {
+        if (!enabled) return;
         const scrollDelta = scrollY - previousScrollY;
         targetScrollPosition = scrollY;
         scrollPosition = scrollY;
@@ -652,12 +720,22 @@ function setupGalaxyField(canvas, reducedMotion) {
     reducedMotion.addEventListener('change', start);
     resize();
     start();
-    return { move, scroll };
+    const setEnabled = nextEnabled => {
+        enabled = nextEnabled;
+        canvas.hidden = !enabled;
+        cancelAnimationFrame(animationFrame);
+        if (enabled) {
+            resize();
+            start();
+        }
+    };
+    return { move, scroll, setEnabled };
 }
 
 function setupCursorEffects(cursorDot, reducedMotion) {
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return { move() {} };
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return { move() {}, setEnabled() {} };
 
+    let enabled = true;
     document.documentElement.classList.add('enhanced-pointer');
     let previousX = window.innerWidth / 2;
     let previousY = window.innerHeight / 2;
@@ -665,6 +743,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     let lastSparkAt = 0;
 
     const move = event => {
+        if (!enabled) return;
         const movementX = event.clientX - previousX;
         const movementY = event.clientY - previousY;
         const movementSpeed = Math.hypot(movementX, movementY);
@@ -699,7 +778,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     };
 
     window.addEventListener('pointerdown', event => {
-        if (event.button !== 0) return;
+        if (!enabled || event.button !== 0) return;
         cursorDot.classList.add('is-pressed');
         if (reducedMotion.matches) return;
         const ripple = document.createElement('span');
@@ -713,7 +792,12 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     window.addEventListener('pointerup', () => cursorDot.classList.remove('is-pressed'));
     window.addEventListener('blur', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
     document.documentElement.addEventListener('pointerleave', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
-    return { move };
+    const setEnabled = nextEnabled => {
+        enabled = nextEnabled;
+        document.documentElement.classList.toggle('enhanced-pointer', enabled);
+        if (!enabled) cursorDot.classList.remove('is-visible', 'is-interactive', 'is-pressed');
+    };
+    return { move, setEnabled };
 }
 
 function setupInteractiveTilt(reducedMotion) {
