@@ -737,14 +737,22 @@ function renderProfile(profile) {
     if (highlights) {
         highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => `<article class="about-highlight"><span>${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p></article>`).join('');
     }
+    const emailAddress = profile.email?.trim();
+    const prefersNativeEmailApp = navigator.userAgentData?.mobile === true
+        || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const emailUrl = emailAddress
+        ? prefersNativeEmailApp
+            ? `mailto:${emailAddress}`
+            : `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailAddress)}`
+        : '';
     const links = [
         [profile.github, 'fa-brands fa-github', 'GitHub'], [profile.linkedin, 'fa-brands fa-linkedin', 'LinkedIn'],
-        [profile.grabcad, 'fa-solid fa-cube', 'GrabCAD'], [profile.email && `mailto:${profile.email}`, 'fa-solid fa-envelope', 'Email']
+        [profile.grabcad, 'fa-solid fa-cube', 'GrabCAD'], [emailUrl, 'fa-solid fa-envelope', `Email ${emailAddress || ''}`, 'Email Me']
     ].filter(([url]) => url && !url.startsWith('UPDATE'));
-    const renderProfileLink = ([url, icon, label], className = '') => {
+    const renderProfileLink = ([url, icon, label, buttonLabel], className = '') => {
         const externalAttributes = url.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
         const classAttribute = className ? ` class="${className}"` : '';
-        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}"></i>${className ? ` ${label}` : ''}</a>`;
+        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}"></i>${className ? ` ${buttonLabel || label}` : ''}</a>`;
     };
     document.getElementById('hero-social').innerHTML = links.map(link => renderProfileLink(link)).join('');
     const resumeButton = profile.resume
