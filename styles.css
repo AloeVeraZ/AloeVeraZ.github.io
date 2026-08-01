@@ -363,6 +363,17 @@ main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); margin: auto; pa
 .modal-image { width: 100%; min-height: 240px; max-height: 410px; margin-bottom: 1.4rem; background: #34363d; }
 .modal-image img { width: 100%; height: 100%; max-height: 410px; display: block; object-fit: cover; }
 .modal-summary { color: #dedee0; font-size: 1.12rem; font-weight: 600; }
+.modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
+.modal-overview { margin: 2rem 0; padding: 1.5rem 0; border-top: 1px solid var(--blue); border-bottom: 1px solid var(--line); }
+.modal-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.modal-section-heading span { color: var(--blue); font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.modal-section-heading h3 { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.65rem, 4vw, 2.35rem); line-height: 1; text-transform: uppercase; }
+.modal-overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.modal-overview-item { min-width: 0; padding: 1.1rem; background: var(--surface); }
+.modal-overview-item > span { display: block; margin-bottom: 1.35rem; color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .8rem; font-weight: 700; }
+.modal-overview-item h4 { margin-bottom: .45rem; font-family: "Barlow Condensed", sans-serif; font-size: 1.25rem; letter-spacing: .02em; text-transform: uppercase; }
+.modal-overview-item p { color: var(--muted); font-size: .84rem; line-height: 1.6; }
+.modal-deep-dive-heading { margin-top: 2rem; margin-bottom: 1.1rem; }
 .modal-details { margin: 1rem 0 1.5rem; color: var(--muted); line-height: 1.75; }
 .modal-detail-section + .modal-detail-section { margin-top: 1.25rem; }
 .modal-detail-section h4 { margin-bottom: .35rem; color: var(--ink); font-size: 1.05rem; letter-spacing: -.025em; }
@@ -398,6 +409,8 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
     .modal-overlay { align-items: flex-start; padding: .65rem; }
     .modal-card { max-height: 94vh; }
     .modal-header { align-items: flex-start; flex-direction: column; }
+    .modal-overview-grid { grid-template-columns: 1fr; }
+    .modal-section-heading { align-items: flex-start; flex-direction: column; }
     .modal-media { grid-template-columns: 1fr; }
 }
 

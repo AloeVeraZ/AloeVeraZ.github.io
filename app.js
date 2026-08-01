@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260801-project-migration-v1')
+    fetch('data.json?v=20260801-case-study-v2')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -1105,6 +1105,17 @@ function openModal(project) {
     document.getElementById('modal-title').textContent = project.title;
     document.getElementById('modal-category').textContent = project.category;
     document.getElementById('modal-summary').textContent = project.summary;
+    const overview = document.getElementById('modal-overview');
+    const overviewGrid = document.getElementById('modal-overview-grid');
+    const deepDiveHeading = document.getElementById('modal-deep-dive-heading');
+    const overviewItems = project.overview
+        ? [['Problem', project.overview.problem], ['Method', project.overview.method], ['Result', project.overview.result]]
+        : [];
+    overviewGrid.innerHTML = overviewItems
+        .map(([heading, body], index) => `<article class="modal-overview-item"><span>0${index + 1}</span><h4>${heading}</h4><p>${body}</p></article>`)
+        .join('');
+    overview.hidden = overviewItems.length === 0;
+    deepDiveHeading.hidden = !project.sections?.length || overviewItems.length === 0;
     const details = document.getElementById('modal-details');
     details.innerHTML = project.sections
         ? project.sections.map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('')

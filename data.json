@@ -47,6 +47,11 @@
       "image": "assets/kiwi-swerve-prototype.jpg",
       "motionImage": "assets/kiwi-swerve-drive.gif",
       "tags": ["Swerve Drive", "Raspberry Pi", "Python", "3D Printing"],
+      "overview": {
+        "problem": "Competition swerve drives often demand four power-hungry modules, specialized parts, and a budget that puts omnidirectional motion out of reach for smaller teams.",
+        "method": "I reduced the drivetrain to three steerable pods, selected readily available hardware, and shifted steering accuracy into encoder-based Python control on a Raspberry Pi.",
+        "result": "The first robot validated a lower-cost, lower-power architecture with full-direction movement and created a practical platform for a more refined second version."
+      },
       "sections": [
         {"heading": "First Robot", "body": "This first prototype established the low-cost, three-module Kiwi swerve concept and provided the foundation for the next version."},
         {"heading": "Overview", "body": "The Kiwi swerve drivetrain is a low-power, affordable, and easy-to-maintain omnidirectional drive system for robotics competitions and real-world robotic applications. Using three modules instead of four, continuous-rotation servos with encoder feedback, and general-purpose mechanical components reduces cost and complexity while maintaining smooth, capable motion. A custom electronics stack and Python control system replace expensive hardware solutions and make the platform practical for teaching robotics design and programming."},
@@ -78,6 +83,11 @@
       "details": "",
       "image": "assets/a-eye-animatronic.jpg",
       "tags": ["Animatronics", "ChatGPT", "Python", "Servo Control"],
+      "overview": {
+        "problem": "Voice assistants can sound responsive while still feeling physically disconnected, and adding moving hardware introduces noise that can disrupt listening.",
+        "method": "I paired a compact two-axis eye and linked eyelids with conversational software, then coordinated motion and microphone states so expression never competed with speech input.",
+        "result": "The prototype responds as both a conversational system and an expressive object, with natural-looking motion that remains quiet enough for dependable interaction."
+      },
       "sections": [
         {"heading": "Challenge", "body": "The goal was to create a lifelike, voice-activated assistant that could listen and respond naturally while controlling an expressive mechanical eye without servo noise interfering with speech recognition."},
         {"heading": "Mechanical Design", "body": "Two hidden servos move the eye vertically and horizontally from a compact mechanism mounted to a monitor arm. Linked upper and lower eyelids create synchronized expressions, while reinforced pivots keep the movement stable and repeatable."},
@@ -100,6 +110,11 @@
       "details": "",
       "image": "assets/coaxial-swerve.jpg",
       "tags": ["FTC", "Swerve Drive", "CAD", "3D Printing"],
+      "overview": {
+        "problem": "Most FTC-scale swerve modules are difficult to package, expensive to reproduce, and tied to a narrow set of proprietary components.",
+        "method": "I built and compared two compact coaxial pod designs, using the first to prove the geometry and the second to prioritize common parts and multiple mounting standards.",
+        "result": "The redesign retained the compact steering concept while lowering the barrier to repair, replacement, and adoption by teams using different hardware ecosystems."
+      },
       "sections": [
         {"heading": "Challenge", "body": "Traditional FTC swerve modules can be too large and expensive for many teams. This project explored a compact, maintainable coaxial pod that could fit inside a competition robot without requiring specialized components."},
         {"heading": "First Prototype", "body": "The first design fit inside a four-inch cube and combined a printed structure with shafts, gears, and bearings. A four-pod drivetrain used one motor and one servo per module, proving the steering and drive arrangement worked as a complete chassis."},
@@ -122,6 +137,11 @@
       "details": "",
       "image": "assets/simple-swerve.jpg",
       "tags": ["FTC", "Differential Swerve", "Gearbox Design", "CAD"],
+      "overview": {
+        "problem": "Differential swerve offers unusual mobility, but its gearing, size, and component count make it a difficult off-season experiment within FTC constraints.",
+        "method": "I simplified a proven differential layout, embedded bearings directly in the gears, and repeatedly repackaged the motors until the chassis fit the legal envelope.",
+        "result": "The work produced an adaptable two-pod foundation that demonstrates the mechanism without forcing teams into one motor vendor or a premium parts list."
+      },
       "sections": [
         {"heading": "Challenge", "body": "After the 2023-2024 NYC FTC championship, the goal was to build an off-season swerve robot despite the complexity, packaging constraints, and cost that make swerve uncommon in FTC."},
         {"heading": "Development", "body": "The design began with a study of differential swerve and a simplified version of FTC 11115's approach. The gearbox was reengineered around M3x45 bolts and bearings embedded in the gears, reducing specialized hardware while preserving the core mechanism."},
@@ -139,6 +159,11 @@
       "details": "",
       "image": "assets/ftc-2023-24-eggwuuhh.jpg",
       "tags": ["FTC 9384", "Mecanum", "Mechanism Design", "Competition Robotics"],
+      "overview": {
+        "problem": "CENTERSTAGE combined intake, precise backdrop scoring, launching, and climbing in one robot, leaving little room for a mechanism that could not evolve during the season.",
+        "method": "Our team treated the machine as a sequence of testable subsystems and revised the chassis, lift, intake, outtake, and endgame hardware as match feedback exposed weaknesses.",
+        "result": "Four revisions converged on a competition-ready robot whose systems were reliable enough to perform the full game cycle and document a clear iteration story."
+      },
       "sections": [
         {"heading": "Challenge", "body": "The CENTERSTAGE season required one robot to collect and score pixels on the backdrop, launch a paper plane, and climb at the end of a match. The team needed a design that could evolve rapidly throughout the season."},
         {"heading": "Core Systems", "body": "The robot used a custom aluminum-sheet mecanum chassis, stacked drawer-slide lift with printed spacers and pulleys, and a three-stage active intake. The backdrop outtake evolved through multiple pivot and pincher designs as testing exposed alignment and reliability issues."},
@@ -156,6 +181,11 @@
       "details": "",
       "image": "assets/ftc-2022-23-crabby.jpg",
       "tags": ["FTC 9384", "Mecanum", "Turret", "Competition Robotics"],
+      "overview": {
+        "problem": "POWERPLAY rewarded rapid cone cycles at several heights, so lift speed, turret accuracy, and drivetrain rigidity all had to improve together.",
+        "method": "We rebuilt the robot through three major configurations, replacing flexible or slow mechanisms with rigid slides, a claw, reinforced structure, and a more capable turret.",
+        "result": "The final revision delivered a lower, sturdier scoring platform and turned competition observations into concrete mechanical gains across the whole machine."
+      },
       "sections": [
         {"heading": "Challenge", "body": "POWERPLAY required the robot to collect cones and place them on junction poles at several heights. Fast cycling, accurate alignment, and chassis stability were all critical to competitive performance."},
         {"heading": "Early Designs", "body": "The first version paired REV linear slides with an H-pattern mecanum chassis and a dual compliant-wheel intake. Later iterations increased lift speed, replaced the roller intake with a claw, and introduced a direct-drive turret supported by a lazy susan bearing."},
@@ -174,6 +204,11 @@
       "details": "",
       "image": "assets/zerog-hydra.jpg",
       "tags": ["CoreXY", "Klipper", "Auto Tramming", "Toolhead Design"],
+      "overview": {
+        "problem": "Large-format printers often trade consistency and serviceability for build volume or headline speed, especially when calibration still depends on manual adjustment.",
+        "method": "I centered the design on a rigid CoreXY frame, three-point automated bed alignment, modular electronics, and a sensor-rich toolhead built around repeatable extrusion.",
+        "result": "The in-progress Hydra now serves as a quality-first flagship platform, with the core motion, calibration, and monitoring architecture established for continued development."
+      },
       "sections": [
         {"heading": "Challenge", "body": "After building and modifying several printers, the goal was a large-volume machine that prioritized print quality, robust hardware, and sensor-driven reliability instead of chasing speed alone."},
         {"heading": "Motion and Bed", "body": "The Hydra uses a CoreXY motion system and a three-point, independently pivoting floating bed. Each point can adjust during automatic tramming, creating a rigid platform while letting the firmware correct alignment before a print."},
@@ -191,6 +226,11 @@
       "details": "",
       "image": "assets/delta-printer.jpg",
       "tags": ["Delta Kinematics", "Klipper", "Closed-Loop Steppers", "CPAP Cooling"],
+      "overview": {
+        "problem": "The delta frame could move quickly, but friction, cooling limitations, and difficult calibration kept that speed from producing consistently clean parts.",
+        "method": "I converted the machine through several toolhead generations, moving to direct drive, closed-loop motion, stronger remote cooling, and a nozzle-based probing strategy.",
+        "result": "The rebuilt printer combines delta speed with dependable extrusion and calibration, producing repeatable parts without the artifacts that limited the original setup."
+      },
       "sections": [
         {"heading": "Challenge", "body": "The project set out to combine delta-printer speed with consistent print quality, using closed-loop stepper motors, a lightweight effector, and strong part cooling while working through the calibration and packaging challenges unique to delta kinematics."},
         {"heading": "Development", "body": "The TEVO Little Monster frame, power supply, and solid-state relay became the foundation. An early Bowden setup introduced friction and surface artifacts, so later revisions moved to direct drive and a frame-mounted CPAP blower feeding the effector through a lightweight hose."},
@@ -208,6 +248,11 @@
       "details": "",
       "image": "assets/voron-v02900.jpg",
       "tags": ["Voron", "Klipper", "High-Speed Printing", "Custom Toolhead"],
+      "overview": {
+        "problem": "The compact Voron platform was capable, but heat management, extrusion flow, monitoring, and access to electronics limited long-term speed and reliability.",
+        "method": "I upgraded the machine as one integrated system, pairing a higher-flow toolhead with external cooling, enclosure sensing, filtration, failure monitoring, and service-friendly wiring.",
+        "result": "The finished modifications make the small printer faster to run, easier to maintain, and safer to leave working through demanding high-speed jobs."
+      },
       "sections": [
         {"heading": "Challenge", "body": "Starting from the community-designed Voron platform, this build focused on identifying performance bottlenecks and improving extrusion, cooling, monitoring, filtration, and service access."},
         {"heading": "Performance Upgrades", "body": "A custom toolhead combines a stronger extruder and high-flow hotend for printing around 225-350 mm/s with travel speeds up to 650 mm/s. An external 12032 fan increases part cooling without adding excessive moving mass."},
@@ -284,6 +329,22 @@
         {"heading": "Result", "body": "The course built a practical understanding of the full CAD-to-CAM workflow and how design choices affect machining time, tool access, surface finish, and manufacturability."}
       ],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://drive.google.com/drive/folders/1-eLXnWs_elbn7zjJ6Bo0BNTC_wbGsJNJ?usp=sharing"}
+    },
+    {
+      "id": "matlab-coursework",
+      "title": "MATLAB Coursework",
+      "category": "Coursework",
+      "collectionOrder": 3,
+      "summary": "Programming coursework applying scripts, functions, matrices, and data visualization to mathematical and engineering problems.",
+      "details": "",
+      "image": "assets/matlab-coursework.svg",
+      "tags": ["MATLAB", "Data Analysis", "Engineering Computing", "Visualization"],
+      "sections": [
+        {"heading": "Coursework", "body": "This freshman course extended a foundation in basic Python into MATLAB's engineering-focused programming environment. Assignments introduced a different syntax and a workflow built around numerical problem solving."},
+        {"heading": "Computing Skills", "body": "Projects used scripts and reusable functions to work with matrices, arrays, and structured calculations. Built-in numerical tools made it possible to analyze data and test mathematical relationships efficiently."},
+        {"heading": "Application", "body": "Plots and visualizations turned computed results into readable engineering evidence. The course connected programming with the mathematical models and data interpretation used throughout engineering work."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://drive.google.com/drive/folders/1xHXXgd00oEDRkiFqBv235gcIqcqxkYEP?usp=sharing"}
     },
     {
       "id": "cuny-geopolymer-research",
