@@ -30,10 +30,10 @@
     }
   ],
   "projectCollections": [
-    {"name": "Personal Projects", "description": "Independent builds, competition work, and experiments.", "categories": ["Robotics", "3D Printing", "Industrial Design", "Software"]},
-    {"name": "Internship Projects", "description": "Engineering work completed in a professional setting.", "categories": ["Internship Robotics"]},
-    {"name": "Club Projects", "description": "Hands-on builds created with campus organizations.", "categories": ["Club Projects"]},
-    {"name": "Awards", "description": "Recognition, credentials, and certificates.", "categories": ["Awards & Certificates"]}
+    {"name": "Personal Projects", "description": "Independent robotics and 3D-printer builds, from early prototypes to finished machines.", "categories": ["Robotics", "3D Printing"]},
+    {"name": "Club Projects", "description": "Hands-on robotics built as collaborative teaching and experimentation platforms.", "categories": ["Club Projects"]},
+    {"name": "Coursework", "description": "Design and manufacturing work completed at New York City College of Technology.", "categories": ["Coursework"]},
+    {"name": "Awards & Research", "description": "Research, technical training, certificates, and academic recognition.", "categories": ["Awards & Certificates"]}
   ],
   "projects": [
     {
@@ -65,135 +65,263 @@
         "github": "",
         "grabcad": "",
         "video": "",
-        "projectUrl": ""
+        "projectUrl": "https://angelojamesny.com/dorito"
       }
     },
     {
-      "id": "project-2",
-      "title": "Personal Project 2",
-      "category": "3D Printing",
+      "id": "a-eye-animatronic-chatbot",
+      "title": "A-Eye Animatronic Chatbot",
+      "category": "Robotics",
       "collectionOrder": 2,
       "featured": true,
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/fsae_chassis.jpg",
-      "tags": ["Tag1", "Tag2"],
+      "summary": "A voice-activated AI assistant that combines real-time conversation with a smooth, expressive animatronic eye.",
+      "details": "",
+      "image": "assets/a-eye-animatronic.jpg",
+      "tags": ["Animatronics", "ChatGPT", "Python", "Servo Control"],
+      "sections": [
+        {"heading": "Challenge", "body": "The goal was to create a lifelike, voice-activated assistant that could listen and respond naturally while controlling an expressive mechanical eye without servo noise interfering with speech recognition."},
+        {"heading": "Mechanical Design", "body": "Two hidden servos move the eye vertically and horizontally from a compact mechanism mounted to a monitor arm. Linked upper and lower eyelids create synchronized expressions, while reinforced pivots keep the movement stable and repeatable."},
+        {"heading": "Controls", "body": "The software combines wake-word detection, speech recognition, and ChatGPT conversation. Cosine easing smooths eye and eyelid movement, coordinated states manage blinking and attention, and the servos pause while the microphone is listening to reduce noise."},
+        {"heading": "Result", "body": "The completed prototype can wake, listen, converse, interrupt, and reset in real time. Smooth eye motion and synchronized blinking give the assistant a more natural presence while preserving reliable voice interaction."}
+      ],
       "links": {
-        "github": "",
-        "grabcad": "",
+        "github": "https://github.com/TheTheAloe/eye_bot",
+        "grabcad": "https://grabcad.com/library/eye-animatronic-1",
         "video": "",
-        "projectUrl": ""
+        "projectUrl": "https://angelojamesny.com/eye"
       }
     },
     {
-      "id": "project-3",
-      "title": "Personal Project 3",
-      "category": "Industrial Design",
+      "id": "coaxial-swerve-drive",
+      "title": "Coaxial Swerve Drive",
+      "category": "Robotics",
       "collectionOrder": 3,
-      "featured": true,
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["Tag1", "Tag2"],
+      "summary": "A compact FTC swerve module redesigned around accessible parts, a small footprint, and broad hardware compatibility.",
+      "details": "",
+      "image": "assets/coaxial-swerve.jpg",
+      "tags": ["FTC", "Swerve Drive", "CAD", "3D Printing"],
+      "sections": [
+        {"heading": "Challenge", "body": "Traditional FTC swerve modules can be too large and expensive for many teams. This project explored a compact, maintainable coaxial pod that could fit inside a competition robot without requiring specialized components."},
+        {"heading": "First Prototype", "body": "The first design fit inside a four-inch cube and combined a printed structure with shafts, gears, and bearings. A four-pod drivetrain used one motor and one servo per module, proving the steering and drive arrangement worked as a complete chassis."},
+        {"heading": "Second Prototype", "body": "The follow-up version replaced expensive specialty hardware with generic Amazon and AliExpress parts. Its shape changed from an L-shaped module to a rectangular pod, added mounting support for GoBilda, REV, and AndyMark systems, and grew by less than a quarter inch."},
+        {"heading": "Result", "body": "The first pod worked but cost about $350, putting the full chassis near $1,300. The second design substantially reduced cost while improving compatibility and serviceability, creating a stronger foundation for continued development."}
+      ],
       "links": {
         "github": "",
         "grabcad": "",
         "video": "",
-        "projectUrl": ""
+        "projectUrl": "https://angelojamesny.com/ftc-coaxial-swerve"
       }
     },
     {
-      "id": "project-4",
-      "title": "Personal Project 4",
-      "category": "Software",
+      "id": "simple-swerve-drive",
+      "title": "Simple Swerve Drive",
+      "category": "Robotics",
       "collectionOrder": 4,
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "A cost-conscious differential swerve chassis engineered to fit FTC size rules and common team hardware.",
+      "details": "",
+      "image": "assets/simple-swerve.jpg",
+      "tags": ["FTC", "Differential Swerve", "Gearbox Design", "CAD"],
+      "sections": [
+        {"heading": "Challenge", "body": "After the 2023-2024 NYC FTC championship, the goal was to build an off-season swerve robot despite the complexity, packaging constraints, and cost that make swerve uncommon in FTC."},
+        {"heading": "Development", "body": "The design began with a study of differential swerve and a simplified version of FTC 11115's approach. The gearbox was reengineered around M3x45 bolts and bearings embedded in the gears, reducing specialized hardware while preserving the core mechanism."},
+        {"heading": "Chassis Iteration", "body": "The first layout measured 18.25 inches, so the motors were rotated 90 degrees with REV Ultra 90 gearboxes to meet FTC sizing. A two-pod chassis used omni wheels at the other corners and included space for a slide mechanism. Version two added lower-cost configurations for REV Ultraplanetary and GoBilda Yellow Jacket motors."},
+        {"heading": "Result", "body": "The project produced a functional, budget-aware differential swerve foundation that fits FTC constraints and can be adapted to the hardware many teams already use."}
+      ],
+      "links": {"github": "", "grabcad": "https://grabcad.com/library/simple-swerve-v2-chassis-1", "video": "", "projectUrl": "https://angelojamesny.com/ftc-swerve"}
     },
     {
-      "id": "personal-project-5",
-      "title": "Personal Project 5",
+      "id": "ftc-9384-eggwuuhh",
+      "title": "FTC 9384 Robot: EggWUUUHH",
       "category": "Robotics",
       "collectionOrder": 5,
-      "summary": "UPDATE — One sentence summary of this personal project.",
-      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Robotics", "Prototyping"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "Team 9384's four-iteration CENTERSTAGE robot, built to score pixels, launch a plane, and climb reliably.",
+      "details": "",
+      "image": "assets/ftc-2023-24-eggwuuhh.jpg",
+      "tags": ["FTC 9384", "Mecanum", "Mechanism Design", "Competition Robotics"],
+      "sections": [
+        {"heading": "Challenge", "body": "The CENTERSTAGE season required one robot to collect and score pixels on the backdrop, launch a paper plane, and climb at the end of a match. The team needed a design that could evolve rapidly throughout the season."},
+        {"heading": "Core Systems", "body": "The robot used a custom aluminum-sheet mecanum chassis, stacked drawer-slide lift with printed spacers and pulleys, and a three-stage active intake. The backdrop outtake evolved through multiple pivot and pincher designs as testing exposed alignment and reliability issues."},
+        {"heading": "Endgame and Autonomous", "body": "A spring-powered plane launcher handled the season's launch task, while an autonomous pixel pincher improved repeatable placement. The final climbing system paired a winch with pivoting hooks and passive rubber assistance."},
+        {"heading": "Result", "body": "Across four major revisions, the team produced a reliable competition platform with strong slide, intake, outtake, launcher, and climber systems. The complete CAD and engineering portfolio document the full iteration process."}
+      ],
+      "links": {"github": "https://github.com/TheTheAloe/FTC9384-2024-Robot/tree/main/Portfolio%26Notebook", "grabcad": "https://grabcad.com/library/ftc-9384-2023-2024-robot-1", "video": "", "projectUrl": "https://angelojamesny.com/tubba-2023-24"}
     },
     {
-      "id": "personal-project-6",
-      "title": "Personal Project 6",
-      "category": "Software",
+      "id": "ftc-9384-crabby",
+      "title": "FTC 9384 Robot: Crabby",
+      "category": "Robotics",
       "collectionOrder": 6,
-      "summary": "UPDATE — One sentence summary of this personal project.",
-      "details": "UPDATE — Add the design process, tools, challenges, and outcome.",
-      "image": "assets/fsae_chassis.jpg",
-      "tags": ["Software", "Controls"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "Team 9384's POWERPLAY robot, refined through three designs for faster cone scoring and a more stable chassis.",
+      "details": "",
+      "image": "assets/ftc-2022-23-crabby.jpg",
+      "tags": ["FTC 9384", "Mecanum", "Turret", "Competition Robotics"],
+      "sections": [
+        {"heading": "Challenge", "body": "POWERPLAY required the robot to collect cones and place them on junction poles at several heights. Fast cycling, accurate alignment, and chassis stability were all critical to competitive performance."},
+        {"heading": "Early Designs", "body": "The first version paired REV linear slides with an H-pattern mecanum chassis and a dual compliant-wheel intake. Later iterations increased lift speed, replaced the roller intake with a claw, and introduced a direct-drive turret supported by a lazy susan bearing."},
+        {"heading": "Final Revision", "body": "The final robot used dual rigid slides, an internal bevel-gearbox chassis, a larger turret, and a reinforced frame. These changes addressed flex, speed, and alignment problems found during competition testing."},
+        {"heading": "Result", "body": "Three major design cycles produced a polished FTC machine with a stable low-profile drivetrain, fast lift, reliable claw, and precise turret. The project provided direct experience turning match feedback into mechanical improvements."}
+      ],
+      "links": {"github": "", "grabcad": "https://grabcad.com/library/ftc-9384-2022-2023-robot-1", "video": "", "projectUrl": "https://angelojamesny.com/crabby-2022-23"}
     },
     {
-      "id": "project-5",
-      "title": "UPDATE — Internship Project Title",
-      "category": "Internship Robotics",
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "id": "zerog-hydra-3d-printer",
+      "title": "ZeroG Hydra 3D Printer",
+      "category": "3D Printing",
+      "collectionOrder": 7,
+      "featured": true,
+      "summary": "A large-format CoreXY printer focused on print quality, automatic calibration, sensing, and robust hardware.",
+      "details": "",
+      "image": "assets/zerog-hydra.jpg",
+      "tags": ["CoreXY", "Klipper", "Auto Tramming", "Toolhead Design"],
+      "sections": [
+        {"heading": "Challenge", "body": "After building and modifying several printers, the goal was a large-volume machine that prioritized print quality, robust hardware, and sensor-driven reliability instead of chasing speed alone."},
+        {"heading": "Motion and Bed", "body": "The Hydra uses a CoreXY motion system and a three-point, independently pivoting floating bed. Each point can adjust during automatic tramming, creating a rigid platform while letting the firmware correct alignment before a print."},
+        {"heading": "Electronics and Toolhead", "body": "An under-printer electronics bay houses the USB hub, controller, power supply, solid-state relay for the 110-volt bed, and the Linux computer running Klipper. The Filimetrix-inspired toolhead adds dual filament sensors, a cutter, Beacon eddy-current probing, lighting, a touchscreen, a Phaetus Rapido hotend, and a Clockwork 2 extruder."},
+        {"heading": "Status", "body": "The printer remains in development, but its large build volume, automated calibration, sensor-rich toolhead, and high-quality extrusion system establish it as a flagship quality-focused machine."}
+      ],
+      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/ZeroG", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/zero-g-hydra"}
     },
     {
-      "id": "project-6",
-      "title": "UPDATE — Award or Certificate Title",
-      "category": "Awards & Certificates",
-      "summary": "UPDATE — One sentence summary of this award or certificate.",
-      "details": "UPDATE — Add issuer, date, and relevant details.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "id": "delta-3d-printer",
+      "title": "Delta 3D Printer",
+      "category": "3D Printing",
+      "collectionOrder": 8,
+      "summary": "A high-speed delta printer rebuilt around closed-loop motion, direct-drive extrusion, and powerful CPAP cooling.",
+      "details": "",
+      "image": "assets/delta-printer.jpg",
+      "tags": ["Delta Kinematics", "Klipper", "Closed-Loop Steppers", "CPAP Cooling"],
+      "sections": [
+        {"heading": "Challenge", "body": "The project set out to combine delta-printer speed with consistent print quality, using closed-loop stepper motors, a lightweight effector, and strong part cooling while working through the calibration and packaging challenges unique to delta kinematics."},
+        {"heading": "Development", "body": "The TEVO Little Monster frame, power supply, and solid-state relay became the foundation. An early Bowden setup introduced friction and surface artifacts, so later revisions moved to direct drive and a frame-mounted CPAP blower feeding the effector through a lightweight hose."},
+        {"heading": "Toolhead Iterations", "body": "Version two combined ducts, hotend, extruder, and probe but exposed airflow and probe-offset problems. Version three lowered the hotend and center of gravity, improved the ducts, and added a detachable nozzle probe. Closed-loop NEMA 17 motors with encoders and a TFT35 KlipperScreen completed the control system."},
+        {"heading": "Result", "body": "The finished machine prints quickly and consistently, pairing reliable closed-loop motion with high-flow direct-drive extrusion, improved calibration, strong cooling, and a custom user interface."}
+      ],
+      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/Delta", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/delta-printer"}
     },
     {
-      "id": "project-9",
-      "title": "UPDATE — Internship Project Title 2",
-      "category": "Internship Robotics",
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/fsae_chassis.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "id": "voron-v02900",
+      "title": "Voron V0.2990",
+      "category": "3D Printing",
+      "collectionOrder": 9,
+      "summary": "A heavily modified compact Voron built for higher flow, better cooling, safer operation, and easier servicing.",
+      "details": "",
+      "image": "assets/voron-v02900.jpg",
+      "tags": ["Voron", "Klipper", "High-Speed Printing", "Custom Toolhead"],
+      "sections": [
+        {"heading": "Challenge", "body": "Starting from the community-designed Voron platform, this build focused on identifying performance bottlenecks and improving extrusion, cooling, monitoring, filtration, and service access."},
+        {"heading": "Performance Upgrades", "body": "A custom toolhead combines a stronger extruder and high-flow hotend for printing around 225-350 mm/s with travel speeds up to 650 mm/s. An external 12032 fan increases part cooling without adding excessive moving mass."},
+        {"heading": "Reliability and Usability", "body": "The enclosure adds active carbon filtration, a chamber thermistor, RGB-lit reinforced panels, upgraded hinges, and a camera for failure detection and timelapses. A filament runout and extrusion sensor monitors material flow, while a larger Mini12864 display improves local control."},
+        {"heading": "Serviceability", "body": "DIN-rail electronics, a hinged rear electronics door, and a quiet Noctua cooling fan make maintenance and thermal management easier. Together, the modifications turn the compact printer into a faster, safer, and more dependable machine."}
+      ],
+      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/Voron%20V0.2990", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/voron-v02900"}
     },
     {
-      "id": "project-10",
-      "title": "UPDATE — Internship Project Title 3",
-      "category": "Internship Robotics",
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/wind_turbine.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
-    },
-    {
-      "id": "project-7",
-      "title": "UPDATE — Club Project Title",
+      "id": "self-balancing-robot",
+      "title": "Self-Balancing Robot",
       "category": "Club Projects",
-      "summary": "UPDATE — One sentence summary of this project.",
-      "details": "UPDATE — Longer description with technical details.",
-      "image": "assets/fsae_chassis.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "collectionOrder": 1,
+      "summary": "Three low-cost balancing robots built from school parts to teach feedback control across Raspberry Pi and Arduino platforms.",
+      "details": "",
+      "image": "assets/self-balancing-robot.jpg",
+      "tags": ["PID Control", "Raspberry Pi", "Arduino", "Gyroscope"],
+      "sections": [
+        {"heading": "Challenge", "body": "The club wanted a practical controls project that could be built with parts already available at school. A self-balancing robot made gyroscope feedback, tuning, and real-time motor control visible and easy to experiment with."},
+        {"heading": "Build", "body": "Three robots were created: one controlled by a Raspberry Pi running Python and two based on Arduino Nano and Uno boards. Each used an existing motor driver, DC motors, and gyroscope inside a custom chassis."},
+        {"heading": "Controls", "body": "A closed-loop PID controller processes the robot angle, synchronizes both motors, and corrects disturbances. Repeated PID tuning and changes to wheel placement, chassis geometry, and center of gravity improved stability across each platform."},
+        {"heading": "Result", "body": "All three robots can balance while stationary and moving forward or backward. The low-cost platforms turned PID control, embedded programming, and mechanical tradeoffs into an expandable hands-on teaching system."}
+      ],
+      "media": [
+        {"type": "video", "src": "https://www.youtube.com/embed/wsOvZ_ywYDQ?enablejsapi=1&playsinline=1&rel=0&start=15", "label": "Balance test"}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=wsOvZ_ywYDQ&t=15s", "projectUrl": "https://angelojamesny.com/selfbalancing"}
     },
     {
-      "id": "project-8",
-      "title": "UPDATE — Classwork Title",
-      "category": "Classwork",
-      "summary": "UPDATE — One sentence summary of this classwork.",
-      "details": "UPDATE — Course, project brief, tools, and result.",
-      "image": "assets/robotic_arm.jpg",
-      "tags": ["Tag 1", "Tag 2", "Tag 3"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "id": "crab-crawler",
+      "title": "Crab Crawler",
+      "category": "Club Projects",
+      "collectionOrder": 2,
+      "summary": "A trio of compact ESP32 walking robots designed to teach wireless programming, sensors, and coordinated servo motion.",
+      "details": "",
+      "image": "assets/crab-crawler.jpg",
+      "tags": ["ESP32-CAM", "Servo Gaits", "OLED", "3D Printing"],
+      "sections": [
+        {"heading": "Challenge", "body": "The project needed to introduce ESP32 programming, camera feedback, sensors, and servo breakout boards through a robot simple enough for students to understand and modify."},
+        {"heading": "Build", "body": "Three compact crawlers were assembled from 3D-printed frames, two servos per robot, an ESP32-CAM for wireless control and video, an OLED status display, and a dedicated servo driver."},
+        {"heading": "Programming", "body": "Custom code coordinates the walking gait, live display information, camera connection, and wireless commands. The gait and body geometry were tuned together to improve traction and keep the two-servo mechanism stable."},
+        {"heading": "Result", "body": "The crawlers walk reliably, stream live feedback, and report status in real time. Their low part count and expandable code make them an approachable educational platform for embedded robotics."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/crabcrawler"}
+    },
+    {
+      "id": "autocad-coursework",
+      "title": "AutoCAD Coursework",
+      "category": "Coursework",
+      "collectionOrder": 1,
+      "summary": "Freshman drafting coursework spanning dimensioned 2D drawings, layer organization, and 3D solid modeling.",
+      "details": "",
+      "image": "assets/autocad-coursework.png",
+      "tags": ["AutoCAD", "2D Drafting", "3D Modeling", "Technical Drawings"],
+      "sections": [
+        {"heading": "Coursework", "body": "Two freshman AutoCAD courses covered the transition from precise 2D drafting to three-dimensional solid modeling. Assignments emphasized correct dimensions, readable layouts, layer organization, and clean geometric construction."},
+        {"heading": "Skills Developed", "body": "The work strengthened drafting fundamentals and the ability to communicate a part through both orthographic drawings and finished 3D geometry. Repeated exercises improved speed, accuracy, and consistency inside a professional CAD workflow."},
+        {"heading": "Archive", "body": "The linked coursework folder contains selected drawings and models from both classes."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://drive.google.com/drive/folders/1h3xb6fmxCe69IjiDHwr-0KdJfRjIxcFA?usp=sharing"}
+    },
+    {
+      "id": "mastercam-coursework",
+      "title": "Mastercam Coursework",
+      "category": "Coursework",
+      "collectionOrder": 2,
+      "summary": "CAM coursework connecting CAD models to CNC machining through practical toolpaths, feeds, speeds, and tooling choices.",
+      "details": "",
+      "image": "assets/mastercam-coursework.png",
+      "tags": ["Mastercam", "CNC", "CAM", "Toolpaths"],
+      "sections": [
+        {"heading": "Coursework", "body": "This freshman course began with existing CAD experience and introduced the manufacturing decisions required to turn a digital model into CNC machine instructions."},
+        {"heading": "Process", "body": "Projects covered 2D and 3D machining strategies, toolpath creation, stock setup, feeds and speeds, tool selection, and simulation. Each assignment connected model geometry to the physical sequence a mill would follow."},
+        {"heading": "Result", "body": "The course built a practical understanding of the full CAD-to-CAM workflow and how design choices affect machining time, tool access, surface finish, and manufacturability."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://drive.google.com/drive/folders/1-eLXnWs_elbn7zjJ6Bo0BNTC_wbGsJNJ?usp=sharing"}
+    },
+    {
+      "id": "cuny-geopolymer-research",
+      "title": "CUNY Research: 3D Printing With Geopolymers",
+      "category": "Awards & Certificates",
+      "collectionOrder": 1,
+      "summary": "Summer 2025 research developing lower-impact geopolymer materials and a custom printer capable of extruding them.",
+      "details": "",
+      "image": "assets/cuny-geopolymer-research.png",
+      "tags": ["CUNY Research", "Geopolymers", "Additive Manufacturing", "Materials Testing"],
+      "sections": [
+        {"heading": "Research", "body": "During Summer 2025 at New York City College of Technology, the project explored eco-friendly geopolymer mixtures as a printable construction material. Work included material formulation, curing studies, structural evaluation, and iterative extrusion testing."},
+        {"heading": "Printer Development", "body": "A custom 3D printer was designed and built to handle the material, joining mechanical design with experiments in flow, consistency, layer formation, and process control."},
+        {"heading": "Recognition", "body": "The work was presented at CUNY's Third Annual Celebrating Research Excellence Symposium and earned a Certificate of Research Achievement for completing and presenting two summer research projects."}
+      ],
+      "media": [
+        {"type": "video", "src": "https://www.youtube.com/embed/IKa7OI-kLgc?enablejsapi=1&playsinline=1&rel=0", "label": "Research presentation"}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": "https://angelojamesny.com/college-certificates"}
+    },
+    {
+      "id": "nsf-advanced-manufacturing-camp",
+      "title": "NSF Advanced Manufacturing Training",
+      "category": "Awards & Certificates",
+      "collectionOrder": 2,
+      "summary": "A five-week manufacturing program covering microscopy, CNC machining, additive manufacturing, CAD, and technical communication.",
+      "details": "",
+      "image": "assets/nsf-manufacturing-camp.png",
+      "tags": ["NSF", "Advanced Manufacturing", "CNC", "SolidWorks"],
+      "sections": [
+        {"heading": "Program", "body": "During freshman year, this five-week NSF Advanced Manufacturing Summer Training Camp introduced a broad range of equipment and professional engineering practices."},
+        {"heading": "Technical Experience", "body": "Hands-on work included electron microscopes, CNC mills, 3D printers, SolidWorks, and Autodesk Inventor. The program connected inspection, modeling, machining, and additive manufacturing inside one production workflow."},
+        {"heading": "Communication", "body": "Weekly video updates and presentations developed the ability to document technical work, explain decisions, and communicate progress in an industry-style format."}
+      ],
+      "media": [
+        {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": "https://angelojamesny.com/college-certificates"}
     }
   ]
 }
