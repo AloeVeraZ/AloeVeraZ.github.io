@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pointerFrame = requestAnimationFrame(() => {
             cursor.move(latestPointerEvent);
             galaxy.move(latestPointerEvent);
-            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - 210}px, ${latestPointerEvent.clientY - 210}px, 0)`;
+            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - 140}px, ${latestPointerEvent.clientY - 140}px, 0)`;
             pointerFrame = 0;
         });
     }, { passive: true });

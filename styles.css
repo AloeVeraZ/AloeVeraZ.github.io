@@ -23,6 +23,7 @@ button { font: inherit; }
     position: absolute;
     inset: 0;
     z-index: 0;
+    display: none;
     pointer-events: none;
     background-image:
         linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
@@ -64,48 +65,30 @@ button { font: inherit; }
     left: 0;
     z-index: 4000;
     display: none;
-    width: 22px;
-    height: 22px;
+    width: 8px;
+    height: 8px;
     pointer-events: none;
     border-radius: 50%;
-    border: 1px solid rgba(145,200,255,.9);
-    background: rgba(123,168,216,.07);
-    box-shadow: 0 0 9px rgba(145,200,255,.45), inset 0 0 7px rgba(123,168,216,.18);
+    border: 0;
+    background: #a8d5ff;
+    box-shadow: 0 0 7px rgba(145,200,255,.9);
     opacity: 0;
     transition: width .12s var(--ease), height .12s var(--ease), opacity .12s ease, background .12s ease;
     will-change: transform;
 }
 .cursor-dot::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 52px;
-    height: 52px;
-    pointer-events: none;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(145,200,255,.1), transparent 70%);
-    transform: translate(-50%, -50%);
+    content: none;
 }
 .cursor-dot::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #b8dcff;
-    box-shadow: 0 0 7px rgba(145,200,255,.9);
-    transform: translate(-50%, -50%);
+    content: none;
 }
 .enhanced-pointer .cursor-dot { display: block; }
 .enhanced-pointer,
 .enhanced-pointer body,
 .enhanced-pointer body * { cursor: none !important; }
 .cursor-dot.is-visible { opacity: 1; }
-.cursor-dot.is-interactive { width: 30px; height: 30px; background: rgba(145,200,255,.16); }
-.cursor-dot.is-pressed { width: 15px; height: 15px; }
+.cursor-dot.is-interactive { width: 12px; height: 12px; background: #c6e5ff; }
+.cursor-dot.is-pressed { width: 6px; height: 6px; }
 .cursor-ripple {
     position: fixed;
     z-index: 3999;
@@ -123,7 +106,8 @@ button { font: inherit; }
     height: var(--spark-size, 2px);
     pointer-events: none;
     border-radius: 50%;
-    background: rgba(190,192,197,.88);
+    background: #91c8ff;
+    box-shadow: 0 0 5px rgba(145,200,255,.75);
     animation: cursor-spark-out .58s cubic-bezier(.15,.7,.25,1) forwards;
 }
 @keyframes cursor-ring {
@@ -138,13 +122,19 @@ button { font: inherit; }
     position: fixed;
     top: 0;
     left: 0;
-    width: 420px;
-    height: 420px;
+    width: 280px;
+    height: 280px;
     pointer-events: none;
     z-index: 0;
-    background-image: radial-gradient(circle, rgba(123,168,216,.13), transparent 68%);
-    background-repeat: no-repeat;
-    transform: translate3d(calc(50vw - 210px), calc(20vh - 210px), 0);
+    background-image:
+        radial-gradient(circle, rgba(123,168,216,.16), transparent 70%),
+        linear-gradient(rgba(145,200,255,.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.18) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-repeat: no-repeat, repeat, repeat;
+    -webkit-mask-image: radial-gradient(circle, #000 0 42%, rgba(0,0,0,.72) 58%, transparent 72%);
+    mask-image: radial-gradient(circle, #000 0 42%, rgba(0,0,0,.72) 58%, transparent 72%);
+    transform: translate3d(calc(50vw - 140px), calc(20vh - 140px), 0);
     will-change: transform;
     contain: strict;
 }
@@ -634,6 +624,7 @@ main > .section + .section { margin-top: var(--content-section-gap); }
 main > #contact { padding-bottom: 1.5rem; }
 
 /* Low FX keeps the engineering grid and stops every continuous visual effect. */
+html[data-effects="low"] .background-grid { display: block; }
 html[data-effects="low"] .galaxy-field,
 html[data-effects="low"] .galaxy-nebula,
 html[data-effects="low"] .ambient-glow,
