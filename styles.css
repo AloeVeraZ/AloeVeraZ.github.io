@@ -119,6 +119,8 @@ button { font: inherit; }
     to { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
 }
 .ambient-glow {
+    --grid-offset-x: calc(140px - 50vw);
+    --grid-offset-y: calc(140px - 20vh);
     position: fixed;
     top: 0;
     left: 0;
@@ -127,13 +129,21 @@ button { font: inherit; }
     pointer-events: none;
     z-index: 0;
     background-image:
-        radial-gradient(circle, rgba(123,168,216,.16), transparent 70%),
-        linear-gradient(rgba(145,200,255,.18) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.18) 1px, transparent 1px);
-    background-size: 100% 100%, 48px 48px, 48px 48px;
-    background-repeat: no-repeat, repeat, repeat;
-    -webkit-mask-image: radial-gradient(circle, #000 0 42%, rgba(0,0,0,.72) 58%, transparent 72%);
-    mask-image: radial-gradient(circle, #000 0 42%, rgba(0,0,0,.72) 58%, transparent 72%);
+        radial-gradient(circle, rgba(123,168,216,.075), transparent 72%),
+        linear-gradient(rgba(145,200,255,.075) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.075) 1px, transparent 1px),
+        linear-gradient(rgba(145,200,255,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.022) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+    background-position:
+        center,
+        var(--grid-offset-x) var(--grid-offset-y),
+        var(--grid-offset-x) var(--grid-offset-y),
+        var(--grid-offset-x) var(--grid-offset-y),
+        var(--grid-offset-x) var(--grid-offset-y);
+    background-repeat: no-repeat, repeat, repeat, repeat, repeat;
+    -webkit-mask-image: radial-gradient(circle, #000 0 38%, rgba(0,0,0,.58) 56%, transparent 72%);
+    mask-image: radial-gradient(circle, #000 0 38%, rgba(0,0,0,.58) 56%, transparent 72%);
     transform: translate3d(calc(50vw - 140px), calc(20vh - 140px), 0);
     will-change: transform;
     contain: strict;

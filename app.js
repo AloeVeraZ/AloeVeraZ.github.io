@@ -30,21 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
     const performanceStorageKey = 'portfolio-effects-mode';
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const automaticallyUseLowEffects = reducedMotion.matches
-        || Boolean(connection?.saveData)
-        || (navigator.hardwareConcurrency || 4) <= 4
-        || ('deviceMemory' in navigator && navigator.deviceMemory <= 4);
     let savedEffectsMode = '';
     try {
         savedEffectsMode = localStorage.getItem(performanceStorageKey) || '';
     } catch (error) {
         savedEffectsMode = '';
     }
-    let effectsMode = ['low', 'high'].includes(savedEffectsMode)
-        ? savedEffectsMode
-        : automaticallyUseLowEffects ? 'low' : 'high';
-    let hasManualEffectsPreference = ['low', 'high'].includes(savedEffectsMode);
+    let effectsMode = ['low', 'high'].includes(savedEffectsMode) ? savedEffectsMode : 'high';
 
     const applyEffectsMode = (mode, remember = false) => {
         effectsMode = mode;
@@ -59,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
         }
         if (remember) {
-            hasManualEffectsPreference = true;
             try {
                 localStorage.setItem(performanceStorageKey, mode);
             } catch (error) {
@@ -73,22 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     applyEffectsMode(effectsMode);
 
-    if (!savedEffectsMode && effectsMode === 'high' && !document.hidden) {
-        const measurementStartedAt = performance.now();
-        let deliveredFrames = 0;
-        const measurePerformance = now => {
-            deliveredFrames += 1;
-            const elapsed = now - measurementStartedAt;
-            if (elapsed < 1400) {
-                requestAnimationFrame(measurePerformance);
-                return;
-            }
-            const deliveredFps = deliveredFrames / elapsed * 1000;
-            if (!hasManualEffectsPreference && deliveredFps < 42) applyEffectsMode('low');
-        };
-        requestAnimationFrame(measurePerformance);
-    }
-
     let pointerFrame = 0;
     let latestPointerEvent;
     window.addEventListener('pointermove', event => {
@@ -99,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cursor.move(latestPointerEvent);
             galaxy.move(latestPointerEvent);
             ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - 140}px, ${latestPointerEvent.clientY - 140}px, 0)`;
+            ambientGlow.style.setProperty('--grid-offset-x', `${140 - latestPointerEvent.clientX}px`);
+            ambientGlow.style.setProperty('--grid-offset-y', `${140 - latestPointerEvent.clientY - window.scrollY}px`);
             pointerFrame = 0;
         });
     }, { passive: true });
@@ -109,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
         pageScrollFill.style.transform = `scaleY(${progress})`;
         galaxy.scroll(window.scrollY);
+        if (effectsMode === 'high' && latestPointerEvent) {
+            ambientGlow.style.setProperty('--grid-offset-y', `${140 - latestPointerEvent.clientY - window.scrollY}px`);
+        }
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
     };
