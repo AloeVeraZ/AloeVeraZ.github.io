@@ -135,14 +135,18 @@ button { font: inherit; }
     to { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
 }
 .ambient-glow {
-    position: absolute;
-    inset: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 420px;
+    height: 420px;
     pointer-events: none;
     z-index: 0;
-    background-image:
-        radial-gradient(420px circle at 76% 10%, rgba(123,168,216,.11), transparent 68%),
-        radial-gradient(520px circle at 18% 58%, rgba(119,91,151,.055), transparent 72%);
+    background-image: radial-gradient(circle, rgba(123,168,216,.13), transparent 68%);
     background-repeat: no-repeat;
+    transform: translate3d(calc(50vw - 210px), calc(20vh - 210px), 0);
+    will-change: transform;
+    contain: strict;
 }
 
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }

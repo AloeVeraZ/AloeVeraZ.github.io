@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pointerFrame = requestAnimationFrame(() => {
             cursor.move(latestPointerEvent);
             galaxy.move(latestPointerEvent);
+            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - 210}px, ${latestPointerEvent.clientY - 210}px, 0)`;
             pointerFrame = 0;
         });
     }, { passive: true });
@@ -661,8 +662,12 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     let previousX = window.innerWidth / 2;
     let previousY = window.innerHeight / 2;
     let lastTarget = null;
+    let lastSparkAt = 0;
 
     const move = event => {
+        const movementX = event.clientX - previousX;
+        const movementY = event.clientY - previousY;
+        const movementSpeed = Math.hypot(movementX, movementY);
         previousX = event.clientX;
         previousY = event.clientY;
         cursorDot.style.transform = `translate3d(${previousX}px, ${previousY}px, 0) translate(-50%, -50%)`;
@@ -674,6 +679,23 @@ function setupCursorEffects(cursorDot, reducedMotion) {
             cursorDot.classList.toggle('is-interactive', Boolean(interactive));
         }
 
+        const now = performance.now();
+        if (!reducedMotion.matches && movementSpeed > 10 && now - lastSparkAt > 80) {
+            const reverseAngle = Math.atan2(movementY, movementX) + Math.PI;
+            const sparkAngle = reverseAngle + (Math.random() - .5) * .9;
+            const sparkDistance = 12 + Math.random() * 14;
+            const spark = document.createElement('span');
+            spark.className = 'cursor-spark';
+            spark.style.left = `${previousX}px`;
+            spark.style.top = `${previousY}px`;
+            spark.style.setProperty('--spark-x', `${Math.cos(sparkAngle) * sparkDistance}px`);
+            spark.style.setProperty('--spark-y', `${Math.sin(sparkAngle) * sparkDistance}px`);
+            spark.style.setProperty('--spark-size', `${1.5 + Math.random()}px`);
+            spark.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(spark);
+            spark.addEventListener('animationend', () => spark.remove(), { once: true });
+            lastSparkAt = now;
+        }
     };
 
     window.addEventListener('pointerdown', event => {
