@@ -810,7 +810,12 @@ function renderProfile(profile) {
         [profile.github, 'fa-brands fa-github', 'GitHub'], [profile.linkedin, 'fa-brands fa-linkedin', 'LinkedIn'],
         [profile.grabcad, 'fa-solid fa-cube', 'GrabCAD'], [profile.email && `mailto:${profile.email}`, 'fa-solid fa-envelope', 'Email']
     ].filter(([url]) => url && !url.startsWith('UPDATE'));
-    document.getElementById('hero-social').innerHTML = links.map(([url, icon, label]) => `<a href="${url}" target="_blank" rel="noopener" title="${label}"><i class="${icon}"></i></a>`).join('');
+    const renderProfileLink = ([url, icon, label], className = '') => {
+        const externalAttributes = url.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
+        const classAttribute = className ? ` class="${className}"` : '';
+        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}"></i>${className ? ` ${label}` : ''}</a>`;
+    };
+    document.getElementById('hero-social').innerHTML = links.map(link => renderProfileLink(link)).join('');
     const resumeButton = profile.resume
         ? `<a href="${profile.resume}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="fa-solid fa-file-arrow-down"></i> Resume</a>`
         : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down"></i> Resume</span>`;
@@ -818,7 +823,7 @@ function renderProfile(profile) {
         ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down"></i></a>`
         : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down"></i></span>`;
     document.getElementById('hero-social').innerHTML += resumeIcon;
-    document.getElementById('contact-links-container').innerHTML = resumeButton + links.map(([url, icon, label]) => `<a href="${url}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="${icon}"></i> ${label}</a>`).join('');
+    document.getElementById('contact-links-container').innerHTML = resumeButton + links.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
 }
 
 function renderSkills(categories) {

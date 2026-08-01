@@ -582,3 +582,18 @@ footer { background: #050505; }
 .hero-section::after {
     display: none;
 }
+
+/* One compact, consistent gap between each major portfolio group. */
+:root { --content-section-gap: clamp(2.75rem, 4vw, 3.75rem); }
+main > .section {
+    margin: 0;
+    padding: 0;
+}
+main > #about { padding-top: var(--content-section-gap); }
+main > .section + .section { margin-top: var(--content-section-gap); }
+#projects .featured-grid { margin-bottom: 0; }
+#projects .project-library {
+    margin-top: 0;
+    padding-top: var(--content-section-gap);
+}
+main > #contact { padding-bottom: 1.5rem; }
