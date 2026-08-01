@@ -2,9 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundGrid = document.createElement('div');
     backgroundGrid.className = 'background-grid';
     backgroundGrid.setAttribute('aria-hidden', 'true');
-    const galaxyCanvas = document.createElement('canvas');
-    galaxyCanvas.className = 'galaxy-field';
-    galaxyCanvas.setAttribute('aria-hidden', 'true');
+    const galaxyField = document.createElement('div');
+    galaxyField.className = 'galaxy-field';
+    galaxyField.setAttribute('aria-hidden', 'true');
     const galaxyNebula = document.createElement('div');
     galaxyNebula.className = 'galaxy-nebula';
     galaxyNebula.setAttribute('aria-hidden', 'true');
@@ -12,79 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
-    backgroundGrid.after(galaxyCanvas);
-    galaxyCanvas.after(galaxyNebula);
+    backgroundGrid.after(galaxyField);
+    galaxyField.after(galaxyNebula);
     galaxyNebula.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
     pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
     ambientGlow.after(pageScrollProgress);
-    const cursorDot = document.createElement('span');
-    cursorDot.className = 'cursor-dot';
-    cursorDot.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(cursorDot);
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const galaxy = setupGalaxyField(galaxyCanvas, reducedMotion);
-    const cursor = setupCursorEffects(cursorDot, reducedMotion);
-    let pointerEffectFrame = 0;
-    let targetGlowX = window.innerWidth / 2;
-    let targetGlowY = window.innerHeight * .2;
-    let currentGlowX = targetGlowX;
-    let currentGlowY = targetGlowY;
-    let nebulaPointerX = 0;
-    let nebulaPointerY = 0;
-    let nebulaScrollX = 0;
-    let nebulaScrollY = 0;
-
-    const renderNebulaTransform = () => {
-        galaxyNebula.style.transform = `translate3d(${nebulaPointerX + nebulaScrollX}px, ${nebulaPointerY + nebulaScrollY}px, 0) scale(1.04)`;
-    };
-
-    const animatePointerEffect = () => {
-        const followSpeed = reducedMotion.matches ? 1 : .14;
-        currentGlowX += (targetGlowX - currentGlowX) * followSpeed;
-        currentGlowY += (targetGlowY - currentGlowY) * followSpeed;
-        ambientGlow.style.setProperty('--glow-x', `${currentGlowX}px`);
-        ambientGlow.style.setProperty('--glow-y', `${currentGlowY}px`);
-        ambientGlow.style.transform = `translate3d(${currentGlowX - 210}px, ${currentGlowY - 210}px, 0)`;
-        nebulaPointerX = ((currentGlowX / window.innerWidth) - .5) * -10;
-        nebulaPointerY = ((currentGlowY / window.innerHeight) - .5) * -8;
-        renderNebulaTransform();
-
-        const remainingDistance = Math.abs(targetGlowX - currentGlowX) + Math.abs(targetGlowY - currentGlowY);
-        if (remainingDistance > .35) {
-            pointerEffectFrame = requestAnimationFrame(animatePointerEffect);
-        } else {
-            currentGlowX = targetGlowX;
-            currentGlowY = targetGlowY;
-            pointerEffectFrame = 0;
-        }
-    };
-
-    window.addEventListener('pointermove', event => {
-        targetGlowX = event.clientX;
-        targetGlowY = event.clientY;
-        cursor.move(event);
-        galaxy.move(event);
-        if (!pointerEffectFrame) pointerEffectFrame = requestAnimationFrame(animatePointerEffect);
-    }, { passive: true });
-
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
     let scrollFrame = 0;
     const updateScrollMotion = () => {
         const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
         pageScrollFill.style.transform = `scaleY(${progress})`;
-        if (!reducedMotion.matches) {
-            const gridOffset = -((window.scrollY * .12) % 48);
-            backgroundGrid.style.transform = `translate3d(0, ${gridOffset}px, 0)`;
-            nebulaScrollX = Math.sin(window.scrollY * .0008) * 12;
-            nebulaScrollY = Math.sin(window.scrollY * .00125) * -26;
-            renderNebulaTransform();
-            galaxy.scroll(window.scrollY);
-        }
-
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
     };
@@ -103,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             renderProfile(data.profile);
             renderSkills(data.skillCategories);
-            setupInteractiveTilt(reducedMotion);
             renderFeaturedProjects(data.projects);
             renderProjectCollections(data.projectCollections, data.projects);
             setupModal();
