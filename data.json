@@ -95,7 +95,7 @@
         {"heading": "Result", "body": "The completed prototype can wake, listen, converse, interrupt, and reset in real time. Smooth eye motion and synchronized blinking give the assistant a more natural presence while preserving reliable voice interaction."}
       ],
       "links": {
-        "github": "https://github.com/TheTheAloe/eye_bot",
+        "github": "https://github.com/AloeVeraZ/eye_bot",
         "grabcad": "https://grabcad.com/library/eye-animatronic-1",
         "video": "",
         "projectUrl": "https://angelojamesny.com/eye"
@@ -140,15 +140,15 @@
       "overview": {
         "problem": "Differential swerve offers unusual mobility, but its gearing, size, and component count make it a difficult off-season experiment within FTC constraints.",
         "method": "I simplified a proven differential layout, embedded bearings directly in the gears, and repeatedly repackaged the motors until the chassis fit the legal envelope.",
-        "result": "The work produced an adaptable two-pod foundation that demonstrates the mechanism without forcing teams into one motor vendor or a premium parts list."
+        "result": "The project is complete. It produced an adaptable two-pod foundation with locally preserved CAD releases for REV and GoBILDA hardware."
       },
       "sections": [
         {"heading": "Challenge", "body": "After the 2023-2024 NYC FTC championship, the goal was to build an off-season swerve robot despite the complexity, packaging constraints, and cost that make swerve uncommon in FTC."},
         {"heading": "Development", "body": "The design began with a study of differential swerve and a simplified version of FTC 11115's approach. The gearbox was reengineered around M3x45 bolts and bearings embedded in the gears, reducing specialized hardware while preserving the core mechanism."},
         {"heading": "Chassis Iteration", "body": "The first layout measured 18.25 inches, so the motors were rotated 90 degrees with REV Ultra 90 gearboxes to meet FTC sizing. A two-pod chassis used omni wheels at the other corners and included space for a slide mechanism. Version two added lower-cost configurations for REV Ultraplanetary and GoBilda Yellow Jacket motors."},
-        {"heading": "Result", "body": "The project produced a functional, budget-aware differential swerve foundation that fits FTC constraints and can be adapted to the hardware many teams already use."}
+        {"heading": "Result", "body": "The project is complete. The repository now preserves the full explanation, development images, and four downloadable CAD packages without depending on the former portfolio page or GrabCAD."}
       ],
-      "links": {"github": "", "grabcad": "https://grabcad.com/library/simple-swerve-v2-chassis-1", "video": "", "projectUrl": "https://angelojamesny.com/ftc-swerve"}
+      "links": {"github": "https://github.com/AloeVeraZ/diffy-swerve", "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "ftc-9384-eggwuuhh",
@@ -170,7 +170,15 @@
         {"heading": "Endgame and Autonomous", "body": "A spring-powered plane launcher handled the season's launch task, while an autonomous pixel pincher improved repeatable placement. The final climbing system paired a winch with pivoting hooks and passive rubber assistance."},
         {"heading": "Result", "body": "Across four major revisions, the team produced a reliable competition platform with strong slide, intake, outtake, launcher, and climber systems. The complete CAD and engineering portfolio document the full iteration process."}
       ],
-      "links": {"github": "https://github.com/TheTheAloe/FTC9384-2024-Robot/tree/main/Portfolio%26Notebook", "grabcad": "https://grabcad.com/library/ftc-9384-2023-2024-robot-1", "video": "", "projectUrl": "https://angelojamesny.com/tubba-2023-24"}
+      "links": {
+        "github": [
+          {"url": "https://github.com/AloeVeraZ/FTC9384-2024-Robot", "label": "Robot Code"},
+          {"url": "https://github.com/AloeVeraZ/tubba-odometry-", "label": "Odometry"}
+        ],
+        "grabcad": "https://grabcad.com/library/ftc-9384-2023-2024-robot-1",
+        "video": "",
+        "projectUrl": "https://angelojamesny.com/tubba-2023-24"
+      }
     },
     {
       "id": "ftc-9384-crabby",
@@ -192,7 +200,7 @@
         {"heading": "Final Revision", "body": "The final robot used dual rigid slides, an internal bevel-gearbox chassis, a larger turret, and a reinforced frame. These changes addressed flex, speed, and alignment problems found during competition testing."},
         {"heading": "Result", "body": "Three major design cycles produced a polished FTC machine with a stable low-profile drivetrain, fast lift, reliable claw, and precise turret. The project provided direct experience turning match feedback into mechanical improvements."}
       ],
-      "links": {"github": "", "grabcad": "https://grabcad.com/library/ftc-9384-2022-2023-robot-1", "video": "", "projectUrl": "https://angelojamesny.com/crabby-2022-23"}
+      "links": {"github": "https://github.com/AloeVeraZ/FTC9384-2023-Robot-Crabby", "grabcad": "https://grabcad.com/library/ftc-9384-2022-2023-robot-1", "video": "", "projectUrl": "https://angelojamesny.com/crabby-2022-23"}
     },
     {
       "id": "zerog-hydra-3d-printer",

@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260801-case-study-v2')
+    fetch('data.json?v=20260801-repository-links')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -1097,7 +1097,15 @@ function setupCarousel(carousel, controls, autoplay = false) {
 
 function buildLinkButtons(links = {}) {
     const map = [['github', 'fa-brands fa-github', 'Code', 'link-btn-github'], ['grabcad', 'fa-solid fa-cube', 'CAD', 'link-btn-grabcad'], ['video', 'fa-solid fa-play', 'Video', ''], ['projectUrl', 'fa-solid fa-arrow-up-right-from-square', 'View', '']];
-    return map.filter(([key]) => links[key]).map(([key, icon, label, cls]) => `<a href="${links[key]}" target="_blank" rel="noopener" class="link-btn ${cls}"><i class="${icon}"></i> ${label}</a>`).join('');
+    return map.flatMap(([key, icon, label, cls]) => {
+        const entries = Array.isArray(links[key]) ? links[key] : [links[key]];
+        return entries.filter(Boolean).map(entry => {
+            const url = typeof entry === 'string' ? entry : entry.url;
+            const linkLabel = typeof entry === 'string' ? label : entry.label || label;
+            if (!url) return '';
+            return `<a href="${url}" target="_blank" rel="noopener" class="link-btn ${cls}"><i class="${icon}"></i> ${linkLabel}</a>`;
+        });
+    }).join('');
 }
 
 function openModal(project) {
