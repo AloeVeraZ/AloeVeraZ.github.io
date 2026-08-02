@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260801-odometry-project')
+    fetch('data.json?v=20260801-about-experience')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -821,7 +821,24 @@ function renderProfile(profile) {
     document.getElementById('about-bio').textContent = profile.bio;
     const highlights = document.getElementById('about-highlights');
     if (highlights) {
-        highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => `<article class="about-highlight"><span>${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p></article>`).join('');
+        highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => {
+            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down"></i></span>` : ''}`;
+            return highlight.targetCollection
+                ? `<a class="about-highlight about-highlight-link" href="#${highlight.targetCollection}" data-collection-target="${highlight.targetCollection}" aria-label="${highlight.cta || `View ${highlight.label}`}">${content}</a>`
+                : `<article class="about-highlight">${content}</article>`;
+        }).join('');
+        highlights.querySelectorAll('[data-collection-target]').forEach(link => {
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                const collection = document.getElementById(link.dataset.collectionTarget);
+                if (!collection) return;
+                const toggle = collection.querySelector('.collection-toggle');
+                if (toggle?.getAttribute('aria-expanded') !== 'true') toggle?.click();
+                window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+                    collection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }));
+            });
+        });
     }
     const emailAddress = profile.email?.trim();
     const prefersNativeEmailApp = navigator.userAgentData?.mobile === true
@@ -883,6 +900,7 @@ function renderProjectCollections(collections, projects) {
     collections.forEach((collection, index) => {
         const group = document.createElement('section');
         group.className = 'project-collection';
+        group.id = collection.id || collection.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');

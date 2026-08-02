@@ -5,9 +5,9 @@
     "tagline": "Robotics • CAD Design • Prototyping • Autonomous Systems",
     "bio": "I’m Angelo, a Mechanical Engineering Technology major at City Tech in New York City. I’m passionate about robotics and 3D printing, with a focus on turning ideas into real, working machines through design, prototyping, and programming.",
     "aboutHighlights": [
-      {"label": "Education", "title": "City Tech — New York City College of Technology", "body": "Mechanical Engineering Technology, 2024–present. Previously attended John Dewey High School in Brooklyn, NY from 2020–2024."},
-      {"label": "Robotics Experience", "title": "FIRST Robotics teams FTC 9384 & FRC 333", "body": "Participated in FTC Team 9384 from 2022–2024 and FRC Team 333 from 2021–2024. Captain of Team 9384 during the 2022–2023 season and co-captain during 2023–2024."},
-      {"label": "Hands-On Work", "title": "Robotics, 3D printers & prototyping", "body": "Since middle school, I’ve built and configured multiple 3D printers with different motion systems, designed omnidirectional robots, and grown my CAD, electronics, and programming skills through hands-on projects."}
+      {"label": "Education", "title": "City Tech — New York City College of Technology", "body": "Mechanical Engineering Technology, 2024–present.", "subline": "John Dewey High School — 2022–2024"},
+      {"label": "Robotics Experience", "title": "NYC FIRST STEM Center at Cornell Tech", "body": "I work at the New York City FIRST STEM Center on Roosevelt Island and run the AI & Automation Club at City Tech.", "subline": "FTC Team 9384, 2022–2024 • FRC Team 333, 2021–2024 • FTC captain in 2022–2023 and co-captain in 2023–2024"},
+      {"label": "Hands-On Work", "title": "Robotics, 3D printers & prototyping", "body": "Since middle school, I’ve built and configured multiple 3D printers with different motion systems, designed omnidirectional robots, and grown my CAD, electronics, and programming skills through hands-on projects.", "targetCollection": "personal-projects", "cta": "Explore personal projects"}
     ],
     "email": "angelojames2006@gmail.com",
     "resume": "",
@@ -30,7 +30,7 @@
     }
   ],
   "projectCollections": [
-    {"name": "Personal Projects", "description": "Independent robotics and 3D-printer builds, from early prototypes to finished machines.", "categories": ["Robotics", "3D Printing"]},
+    {"id": "personal-projects", "name": "Personal Projects", "description": "Independent robotics and 3D-printer builds, from early prototypes to finished machines.", "categories": ["Robotics", "3D Printing"]},
     {"name": "Club Projects", "description": "Hands-on robotics built as collaborative teaching and experimentation platforms.", "categories": ["Club Projects"]},
     {"name": "Coursework", "description": "Design and manufacturing work completed at New York City College of Technology.", "categories": ["Coursework"]},
     {"name": "Awards & Research", "description": "Research, technical training, certificates, and academic recognition.", "categories": ["Awards & Certificates"]}
