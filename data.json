@@ -174,17 +174,43 @@
         "github": "",
         "grabcad": "",
         "video": "",
-        "projectUrl": [
-          {"url": "https://github.com/AloeVeraZ/FTC9384-2024-Robot", "label": "View Robot"},
-          {"url": "https://github.com/AloeVeraZ/tubba-odometry-", "label": "View Odometry"}
-        ]
+        "projectUrl": {"url": "https://github.com/AloeVeraZ/FTC9384-2024-Robot", "label": "View Robot"}
+      }
+    },
+    {
+      "id": "tubba-odometry",
+      "title": "Tubba Odometry Pods",
+      "category": "Robotics",
+      "collectionOrder": 6,
+      "featured": true,
+      "summary": "A competition-proven dead-wheel tracking system designed before compact FTC odometry pods were widely available off the shelf.",
+      "details": "",
+      "image": "https://raw.githubusercontent.com/AloeVeraZ/tubba-odometry-/main/assets/images/assembly-render.png",
+      "tags": ["FTC", "Odometry", "Robot Localization", "CAD"],
+      "overview": {
+        "problem": "We wanted dependable live robot-position tracking for autonomous routines and driver assistance at a time when compact FTC odometry pods were not yet a common off-the-shelf option. Existing approaches were expensive, difficult to package, or left teams to build the mechanism themselves.",
+        "method": "I designed a compact dead-wheel pod around the essential tracking system: a passive 2-inch omni wheel coupled to a through-bore encoder. The plates, shaft support, preload, mounting geometry, and robot integration were developed specifically for Team 9384's chassis, then calibrated as part of the localization system.",
+        "result": "The completed pods were installed on EggWUUUHH and used successfully in competition. They tracked the robot consistently, strengthened autonomous path accuracy, and provided position feedback that could also support corrections during teleop driving."
+      },
+      "sections": [
+        {"heading": "Challenge", "body": "Reliable odometry required far more than attaching an encoder to a wheel. The complete module had to fit inside the robot, maintain dependable contact with the field, minimize sideways scrub, protect the sensor, and return repeatable measurements through impacts, fast direction changes, and an entire competition match."},
+        {"heading": "Core System", "body": "At its center, each pod used a REV through-bore encoder and a passive 2-inch AndyMark Dualie omni wheel. The tracking wheel rotated independently from the drivetrain, allowing the localization software to measure the robot's actual movement instead of estimating position only from powered-wheel motion and slip."},
+        {"heading": "Designed From Scratch", "body": "Because a ready-made solution was not available for our requirements, I designed the plates, shaft arrangement, bearings, wheel support, preload system, and chassis mounting as one compact assembly. The finished pod fit within EggWUUUHH's parallel-plate structure and was documented as a complete STEP assembly with individual manufacturing files."},
+        {"heading": "Cost and Accessibility", "body": "A pod cost roughly $100 in 2024, which was an affordable result for custom competition-grade localization hardware at the time. The encoder represented the largest share of the early prototype budget; the rest of the mechanism used a printed structure, a standard omni wheel, common bearings, shaft stock, tubing, and ordinary fasteners to keep the design serviceable and reproducible."},
+        {"heading": "Competition Result", "body": "The system was installed, calibrated, and run on our competition robot with strong results. Its live position estimate made autonomous motion more repeatable and gave the control system useful feedback for correcting movement during teleop. The project turned a sensor and tracking wheel into a compact, field-tested localization tool that the team could actually trust in a match."}
+      ],
+      "links": {
+        "github": {"url": "https://github.com/AloeVeraZ/tubba-odometry-", "label": "CAD & Documentation"},
+        "grabcad": "",
+        "video": "",
+        "projectUrl": ""
       }
     },
     {
       "id": "ftc-9384-crabby",
       "title": "FTC 9384 Robot: Crabby",
       "category": "Robotics",
-      "collectionOrder": 6,
+      "collectionOrder": 7,
       "summary": "Team 9384's POWERPLAY robot, refined through three designs for faster cone scoring and a more stable chassis.",
       "details": "",
       "image": "assets/ftc-2022-23-crabby.jpg",
@@ -206,7 +232,7 @@
       "id": "zerog-hydra-3d-printer",
       "title": "ZeroG Hydra 3D Printer",
       "category": "3D Printing",
-      "collectionOrder": 7,
+      "collectionOrder": 8,
       "featured": true,
       "summary": "A large-format CoreXY printer focused on print quality, automatic calibration, sensing, and robust hardware.",
       "details": "",
@@ -229,7 +255,7 @@
       "id": "delta-3d-printer",
       "title": "Delta 3D Printer",
       "category": "3D Printing",
-      "collectionOrder": 8,
+      "collectionOrder": 9,
       "summary": "A high-speed delta printer rebuilt around closed-loop motion, direct-drive extrusion, and powerful CPAP cooling.",
       "details": "",
       "image": "assets/delta-printer.jpg",
@@ -251,7 +277,7 @@
       "id": "voron-v02900",
       "title": "Voron V0.2990",
       "category": "3D Printing",
-      "collectionOrder": 9,
+      "collectionOrder": 10,
       "summary": "A heavily modified compact Voron built for higher flow, better cooling, safer operation, and easier servicing.",
       "details": "",
       "image": "assets/voron-v02900.jpg",

@@ -5,7 +5,7 @@
 ### Designing, building, and programming machines that move.
 
 [![Live Portfolio](https://img.shields.io/badge/Live_Portfolio-Visit_Site-7BA8D8?style=for-the-badge&logo=githubpages&logoColor=white)](https://aloeveraz.github.io/)
-[![Projects](https://img.shields.io/badge/Projects-16-111111?style=for-the-badge&logo=robotframework&logoColor=7BA8D8)](https://aloeveraz.github.io/#projects)
+[![Projects](https://img.shields.io/badge/Projects-17-111111?style=for-the-badge&logo=robotframework&logoColor=7BA8D8)](https://aloeveraz.github.io/#projects)
 [![GitHub](https://img.shields.io/badge/GitHub-AloeVeraZ-181717?style=for-the-badge&logo=github)](https://github.com/AloeVeraZ)
 [![Email](https://img.shields.io/badge/Email-Let's_Talk-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:angelojames2006@gmail.com)
 
@@ -77,7 +77,7 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 | Collection | Projects | Highlights |
 | --- | ---: | --- |
-| **Personal Projects** | 9 | Swerve drivetrains, competition robots, an animatronic AI assistant, and custom printers |
+| **Personal Projects** | 10 | Swerve drivetrains, custom odometry, competition robots, an animatronic AI assistant, and custom printers |
 | **Club Projects** | 2 | Self-balancing PID robots and ESP32 crab crawlers |
 | **Coursework** | 3 | AutoCAD drafting, Mastercam CNC workflows, and MATLAB engineering computing |
 | **Awards & Research** | 2 | CUNY geopolymer printing research and NSF manufacturing training |
