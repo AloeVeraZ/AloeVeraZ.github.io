@@ -70,7 +70,7 @@
         "github": "",
         "grabcad": "",
         "video": "",
-        "projectUrl": "https://angelojamesny.com/dorito"
+        "projectUrl": {"url": "https://github.com/AloeVeraZ/Dorito-Swerve", "label": "GitHub Project"}
       }
     },
     {
@@ -125,7 +125,7 @@
         "github": "",
         "grabcad": "",
         "video": "",
-        "projectUrl": "https://angelojamesny.com/ftc-coaxial-swerve"
+        "projectUrl": {"url": "https://github.com/AloeVeraZ/coax-swerve-FTC", "label": "GitHub Project"}
       }
     },
     {
@@ -223,7 +223,7 @@
         {"heading": "Electronics and Toolhead", "body": "An under-printer electronics bay houses the USB hub, controller, power supply, solid-state relay for the 110-volt bed, and the Linux computer running Klipper. The Filimetrix-inspired toolhead adds dual filament sensors, a cutter, Beacon eddy-current probing, lighting, a touchscreen, a Phaetus Rapido hotend, and a Clockwork 2 extruder."},
         {"heading": "Status", "body": "The printer remains in development, but its large build volume, automated calibration, sensor-rich toolhead, and high-quality extrusion system establish it as a flagship quality-focused machine."}
       ],
-      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/ZeroG", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/zero-g-hydra"}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/ZeroG/code", "label": "Printer Config"}, "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/ZeroG", "label": "Build Docs"}}
     },
     {
       "id": "delta-3d-printer",
@@ -245,7 +245,7 @@
         {"heading": "Toolhead Iterations", "body": "Version two combined ducts, hotend, extruder, and probe but exposed airflow and probe-offset problems. Version three lowered the hotend and center of gravity, improved the ducts, and added a detachable nozzle probe. Closed-loop NEMA 17 motors with encoders and a TFT35 KlipperScreen completed the control system."},
         {"heading": "Result", "body": "The finished machine prints quickly and consistently, pairing reliable closed-loop motion with high-flow direct-drive extrusion, improved calibration, strong cooling, and a custom user interface."}
       ],
-      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/Delta", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/delta-printer"}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Delta/code", "label": "Printer Config"}, "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Delta", "label": "Build Docs"}}
     },
     {
       "id": "voron-v02900",
@@ -267,7 +267,7 @@
         {"heading": "Reliability and Usability", "body": "The enclosure adds active carbon filtration, a chamber thermistor, RGB-lit reinforced panels, upgraded hinges, and a camera for failure detection and timelapses. A filament runout and extrusion sensor monitors material flow, while a larger Mini12864 display improves local control."},
         {"heading": "Serviceability", "body": "DIN-rail electronics, a hinged rear electronics door, and a quiet Noctua cooling fan make maintenance and thermal management easier. Together, the modifications turn the compact printer into a faster, safer, and more dependable machine."}
       ],
-      "links": {"github": "https://github.com/TheTheAloe/3DPrinterCode/tree/main/Voron%20V0.2990", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/voron-v02900"}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Voron%20V0.2990/code", "label": "Printer Config"}, "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Voron%20V0.2990", "label": "Build Docs"}}
     },
     {
       "id": "self-balancing-robot",
@@ -287,7 +287,7 @@
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/wsOvZ_ywYDQ?enablejsapi=1&playsinline=1&rel=0&start=15", "label": "Balance test"}
       ],
-      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=wsOvZ_ywYDQ&t=15s", "projectUrl": "https://angelojamesny.com/selfbalancing"}
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=wsOvZ_ywYDQ&t=15s", "projectUrl": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/self-balancing-robot", "label": "GitHub Project"}}
     },
     {
       "id": "crab-crawler",
@@ -304,7 +304,7 @@
         {"heading": "Programming", "body": "Custom code coordinates the walking gait, live display information, camera connection, and wireless commands. The gait and body geometry were tuned together to improve traction and keep the two-servo mechanism stable."},
         {"heading": "Result", "body": "The crawlers walk reliably, stream live feedback, and report status in real time. Their low part count and expandable code make them an approachable educational platform for embedded robotics."}
       ],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://angelojamesny.com/crabcrawler"}
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/crab-crawler", "label": "GitHub Project"}}
     },
     {
       "id": "autocad-coursework",
@@ -371,7 +371,7 @@
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/IKa7OI-kLgc?enablejsapi=1&playsinline=1&rel=0", "label": "Research presentation"}
       ],
-      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": "https://angelojamesny.com/college-certificates"}
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/CitytechClay/code", "label": "Printer Config"}}
     },
     {
       "id": "nsf-advanced-manufacturing-camp",
@@ -390,7 +390,7 @@
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
       ],
-      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": "https://angelojamesny.com/college-certificates"}
+      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": {"url": "https://github.com/AloeVeraZ?tab=repositories", "label": "GitHub Repositories"}}
     }
   ]
 }

@@ -71,7 +71,7 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 | Construction | 3D-printed parts, CNC-machined plates, and accessible hardware |
 | Current status | First prototype validated; V2 in development |
 
-[Open the project collection](https://aloeveraz.github.io/#projects) · [Read the full project page](https://angelojamesny.com/dorito)
+[Open the project collection](https://aloeveraz.github.io/#projects) · [Browse the Dorito repository](https://github.com/AloeVeraZ/Dorito-Swerve)
 
 ## Project Collections
 
