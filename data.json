@@ -469,38 +469,36 @@
       "title": "Geopolymer Research",
       "category": "Awards & Certificates",
       "collectionOrder": 1,
-      "summary": "Undergraduate research combining geopolymer material testing with a modified 3D printer for paste extrusion.",
+      "summary": "Research on printable geopolymer material and a modified paste-extrusion 3D printer.",
       "details": "",
       "image": "assets/cuny-geopolymer-research.png",
       "tags": ["CUNY Research", "Geopolymers", "Additive Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "Research", "body": "I worked with a City Tech research team to prepare and test fly ash geopolymer mixtures, studying how the material mixed, flowed, held its shape, cured, and absorbed carbon dioxide."},
-        {"heading": "Printer Modification", "body": "I independently modified an Ender 5 Plus with a paste extruder, pump, redesigned carriage, new control hardware, a Raspberry Pi, and Klipper so it could print geopolymer material."},
-        {"heading": "Result", "body": "The system printed single-layer geopolymer shapes, and the research was documented through two posters, a presentation, printer configuration files, and plans for further material and multilayer testing."}
+        {"heading": "Research", "body": "Our team tested fly ash geopolymer mixtures for printability and CO2 adsorption."},
+        {"heading": "My Work", "body": "I converted an Ender 5 Plus for paste extrusion using custom hardware, a pump, Raspberry Pi, and Klipper. The full process, posters, and files are in the GitHub folder linked below."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/IKa7OI-kLgc?enablejsapi=1&playsinline=1&rel=0", "label": "Research presentation"}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/projects/geopolymer-research/README.md", "label": "Research README"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/projects/geopolymer-research", "label": "Full Write-Up on GitHub"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": ""}
     },
     {
       "id": "city-tech-nyu-summer-camp",
       "title": "City Tech & NYU Summer Camp",
       "category": "Awards & Certificates",
       "collectionOrder": 2,
-      "summary": "A month-long advanced materials and manufacturing program at City Tech and NYU covering laboratory analysis and hands-on production.",
+      "summary": "A month-long City Tech and NYU program focused on materials testing and manufacturing.",
       "details": "",
       "image": "assets/nsf-manufacturing-camp.png",
       "tags": ["City Tech", "NYU", "Advanced Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "Program", "body": "From May 27 through June 26, 2025, I participated in the Advanced Materials & Manufacturing Summer Camp hosted by City Tech and NYU."},
-        {"heading": "What I Worked On", "body": "The program covered optical microscopy, SEM and EDS analysis, sample preparation, SolidWorks product development, several types of 3D printing, CNC milling, and GD&T inspection with a coordinate measuring machine."},
-        {"heading": "Result", "body": "I connected material testing with manufacturing, machined aluminum parts on a 3-axis CNC mill, documented each week through recap videos, and earned a certificate of completion."}
+        {"heading": "Program", "body": "I completed the 2025 Advanced Materials & Manufacturing Summer Camp at City Tech and NYU."},
+        {"heading": "What I Did", "body": "I worked with microscopy, SEM/EDS, CAD, 3D printing, CNC machining, and CMM inspection. The full weekly breakdown and files are in the GitHub folder linked below."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/projects/advanced-materials-manufacturing-summer-camp-2025/README.md", "label": "Program README"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/projects/advanced-materials-manufacturing-summer-camp-2025", "label": "Full Write-Up on GitHub"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": ""}
     }
   ]
 }
