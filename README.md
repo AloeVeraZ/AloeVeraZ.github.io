@@ -35,9 +35,9 @@ Mechanical engineering, robotics, CAD, rapid prototyping, controls, and autonomo
 | Area | Details |
 | --- | --- |
 | Focus | Mechanical engineering, robotics, 3D printing, controls, and prototyping |
-| Project library | 16 documented projects across four collections |
-| Personal builds | 9 robotics and custom 3D-printer projects |
-| Academic work | AutoCAD, Mastercam, and MATLAB coursework |
+| Project library | 20 documented projects across four collections |
+| Personal builds | 10 robotics and custom 3D-printer projects |
+| Academic work | Six class archives covering CAD, CAM, computing, and machining |
 | Controls | Python, MATLAB, Arduino, Raspberry Pi, and Klipper |
 | CAD | Fusion 360, Autodesk Inventor, SolidWorks, AutoCAD, and Blender |
 | Front end | Semantic HTML, responsive CSS, vanilla JavaScript, and JSON |
@@ -79,7 +79,7 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 | --- | ---: | --- |
 | **Personal Projects** | 10 | Swerve drivetrains, custom odometry, competition robots, an animatronic AI assistant, and custom printers |
 | **Club Projects** | 2 | Self-balancing PID robots and ESP32 crab crawlers |
-| **Coursework** | 3 | AutoCAD drafting, Mastercam CNC workflows, and MATLAB engineering computing |
+| **Classes** | 6 | AutoCAD I & II, Mastercam, MATLAB, machine shop, and Autodesk Inventor |
 | **Awards & Research** | 2 | CUNY geopolymer printing research and NSF manufacturing training |
 
 <details>
@@ -102,11 +102,14 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 - Self-Balancing Robot
 - Crab Crawler
 
-### Coursework
+### Classes
 
-- AutoCAD Coursework
-- Mastercam Coursework
-- MATLAB Coursework
+- AutoCAD I
+- AutoCAD II
+- Mastercam
+- MATLAB
+- MECH 1101 Machine Shop
+- Autodesk Inventor
 
 ### Awards & Research
 

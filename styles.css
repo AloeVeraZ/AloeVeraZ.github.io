@@ -312,6 +312,7 @@ main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); margin: auto; pa
 .featured-grid { margin-bottom: 5.5rem; }
 .project-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s; }
 .project-card:hover { transform: translateY(-3px); border-color: rgba(123,168,216,.42); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
+.project-card[role="link"]:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
 .project-image-wrapper { position: relative; height: 240px; overflow: hidden; background: #34363d; }
 .project-image { width: 100%; height: 100%; object-fit: cover; transition: transform .25s var(--ease); }
 .project-card:hover .project-image { transform: scale(1.012); }

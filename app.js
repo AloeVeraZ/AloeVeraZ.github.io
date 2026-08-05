@@ -881,6 +881,11 @@ function renderFeaturedProjects(projects) {
 function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
+    if (project.cardUrl) {
+        card.setAttribute('role', 'link');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `Open ${project.title} on GitHub`);
+    }
     const cardMedia = project.image
         ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
@@ -890,7 +895,19 @@ function createProjectCard(project) {
         card.addEventListener('pointerenter', () => { motionImage.src = motionImage.dataset.motionSrc; }, { passive: true });
         card.addEventListener('pointerleave', () => { motionImage.src = project.image; }, { passive: true });
     }
-    card.addEventListener('click', event => { if (!event.target.closest('a')) openModal(project); });
+    const activateCard = () => {
+        if (project.cardUrl) {
+            window.location.assign(project.cardUrl);
+        } else {
+            openModal(project);
+        }
+    };
+    card.addEventListener('click', event => { if (!event.target.closest('a')) activateCard(); });
+    card.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        activateCard();
+    });
     return card;
 }
 
@@ -907,7 +924,8 @@ function renderProjectCollections(collections, projects) {
         const collectionProjects = projects
             .filter(project => collection.categories.includes(project.category))
             .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
-        const useCarousel = collection.name === 'Personal Projects' && collectionProjects.length > 3;
+        const carouselCollections = ['Personal Projects', 'Classes'];
+        const useCarousel = carouselCollections.includes(collection.name) && collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
@@ -915,7 +933,8 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            controls.innerHTML = '<span>Browse with the arrows, swipe, or watch the projects advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous projects"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next projects"><i class="fa-solid fa-arrow-right"></i></button></div>';
+            const itemLabel = collection.name === 'Classes' ? 'classes' : 'projects';
+            controls.innerHTML = `<span>Browse with the arrows, swipe, or watch the ${itemLabel} advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous ${itemLabel}"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next ${itemLabel}"><i class="fa-solid fa-arrow-right"></i></button></div>`;
             content.prepend(controls);
             initializeCarousel = setupCarousel(gallery, controls, true);
         }
