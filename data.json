@@ -466,41 +466,41 @@
     },
     {
       "id": "cuny-geopolymer-research",
-      "title": "CUNY Research: 3D Printing With Geopolymers",
+      "title": "Geopolymer Research",
       "category": "Awards & Certificates",
       "collectionOrder": 1,
-      "summary": "Summer 2025 research on geopolymer materials and a custom 3D printer built to extrude them.",
+      "summary": "Undergraduate research combining geopolymer material testing with a modified 3D printer for paste extrusion.",
       "details": "",
       "image": "assets/cuny-geopolymer-research.png",
       "tags": ["CUNY Research", "Geopolymers", "Additive Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "Research", "body": "During summer 2025 at New York City College of Technology, I worked on geopolymer mixtures that could be used as a printable construction material. The research included mixing materials, studying curing, evaluating samples, and testing the extrusion process."},
-        {"heading": "Printer Development", "body": "A custom 3D printer was designed and built to handle the material, joining mechanical design with experiments in flow, consistency, layer formation, and process control."},
-        {"heading": "Recognition", "body": "The work was presented at CUNY's Third Annual Celebrating Research Excellence Symposium and earned a Certificate of Research Achievement for completing and presenting two summer research projects."}
+        {"heading": "Research", "body": "I worked with a City Tech research team to prepare and test fly ash geopolymer mixtures, studying how the material mixed, flowed, held its shape, cured, and absorbed carbon dioxide."},
+        {"heading": "Printer Modification", "body": "I independently modified an Ender 5 Plus with a paste extruder, pump, redesigned carriage, new control hardware, a Raspberry Pi, and Klipper so it could print geopolymer material."},
+        {"heading": "Result", "body": "The system printed single-layer geopolymer shapes, and the research was documented through two posters, a presentation, printer configuration files, and plans for further material and multilayer testing."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/IKa7OI-kLgc?enablejsapi=1&playsinline=1&rel=0", "label": "Research presentation"}
       ],
-      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": {"url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/CitytechClay/code", "label": "Printer Config"}}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/projects/geopolymer-research/README.md", "label": "Research README"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=IKa7OI-kLgc", "projectUrl": ""}
     },
     {
-      "id": "nsf-advanced-manufacturing-camp",
-      "title": "NSF Advanced Manufacturing Training",
+      "id": "city-tech-nyu-summer-camp",
+      "title": "City Tech & NYU Summer Camp",
       "category": "Awards & Certificates",
       "collectionOrder": 2,
-      "summary": "A manufacturing program lasting five weeks where I worked with microscopy, CNC machining, 3D printing, CAD, and technical presentations.",
+      "summary": "A month-long advanced materials and manufacturing program at City Tech and NYU covering laboratory analysis and hands-on production.",
       "details": "",
       "image": "assets/nsf-manufacturing-camp.png",
-      "tags": ["NSF", "Advanced Manufacturing", "CNC", "SolidWorks"],
+      "tags": ["City Tech", "NYU", "Advanced Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "Program", "body": "During freshman year, I attended the NSF Advanced Manufacturing Summer Training Camp for five weeks. The program introduced a broad range of equipment and professional engineering practices."},
-        {"heading": "Technical Experience", "body": "I worked with electron microscopes, CNC mills, 3D printers, SolidWorks, and Autodesk Inventor. The program showed how inspection, modeling, machining, and additive manufacturing fit into one production process."},
-        {"heading": "Communication", "body": "Weekly video updates and presentations helped me get better at documenting technical work, explaining decisions, and sharing progress in a professional format."}
+        {"heading": "Program", "body": "From May 27 through June 26, 2025, I participated in the Advanced Materials & Manufacturing Summer Camp hosted by City Tech and NYU."},
+        {"heading": "What I Worked On", "body": "The program covered optical microscopy, SEM and EDS analysis, sample preparation, SolidWorks product development, several types of 3D printing, CNC milling, and GD&T inspection with a coordinate measuring machine."},
+        {"heading": "Result", "body": "I connected material testing with manufacturing, machined aluminum parts on a 3-axis CNC mill, documented each week through recap videos, and earned a certificate of completion."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
       ],
-      "links": {"github": "", "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": {"url": "https://github.com/AloeVeraZ?tab=repositories", "label": "GitHub Repositories"}}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/projects/advanced-materials-manufacturing-summer-camp-2025/README.md", "label": "Program README"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": ""}
     }
   ]
 }
