@@ -1139,22 +1139,32 @@ function buildLinkButtons(links = {}) {
 
 function openModal(project) {
     const modal = document.getElementById('project-modal');
+    const isCoursework = project.category === 'Coursework';
     document.getElementById('modal-title').textContent = project.title;
     document.getElementById('modal-category').textContent = project.category;
     document.getElementById('modal-summary').textContent = project.summary;
     const overview = document.getElementById('modal-overview');
     const overviewGrid = document.getElementById('modal-overview-grid');
     const deepDiveHeading = document.getElementById('modal-deep-dive-heading');
-    const overviewItems = project.overview
+    const overviewLabel = overview.querySelector('.modal-section-heading span');
+    const overviewTitle = document.getElementById('modal-overview-title');
+    overviewLabel.textContent = isCoursework ? 'Coursework' : 'Case Study';
+    overviewTitle.textContent = isCoursework ? 'Class Rundown' : 'At a Glance';
+    overviewGrid.classList.toggle('is-class-rundown', isCoursework);
+    const overviewItems = isCoursework
+        ? [['What I Did', project.classRundown || project.summary]]
+        : project.overview
         ? [['Problem', project.overview.problem], ['Method', project.overview.method], ['Result', project.overview.result]]
         : [];
     overviewGrid.innerHTML = overviewItems
         .map(([heading, body], index) => `<article class="modal-overview-item"><span>0${index + 1}</span><h4>${heading}</h4><p>${body}</p></article>`)
         .join('');
     overview.hidden = overviewItems.length === 0;
-    deepDiveHeading.hidden = !project.sections?.length || overviewItems.length === 0;
+    deepDiveHeading.hidden = isCoursework || !project.sections?.length || overviewItems.length === 0;
     const details = document.getElementById('modal-details');
-    details.innerHTML = project.sections
+    details.innerHTML = isCoursework
+        ? '<section class="modal-detail-section"><h4>Want the full explanation?</h4><p>The class README on GitHub has the full explanation of this class and a complete look at the work I did.</p></section>'
+        : project.sections
         ? project.sections.map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('')
         : `<p>${project.details || ''}</p>`;
     document.getElementById('modal-tags').innerHTML = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');

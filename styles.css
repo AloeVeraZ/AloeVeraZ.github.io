@@ -375,6 +375,7 @@ main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); margin: auto; pa
 .modal-section-heading span { color: var(--blue); font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .modal-section-heading h3 { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.65rem, 4vw, 2.35rem); line-height: 1; text-transform: uppercase; }
 .modal-overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.modal-overview-grid.is-class-rundown { grid-template-columns: 1fr; }
 .modal-overview-item { min-width: 0; padding: 1.1rem; background: var(--surface); }
 .modal-overview-item > span { display: block; margin-bottom: 1.35rem; color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .8rem; font-weight: 700; }
 .modal-overview-item h4 { margin-bottom: .45rem; font-family: "Barlow Condensed", sans-serif; font-size: 1.25rem; letter-spacing: .02em; text-transform: uppercase; }
