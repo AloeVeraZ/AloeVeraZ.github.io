@@ -379,7 +379,7 @@
       "collectionOrder": 3,
       "summary": "Seven CAM tutorials that turned part geometry into simulated toolpaths and CNC programs.",
       "details": "",
-      "image": "assets/class-mastercam.png",
+      "image": "assets/class-mastercam-toolpath.png",
       "motionImage": "assets/class-mastercam.gif",
       "tags": ["Mastercam", "CNC", "CAM", "Toolpaths"],
       "overview": {
@@ -404,7 +404,7 @@
       "collectionOrder": 4,
       "summary": "Programming assignments that used scripts, functions, matrices, and graphs to solve math and engineering problems.",
       "details": "",
-      "image": "assets/class-matlab.png",
+      "image": "assets/class-matlab-gpu.png",
       "tags": ["MATLAB", "Data Analysis", "Engineering Computing", "Visualization"],
       "overview": {
         "problem": "I needed to move beyond basic Python and learn a programming tool made for engineering calculations, data, and graphs.",
