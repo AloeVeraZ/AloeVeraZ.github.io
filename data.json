@@ -341,12 +341,16 @@
       "details": "",
       "image": "assets/class-autocad-i.png",
       "tags": ["AutoCAD", "2D Drafting", "Dimensioning", "Layouts"],
+      "overview": {
+        "problem": "I needed to learn how to turn part geometry into technical drawings that were accurate, readable, and ready to print.",
+        "method": "I completed drawing exercises, homework, quizzes, a midterm, and a final while practicing dimensions, title blocks, layouts, and plotting.",
+        "result": "The course gave me a solid foundation in AutoCAD and made my drawings faster, cleaner, and easier to understand."
+      },
       "sections": [
         {"heading": "Coursework", "body": "Classwork, homework, quizzes, a midterm, and a final helped me build a strong foundation in technical drafting."},
         {"heading": "Skills Developed", "body": "The work covers 2D geometry, object snaps, repeated features, dimensioning, sheet layouts, title blocks, and plotting drawings to PDF."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/autocad/autocad-i",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/autocad/autocad-i", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/autocad/autocad-i/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "autocad-ii",
@@ -357,12 +361,16 @@
       "details": "",
       "image": "assets/class-autocad-ii.png",
       "tags": ["AutoCAD", "3D Geometry", "Technical Drawings", "Title Blocks"],
+      "overview": {
+        "problem": "The second AutoCAD course required more complex drawings, different unit systems, and a consistent format across several assignments.",
+        "method": "I worked through advanced exercises, reusable title blocks, 3D geometry, revisions, and a final project made up of several drawings.",
+        "result": "I became more comfortable organizing larger drawing sets and keeping the dimensions, layouts, and presentation consistent."
+      },
       "sections": [
         {"heading": "Coursework", "body": "Chapter exercises, homework, assessments, and a staged final expanded the drafting workflow into more complex 2D and 3D work."},
         {"heading": "Skills Developed", "body": "The work covers drawings with different unit systems, reusable title blocks, revisions, 3D geometry, and consistent presentation."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/autocad/autocad-ii",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/autocad/autocad-ii", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/autocad/autocad-ii/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "mastercam-coursework",
@@ -371,15 +379,23 @@
       "collectionOrder": 3,
       "summary": "Seven CAM tutorials that turned part geometry into simulated toolpaths and CNC programs.",
       "details": "",
-      "image": "assets/class-mastercam.svg",
+      "image": "assets/class-mastercam.png",
+      "motionImage": "assets/class-mastercam.gif",
       "tags": ["Mastercam", "CNC", "CAM", "Toolpaths"],
+      "overview": {
+        "problem": "I knew how to model parts in CAD, but I still needed to learn how those models become safe and organized CNC operations.",
+        "method": "I created stock setups, selected tools, programmed milling operations, simulated each toolpath, and posted the results as CNC code.",
+        "result": "The course taught me the complete CAM workflow and prepared me to apply those skills later on real CNC equipment."
+      },
       "sections": [
         {"heading": "Coursework", "body": "This freshman course began with existing CAD experience and introduced the manufacturing decisions required to turn a digital model into CNC machine instructions."},
         {"heading": "Process", "body": "Projects covered 2D and 3D machining strategies, toolpath creation, stock setup, feeds and speeds, tool selection, and simulation. Each assignment connected model geometry to the physical sequence a mill would follow."},
         {"heading": "Result", "body": "The course helped me understand the complete CAD to CAM process and how design choices affect machining time, tool access, surface finish, and manufacturability."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/mastercam",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/mastercam", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "media": [
+        {"type": "gif", "src": "assets/class-mastercam.gif", "label": "Mastercam toolpath simulation"}
+      ],
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/mastercam/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "matlab-coursework",
@@ -388,15 +404,19 @@
       "collectionOrder": 4,
       "summary": "Programming assignments that used scripts, functions, matrices, and graphs to solve math and engineering problems.",
       "details": "",
-      "image": "assets/matlab-coursework.svg",
+      "image": "assets/class-matlab.png",
       "tags": ["MATLAB", "Data Analysis", "Engineering Computing", "Visualization"],
+      "overview": {
+        "problem": "I needed to move beyond basic Python and learn a programming tool made for engineering calculations, data, and graphs.",
+        "method": "I wrote scripts and functions that used matrices, imported data, solved math problems, and created plots for several class projects.",
+        "result": "By the end of the course, I could use MATLAB to organize calculations, study data, and explain results with clear visualizations."
+      },
       "sections": [
         {"heading": "Coursework", "body": "This freshman course built on my basic Python experience and introduced me to MATLAB, a programming environment designed for engineering. Assignments introduced a different syntax and a workflow built around numerical problem solving."},
         {"heading": "Computing Skills", "body": "Projects used scripts and reusable functions to work with matrices, arrays, and structured calculations. MATLAB's numerical tools made it possible to analyze data and test mathematical relationships efficiently."},
         {"heading": "Application", "body": "Plots and graphs made the results easier to read and explain. The course showed me how programming connects to mathematical models and engineering data."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/matlab",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/matlab", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/matlab/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "mech-1101-machine-shop",
@@ -407,12 +427,16 @@
       "details": "",
       "image": "assets/class-machine-shop.jpg",
       "tags": ["Machining", "Drilling", "Tapping", "Inspection"],
+      "overview": {
+        "problem": "Our team had to turn a blank metal plate into a finished part while learning how to work accurately and safely in the machine shop.",
+        "method": "We laid out the part, drilled and finished the holes, cut the notch, filed and sanded the edges, and inspected the final dimensions.",
+        "result": "The project gave me direct experience with common shop tools and showed how small errors during one step affect the final inspection."
+      },
       "sections": [
         {"heading": "Class Project", "body": "The team converted blank metal plate stock into a dimensioned part with four hole treatments, a square notch, finished edges, and inspected dimensions."},
         {"heading": "Skills Developed", "body": "The build documents layout, drilling, tapping, reaming, countersinking, counterboring, filing, sanding, and tolerance inspection."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/mech-1101-machine-shop",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-1/mech-1101-machine-shop", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/mech-1101-machine-shop/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "autodesk-inventor",
@@ -421,14 +445,18 @@
       "collectionOrder": 6,
       "summary": "Parametric CAD coursework covering part models, assemblies, drawings, presentations, and finite element analysis.",
       "details": "",
-      "image": "assets/class-inventor.svg",
+      "image": "assets/class-inventor.png",
       "tags": ["Inventor", "Parametric CAD", "Assemblies", "FEA"],
+      "overview": {
+        "problem": "I wanted to build stronger parametric CAD skills and understand how separate parts, drawings, presentations, and simulations fit together.",
+        "method": "I modeled parts, constrained assemblies, created exploded views and manufacturing drawings, and completed a static stress analysis.",
+        "result": "The course improved how I organize larger CAD projects and gave me experience carrying a design from individual features to a documented assembly."
+      },
       "sections": [
         {"heading": "Coursework", "body": "Homework, class projects, a midterm, a mini project, and a final cover part modeling, constrained assemblies, drawing production, and presentations."},
         {"heading": "Skills Developed", "body": "The work includes modeling with parametric features, assembly constraints, exploded views, manufacturing drawings, revision history, and static stress analysis."}
       ],
-      "cardUrl": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-2/inventor",
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/coursework/year-2/inventor", "label": "Class Archive"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-2/inventor/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "cuny-geopolymer-research",

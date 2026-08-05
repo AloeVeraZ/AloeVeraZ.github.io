@@ -881,11 +881,9 @@ function renderFeaturedProjects(projects) {
 function createProjectCard(project) {
     const card = document.createElement('article');
     card.className = 'project-card';
-    if (project.cardUrl) {
-        card.setAttribute('role', 'link');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('aria-label', `Open ${project.title} on GitHub`);
-    }
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `View ${project.title} details`);
     const cardMedia = project.image
         ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
@@ -895,13 +893,7 @@ function createProjectCard(project) {
         card.addEventListener('pointerenter', () => { motionImage.src = motionImage.dataset.motionSrc; }, { passive: true });
         card.addEventListener('pointerleave', () => { motionImage.src = project.image; }, { passive: true });
     }
-    const activateCard = () => {
-        if (project.cardUrl) {
-            window.location.assign(project.cardUrl);
-        } else {
-            openModal(project);
-        }
-    };
+    const activateCard = () => openModal(project);
     card.addEventListener('click', event => { if (!event.target.closest('a')) activateCard(); });
     card.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
