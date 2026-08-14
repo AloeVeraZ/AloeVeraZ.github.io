@@ -4,10 +4,10 @@
 
 ### Designing, building, and programming machines that move.
 
-[![Live Portfolio](https://img.shields.io/badge/Live_Portfolio-Visit_Site-111111?style=for-the-badge&logo=githubpages&logoColor=white)](https://aloeveraz.github.io/)
-[![Projects](https://img.shields.io/badge/Projects-17-3f3f46?style=for-the-badge&logo=robotframework&logoColor=white)](https://aloeveraz.github.io/#projects)
-[![GitHub](https://img.shields.io/badge/GitHub-AloeVeraZ-6b7280?style=for-the-badge&logo=github&logoColor=white)](https://github.com/AloeVeraZ)
-[![Email](https://img.shields.io/badge/Email-Let's_Talk-111111?style=for-the-badge&logo=gmail&logoColor=white)](mailto:angelojames2006@gmail.com)
+[![Live Portfolio](https://img.shields.io/badge/Live_Portfolio-Visit_Site-0EA5E9?style=for-the-badge&logo=githubpages&logoColor=white&labelColor=0369A1)](https://aloeveraz.github.io/)
+[![Projects](https://img.shields.io/badge/Projects-17-8B5CF6?style=for-the-badge&logo=robotframework&logoColor=white&labelColor=6D28D9)](https://aloeveraz.github.io/#projects)
+[![GitHub](https://img.shields.io/badge/GitHub-AloeVeraZ-2563EB?style=for-the-badge&logo=github&logoColor=white&labelColor=1D4ED8)](https://github.com/AloeVeraZ)
+[![Email](https://img.shields.io/badge/Email-Let's_Talk-EA4335?style=for-the-badge&logo=gmail&logoColor=white&labelColor=B3261E)](mailto:angelojames2006@gmail.com)
 
 Mechanical engineering, robotics, CAD, rapid prototyping, controls, and autonomous systems in one interactive portfolio.
 
