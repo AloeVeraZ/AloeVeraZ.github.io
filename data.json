@@ -31,9 +31,10 @@
   ],
   "projectCollections": [
     {"id": "personal-projects", "name": "Personal Projects", "description": "Robots and 3D printers I designed, built, tested, and improved in my own time.", "categories": ["Robotics", "3D Printing"]},
+    {"id": "internship-work-projects", "name": "Internship / Work Projects", "description": "Projects completed through internships and other professional work experiences.", "categories": ["Internship / Work Projects"]},
     {"name": "Club Projects", "description": "Robotics projects built with other students for teaching, testing, and learning new skills.", "categories": ["Club Projects"]},
-    {"id": "classes", "name": "Classes", "description": "Selected work from my classes at New York City College of Technology, with links to each course archive on GitHub.", "categories": ["Coursework"]},
-    {"name": "Awards & Research", "description": "Research projects, technical training, certificates, and other academic work.", "categories": ["Awards & Certificates"]}
+    {"name": "Awards & Research", "description": "Research projects, technical training, certificates, and other academic work.", "categories": ["Awards & Certificates"]},
+    {"id": "classes", "name": "Classes", "description": "Selected work from my classes at New York City College of Technology, with links to each course archive on GitHub.", "categories": ["Coursework"]}
   ],
   "projects": [
     {
@@ -499,6 +500,30 @@
         {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/tree/main/projects/advanced-materials-manufacturing-summer-camp-2025", "label": "Full Write-Up on GitHub"}, "grabcad": "", "video": "https://www.youtube.com/watch?v=S01YHTue9bU", "projectUrl": ""}
+    },
+    {
+      "id": "internship-project-01",
+      "title": "Internship Project 01",
+      "category": "Internship / Work Projects",
+      "additionalCategories": ["Awards & Certificates"],
+      "collectionOrder": 3,
+      "summary": "Details for this internship project are coming soon.",
+      "details": "Project details will be added when this internship work is ready to share.",
+      "image": "",
+      "tags": ["Internship", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "internship-project-02",
+      "title": "Internship Project 02",
+      "category": "Internship / Work Projects",
+      "additionalCategories": ["Awards & Certificates"],
+      "collectionOrder": 4,
+      "summary": "Details for this internship project are coming soon.",
+      "details": "Project details will be added when this internship work is ready to share.",
+      "image": "",
+      "tags": ["Internship", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     }
   ]
 }
