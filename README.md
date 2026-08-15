@@ -5,7 +5,7 @@
 ### Designing, building, and programming machines that move.
 
 [![Live Portfolio](https://img.shields.io/badge/Live_Portfolio-Visit_Site-0EA5E9?style=for-the-badge&logo=githubpages&logoColor=white&labelColor=0369A1)](https://aloeveraz.github.io/)
-[![Projects](https://img.shields.io/badge/Projects-17-8B5CF6?style=for-the-badge&logo=robotframework&logoColor=white&labelColor=6D28D9)](https://aloeveraz.github.io/#projects)
+[![Projects](https://img.shields.io/badge/Projects-28-8B5CF6?style=for-the-badge&logo=robotframework&logoColor=white&labelColor=6D28D9)](https://aloeveraz.github.io/#projects)
 [![GitHub](https://img.shields.io/badge/GitHub-AloeVeraZ-2563EB?style=for-the-badge&logo=github&logoColor=white&labelColor=1D4ED8)](https://github.com/AloeVeraZ)
 [![Email](https://img.shields.io/badge/Email-Let's_Talk-EA4335?style=for-the-badge&logo=gmail&logoColor=white&labelColor=B3261E)](mailto:angelojames2006@gmail.com)
 
@@ -35,8 +35,8 @@ Mechanical engineering, robotics, CAD, rapid prototyping, controls, and autonomo
 | Area | Details |
 | --- | --- |
 | Focus | Mechanical engineering, robotics, 3D printing, controls, and prototyping |
-| Project library | 20 documented projects across four collections |
-| Personal builds | 10 robotics and custom 3D-printer projects |
+| Project library | 28 project cards across five collections |
+| Personal builds | 12 robotics, software, electronics, and custom 3D-printer projects |
 | Academic work | Six class archives covering CAD, CAM, computing, and machining |
 | Controls | Python, MATLAB, Arduino, Raspberry Pi, and Klipper |
 | CAD | Fusion 360, Autodesk Inventor, SolidWorks, AutoCAD, and Blender |
@@ -77,8 +77,9 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 | Collection | Projects | Highlights |
 | --- | ---: | --- |
-| **Personal Projects** | 10 | Swerve drivetrains, custom odometry, competition robots, an animatronic AI assistant, and custom printers |
-| **Club Projects** | 2 | Self-balancing PID robots and ESP32 crab crawlers |
+| **Personal Projects** | 12 | Swerve drivetrains, controller mapping, TrainUI, custom odometry, competition robots, an animatronic AI assistant, and custom printers |
+| **Internship / Work Projects** | 4 | Reserved cards for internship and professional work that will be added when ready to share |
+| **Club Projects** | 4 | Self-balancing PID robots, ESP32 crab crawlers, and two reserved cards for future club work |
 | **Classes** | 6 | AutoCAD I & II, Mastercam, MATLAB, machine shop, and Autodesk Inventor |
 | **Awards & Research** | 2 | CUNY geopolymer printing research and NSF manufacturing training |
 
@@ -88,11 +89,14 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 ### Personal Projects
 
 - Kiwi Swerve Drivetrain
-- A-Eye Animatronic Chatbot
+- AI Eye Animatronic Chatbot
 - Coaxial Swerve Drive
 - Simple Swerve Drive
 - FTC 9384 Robot: EggWUUUHH
+- Tubba Odometry Pods
 - FTC 9384 Robot: Crabby
+- Raspberry Pi Controller Mapping
+- TrainUI
 - ZeroG Hydra 3D Printer
 - Delta 3D Printer
 - Voron V0.2990
@@ -101,6 +105,15 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 - Self-Balancing Robot
 - Crab Crawler
+- Club Project 03
+- Club Project 04
+
+### Internship / Work Projects
+
+- Internship Project 01
+- Internship Project 02
+- Internship Project 03
+- Internship Project 04
 
 ### Classes
 

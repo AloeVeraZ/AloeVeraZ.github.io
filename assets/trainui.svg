@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title description">
+  <title id="title">TrainUI departure board</title>
+  <desc id="description">A stylized New York City subway departure board running on a small display.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06090f"/>
+      <stop offset="1" stop-color="#17263b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="20" stdDeviation="22" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="675" fill="url(#background)"/>
+  <path d="M0 565C215 480 390 610 596 530c239-93 379 39 604-45v190H0z" fill="#0039a6" opacity=".22"/>
+  <g transform="translate(120 105)" filter="url(#shadow)">
+    <rect width="960" height="470" rx="30" fill="#12171e" stroke="#455466" stroke-width="8"/>
+    <rect x="35" y="35" width="890" height="400" rx="12" fill="#f4f6f8"/>
+    <rect x="35" y="35" width="890" height="88" rx="12" fill="#10151c"/>
+    <rect x="35" y="101" width="890" height="22" fill="#10151c"/>
+    <circle cx="95" cy="79" r="29" fill="#00933c"/>
+    <text x="95" y="90" fill="#fff" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700">4</text>
+    <text x="145" y="88" fill="#fff" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700">BOROUGH HALL</text>
+    <text x="745" y="87" fill="#a9b7c6" font-family="Segoe UI, Arial, sans-serif" font-size="24">8:42 PM</text>
+    <g font-family="Segoe UI, Arial, sans-serif">
+      <text x="75" y="172" fill="#55606c" font-size="20" font-weight="700">UPTOWN &amp; THE BRONX</text>
+      <circle cx="95" cy="222" r="25" fill="#00933c"/>
+      <text x="95" y="232" fill="#fff" text-anchor="middle" font-size="29" font-weight="700">4</text>
+      <text x="145" y="231" fill="#17202b" font-size="30" font-weight="650">Woodlawn</text>
+      <text x="840" y="231" fill="#00933c" text-anchor="end" font-size="30" font-weight="700">2 min</text>
+      <line x1="75" y1="260" x2="885" y2="260" stroke="#d8dde2" stroke-width="3"/>
+      <circle cx="95" cy="306" r="25" fill="#00933c"/>
+      <text x="95" y="316" fill="#fff" text-anchor="middle" font-size="29" font-weight="700">4</text>
+      <text x="145" y="315" fill="#17202b" font-size="30" font-weight="650">Woodlawn</text>
+      <text x="840" y="315" fill="#303d4b" text-anchor="end" font-size="30" font-weight="700">8 min</text>
+      <rect x="70" y="350" width="820" height="55" rx="10" fill="#e7edf3"/>
+      <text x="92" y="384" fill="#304153" font-size="21">Clear 72°F</text>
+      <text x="845" y="384" fill="#304153" text-anchor="end" font-size="21">Pi Zero W  •  Online</text>
+    </g>
+  </g>
+  <text x="600" y="635" fill="#d9e7f5" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="600">Live NYC departures on Raspberry Pi</text>
+</svg>

@@ -30,7 +30,7 @@
     }
   ],
   "projectCollections": [
-    {"id": "personal-projects", "name": "Personal Projects", "description": "Robots and 3D printers I designed, built, tested, and improved in my own time.", "categories": ["Robotics", "3D Printing"]},
+    {"id": "personal-projects", "name": "Personal Projects", "description": "Robots, 3D printers, electronics, and software I designed, built, tested, and improved in my own time.", "categories": ["Robotics", "3D Printing", "Software"]},
     {"id": "internship-work-projects", "name": "Internship / Work Projects", "description": "Projects completed through internships and other professional work experiences.", "categories": ["Internship / Work Projects"]},
     {"name": "Club Projects", "description": "Robotics projects built with other students for teaching, testing, and learning new skills.", "categories": ["Club Projects"]},
     {"name": "Awards & Research", "description": "Research projects, technical training, certificates, and other academic work.", "categories": ["Awards & Certificates"]},
@@ -83,7 +83,7 @@
       "summary": "A voice activated AI assistant that can hold a conversation while moving an expressive animatronic eye.",
       "details": "",
       "image": "assets/a-eye-animatronic.jpg",
-      "tags": ["Animatronics", "ChatGPT", "Python", "Servo Control"],
+      "tags": ["Animatronics", "Local LLM", "Python", "Servo Control"],
       "overview": {
         "problem": "Voice assistants can sound responsive while still feeling physically disconnected, and adding moving hardware introduces noise that can disrupt listening.",
         "method": "I paired a compact eye mechanism that moves across two axes with linked eyelids and conversational software. I then coordinated the motion and microphone states so the eye never competed with speech input.",
@@ -92,7 +92,7 @@
       "sections": [
         {"heading": "Challenge", "body": "The goal was to create a lifelike assistant activated by voice that could listen and respond naturally. It also needed to control an expressive mechanical eye without letting servo noise interfere with speech recognition."},
         {"heading": "Mechanical Design", "body": "Two hidden servos move the eye vertically and horizontally from a compact mechanism mounted to a monitor arm. Linked upper and lower eyelids create synchronized expressions, while reinforced pivots keep the movement stable and repeatable."},
-        {"heading": "Controls", "body": "The software combines wake word detection, speech recognition, and ChatGPT conversation. Cosine easing smooths eye and eyelid movement, coordinated states manage blinking and attention, and the servos pause while the microphone is listening to reduce noise."},
+        {"heading": "Controls", "body": "The software combines wake word detection, speech recognition, and conversation through a local large language model. Cosine easing smooths eye and eyelid movement, coordinated states manage blinking and attention, and the servos pause while the microphone is listening to reduce noise."},
         {"heading": "Result", "body": "The completed prototype can wake, listen, converse, interrupt, and reset in real time. Smooth eye motion and synchronized blinking give the assistant a more natural presence while preserving reliable voice interaction."}
       ],
       "links": {
@@ -230,10 +230,52 @@
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://github.com/AloeVeraZ/FTC9384-2023-Robot-Crabby"}
     },
     {
+      "id": "raspberry-pi-controller-mapping",
+      "title": "Raspberry Pi Controller Mapping",
+      "category": "Robotics",
+      "collectionOrder": 8,
+      "summary": "Two Python experiments for visualizing Xbox and SCUF controller inputs and using a joystick to position a Raspberry Pi controlled servo.",
+      "details": "",
+      "image": "assets/raspberry-pi-controller-mapping.svg",
+      "tags": ["Raspberry Pi", "Python", "Pygame", "Servo Control"],
+      "overview": {
+        "problem": "I wanted a clear way to inspect every controller input and then use the same joystick data to control real hardware from a Raspberry Pi.",
+        "method": "I made a Pygame controller visualizer and a second Python prototype that converts the left stick heading into a smoothed servo position on GPIO 17.",
+        "result": "The project provides a live controller diagnostic and a working example of mapping a full joystick direction to a 0 to 180 degree servo command."
+      },
+      "sections": [
+        {"heading": "Controller Visualizer", "body": "The visualizer displays the controller's sticks, triggers, buttons, and D pad in real time. It supports the Xbox and SCUF layout used during development and makes input testing easier before connecting hardware."},
+        {"heading": "Servo Mapping", "body": "The Raspberry Pi script reads both axes of the left stick, calculates its direction, applies a dead zone and smoothing, and sends the resulting position to a servo through pigpio on GPIO 17."},
+        {"heading": "Hardware Safety", "body": "The project documents the servo pulse range, shared ground requirement, and the need for a suitable external servo power supply instead of powering a high current servo from a GPIO pin."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/raspberry-pi-controller-mapping", "label": "GitHub Project"}}
+    },
+    {
+      "id": "trainui",
+      "title": "TrainUI",
+      "category": "Software",
+      "collectionOrder": 9,
+      "summary": "An always on New York City train departure board built around a Raspberry Pi Zero W and a small HDMI display.",
+      "details": "",
+      "image": "assets/trainui.svg",
+      "tags": ["Raspberry Pi", "Python", "MTA Realtime", "Kiosk Display"],
+      "overview": {
+        "problem": "I wanted a dedicated display that could show useful New York City train information at a glance without acting like another tablet or touchscreen.",
+        "method": "I built a lightweight fullscreen interface for the original Raspberry Pi Zero W, connected it to official MTA realtime feeds, and created an installer that configures the selected train and station.",
+        "result": "TrainUI boots directly into an always on departure board with arrivals, service alerts, weather, time, and Raspberry Pi health information."
+      },
+      "sections": [
+        {"heading": "Live Information", "body": "The display shows route specific arrival times and service alerts alongside New York City weather, the current time, and system health. The public MTA and weather feeds do not require API keys."},
+        {"heading": "Raspberry Pi Kiosk", "body": "The reference build uses an original Raspberry Pi Zero W and a 10.1 inch HDMI monitor in a custom three part printed enclosure. The software runs fullscreen and is designed to stay readable from a distance."},
+        {"heading": "Installation and Reliability", "body": "A one command installer lets the owner choose a supported train and station, configures automatic startup, prevents screen blanking, and installs a connectivity watchdog for long term use."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/TrainUI", "label": "GitHub Project"}}
+    },
+    {
       "id": "zerog-hydra-3d-printer",
       "title": "ZeroG Hydra 3D Printer",
       "category": "3D Printing",
-      "collectionOrder": 8,
+      "collectionOrder": 10,
       "featured": true,
       "summary": "A large CoreXY printer built around print quality, automatic calibration, useful sensors, and dependable hardware.",
       "details": "",
@@ -256,7 +298,7 @@
       "id": "delta-3d-printer",
       "title": "Delta 3D Printer",
       "category": "3D Printing",
-      "collectionOrder": 9,
+      "collectionOrder": 11,
       "summary": "A fast delta printer rebuilt with closed loop motion, direct drive extrusion, and a powerful CPAP cooling system.",
       "details": "",
       "image": "assets/delta-printer.jpg",
@@ -278,7 +320,7 @@
       "id": "voron-v02900",
       "title": "Voron V0.2990",
       "category": "3D Printing",
-      "collectionOrder": 10,
+      "collectionOrder": 12,
       "summary": "A compact Voron that I modified for higher flow, better cooling, safer operation, and easier maintenance.",
       "details": "",
       "image": "assets/voron-v02900.jpg",
@@ -332,6 +374,28 @@
         {"heading": "Result", "body": "The crawlers can walk reliably, stream live video, and show their status in real time. Since they use few parts and straightforward code, students can understand them and add their own ideas."}
       ],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/crab-crawler", "label": "GitHub Project"}}
+    },
+    {
+      "id": "club-project-03",
+      "title": "Club Project 03",
+      "category": "Club Projects",
+      "collectionOrder": 3,
+      "summary": "Details for this club project are coming soon.",
+      "details": "Project details will be added when this club work is ready to share.",
+      "image": "",
+      "tags": ["Club Project", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "club-project-04",
+      "title": "Club Project 04",
+      "category": "Club Projects",
+      "collectionOrder": 4,
+      "summary": "Details for this club project are coming soon.",
+      "details": "Project details will be added when this club work is ready to share.",
+      "image": "",
+      "tags": ["Club Project", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "autocad-i",
@@ -519,6 +583,30 @@
       "category": "Internship / Work Projects",
       "additionalCategories": ["Awards & Certificates"],
       "collectionOrder": 4,
+      "summary": "Details for this internship project are coming soon.",
+      "details": "Project details will be added when this internship work is ready to share.",
+      "image": "",
+      "tags": ["Internship", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "internship-project-03",
+      "title": "Internship Project 03",
+      "category": "Internship / Work Projects",
+      "additionalCategories": ["Awards & Certificates"],
+      "collectionOrder": 5,
+      "summary": "Details for this internship project are coming soon.",
+      "details": "Project details will be added when this internship work is ready to share.",
+      "image": "",
+      "tags": ["Internship", "Coming Soon"],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "internship-project-04",
+      "title": "Internship Project 04",
+      "category": "Internship / Work Projects",
+      "additionalCategories": ["Awards & Certificates"],
+      "collectionOrder": 6,
       "summary": "Details for this internship project are coming soon.",
       "details": "Project details will be added when this internship work is ready to share.",
       "image": "",
