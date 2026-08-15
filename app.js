@@ -817,7 +817,6 @@ function setupInteractiveTilt(reducedMotion) {
 
 function renderProfile(profile) {
     ['nav-name', 'footer-name', 'hero-name'].forEach(id => document.getElementById(id).textContent = profile.name);
-    document.getElementById('nav-name').dataset.text = profile.name;
     document.getElementById('hero-tagline').textContent = profile.tagline || profile.title;
     document.getElementById('about-bio').textContent = profile.bio;
     const highlights = document.getElementById('about-highlights');
