@@ -453,7 +453,7 @@ body { background-color: var(--bg); background-image: none; }
         background-clip: text;
         filter: drop-shadow(0 0 0 rgba(123,168,216,0));
         transition:
-            background-size .72s cubic-bezier(.22, .72, .2, 1),
+            background-size .35s cubic-bezier(.22, .72, .2, 1),
             filter .35s ease;
     }
     .logo:hover,
