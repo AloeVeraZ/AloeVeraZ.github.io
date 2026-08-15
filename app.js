@@ -917,7 +917,7 @@ function renderProjectCollections(collections, projects) {
             .filter(project => collection.categories.includes(project.category)
                 || project.additionalCategories?.some(category => collection.categories.includes(category)))
             .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
-        const carouselCollections = ['Personal Projects', 'Internship / Work Projects', 'Awards & Research', 'Classes'];
+        const carouselCollections = ['Personal Projects', 'Internship / Work Projects', 'Club Projects', 'Awards & Research', 'Classes'];
         const useCarousel = carouselCollections.includes(collection.name) && collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));

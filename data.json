@@ -377,7 +377,7 @@
     },
     {
       "id": "club-project-03",
-      "title": "Club Project 03",
+      "title": "Placeholder 1",
       "category": "Club Projects",
       "collectionOrder": 3,
       "summary": "Details for this club project are coming soon.",
@@ -388,7 +388,7 @@
     },
     {
       "id": "club-project-04",
-      "title": "Club Project 04",
+      "title": "Placeholder 2",
       "category": "Club Projects",
       "collectionOrder": 4,
       "summary": "Details for this club project are coming soon.",
@@ -567,7 +567,7 @@
     },
     {
       "id": "internship-project-01",
-      "title": "Internship Project 01",
+      "title": "Placeholder 1",
       "category": "Internship / Work Projects",
       "additionalCategories": ["Awards & Certificates"],
       "collectionOrder": 3,
@@ -579,7 +579,7 @@
     },
     {
       "id": "internship-project-02",
-      "title": "Internship Project 02",
+      "title": "Placeholder 2",
       "category": "Internship / Work Projects",
       "additionalCategories": ["Awards & Certificates"],
       "collectionOrder": 4,
@@ -591,7 +591,7 @@
     },
     {
       "id": "internship-project-03",
-      "title": "Internship Project 03",
+      "title": "Placeholder 3",
       "category": "Internship / Work Projects",
       "additionalCategories": ["Awards & Certificates"],
       "collectionOrder": 5,
@@ -603,7 +603,7 @@
     },
     {
       "id": "internship-project-04",
-      "title": "Internship Project 04",
+      "title": "Placeholder 4",
       "category": "Internship / Work Projects",
       "additionalCategories": ["Awards & Certificates"],
       "collectionOrder": 6,

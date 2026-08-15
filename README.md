@@ -105,15 +105,15 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 - Self-Balancing Robot
 - Crab Crawler
-- Club Project 03
-- Club Project 04
+- Placeholder 1
+- Placeholder 2
 
 ### Internship / Work Projects
 
-- Internship Project 01
-- Internship Project 02
-- Internship Project 03
-- Internship Project 04
+- Placeholder 1
+- Placeholder 2
+- Placeholder 3
+- Placeholder 4
 
 ### Classes
 
