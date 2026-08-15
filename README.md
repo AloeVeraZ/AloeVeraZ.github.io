@@ -11,6 +11,7 @@
 
 Mechanical engineering, robotics, CAD, rapid prototyping, controls, and autonomous systems in one interactive portfolio.
 
+<strong>Quick navigation:</strong><br>
 [Explore the Website](https://aloeveraz.github.io/) · [Jump to Projects](https://aloeveraz.github.io/#projects) · [View Source](https://github.com/AloeVeraZ/AloeVeraZ.github.io)
 
 </div>
@@ -142,22 +143,32 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 ## How the Site Works
 
-```mermaid
-flowchart LR
-    DATA["data.json\nProfile, skills, projects"] --> APP["app.js\nRendering and interaction"]
-    ASSETS["assets/\nPhotos, GIFs, and graphics"] --> CARDS["Project cards"]
-    APP --> CARDS
-    APP --> COLLECTIONS["Expandable collections"]
-    APP --> MODAL["Case-study modal"]
-    DATA --> COLLECTIONS
-    DATA --> MODAL
-    STYLE["styles.css\nResponsive visual system"] --> CARDS
-    STYLE --> COLLECTIONS
-    STYLE --> MODAL
-    CARDS --> SITE["Interactive portfolio"]
-    COLLECTIONS --> SITE
-    MODAL --> SITE
-```
+<table>
+  <tr>
+    <th>Content</th>
+    <td align="center"><strong><code>data.json</code></strong><br>Profile, skills, and projects</td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong><code>app.js</code></strong><br>Rendering and interaction</td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong>Cards, Collections, and Case Studies</strong></td>
+  </tr>
+  <tr>
+    <th>Media</th>
+    <td align="center"><strong><code>assets/</code></strong><br>Photos, GIFs, and graphics</td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong>Project Cards</strong></td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong>Portfolio</strong></td>
+  </tr>
+  <tr>
+    <th>Presentation</th>
+    <td align="center"><strong><code>styles.css</code></strong><br>Responsive visual system</td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong>Cards, Collections, and Modals</strong></td>
+    <td align="center">&rarr;</td>
+    <td align="center"><strong>Portfolio</strong></td>
+  </tr>
+</table>
 
 The site is framework-free and data-driven:
 
@@ -259,8 +270,6 @@ Example structure:
 ---
 
 <div align="center">
-
-Built from scratch by **[Angelo Demetroulakos](https://github.com/AloeVeraZ)**.
 
 [Website](https://aloeveraz.github.io/) · [Projects](https://aloeveraz.github.io/#projects) · [Email](mailto:angelojames2006@gmail.com)
 
