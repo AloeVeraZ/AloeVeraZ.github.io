@@ -1,0 +1,54 @@
+{
+  "id": "new-project-name",
+  "title": "New Project Name",
+  "category": "Robotics",
+  "collectionOrder": 1,
+  "featured": false,
+  "featuredOrder": 1,
+  "summary": "Write a short overview of the project.",
+  "cardSummary": "Write the first sentence for the front page card. Write the second sentence here.",
+  "details": "",
+  "image": "assets/new-project-cover.jpg",
+  "motionImage": "assets/new-project-preview.gif",
+  "tags": [
+    "CAD",
+    "3D Printing",
+    "Robotics"
+  ],
+  "overview": {
+    "problem": "What problem were you trying to solve?",
+    "method": "How did you design and build it?",
+    "result": "What worked and what did you learn?"
+  },
+  "sections": [
+    {
+      "heading": "Design",
+      "body": "Explain this part of the project."
+    },
+    {
+      "heading": "Build and Testing",
+      "body": "Explain how you built and tested it."
+    }
+  ],
+  "media": [
+    {
+      "type": "image",
+      "src": "assets/new-project-detail.jpg",
+      "label": "Project detail"
+    },
+    {
+      "type": "video",
+      "src": "https://www.youtube.com/embed/VIDEO_ID?enablejsapi=1&playsinline=1&rel=0",
+      "label": "Project video"
+    }
+  ],
+  "links": {
+    "github": "",
+    "grabcad": "",
+    "video": "",
+    "projectUrl": {
+      "url": "",
+      "label": "Full Project"
+    }
+  }
+}

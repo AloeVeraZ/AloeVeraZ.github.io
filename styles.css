@@ -707,37 +707,121 @@ main > .section + .section { margin-top: var(--content-section-gap); }
 }
 main > #contact { padding-bottom: 1.5rem; }
 
-.featured-mobile-controls { display: none; }
+.featured-carousel-controls {
+    display: flex;
+    width: 100%;
+    padding-bottom: 1rem;
+}
+
+/* Every project row uses the same centered, data driven carousel. */
+.project-carousel,
+#featured-projects-container.featured-project-carousel {
+    display: flex;
+    gap: clamp(1rem, 2vw, 1.5rem);
+    width: 100%;
+    margin: 0;
+    padding: 1.2rem 0 1.8rem;
+    overflow-x: hidden;
+    overflow-y: visible;
+    perspective: 1200px;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    touch-action: pan-y;
+}
+.project-carousel::-webkit-scrollbar,
+#featured-projects-container.featured-project-carousel::-webkit-scrollbar {
+    display: none;
+}
+.project-carousel .project-card,
+#featured-projects-container.featured-project-carousel .project-card {
+    flex: 0 0 clamp(300px, 36vw, 440px);
+    opacity: calc(1 - (var(--carousel-depth, 0) * .24));
+    transform:
+        perspective(1100px)
+        rotateY(calc(var(--carousel-position, 0) * -9deg))
+        translateZ(calc(var(--carousel-depth, 0) * -72px))
+        scale(calc(1 - (var(--carousel-depth, 0) * .075)));
+    transform-origin: center center;
+    transform-style: preserve-3d;
+    transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear;
+    will-change: transform, opacity;
+}
+.project-carousel .project-card.is-carousel-active,
+#featured-projects-container.featured-project-carousel .project-card.is-carousel-active {
+    border-color: rgba(123,168,216,.62);
+    box-shadow: 0 22px 52px rgba(0,0,0,.34), 0 0 0 1px rgba(123,168,216,.12);
+}
+.project-carousel .project-card:hover,
+#featured-projects-container.featured-project-carousel .project-card:hover {
+    transform:
+        perspective(1100px)
+        rotateY(calc(var(--carousel-position, 0) * -9deg))
+        translateZ(calc(var(--carousel-depth, 0) * -72px))
+        scale(calc(1 - (var(--carousel-depth, 0) * .075)));
+}
+.carousel-controls .carousel-arrow {
+    border-radius: 999px;
+}
+.carousel-controls > div {
+    padding: .18rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(18,19,23,.78);
+}
+.carousel-indicators {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .5rem;
+    min-height: 20px;
+    margin: -.7rem 0 1.35rem;
+}
+.carousel-indicator {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 1px solid var(--indicator-color, var(--blue));
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    transition: width .38s var(--ease), background .38s ease, box-shadow .38s ease, transform .2s ease;
+}
+.carousel-indicator:hover,
+.carousel-indicator:focus-visible {
+    transform: scale(1.15);
+}
+.carousel-indicator.is-active {
+    width: 34px;
+    background: var(--indicator-color, var(--blue));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--indicator-color, var(--blue)) 45%, transparent);
+}
+
+html[data-effects="low"] .project-carousel .project-card,
+html[data-effects="low"] #featured-projects-container.featured-project-carousel .project-card {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+}
 
 @media (max-width: 800px) {
-    #featured-projects-container.featured-grid {
-        display: flex;
+    .project-carousel,
+    #featured-projects-container.featured-project-carousel {
         gap: 1rem;
-        width: 100%;
-        margin: 0;
-        padding: .25rem 0 1rem;
-        overflow-x: hidden;
-        scroll-snap-type: none;
-        scrollbar-width: none;
-        overscroll-behavior-x: contain;
-        touch-action: pan-y;
+        padding: .7rem 0 1.35rem;
     }
-    #featured-projects-container.featured-grid::-webkit-scrollbar { display: none; }
-    #featured-projects-container .project-card {
-        flex: 0 0 min(290px, 78vw);
-        scroll-snap-align: none;
+    .project-carousel .project-card,
+    #featured-projects-container.featured-project-carousel .project-card {
+        flex-basis: min(290px, 78vw);
     }
-    .featured-mobile-controls {
-        display: flex;
+    .featured-carousel-controls,
+    .carousel-controls {
         justify-content: flex-end;
-        align-items: center;
-        width: 100%;
-        margin: 0;
-        padding-bottom: .9rem;
     }
-    .featured-mobile-controls .carousel-arrow { width: 44px; height: 44px; }
-    .project-carousel { touch-action: pan-y; }
-    .project-carousel .project-card { scroll-snap-align: center; }
+    .featured-carousel-controls .carousel-arrow,
+    .carousel-controls .carousel-arrow {
+        width: 44px;
+        height: 44px;
+    }
     .collection-toggle:hover { padding-left: 0; }
 }
 

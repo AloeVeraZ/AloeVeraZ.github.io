@@ -30,11 +30,11 @@
     }
   ],
   "projectCollections": [
-    {"id": "personal-projects", "name": "Personal Projects", "description": "Robots, 3D printers, electronics, and software I worked on in my own time.", "categories": ["Robotics", "Electronics", "3D Printing", "Software"]},
-    {"id": "internship-work-projects", "name": "Internship / Work Projects", "description": "Projects I worked on during internships and at work.", "categories": ["Internship / Work Projects"]},
-    {"name": "Club Projects", "description": "Robots I built with other students to test ideas and learn new skills.", "categories": ["Club Projects"]},
-    {"name": "Awards & Research", "description": "My research, training programs, certificates, and other school work.", "categories": ["Awards & Certificates"]},
-    {"id": "classes", "name": "Classes", "description": "Some of my work from classes at City Tech, with links to the files on GitHub.", "categories": ["Coursework"]}
+    {"id": "personal-projects", "name": "Personal Projects", "description": "Robots, 3D printers, electronics, and software I worked on in my own time.", "carousel": true, "categories": ["Robotics", "Electronics", "3D Printing", "Software"]},
+    {"id": "internship-work-projects", "name": "Internship / Work Projects", "description": "Projects I worked on during internships and at work.", "carousel": true, "categories": ["Internship / Work Projects"]},
+    {"name": "Club Projects", "description": "Robots I built with other students to test ideas and learn new skills.", "carousel": true, "categories": ["Club Projects"]},
+    {"name": "Awards & Research", "description": "My research, training programs, certificates, and other school work.", "carousel": true, "categories": ["Awards & Certificates"]},
+    {"id": "classes", "name": "Classes", "description": "Some of my work from classes at City Tech, with links to the files on GitHub.", "carousel": true, "categories": ["Coursework"]}
   ],
   "projects": [
     {

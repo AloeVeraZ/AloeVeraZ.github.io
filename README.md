@@ -180,6 +180,10 @@ The site is framework-free and data-driven:
 - [`index.html`](./index.html) provides the semantic page structure and modal shell.
 - [`assets/`](./assets/) contains project photos, animated demonstrations, and coursework graphics.
 
+## Add a Project
+
+Copy [`project-template.json`](./project-template.json) into the `projects` list in [`data.json`](./data.json), fill in the project information, and add the image files to `assets`. The card, collection carousel, featured carousel, modal, media, and links are built automatically from that one entry. Set `featured` to `true` and choose a `featuredOrder` if the project should appear in Featured Projects.
+
 ## Repository Layout
 
 ```text

@@ -880,18 +880,18 @@ function renderFeaturedProjects(projects) {
         .sort((first, second) => (first.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (second.featuredOrder ?? Number.MAX_SAFE_INTEGER))
         .slice(0, 3)
         .forEach(project => container.appendChild(createProjectCard(project)));
-    setupFeaturedMobileCarousel(container);
+    setupFeaturedCarousel(container);
 }
 
-function setupFeaturedMobileCarousel(container) {
+function setupFeaturedCarousel(container) {
     const cards = [...container.querySelectorAll('.project-card')];
-    if (cards.length < 2 || !window.matchMedia('(max-width: 800px)').matches) return;
-    container.classList.add('project-carousel', 'featured-mobile-carousel');
+    if (cards.length < 2) return;
+    container.classList.add('project-carousel', 'featured-project-carousel');
     const controls = document.createElement('div');
-    controls.className = 'carousel-controls featured-mobile-controls';
+    controls.className = 'carousel-controls featured-carousel-controls';
     controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
     container.before(controls);
-    const initialize = setupCarousel(container, controls, true);
+    const initialize = setupCarousel(container, controls, { autoplay: true, indicators: true });
     window.requestAnimationFrame(initialize);
 }
 
@@ -969,8 +969,7 @@ function renderProjectCollections(collections, projects) {
             .filter(project => collection.categories.includes(project.category)
                 || project.additionalCategories?.some(category => collection.categories.includes(category)))
             .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
-        const carouselCollections = ['Personal Projects', 'Internship / Work Projects', 'Club Projects', 'Awards & Research', 'Classes'];
-        const useCarousel = carouselCollections.includes(collection.name) && collectionProjects.length > 3;
+        const useCarousel = collection.carousel !== false && collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
@@ -994,9 +993,11 @@ function renderProjectCollections(collections, projects) {
     });
 }
 
-function setupCarousel(carousel, controls, autoplay = false) {
+function setupCarousel(carousel, controls, options = {}) {
+    const settings = typeof options === 'boolean' ? { autoplay: options } : options;
     const originalCards = [...carousel.querySelectorAll('.project-card')];
-    const cloneCount = Math.min(3, originalCards.length);
+    if (originalCards.length < 2) return () => {};
+    const cloneCount = Math.min(2, originalCards.length);
     const beforeClones = document.createDocumentFragment();
     originalCards.slice(-cloneCount).forEach(card => {
         const clone = card.cloneNode(true);
@@ -1018,27 +1019,68 @@ function setupCarousel(carousel, controls, autoplay = false) {
     let initialized = false;
     let isAnimating = false;
     let queuedSteps = 0;
-    let controlsHovered = false;
-    let controlsFocused = false;
+    let carouselVisible = true;
+    let manualPauseUntil = 0;
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartScrollLeft = 0;
     let touchLastX = 0;
     let touchDirection = null;
     let suppressSwipeClick = false;
-    const autoplayEnabled = autoplay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
+    const indicators = settings.indicators ? document.createElement('div') : null;
+    const cards = [...carousel.querySelectorAll('.project-card')];
+
+    if (indicators) {
+        indicators.className = 'carousel-indicators';
+        indicators.setAttribute('aria-label', 'Choose a featured project');
+        originalCards.forEach((card, index) => {
+            const dot = document.createElement('button');
+            const category = card.querySelector('.project-category-badge')?.textContent || '';
+            dot.type = 'button';
+            dot.className = 'carousel-indicator';
+            dot.style.setProperty('--indicator-color', category.includes('Internship') ? 'var(--red)' : 'var(--blue)');
+            dot.setAttribute('aria-label', `Show featured project ${index + 1}`);
+            indicators.appendChild(dot);
+        });
+        carousel.after(indicators);
+    }
+
     const getMetrics = () => {
         const card = originalCards[0];
         if (!card) return null;
         const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
         const distance = card.getBoundingClientRect().width + gap;
-        const visibleCount = Math.max(Math.round(carousel.clientWidth / distance), 1);
-        const lastIndex = Math.max(originalCards.length - visibleCount, 0);
-        const centerOffset = window.matchMedia('(max-width: 800px)').matches
-            ? Math.max((carousel.clientWidth - card.getBoundingClientRect().width) / 2, 0)
-            : 0;
-        return { distance, lastIndex, centerOffset };
+        const centerOffset = Math.max((carousel.clientWidth - card.getBoundingClientRect().width) / 2, 0);
+        return { distance, lastIndex: originalCards.length - 1, centerOffset };
     };
+
+    const updateIndicators = () => {
+        if (!indicators) return;
+        [...indicators.children].forEach((indicator, index) => {
+            const active = index === currentIndex;
+            indicator.classList.toggle('is-active', active);
+            if (active) indicator.setAttribute('aria-current', 'true');
+            else indicator.removeAttribute('aria-current');
+        });
+    };
+
+    const updateCardDepth = () => {
+        const metrics = getMetrics();
+        if (!metrics) return;
+        const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+        cards.forEach(card => {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const position = Math.max(-2.25, Math.min(2.25, (cardCenter - carouselCenter) / metrics.distance));
+            const depth = Math.min(Math.abs(position), 1.65);
+            card.style.setProperty('--carousel-position', position.toFixed(3));
+            card.style.setProperty('--carousel-depth', depth.toFixed(3));
+            card.style.zIndex = String(10 - Math.round(depth * 3));
+            card.classList.toggle('is-carousel-active', depth < .18);
+        });
+    };
+
     const initialize = () => {
         const metrics = getMetrics();
         if (!metrics || metrics.distance <= 0) return;
@@ -1047,20 +1089,23 @@ function setupCarousel(carousel, controls, autoplay = false) {
         currentIndex = 0;
         initialized = true;
         isAnimating = false;
+        queuedSteps = 0;
+        updateCardDepth();
+        updateIndicators();
     };
+
     const animateScroll = (target, onComplete) => {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
-        const duration = Math.min(360, Math.max(180, Math.abs(change) * .55));
+        const duration = reducedMotion.matches ? 0 : 720;
         const startedAt = performance.now();
         isAnimating = true;
         const frame = now => {
-            const progress = Math.min((now - startedAt) / duration, 1);
-            const eased = progress < .5
-                ? 4 * Math.pow(progress, 3)
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            const progress = duration === 0 ? 1 : Math.min((now - startedAt) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 4);
             carousel.scrollTo({ left: start + (change * eased), behavior: 'auto' });
+            updateCardDepth();
             if (progress < 1) {
                 scrollAnimation = window.requestAnimationFrame(frame);
             } else {
@@ -1078,25 +1123,26 @@ function setupCarousel(carousel, controls, autoplay = false) {
         }
         const metrics = getMetrics();
         if (!metrics || metrics.lastIndex <= 0) return;
-        const positionCount = metrics.lastIndex + 1;
-        const nextIndex = (currentIndex + step + positionCount) % positionCount;
-        const wrappingBackward = currentIndex === 0 && step < 0;
-        const wrappingForward = currentIndex === metrics.lastIndex && step > 0;
+        const direction = Math.sign(step);
+        const positionCount = originalCards.length;
+        const nextIndex = (currentIndex + direction + positionCount) % positionCount;
+        const wrappingBackward = currentIndex === 0 && direction < 0;
+        const wrappingForward = currentIndex === metrics.lastIndex && direction > 0;
         let physicalIndex = cloneCount + nextIndex;
         let resetIndex = null;
         if (wrappingBackward) {
-            physicalIndex = metrics.centerOffset > 0 ? cloneCount - 1 : 0;
+            physicalIndex = cloneCount - 1;
             resetIndex = cloneCount + metrics.lastIndex;
         } else if (wrappingForward) {
-            physicalIndex = metrics.centerOffset > 0
-                ? cloneCount + metrics.lastIndex + 1
-                : cloneCount + originalCards.length;
+            physicalIndex = cloneCount + originalCards.length;
             resetIndex = cloneCount;
         }
         currentIndex = nextIndex;
+        updateIndicators();
         animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
             if (resetIndex !== null) {
                 carousel.scrollTo({ left: resetIndex * metrics.distance - metrics.centerOffset, behavior: 'auto' });
+                updateCardDepth();
             }
             if (queuedSteps !== 0) {
                 const queuedDirection = Math.sign(queuedSteps);
@@ -1114,41 +1160,42 @@ function setupCarousel(carousel, controls, autoplay = false) {
     const next = controls.querySelector('.carousel-next');
     const scheduleAutoplay = () => {
         window.clearTimeout(autoplayTimer);
-        if (!autoplayEnabled || controlsHovered || controlsFocused) return;
+        if (!autoplayEnabled || !carouselVisible) return;
+        const waitForInteraction = Math.max(manualPauseUntil - Date.now(), 0);
         autoplayTimer = window.setTimeout(() => {
-            if (!document.hidden && !carousel.closest('[hidden]')) move(1);
+            if (!document.hidden && !carousel.closest('[hidden]') && Date.now() >= manualPauseUntil) move(1);
             scheduleAutoplay();
-        }, 5000);
+        }, Math.max(4200, waitForInteraction));
     };
-    const arrowControls = controls.querySelector('div');
     const cancelAutoplay = () => {
         window.clearTimeout(autoplayTimer);
     };
-    arrowControls.addEventListener('pointerenter', () => {
-        controlsHovered = true;
+    const pauseAfterInteraction = (delay = 6500) => {
+        manualPauseUntil = Date.now() + delay;
         cancelAutoplay();
-    });
-    arrowControls.addEventListener('pointerleave', () => {
-        controlsHovered = false;
         scheduleAutoplay();
-    });
-    arrowControls.addEventListener('focusin', () => {
-        controlsFocused = true;
-        cancelAutoplay();
-    });
-    arrowControls.addEventListener('focusout', () => {
-        controlsFocused = false;
-        scheduleAutoplay();
-    });
-    previous.addEventListener('pointerdown', cancelAutoplay);
-    next.addEventListener('pointerdown', cancelAutoplay);
+    };
+    previous.addEventListener('pointerdown', () => pauseAfterInteraction());
+    next.addEventListener('pointerdown', () => pauseAfterInteraction());
     previous.addEventListener('click', () => {
         move(-1, previous);
-        scheduleAutoplay();
+        pauseAfterInteraction();
     });
     next.addEventListener('click', () => {
         move(1, next);
-        scheduleAutoplay();
+        pauseAfterInteraction();
+    });
+    indicators?.querySelectorAll('.carousel-indicator').forEach((indicator, targetIndex) => {
+        indicator.addEventListener('click', () => {
+            if (targetIndex === currentIndex || isAnimating) return;
+            queuedSteps = 0;
+            const forward = (targetIndex - currentIndex + originalCards.length) % originalCards.length;
+            const backward = forward - originalCards.length;
+            const shortestStep = Math.abs(forward) <= Math.abs(backward) ? forward : backward;
+            queuedSteps = Math.sign(shortestStep) * Math.max(Math.abs(shortestStep) - 1, 0);
+            move(Math.sign(shortestStep));
+            pauseAfterInteraction();
+        });
     });
     carousel.addEventListener('touchstart', event => {
         if (event.touches.length !== 1) return;
@@ -1158,7 +1205,8 @@ function setupCarousel(carousel, controls, autoplay = false) {
         touchLastX = touch.clientX;
         touchStartScrollLeft = carousel.scrollLeft;
         touchDirection = null;
-        cancelAutoplay();
+        queuedSteps = 0;
+        pauseAfterInteraction();
     }, { passive: true });
     carousel.addEventListener('touchmove', event => {
         if (event.touches.length !== 1) return;
@@ -1176,19 +1224,21 @@ function setupCarousel(carousel, controls, autoplay = false) {
             window.cancelAnimationFrame(scrollAnimation);
             isAnimating = false;
             carousel.scrollTo({ left: touchStartScrollLeft - horizontalDistance, behavior: 'auto' });
+            updateCardDepth();
         }
     }, { passive: false });
     const finishSwipe = () => {
         const horizontalDistance = touchLastX - touchStartX;
         if (touchDirection === 'horizontal' && Math.abs(horizontalDistance) >= 42) {
             suppressSwipeClick = true;
+            move(horizontalDistance < 0 ? 1 : -1);
+            window.setTimeout(() => { suppressSwipeClick = false; }, 760);
+        } else if (touchDirection === 'horizontal') {
             const metrics = getMetrics();
-            const cardSteps = metrics ? Math.max(1, Math.round(Math.abs(horizontalDistance) / metrics.distance)) : 1;
-            move((horizontalDistance < 0 ? 1 : -1) * cardSteps);
-            window.setTimeout(() => { suppressSwipeClick = false; }, 420);
+            if (metrics) animateScroll((cloneCount + currentIndex) * metrics.distance - metrics.centerOffset);
         }
         touchDirection = null;
-        scheduleAutoplay();
+        pauseAfterInteraction();
     };
     carousel.addEventListener('touchend', finishSwipe, { passive: true });
     carousel.addEventListener('touchcancel', finishSwipe, { passive: true });
@@ -1203,6 +1253,12 @@ function setupCarousel(carousel, controls, autoplay = false) {
             if (!carousel.closest('[hidden]')) initialize();
         });
     }, { passive: true });
+    const visibilityObserver = new IntersectionObserver(entries => {
+        carouselVisible = entries[0]?.isIntersecting ?? true;
+        if (carouselVisible) scheduleAutoplay();
+        else cancelAutoplay();
+    }, { threshold: .15 });
+    visibilityObserver.observe(carousel);
     scheduleAutoplay();
     return initialize;
 }
