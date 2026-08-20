@@ -1021,6 +1021,7 @@ function createProjectCard(project) {
         }, { passive: true });
     }
     const activateCard = () => openModal(project);
+    card._openProject = activateCard;
     card.addEventListener('click', event => { if (!event.target.closest('a')) activateCard(); });
     card.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1082,7 +1083,6 @@ function setupCarousel(carousel, controls, options = {}) {
         clone.setAttribute('aria-hidden', 'true');
         clone.setAttribute('tabindex', '-1');
         clone.querySelectorAll('a, button, [tabindex]').forEach(item => item.setAttribute('tabindex', '-1'));
-        if ('inert' in clone) clone.inert = true;
         return clone;
     };
     originalCards.slice(-cloneCount).forEach(card => {
@@ -1113,6 +1113,7 @@ function setupCarousel(carousel, controls, options = {}) {
     let dragLastX = 0;
     let dragDirection = null;
     let suppressSwipeClick = false;
+    let pendingCenterStep = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
     const indicators = settings.indicators ? document.createElement('div') : null;
@@ -1187,7 +1188,7 @@ function setupCarousel(carousel, controls, options = {}) {
                 // Keep the front cards close while the next cards curve behind them.
                 // A shallower step leaves those future cards visible in the side gaps.
                 const angle = ringPosition * (Math.PI * .39);
-                const radius = Math.min(carousel.clientWidth * .36, 440);
+                const radius = Math.min(carousel.clientWidth * .385, 470);
                 const targetX = Math.sin(angle) * radius;
                 const naturalX = position * metrics.distance;
                 const circleDepth = (1 - Math.cos(angle)) * 210;
@@ -1211,8 +1212,7 @@ function setupCarousel(carousel, controls, options = {}) {
                 card.style.setProperty('--carousel-ring-opacity', circleOpacity.toFixed(3));
                 card.style.zIndex = String(Math.round(90 - absolutePosition * 30));
                 card.style.pointerEvents = visibleOnRing
-                    && !card.classList.contains('carousel-clone')
-                    && Math.abs(position) < .55
+                    && Math.abs(position) < 1.25
                     ? 'auto'
                     : 'none';
             } else {
@@ -1459,9 +1459,26 @@ function setupCarousel(carousel, controls, options = {}) {
         }, 140);
     }, { passive: true });
     carousel.addEventListener('click', event => {
-        if (!suppressSwipeClick) return;
+        if (suppressSwipeClick) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+        if (!settings.ring) return;
+        const selectedCard = event.target.closest('.project-card');
+        if (!selectedCard || !carousel.contains(selectedCard)) return;
+        const selectedPosition = Number.parseFloat(selectedCard.style.getPropertyValue('--carousel-position')) || 0;
+        if (Math.abs(selectedPosition) < .55) {
+            pendingCenterStep = 0;
+            return;
+        }
+        if (Math.abs(selectedPosition) >= 1.25) return;
         event.preventDefault();
         event.stopPropagation();
+        pendingCenterStep = Math.sign(selectedPosition);
+        const logicalIndex = Number(selectedCard.dataset.carouselIndex);
+        originalCards[logicalIndex]?._openProject?.();
+        pauseAfterInteraction();
     }, true);
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         carousel.addEventListener('pointerenter', () => {
@@ -1499,6 +1516,11 @@ function setupCarousel(carousel, controls, options = {}) {
         stopAndCenterCurrentMotion();
     });
     document.addEventListener('portfolio:modal-close', () => {
+        if (pendingCenterStep) {
+            const step = pendingCenterStep;
+            pendingCenterStep = 0;
+            move(step);
+        }
         pauseAfterInteraction(2500);
     });
     document.addEventListener('visibilitychange', () => {
