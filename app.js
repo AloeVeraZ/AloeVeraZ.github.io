@@ -29,23 +29,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
-    const performanceStorageKey = 'portfolio-effects-mode';
+    const performanceStorageKey = 'portfolio-effects-override-v2';
     let savedEffectsMode = '';
     try {
         savedEffectsMode = localStorage.getItem(performanceStorageKey) || '';
     } catch (error) {
         savedEffectsMode = '';
     }
-    let effectsMode = ['low', 'high'].includes(savedEffectsMode) ? savedEffectsMode : 'high';
+    const logicalCores = navigator.hardwareConcurrency || 4;
+    const deviceMemory = navigator.deviceMemory || 0;
+    const dataSaverEnabled = Boolean(navigator.connection?.saveData);
+    const meetsHighEffectsBaseline = logicalCores >= 8
+        && (!deviceMemory || deviceMemory >= 8)
+        && !dataSaverEnabled
+        && !reducedMotion.matches;
+    let effectsMode = ['low', 'high'].includes(savedEffectsMode)
+        ? savedEffectsMode
+        : (meetsHighEffectsBaseline ? 'high' : 'low');
+    let effectsReason = savedEffectsMode ? 'manual' : 'hardware';
+    let performanceMonitorFrame = 0;
+    let performanceMonitorStartedAt = 0;
+    let performanceMonitorLastFrame = 0;
+    let performanceMonitorFrames = 0;
+    let performanceMonitorLongFrames = 0;
+    let performanceMonitorSevereFrames = 0;
+    let consecutiveSlowWindows = 0;
+    let automaticDowngradeComplete = false;
 
-    const applyEffectsMode = (mode, remember = false) => {
+    document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
+
+    const resetPerformanceWindow = timestamp => {
+        performanceMonitorStartedAt = timestamp;
+        performanceMonitorLastFrame = timestamp;
+        performanceMonitorFrames = 0;
+        performanceMonitorLongFrames = 0;
+        performanceMonitorSevereFrames = 0;
+    };
+
+    const monitorPerformance = timestamp => {
+        performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
+        if (effectsMode !== 'high' || document.hidden || automaticDowngradeComplete) {
+            resetPerformanceWindow(timestamp);
+            return;
+        }
+
+        if (!performanceMonitorStartedAt) resetPerformanceWindow(timestamp);
+        const frameTime = timestamp - performanceMonitorLastFrame;
+        performanceMonitorLastFrame = timestamp;
+        performanceMonitorFrames += 1;
+        if (frameTime > 45) performanceMonitorLongFrames += 1;
+        if (frameTime > 160) performanceMonitorSevereFrames += 1;
+
+        const windowLength = timestamp - performanceMonitorStartedAt;
+        if (windowLength < 3000) return;
+
+        const averageFps = performanceMonitorFrames / (windowLength / 1000);
+        const longFrameRatio = performanceMonitorLongFrames / Math.max(performanceMonitorFrames, 1);
+        const slowWindow = averageFps < 42
+            || longFrameRatio > .18
+            || performanceMonitorSevereFrames >= 2;
+        consecutiveSlowWindows = slowWindow ? consecutiveSlowWindows + 1 : 0;
+        resetPerformanceWindow(timestamp);
+
+        if (consecutiveSlowWindows >= 2) {
+            automaticDowngradeComplete = true;
+            applyEffectsMode('low', false, 'lag');
+        }
+    };
+
+    const applyEffectsMode = (mode, remember = false, reason = 'manual') => {
         effectsMode = mode;
+        effectsReason = reason;
         const useHighEffects = mode === 'high';
         document.documentElement.dataset.effects = mode;
+        document.documentElement.dataset.effectsReason = reason;
         galaxy.setEnabled(useHighEffects);
         cursor.setEnabled(useHighEffects);
         performanceToggle.setAttribute('aria-checked', String(useHighEffects));
         performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
+        performanceToggle.title = reason === 'lag'
+            ? 'Low FX turned on because the page was running slowly'
+            : `${useHighEffects ? 'High' : 'Low'} FX selected ${reason === 'hardware' ? 'for this device' : 'manually'}`;
         performanceToggleLabel.textContent = useHighEffects ? 'High FX' : 'Low FX';
         if (!useHighEffects) {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
@@ -60,9 +124,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     performanceToggle.addEventListener('click', () => {
-        applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true);
+        consecutiveSlowWindows = 0;
+        automaticDowngradeComplete = false;
+        resetPerformanceWindow(performance.now());
+        applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true, 'manual');
     });
-    applyEffectsMode(effectsMode);
+    document.addEventListener('visibilitychange', () => {
+        consecutiveSlowWindows = 0;
+        resetPerformanceWindow(performance.now());
+    });
+    applyEffectsMode(effectsMode, false, effectsReason);
+    performanceMonitorFrame = requestAnimationFrame(timestamp => {
+        resetPerformanceWindow(timestamp);
+        performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
+    });
 
     let pointerFrame = 0;
     let latestPointerEvent;
@@ -997,8 +1072,9 @@ function setupCarousel(carousel, controls, options = {}) {
     const settings = typeof options === 'boolean' ? { autoplay: options } : options;
     const originalCards = [...carousel.querySelectorAll('.project-card')];
     if (originalCards.length < 2) return () => {};
-    const ringSlots = settings.ring ? Math.min(originalCards.length, 8) : 0;
-    const cloneCount = Math.min(settings.ring ? Math.ceil(ringSlots / 2) : 2, originalCards.length);
+    const ringSlots = settings.ring ? originalCards.length : 0;
+    const cloneCount = Math.min(2, originalCards.length);
+    if (settings.ring) carousel.style.setProperty('--ring-project-count', String(ringSlots));
     originalCards.forEach((card, index) => { card.dataset.carouselIndex = String(index); });
     const beforeClones = document.createDocumentFragment();
     const prepareClone = card => {
@@ -1026,6 +1102,8 @@ function setupCarousel(carousel, controls, options = {}) {
     let isAnimating = false;
     let queuedSteps = 0;
     let carouselVisible = true;
+    let carouselHovered = false;
+    let carouselFocused = false;
     let manualPauseUntil = 0;
     let interactionActive = false;
     let wheelLocked = false;
@@ -1104,25 +1182,33 @@ function setupCarousel(carousel, controls, options = {}) {
             card.style.setProperty('--carousel-position', position.toFixed(3));
             card.style.setProperty('--carousel-depth', depth.toFixed(3));
             if (settings.ring) {
-                const halfRing = ringSlots / 2;
-                const atBackCenter = Math.abs(Math.abs(position) - halfRing) < .52;
                 const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
-                    && (Math.abs(position) < halfRing || (atBackCenter && position >= 0));
-                const angle = position * ((Math.PI * 2) / ringSlots);
-                const radius = Math.min(carousel.clientWidth * .47, 570);
+                    && Math.abs(position) <= 2.05;
+                const ringPosition = Math.max(-2, Math.min(2, position));
+                const angle = ringPosition * (Math.PI / 2);
+                const radius = Math.min(carousel.clientWidth * .44, 530);
                 const targetX = Math.sin(angle) * radius;
                 const naturalX = position * metrics.distance;
-                const circleDepth = (1 - Math.cos(angle)) * 190;
-                const circleScale = .52 + .48 * ((Math.cos(angle) + 1) / 2);
-                const circleRotation = Math.max(-78, Math.min(78, angle * (180 / Math.PI) * .64));
-                const circleOpacity = visibleOnRing ? Math.max(.2, .96 - Math.abs(position) * .13) : 0;
+                const circleDepth = (1 - Math.cos(angle)) * 210;
+                const absolutePosition = Math.abs(ringPosition);
+                const circleScale = absolutePosition <= 1
+                    ? 1 - absolutePosition * .1
+                    : .9 - (absolutePosition - 1) * .48;
+                const rotationMagnitude = absolutePosition <= 1
+                    ? absolutePosition * 12
+                    : 12 + (absolutePosition - 1) * 54;
+                const circleRotation = Math.sign(ringPosition) * rotationMagnitude;
+                const visibleOpacity = absolutePosition <= 1
+                    ? .98 - absolutePosition * .18
+                    : .8 - (absolutePosition - 1) * .5;
+                const circleOpacity = visibleOnRing ? Math.max(.3, visibleOpacity) : 0;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-y', `${Math.min(circleDepth * .13, 38).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-z', `${(-circleDepth).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-rotate', `${circleRotation.toFixed(2)}deg`);
                 card.style.setProperty('--carousel-ring-scale', circleScale.toFixed(3));
                 card.style.setProperty('--carousel-ring-opacity', circleOpacity.toFixed(3));
-                card.style.zIndex = String(Math.round(50 + Math.cos(angle) * 40));
+                card.style.zIndex = String(Math.round(90 - absolutePosition * 30));
                 card.style.pointerEvents = visibleOnRing
                     && !card.classList.contains('carousel-clone')
                     && Math.abs(position) < .55
@@ -1256,12 +1342,14 @@ function setupCarousel(carousel, controls, options = {}) {
     const next = controls.querySelector('.carousel-next');
     const scheduleAutoplay = () => {
         window.clearTimeout(autoplayTimer);
-        if (!autoplayEnabled || !carouselVisible || interactionActive) return;
+        const modalOpen = document.getElementById('project-modal')?.classList.contains('active');
+        if (!autoplayEnabled || !carouselVisible || interactionActive || carouselHovered || carouselFocused || document.hidden || modalOpen) return;
         const waitForInteraction = Math.max(manualPauseUntil - Date.now(), 0);
         autoplayTimer = window.setTimeout(() => {
-            if (!interactionActive && !document.hidden && !carousel.closest('[hidden]') && Date.now() >= manualPauseUntil) move(1);
+            const projectOpen = document.getElementById('project-modal')?.classList.contains('active');
+            if (!interactionActive && !carouselHovered && !carouselFocused && !document.hidden && !projectOpen && !carousel.closest('[hidden]') && Date.now() >= manualPauseUntil) move(1);
             scheduleAutoplay();
-        }, Math.max(4200, waitForInteraction));
+        }, Math.max(5500, waitForInteraction));
     };
     const cancelAutoplay = () => {
         window.clearTimeout(autoplayTimer);
@@ -1374,6 +1462,25 @@ function setupCarousel(carousel, controls, options = {}) {
         event.preventDefault();
         event.stopPropagation();
     }, true);
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        carousel.addEventListener('pointerenter', () => {
+            carouselHovered = true;
+            cancelAutoplay();
+        }, { passive: true });
+        carousel.addEventListener('pointerleave', () => {
+            carouselHovered = false;
+            pauseAfterInteraction(2500);
+        }, { passive: true });
+    }
+    carousel.addEventListener('focusin', () => {
+        carouselFocused = true;
+        cancelAutoplay();
+    });
+    carousel.addEventListener('focusout', event => {
+        if (carousel.contains(event.relatedTarget)) return;
+        carouselFocused = false;
+        pauseAfterInteraction(2500);
+    });
     window.addEventListener('resize', () => {
         window.cancelAnimationFrame(resizeFrame);
         resizeFrame = window.requestAnimationFrame(() => {
@@ -1386,6 +1493,17 @@ function setupCarousel(carousel, controls, options = {}) {
         else cancelAutoplay();
     }, { threshold: .15 });
     visibilityObserver.observe(carousel);
+    document.addEventListener('portfolio:modal-open', () => {
+        cancelAutoplay();
+        stopAndCenterCurrentMotion();
+    });
+    document.addEventListener('portfolio:modal-close', () => {
+        pauseAfterInteraction(2500);
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) cancelAutoplay();
+        else pauseAfterInteraction(1200);
+    });
     scheduleAutoplay();
     return initialize;
 }
@@ -1478,6 +1596,7 @@ function openModal(project) {
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
+    document.dispatchEvent(new CustomEvent('portfolio:modal-open'));
 }
 
 function setupModal() {
@@ -1493,6 +1612,7 @@ function setupModal() {
         modal.setAttribute('aria-hidden', 'true');
         modal.scrollTop = 0;
         if (modalCard) modalCard.scrollTop = 0;
+        document.dispatchEvent(new CustomEvent('portfolio:modal-close'));
     };
     document.getElementById('modal-close').addEventListener('click', close);
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
