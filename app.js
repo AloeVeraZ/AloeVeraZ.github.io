@@ -885,55 +885,14 @@ function renderFeaturedProjects(projects) {
 
 function setupFeaturedMobileCarousel(container) {
     const cards = [...container.querySelectorAll('.project-card')];
-    if (cards.length < 2) return;
-    const mobileView = window.matchMedia('(max-width: 800px)');
+    if (cards.length < 2 || !window.matchMedia('(max-width: 800px)').matches) return;
+    container.classList.add('project-carousel', 'featured-mobile-carousel');
     const controls = document.createElement('div');
-    controls.className = 'featured-mobile-controls';
-    controls.innerHTML = `<button class="carousel-arrow featured-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><div class="featured-carousel-dots" aria-label="Featured project position">${cards.map((_, index) => `<button aria-label="Show featured project ${index + 1}"${index === 0 ? ' class="is-active"' : ''}></button>`).join('')}</div><button class="carousel-arrow featured-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button>`;
-    container.after(controls);
-    const dots = [...controls.querySelectorAll('.featured-carousel-dots button')];
-    let currentIndex = 0;
-    let scrollFrame = 0;
-    const updateDots = index => {
-        currentIndex = Math.max(0, Math.min(index, cards.length - 1));
-        dots.forEach((dot, dotIndex) => dot.classList.toggle('is-active', dotIndex === currentIndex));
-    };
-    const nearestCardIndex = () => {
-        const center = container.scrollLeft + container.clientWidth / 2;
-        return cards.reduce((closest, card, index) => {
-            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-            const distance = Math.abs(cardCenter - center);
-            return distance < closest.distance ? { index, distance } : closest;
-        }, { index: 0, distance: Number.POSITIVE_INFINITY }).index;
-    };
-    const scrollToCard = (index, behavior = 'smooth') => {
-        if (!mobileView.matches) return;
-        const normalizedIndex = (index + cards.length) % cards.length;
-        const card = cards[normalizedIndex];
-        const centeredLeft = card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
-        container.scrollTo({ left: centeredLeft, behavior });
-        updateDots(normalizedIndex);
-    };
-    controls.querySelector('.featured-prev').addEventListener('click', () => scrollToCard(currentIndex - 1));
-    controls.querySelector('.featured-next').addEventListener('click', () => scrollToCard(currentIndex + 1));
-    dots.forEach((dot, index) => dot.addEventListener('click', () => scrollToCard(index)));
-    container.addEventListener('scroll', () => {
-        if (!mobileView.matches || scrollFrame) return;
-        scrollFrame = window.requestAnimationFrame(() => {
-            updateDots(nearestCardIndex());
-            scrollFrame = 0;
-        });
-    }, { passive: true });
-    const resetForViewport = () => {
-        if (mobileView.matches) window.requestAnimationFrame(() => scrollToCard(currentIndex, 'auto'));
-        else {
-            container.scrollTo({ left: 0, behavior: 'auto' });
-            updateDots(0);
-        }
-    };
-    mobileView.addEventListener('change', resetForViewport);
-    window.addEventListener('resize', resetForViewport, { passive: true });
-    resetForViewport();
+    controls.className = 'carousel-controls featured-mobile-controls';
+    controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
+    container.before(controls);
+    const initialize = setupCarousel(container, controls, true);
+    window.requestAnimationFrame(initialize);
 }
 
 function buildTwoSentenceCardSummary(project) {
@@ -1058,6 +1017,7 @@ function setupCarousel(carousel, controls, autoplay = false) {
     let resizeFrame;
     let initialized = false;
     let isAnimating = false;
+    let queuedSteps = 0;
     let controlsHovered = false;
     let controlsFocused = false;
     let touchStartX = 0;
@@ -1104,14 +1064,18 @@ function setupCarousel(carousel, controls, autoplay = false) {
             if (progress < 1) {
                 scrollAnimation = window.requestAnimationFrame(frame);
             } else {
-                onComplete?.();
                 isAnimating = false;
+                onComplete?.();
             }
         };
         scrollAnimation = window.requestAnimationFrame(frame);
     };
     const move = (step, button) => {
         if (!initialized) initialize();
+        if (isAnimating) {
+            queuedSteps += step;
+            return;
+        }
         const metrics = getMetrics();
         if (!metrics || metrics.lastIndex <= 0) return;
         const positionCount = metrics.lastIndex + 1;
@@ -1121,16 +1085,23 @@ function setupCarousel(carousel, controls, autoplay = false) {
         let physicalIndex = cloneCount + nextIndex;
         let resetIndex = null;
         if (wrappingBackward) {
-            physicalIndex = 0;
+            physicalIndex = metrics.centerOffset > 0 ? cloneCount - 1 : 0;
             resetIndex = cloneCount + metrics.lastIndex;
         } else if (wrappingForward) {
-            physicalIndex = cloneCount + originalCards.length;
+            physicalIndex = metrics.centerOffset > 0
+                ? cloneCount + metrics.lastIndex + 1
+                : cloneCount + originalCards.length;
             resetIndex = cloneCount;
         }
         currentIndex = nextIndex;
         animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
             if (resetIndex !== null) {
                 carousel.scrollTo({ left: resetIndex * metrics.distance - metrics.centerOffset, behavior: 'auto' });
+            }
+            if (queuedSteps !== 0) {
+                const queuedDirection = Math.sign(queuedSteps);
+                queuedSteps -= queuedDirection;
+                move(queuedDirection);
             }
         });
         if (button) {
