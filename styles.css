@@ -766,6 +766,9 @@ main > #contact { padding-bottom: 1.5rem; }
 .circular-project-carousel .project-card {
     border-radius: 14px;
 }
+.featured-project-carousel .project-card {
+    border-radius: 14px;
+}
 html[data-effects="high"] .circular-project-carousel {
     min-height: clamp(520px, 44vw, 560px);
     padding-top: 1.1rem;
@@ -807,6 +810,7 @@ html[data-effects="high"] .circular-project-carousel .project-info {
     border-radius: 999px;
 }
 .carousel-controls > div {
+    margin-left: auto;
     padding: .18rem;
     border: 1px solid var(--line);
     border-radius: 999px;

@@ -1052,8 +1052,7 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            const itemLabel = collection.name === 'Classes' ? 'classes' : 'projects';
-            controls.innerHTML = `<span>Browse with the arrows, swipe, or watch the ${itemLabel} advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous ${itemLabel}"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next ${itemLabel}"><i class="fa-solid fa-arrow-right"></i></button></div>`;
+            controls.innerHTML = `<div><button class="carousel-arrow carousel-prev" aria-label="Previous project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
             content.prepend(controls);
             initializeCarousel = setupCarousel(gallery, controls, { autoplay: true, ring: true });
         }
@@ -1185,23 +1184,25 @@ function setupCarousel(carousel, controls, options = {}) {
                 const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
                     && Math.abs(position) <= 2.05;
                 const ringPosition = Math.max(-2, Math.min(2, position));
-                const angle = ringPosition * (Math.PI / 2);
-                const radius = Math.min(carousel.clientWidth * .44, 530);
+                // Keep the front cards close while the next cards curve behind them.
+                // A shallower step leaves those future cards visible in the side gaps.
+                const angle = ringPosition * (Math.PI * .39);
+                const radius = Math.min(carousel.clientWidth * .36, 440);
                 const targetX = Math.sin(angle) * radius;
                 const naturalX = position * metrics.distance;
                 const circleDepth = (1 - Math.cos(angle)) * 210;
                 const absolutePosition = Math.abs(ringPosition);
                 const circleScale = absolutePosition <= 1
-                    ? 1 - absolutePosition * .1
-                    : .9 - (absolutePosition - 1) * .48;
+                    ? 1 - absolutePosition * .08
+                    : .92 - (absolutePosition - 1) * .42;
                 const rotationMagnitude = absolutePosition <= 1
-                    ? absolutePosition * 12
-                    : 12 + (absolutePosition - 1) * 54;
+                    ? absolutePosition * 11
+                    : 11 + (absolutePosition - 1) * 42;
                 const circleRotation = Math.sign(ringPosition) * rotationMagnitude;
                 const visibleOpacity = absolutePosition <= 1
-                    ? .98 - absolutePosition * .18
-                    : .8 - (absolutePosition - 1) * .5;
-                const circleOpacity = visibleOnRing ? Math.max(.3, visibleOpacity) : 0;
+                    ? .98 - absolutePosition * .16
+                    : .82 - (absolutePosition - 1) * .4;
+                const circleOpacity = visibleOnRing ? Math.max(.42, visibleOpacity) : 0;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-y', `${Math.min(circleDepth * .13, 38).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-z', `${(-circleDepth).toFixed(2)}px`);
