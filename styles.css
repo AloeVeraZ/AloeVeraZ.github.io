@@ -738,9 +738,10 @@ main > #contact { padding-bottom: 1.5rem; }
     opacity: calc(1 - (var(--carousel-depth, 0) * .24));
     transform:
         perspective(1100px)
-        rotateY(calc(var(--carousel-position, 0) * -9deg))
-        translateZ(calc(var(--carousel-depth, 0) * -72px))
-        scale(calc(1 - (var(--carousel-depth, 0) * .075)));
+        rotateY(calc(var(--carousel-position, 0) * 11deg))
+        translateY(calc(var(--carousel-depth, 0) * 18px))
+        translateZ(calc(var(--carousel-depth, 0) * -88px))
+        scale(calc(1 - (var(--carousel-depth, 0) * .07)));
     transform-origin: center center;
     transform-style: preserve-3d;
     transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear;
@@ -755,9 +756,19 @@ main > #contact { padding-bottom: 1.5rem; }
 #featured-projects-container.featured-project-carousel .project-card:hover {
     transform:
         perspective(1100px)
-        rotateY(calc(var(--carousel-position, 0) * -9deg))
-        translateZ(calc(var(--carousel-depth, 0) * -72px))
-        scale(calc(1 - (var(--carousel-depth, 0) * .075)));
+        rotateY(calc(var(--carousel-position, 0) * 11deg))
+        translateY(calc(var(--carousel-depth, 0) * 18px))
+        translateZ(calc(var(--carousel-depth, 0) * -88px))
+        scale(calc(1 - (var(--carousel-depth, 0) * .07)));
+}
+.project-carousel.is-dragging,
+#featured-projects-container.featured-project-carousel.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+.project-carousel:not(.is-dragging),
+#featured-projects-container.featured-project-carousel:not(.is-dragging) {
+    cursor: grab;
 }
 .carousel-controls .carousel-arrow {
     border-radius: 999px;
@@ -811,7 +822,7 @@ html[data-effects="low"] #featured-projects-container.featured-project-carousel 
     }
     .project-carousel .project-card,
     #featured-projects-container.featured-project-carousel .project-card {
-        flex-basis: min(290px, 78vw);
+        flex-basis: min(290px, 72vw);
     }
     .featured-carousel-controls,
     .carousel-controls {

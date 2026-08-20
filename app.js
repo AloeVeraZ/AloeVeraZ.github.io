@@ -999,33 +999,40 @@ function setupCarousel(carousel, controls, options = {}) {
     if (originalCards.length < 2) return () => {};
     const cloneCount = Math.min(2, originalCards.length);
     const beforeClones = document.createDocumentFragment();
-    originalCards.slice(-cloneCount).forEach(card => {
+    const prepareClone = card => {
         const clone = card.cloneNode(true);
         clone.classList.add('carousel-clone');
         clone.setAttribute('aria-hidden', 'true');
-        beforeClones.appendChild(clone);
+        clone.setAttribute('tabindex', '-1');
+        clone.querySelectorAll('a, button, [tabindex]').forEach(item => item.setAttribute('tabindex', '-1'));
+        if ('inert' in clone) clone.inert = true;
+        return clone;
+    };
+    originalCards.slice(-cloneCount).forEach(card => {
+        beforeClones.appendChild(prepareClone(card));
     });
     carousel.prepend(beforeClones);
     originalCards.slice(0, cloneCount).forEach(card => {
-        const clone = card.cloneNode(true);
-        clone.classList.add('carousel-clone');
-        clone.setAttribute('aria-hidden', 'true');
-        carousel.appendChild(clone);
+        carousel.appendChild(prepareClone(card));
     });
     let currentIndex = 0;
     let autoplayTimer;
     let scrollAnimation;
+    let snapTimer;
     let resizeFrame;
     let initialized = false;
     let isAnimating = false;
     let queuedSteps = 0;
     let carouselVisible = true;
     let manualPauseUntil = 0;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartScrollLeft = 0;
-    let touchLastX = 0;
-    let touchDirection = null;
+    let interactionActive = false;
+    let wheelLocked = false;
+    let dragPointerId = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartScrollLeft = 0;
+    let dragLastX = 0;
+    let dragDirection = null;
     let suppressSwipeClick = false;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
@@ -1051,8 +1058,9 @@ function setupCarousel(carousel, controls, options = {}) {
         const card = originalCards[0];
         if (!card) return null;
         const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
-        const distance = card.getBoundingClientRect().width + gap;
-        const centerOffset = Math.max((carousel.clientWidth - card.getBoundingClientRect().width) / 2, 0);
+        const cardWidth = card.offsetWidth;
+        const distance = cardWidth + gap;
+        const centerOffset = Math.max((carousel.clientWidth - cardWidth) / 2, 0);
         return { distance, lastIndex: originalCards.length - 1, centerOffset };
     };
 
@@ -1085,13 +1093,55 @@ function setupCarousel(carousel, controls, options = {}) {
         const metrics = getMetrics();
         if (!metrics || metrics.distance <= 0) return;
         window.cancelAnimationFrame(scrollAnimation);
-        carousel.scrollTo({ left: cloneCount * metrics.distance - metrics.centerOffset, behavior: 'auto' });
-        currentIndex = 0;
+        if (!initialized) currentIndex = 0;
+        carousel.scrollTo({ left: (cloneCount + currentIndex) * metrics.distance - metrics.centerOffset, behavior: 'auto' });
         initialized = true;
         isAnimating = false;
         queuedSteps = 0;
         updateCardDepth();
         updateIndicators();
+    };
+
+    const syncIndexToNearestCard = () => {
+        const metrics = getMetrics();
+        if (!metrics) return;
+        const physicalIndex = Math.round((carousel.scrollLeft + metrics.centerOffset) / metrics.distance);
+        currentIndex = ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
+        updateIndicators();
+    };
+
+    const stopAndCenterCurrentMotion = () => {
+        window.cancelAnimationFrame(scrollAnimation);
+        if (isAnimating) {
+            isAnimating = false;
+            queuedSteps = 0;
+            syncIndexToNearestCard();
+        }
+        const metrics = getMetrics();
+        if (!metrics) return;
+        carousel.scrollTo({ left: (cloneCount + currentIndex) * metrics.distance - metrics.centerOffset, behavior: 'auto' });
+        updateCardDepth();
+        updateIndicators();
+    };
+
+    const snapToNearestCard = () => {
+        const metrics = getMetrics();
+        if (!metrics) return;
+        const physicalIndex = Math.max(0, Math.min(
+            Math.round((carousel.scrollLeft + metrics.centerOffset) / metrics.distance),
+            cards.length - 1
+        ));
+        currentIndex = ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
+        const resetIndex = physicalIndex < cloneCount || physicalIndex >= cloneCount + originalCards.length
+            ? cloneCount + currentIndex
+            : null;
+        updateIndicators();
+        animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
+            if (resetIndex !== null) {
+                carousel.scrollTo({ left: resetIndex * metrics.distance - metrics.centerOffset, behavior: 'auto' });
+                updateCardDepth();
+            }
+        });
     };
 
     const animateScroll = (target, onComplete) => {
@@ -1160,23 +1210,29 @@ function setupCarousel(carousel, controls, options = {}) {
     const next = controls.querySelector('.carousel-next');
     const scheduleAutoplay = () => {
         window.clearTimeout(autoplayTimer);
-        if (!autoplayEnabled || !carouselVisible) return;
+        if (!autoplayEnabled || !carouselVisible || interactionActive) return;
         const waitForInteraction = Math.max(manualPauseUntil - Date.now(), 0);
         autoplayTimer = window.setTimeout(() => {
-            if (!document.hidden && !carousel.closest('[hidden]') && Date.now() >= manualPauseUntil) move(1);
+            if (!interactionActive && !document.hidden && !carousel.closest('[hidden]') && Date.now() >= manualPauseUntil) move(1);
             scheduleAutoplay();
         }, Math.max(4200, waitForInteraction));
     };
     const cancelAutoplay = () => {
         window.clearTimeout(autoplayTimer);
     };
-    const pauseAfterInteraction = (delay = 6500) => {
+    const pauseAfterInteraction = (delay = 9000) => {
         manualPauseUntil = Date.now() + delay;
         cancelAutoplay();
         scheduleAutoplay();
     };
-    previous.addEventListener('pointerdown', () => pauseAfterInteraction());
-    next.addEventListener('pointerdown', () => pauseAfterInteraction());
+    previous.addEventListener('pointerdown', () => {
+        stopAndCenterCurrentMotion();
+        pauseAfterInteraction();
+    });
+    next.addEventListener('pointerdown', () => {
+        stopAndCenterCurrentMotion();
+        pauseAfterInteraction();
+    });
     previous.addEventListener('click', () => {
         move(-1, previous);
         pauseAfterInteraction();
@@ -1187,7 +1243,8 @@ function setupCarousel(carousel, controls, options = {}) {
     });
     indicators?.querySelectorAll('.carousel-indicator').forEach((indicator, targetIndex) => {
         indicator.addEventListener('click', () => {
-            if (targetIndex === currentIndex || isAnimating) return;
+            stopAndCenterCurrentMotion();
+            if (targetIndex === currentIndex) return;
             queuedSteps = 0;
             const forward = (targetIndex - currentIndex + originalCards.length) % originalCards.length;
             const backward = forward - originalCards.length;
@@ -1197,51 +1254,75 @@ function setupCarousel(carousel, controls, options = {}) {
             pauseAfterInteraction();
         });
     });
-    carousel.addEventListener('touchstart', event => {
-        if (event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        touchLastX = touch.clientX;
-        touchStartScrollLeft = carousel.scrollLeft;
-        touchDirection = null;
+    carousel.addEventListener('pointerdown', event => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        interactionActive = true;
+        dragPointerId = event.pointerId;
+        cancelAutoplay();
+        stopAndCenterCurrentMotion();
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        dragLastX = event.clientX;
+        dragStartScrollLeft = carousel.scrollLeft;
+        dragDirection = null;
         queuedSteps = 0;
-        pauseAfterInteraction();
+        carousel.classList.add('is-dragging');
     }, { passive: true });
-    carousel.addEventListener('touchmove', event => {
-        if (event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        const horizontalDistance = touch.clientX - touchStartX;
-        const verticalDistance = touch.clientY - touchStartY;
-        touchLastX = touch.clientX;
-        if (!touchDirection && Math.hypot(horizontalDistance, verticalDistance) > 9) {
-            touchDirection = Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.15
+    carousel.addEventListener('pointermove', event => {
+        if (!interactionActive || event.pointerId !== dragPointerId) return;
+        const horizontalDistance = event.clientX - dragStartX;
+        const verticalDistance = event.clientY - dragStartY;
+        dragLastX = event.clientX;
+        if (!dragDirection && Math.hypot(horizontalDistance, verticalDistance) > 8) {
+            dragDirection = Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.12
                 ? 'horizontal'
                 : 'vertical';
+            if (dragDirection === 'horizontal') carousel.setPointerCapture?.(event.pointerId);
         }
-        if (touchDirection === 'horizontal') {
+        if (dragDirection === 'horizontal') {
             event.preventDefault();
-            window.cancelAnimationFrame(scrollAnimation);
-            isAnimating = false;
-            carousel.scrollTo({ left: touchStartScrollLeft - horizontalDistance, behavior: 'auto' });
+            suppressSwipeClick = Math.abs(horizontalDistance) > 7;
+            manualPauseUntil = Date.now() + 9000;
+            carousel.scrollTo({ left: dragStartScrollLeft - horizontalDistance, behavior: 'auto' });
             updateCardDepth();
         }
     }, { passive: false });
-    const finishSwipe = () => {
-        const horizontalDistance = touchLastX - touchStartX;
-        if (touchDirection === 'horizontal' && Math.abs(horizontalDistance) >= 42) {
-            suppressSwipeClick = true;
-            move(horizontalDistance < 0 ? 1 : -1);
-            window.setTimeout(() => { suppressSwipeClick = false; }, 760);
-        } else if (touchDirection === 'horizontal') {
-            const metrics = getMetrics();
-            if (metrics) animateScroll((cloneCount + currentIndex) * metrics.distance - metrics.centerOffset);
+    const finishDrag = event => {
+        if (!interactionActive || (event.pointerId !== undefined && event.pointerId !== dragPointerId)) return;
+        const horizontalDistance = dragLastX - dragStartX;
+        interactionActive = false;
+        carousel.classList.remove('is-dragging');
+        if (dragPointerId !== null && carousel.hasPointerCapture?.(dragPointerId)) {
+            carousel.releasePointerCapture(dragPointerId);
         }
-        touchDirection = null;
+        dragPointerId = null;
+        if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
+            move(horizontalDistance < 0 ? 1 : -1);
+        } else {
+            snapToNearestCard();
+        }
+        if (suppressSwipeClick) window.setTimeout(() => { suppressSwipeClick = false; }, 820);
+        dragDirection = null;
         pauseAfterInteraction();
     };
-    carousel.addEventListener('touchend', finishSwipe, { passive: true });
-    carousel.addEventListener('touchcancel', finishSwipe, { passive: true });
+    carousel.addEventListener('pointerup', finishDrag, { passive: true });
+    carousel.addEventListener('pointercancel', finishDrag, { passive: true });
+    carousel.addEventListener('wheel', event => {
+        if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || Math.abs(event.deltaX) < 8) return;
+        event.preventDefault();
+        pauseAfterInteraction();
+        if (wheelLocked) return;
+        wheelLocked = true;
+        move(event.deltaX > 0 ? 1 : -1);
+        window.setTimeout(() => { wheelLocked = false; }, 760);
+    }, { passive: false });
+    carousel.addEventListener('scroll', () => {
+        window.clearTimeout(snapTimer);
+        if (isAnimating || interactionActive) return;
+        snapTimer = window.setTimeout(() => {
+            if (!isAnimating && !interactionActive) snapToNearestCard();
+        }, 140);
+    }, { passive: true });
     carousel.addEventListener('click', event => {
         if (!suppressSwipeClick) return;
         event.preventDefault();
