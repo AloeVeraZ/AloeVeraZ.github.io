@@ -5,8 +5,8 @@
     "tagline": "Robotics • CAD • 3D Printing • Programming",
     "bio": "I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like building robots and 3D printers, especially when I get to design the parts, make them, wire everything, and program the final build.",
     "aboutHighlights": [
-      {"label": "Education", "title": "City Tech, New York City College of Technology", "body": "Mechanical Engineering Technology, 2024 to present.", "subline": "John Dewey High School, 2022 to 2024"},
-      {"label": "Robotics Experience", "title": "NYC FIRST STEM Center at Cornell Tech", "body": "I work at the New York City FIRST STEM Center on Roosevelt Island and run the AI & Automation Club at City Tech.", "subline": "FTC Team 9384, 2022 to 2024 • FRC Team 333, 2021 to 2024 • FTC captain in 2022 to 2023 and co captain in 2023 to 2024"},
+      {"label": "Education", "title": "City Tech, New York City College of Technology", "body": "Mechanical Engineering Technology, 2024 to present.", "subline": "John Dewey High School, 2022 to 2024", "targetCollection": "classes", "cta": "View classwork"},
+      {"label": "Robotics Experience", "title": "NYC FIRST STEM Center at Cornell Tech", "body": "I work at the New York City FIRST STEM Center on Roosevelt Island and run the AI & Automation Club at City Tech.", "subline": "FTC Team 9384, 2022 to 2024 • FRC Team 333, 2021 to 2024 • FTC captain in 2022 to 2023 and co captain in 2023 to 2024", "targetCollection": "internship-work-projects", "cta": "View internship and work projects"},
       {"label": "Hands On Work", "title": "Robotics, 3D printers & prototyping", "body": "I have been building and modifying 3D printers since middle school. That eventually led me to designing robots that can move in any direction and learning more CAD, electronics, and programming along the way.", "targetCollection": "personal-projects", "cta": "Explore personal projects"}
     ],
     "email": "angelojames2006@gmail.com",
@@ -22,11 +22,11 @@
     },
     {
       "name": "Manufacturing & Fabrication",
-      "skills": ["3D Printing (FDM, SLA, SLS)", "Laser Cutting", "Manual Mills", "Manual Lathes", "Bandsaws", "Manual Hand Tools", "Punches", "Rapid Prototyping"]
+      "skills": ["3D Printing (FDM, SLA, SLS)", "Laser Cutting", "CNC Machining", "Manual Mills", "Manual Lathes", "Bandsaws", "Belt Sanders", "Drill Presses", "Bench Grinders", "Hand Tools", "Punches", "Rapid Prototyping"]
     },
     {
       "name": "Software & Controls",
-      "skills": ["Python", "MATLAB", "Arduino", "Raspberry Pi", "Klipper", "Block Coding"]
+      "skills": ["Python", "MATLAB", "Arduino", "Raspberry Pi", "VS Code", "Android Studio", "Thonny", "Geany", "Klipper", "Block Coding"]
     }
   ],
   "projectCollections": [

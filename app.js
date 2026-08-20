@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260820-research-placeholders')
+    fetch('data.json?v=20260820-expanded-skills')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -1216,6 +1216,7 @@ function setupCarousel(carousel, controls, options = {}) {
                     : 'none';
             } else {
                 card.style.zIndex = String(10 - Math.round(depth * 3));
+                card.style.pointerEvents = Math.abs(position) < 1.25 ? 'auto' : 'none';
             }
             card.classList.toggle('is-carousel-active', depth < .18);
         });
@@ -1297,7 +1298,7 @@ function setupCarousel(carousel, controls, options = {}) {
         };
         scrollAnimation = window.requestAnimationFrame(frame);
     };
-    const move = (step, button, onComplete) => {
+    const move = (step, button) => {
         if (!initialized) initialize();
         if (isAnimating) {
             queuedSteps += step;
@@ -1330,8 +1331,6 @@ function setupCarousel(carousel, controls, options = {}) {
                 const queuedDirection = Math.sign(queuedSteps);
                 queuedSteps -= queuedDirection;
                 move(queuedDirection);
-            } else {
-                onComplete?.();
             }
         });
         if (button) {
@@ -1465,7 +1464,6 @@ function setupCarousel(carousel, controls, options = {}) {
             event.stopPropagation();
             return;
         }
-        if (!settings.ring) return;
         const selectedCard = event.target.closest('.project-card');
         if (!selectedCard || !carousel.contains(selectedCard)) return;
         const selectedPosition = Number.parseFloat(selectedCard.style.getPropertyValue('--carousel-position')) || 0;
@@ -1474,9 +1472,11 @@ function setupCarousel(carousel, controls, options = {}) {
         event.preventDefault();
         event.stopPropagation();
         const logicalIndex = Number(selectedCard.dataset.carouselIndex);
-        const openSelectedProject = () => originalCards[logicalIndex]?._openProject?.();
         stopAndCenterCurrentMotion();
-        move(Math.sign(selectedPosition), undefined, openSelectedProject);
+        move(Math.sign(selectedPosition));
+        carousel.dataset.keepAnimatingThroughModal = 'true';
+        originalCards[logicalIndex]?._openProject?.();
+        delete carousel.dataset.keepAnimatingThroughModal;
         pauseAfterInteraction();
     }, true);
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
@@ -1512,7 +1512,7 @@ function setupCarousel(carousel, controls, options = {}) {
     visibilityObserver.observe(carousel);
     document.addEventListener('portfolio:modal-open', () => {
         cancelAutoplay();
-        stopAndCenterCurrentMotion();
+        if (carousel.dataset.keepAnimatingThroughModal !== 'true') stopAndCenterCurrentMotion();
     });
     document.addEventListener('portfolio:modal-close', () => {
         pauseAfterInteraction(2500);
