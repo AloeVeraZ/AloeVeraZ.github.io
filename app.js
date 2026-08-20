@@ -1186,6 +1186,9 @@ function buildLinkButtons(links = {}) {
 
 function openModal(project) {
     const modal = document.getElementById('project-modal');
+    const modalCard = modal.querySelector('.modal-card');
+    modal.scrollTop = 0;
+    if (modalCard) modalCard.scrollTop = 0;
     const isCoursework = project.category === 'Coursework';
     document.getElementById('modal-title').textContent = project.title;
     document.getElementById('modal-category').textContent = project.category;
@@ -1260,6 +1263,7 @@ function openModal(project) {
 
 function setupModal() {
     const modal = document.getElementById('project-modal');
+    const modalCard = modal.querySelector('.modal-card');
     const close = () => {
         modal.querySelectorAll('iframe').forEach(video => {
             video.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }), '*');
@@ -1268,6 +1272,8 @@ function setupModal() {
         });
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
+        modal.scrollTop = 0;
+        if (modalCard) modalCard.scrollTop = 0;
     };
     document.getElementById('modal-close').addEventListener('click', close);
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
