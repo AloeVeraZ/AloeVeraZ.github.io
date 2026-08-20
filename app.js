@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260801-about-experience')
+    fetch('data.json?v=20260820-city-tech-roles')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -875,7 +875,36 @@ function renderSkills(categories) {
 function renderFeaturedProjects(projects) {
     const container = document.getElementById('featured-projects-container');
     container.innerHTML = '';
-    projects.filter(project => project.featured).slice(0, 3).forEach(project => container.appendChild(createProjectCard(project)));
+    projects
+        .filter(project => project.featured)
+        .sort((first, second) => (first.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (second.featuredOrder ?? Number.MAX_SAFE_INTEGER))
+        .slice(0, 3)
+        .forEach(project => container.appendChild(createProjectCard(project)));
+}
+
+function buildTwoSentenceCardSummary(project) {
+  if (project.cardSummary) return project.cardSummary;
+
+    const lastSection = project.sections?.[project.sections.length - 1]?.body;
+    const sources = [
+        project.summary,
+        project.programSummary,
+        project.overview?.result,
+        project.classRundown,
+        project.details,
+        lastSection
+    ].filter(Boolean);
+    const sentences = [];
+    sources.forEach(source => {
+        String(source).trim().split(/(?<=[.!?])\s+/).forEach(part => {
+            const clean = part.trim();
+            if (!clean) return;
+            const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`;
+            if (!sentences.some(existing => existing.toLowerCase() === sentence.toLowerCase())) sentences.push(sentence);
+        });
+    });
+    if (sentences.length < 2) sentences.push('Open the project to see the complete design and build details.');
+    return sentences.slice(0, 2).join(' ');
 }
 
 function createProjectCard(project) {
@@ -886,12 +915,22 @@ function createProjectCard(project) {
     card.setAttribute('aria-label', `View ${project.title} details`);
     const cardMedia = project.image
         ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
-        : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Add front GIF</span></div>`;
-    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3><p class="project-summary">${project.summary}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+        : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Preview coming soon</span></div>`;
+    const projectPeriod = project.period
+        ? `<div class="project-period"><i class="fa-regular fa-calendar"></i>${project.period}</div>`
+        : '';
+    const cardDescription = buildTwoSentenceCardSummary(project);
+    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3>${projectPeriod}<p class="project-summary">${cardDescription}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
     if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        card.addEventListener('pointerenter', () => { motionImage.src = motionImage.dataset.motionSrc; }, { passive: true });
-        card.addEventListener('pointerleave', () => { motionImage.src = project.image; }, { passive: true });
+        card.addEventListener('pointerenter', () => {
+            motionImage.src = motionImage.dataset.motionSrc;
+            motionImage.classList.add('is-motion-active');
+        }, { passive: true });
+        card.addEventListener('pointerleave', () => {
+            motionImage.src = project.image;
+            motionImage.classList.remove('is-motion-active');
+        }, { passive: true });
     }
     const activateCard = () => openModal(project);
     card.addEventListener('click', event => { if (!event.target.closest('a')) activateCard(); });
@@ -1150,42 +1189,70 @@ function openModal(project) {
     const isCoursework = project.category === 'Coursework';
     document.getElementById('modal-title').textContent = project.title;
     document.getElementById('modal-category').textContent = project.category;
+    const quickLink = document.getElementById('modal-quick-link');
+    if (quickLink) {
+        const quickLinkUrl = project.quickLink?.url;
+        quickLink.hidden = !quickLinkUrl;
+        quickLink.textContent = project.quickLink?.label || 'Full Project Breakdown';
+        if (quickLinkUrl) quickLink.href = quickLinkUrl;
+        else quickLink.removeAttribute('href');
+    }
+    const modalPeriod = document.getElementById('modal-period');
+    if (modalPeriod) {
+        modalPeriod.hidden = !project.period;
+        modalPeriod.querySelector('span').textContent = project.period || '';
+    }
+    const modalProgramSummary = document.getElementById('modal-program-summary');
+    if (modalProgramSummary) {
+        modalProgramSummary.hidden = !project.programSummary;
+        modalProgramSummary.textContent = project.programSummary || '';
+    }
     document.getElementById('modal-summary').textContent = project.summary;
     const overview = document.getElementById('modal-overview');
     const overviewGrid = document.getElementById('modal-overview-grid');
     const deepDiveHeading = document.getElementById('modal-deep-dive-heading');
     const overviewLabel = overview.querySelector('.modal-section-heading span');
     const overviewTitle = document.getElementById('modal-overview-title');
-    overviewLabel.textContent = isCoursework ? 'Coursework' : 'Case Study';
-    overviewTitle.textContent = isCoursework ? 'Class Rundown' : 'At a Glance';
+    overviewLabel.textContent = isCoursework ? 'Coursework' : 'Quick Overview';
+    overviewTitle.textContent = isCoursework ? 'What I Did in Class' : 'The Main Parts';
     overviewGrid.classList.toggle('is-class-rundown', isCoursework);
     const overviewItems = isCoursework
         ? [['What I Did', project.classRundown || project.summary]]
         : project.overview
-        ? [['Problem', project.overview.problem], ['Method', project.overview.method], ['Result', project.overview.result]]
+        ? [['Why I Made It', project.overview.problem], ['What I Did', project.overview.method], ['How It Turned Out', project.overview.result]]
         : [];
     overviewGrid.innerHTML = overviewItems
         .map(([heading, body], index) => `<article class="modal-overview-item"><span>0${index + 1}</span><h4>${heading}</h4><p>${body}</p></article>`)
         .join('');
     overview.hidden = overviewItems.length === 0;
+    const featureVideo = document.getElementById('modal-feature-video');
+    const featureVideoPlayer = document.getElementById('modal-feature-video-player');
+    if (featureVideo && featureVideoPlayer) {
+        featureVideo.hidden = !project.featureVideo?.src;
+        featureVideoPlayer.innerHTML = project.featureVideo?.src
+            ? `<iframe src="${project.featureVideo.src}" title="${project.featureVideo.label || `${project.title} video`}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+            : '';
+    }
     deepDiveHeading.hidden = isCoursework || !project.sections?.length || overviewItems.length === 0;
     const details = document.getElementById('modal-details');
     details.innerHTML = isCoursework
-        ? '<section class="modal-detail-section"><h4>Want the full explanation?</h4><p>The class README on GitHub has the full explanation of this class and a complete look at the work I did.</p></section>'
+        ? '<section class="modal-detail-section"><h4>Want to see more?</h4><p>The class README on GitHub has more details and all of the work I saved from the class.</p></section>'
         : project.sections
         ? project.sections.map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('')
         : `<p>${project.details || ''}</p>`;
     document.getElementById('modal-tags').innerHTML = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
     document.getElementById('modal-links').innerHTML = buildLinkButtons(project.links);
     const image = document.getElementById('modal-image');
-    image.innerHTML = project.image
-        ? `<img src="${project.image}" alt="${project.title}" decoding="async">`
-        : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Front GIF placeholder</span><small>Add your GIF at the project card when it is ready.</small></div>`;
+    const leadMedia = project.motionImage || project.image;
+    image.classList.toggle('has-motion-media', Boolean(project.motionImage));
+    image.innerHTML = leadMedia
+        ? `<img src="${leadMedia}" alt="${project.title}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
+        : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;
     const media = document.getElementById('modal-media');
     media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
-        ? `<figure class="modal-media-item modal-video"><iframe src="${item.src}" title="${item.label}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe><figcaption>${item.label}</figcaption></figure>`
+        ? `<figure class="modal-media-item modal-video"><iframe src="${item.src}" title="${item.label}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><figcaption>${item.label}</figcaption></figure>`
         : item.src
-        ? `<figure class="modal-media-item"><img src="${item.src}" alt="${item.alt || item.label}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
+        ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${item.alt || item.label}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');

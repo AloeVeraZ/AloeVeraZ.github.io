@@ -36,8 +36,8 @@ Mechanical engineering, robotics, CAD, rapid prototyping, controls, and autonomo
 | Area | Details |
 | --- | --- |
 | Focus | Mechanical engineering, robotics, 3D printing, controls, and prototyping |
-| Project library | 28 project cards across five collections |
-| Personal builds | 12 robotics, software, electronics, and custom 3D-printer projects |
+| Project library | 30 project cards across five collections |
+| Personal builds | 14 robotics, software, electronics, and custom 3D-printer projects |
 | Academic work | Six class archives covering CAD, CAM, computing, and machining |
 | Controls | Python, MATLAB, Arduino, Raspberry Pi, and Klipper |
 | CAD | Fusion 360, Autodesk Inventor, SolidWorks, AutoCAD, and Blender |
@@ -78,7 +78,7 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 
 | Collection | Projects | Highlights |
 | --- | ---: | --- |
-| **Personal Projects** | 12 | Swerve drivetrains, controller mapping, TrainUI, custom odometry, competition robots, an animatronic AI assistant, and custom printers |
+| **Personal Projects** | 14 | Swerve drivetrains, TrainUI, custom odometry, competition robots, an animatronic AI assistant, electronics, and custom printers |
 | **Internship / Work Projects** | 4 | Reserved cards for internship and professional work that will be added when ready to share |
 | **Club Projects** | 4 | Self-balancing PID robots, ESP32 crab crawlers, and two reserved cards for future club work |
 | **Classes** | 6 | AutoCAD I & II, Mastercam, MATLAB, machine shop, and Autodesk Inventor |
@@ -96,7 +96,9 @@ The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirec
 - FTC 9384 Robot: EggWUUUHH
 - Tubba Odometry Pods
 - FTC 9384 Robot: Crabby
-- Raspberry Pi Controller Mapping
+- Omnibot
+- Digital Camera
+- Open Mecanum
 - TrainUI
 - ZeroG Hydra 3D Printer
 - Delta 3D Printer

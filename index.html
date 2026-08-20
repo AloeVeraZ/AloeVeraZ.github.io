@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Angelo Demetroulakos | Mechanical Engineering Portfolio</title>
-    <meta name="description" content="Mechanical Engineering & Robotics Portfolio featuring CAD design, 3D printing, swerve drivetrains, and hardware projects.">
-    <link rel="stylesheet" href="styles.css?v=20260801-case-study-v2">
+    <meta name="description" content="Angelo Demetroulakos's mechanical engineering portfolio with robots, CAD, 3D printers, and other projects.">
+    <link rel="stylesheet" href="styles.css?v=20260820-compact-project-modal">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome 6 icons for GitHub, GrabCAD, CAD, Video, External Links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -76,7 +76,7 @@
             <div class="section-header">
                 <span class="section-label">Portfolio</span>
                 <h2 class="section-title">Featured Projects</h2>
-                <p class="section-subtitle">Here are a few of my projects. Select one to see how I built it, what I used, and where to find the project files.</p>
+                <p class="section-subtitle">Here are a few projects I have worked on. Open one to see how I made it and find the project files.</p>
             </div>
 
             <div class="projects-grid featured-grid" id="featured-projects-container">
@@ -98,7 +98,7 @@
                 <span class="section-label">Connect</span>
                 <h2 class="section-title">Contact & Links</h2>
             </div>
-            <p class="contact-desc">If you want to talk about robotics, 3D printing, or another engineering project, feel free to reach out or look through my code and CAD work.</p>
+            <p class="contact-desc">If you want to talk about robotics, 3D printing, or another project, feel free to reach out or look through my code and CAD files.</p>
             <div class="contact-links" id="contact-links-container">
                 <!-- Populated dynamically -->
             </div>
@@ -111,20 +111,32 @@
             <button class="modal-close" id="modal-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
             <div class="modal-header">
                 <h3 id="modal-title" class="modal-title">Project Title</h3>
-                <span id="modal-category" class="tag">Category</span>
             </div>
             <div id="modal-image" class="modal-image" aria-label="Project media"></div>
+            <div class="modal-header-actions">
+                <span id="modal-category" class="tag">Category</span>
+                <a id="modal-quick-link" class="modal-quick-link" target="_blank" rel="noopener" hidden><i class="fa-brands fa-github"></i> Full Project Breakdown</a>
+            </div>
+            <p id="modal-period" class="modal-period" hidden><i class="fa-regular fa-calendar"></i><span></span></p>
+            <p id="modal-program-summary" class="modal-program-summary" hidden></p>
             <p id="modal-summary" class="modal-summary"></p>
             <section class="modal-overview" id="modal-overview" aria-labelledby="modal-overview-title" hidden>
                 <div class="modal-section-heading">
-                    <span>Case Study</span>
-                    <h3 id="modal-overview-title">At a Glance</h3>
+                    <span>Quick Overview</span>
+                    <h3 id="modal-overview-title">The Main Parts</h3>
                 </div>
                 <div class="modal-overview-grid" id="modal-overview-grid"></div>
             </section>
+            <section class="modal-feature-video" id="modal-feature-video" aria-labelledby="modal-feature-video-title" hidden>
+                <div class="modal-section-heading">
+                    <span>Video</span>
+                    <h3 id="modal-feature-video-title">Watch It Run</h3>
+                </div>
+                <div id="modal-feature-video-player" class="modal-feature-video-player"></div>
+            </section>
             <div class="modal-section-heading modal-deep-dive-heading" id="modal-deep-dive-heading" hidden>
-                <span>Engineering Detail</span>
-                <h3>Technical Deep Dive</h3>
+                <span>More Details</span>
+                <h3>How I Built It</h3>
             </div>
             <div id="modal-details" class="modal-details"></div>
             <div id="modal-media" class="modal-media" aria-label="Project media"></div>
@@ -140,6 +152,6 @@
         </div>
     </footer>
 
-    <script src="app.js?v=20260801-about-experience"></script>
+    <script src="app.js?v=20260820-city-tech-roles"></script>
 </body>
 </html>
