@@ -1113,7 +1113,6 @@ function setupCarousel(carousel, controls, options = {}) {
     let dragLastX = 0;
     let dragDirection = null;
     let suppressSwipeClick = false;
-    let pendingCenterStep = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
     const indicators = settings.indicators ? document.createElement('div') : null;
@@ -1298,7 +1297,7 @@ function setupCarousel(carousel, controls, options = {}) {
         };
         scrollAnimation = window.requestAnimationFrame(frame);
     };
-    const move = (step, button) => {
+    const move = (step, button, onComplete) => {
         if (!initialized) initialize();
         if (isAnimating) {
             queuedSteps += step;
@@ -1331,6 +1330,8 @@ function setupCarousel(carousel, controls, options = {}) {
                 const queuedDirection = Math.sign(queuedSteps);
                 queuedSteps -= queuedDirection;
                 move(queuedDirection);
+            } else {
+                onComplete?.();
             }
         });
         if (button) {
@@ -1433,7 +1434,7 @@ function setupCarousel(carousel, controls, options = {}) {
         dragPointerId = null;
         if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
             move(horizontalDistance < 0 ? 1 : -1);
-        } else {
+        } else if (dragDirection) {
             snapToNearestCard();
         }
         if (suppressSwipeClick) window.setTimeout(() => { suppressSwipeClick = false; }, 820);
@@ -1468,16 +1469,14 @@ function setupCarousel(carousel, controls, options = {}) {
         const selectedCard = event.target.closest('.project-card');
         if (!selectedCard || !carousel.contains(selectedCard)) return;
         const selectedPosition = Number.parseFloat(selectedCard.style.getPropertyValue('--carousel-position')) || 0;
-        if (Math.abs(selectedPosition) < .55) {
-            pendingCenterStep = 0;
-            return;
-        }
+        if (Math.abs(selectedPosition) < .55) return;
         if (Math.abs(selectedPosition) >= 1.25) return;
         event.preventDefault();
         event.stopPropagation();
-        pendingCenterStep = Math.sign(selectedPosition);
         const logicalIndex = Number(selectedCard.dataset.carouselIndex);
-        originalCards[logicalIndex]?._openProject?.();
+        const openSelectedProject = () => originalCards[logicalIndex]?._openProject?.();
+        stopAndCenterCurrentMotion();
+        move(Math.sign(selectedPosition), undefined, openSelectedProject);
         pauseAfterInteraction();
     }, true);
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
@@ -1516,11 +1515,6 @@ function setupCarousel(carousel, controls, options = {}) {
         stopAndCenterCurrentMotion();
     });
     document.addEventListener('portfolio:modal-close', () => {
-        if (pendingCenterStep) {
-            const step = pendingCenterStep;
-            pendingCenterStep = 0;
-            move(step);
-        }
         pauseAfterInteraction(2500);
     });
     document.addEventListener('visibilitychange', () => {
