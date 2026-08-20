@@ -345,7 +345,7 @@ main { width: min(1440px, calc(100% - clamp(2rem, 6vw, 7rem))); margin: auto; pa
 .collection-copy small { color: var(--muted); }
 .collection-copy strong, .collection-copy small, .project-title, .project-summary, .modal-title { overflow-wrap: anywhere; }
 .collection-toggle > i { justify-self: end; transition: transform .3s var(--ease); }
-.collection-toggle[aria-expanded="true"] > i { transform: rotate(180deg); }
+.collection-toggle[aria-expanded="true"] > i { color: var(--blue); transform: rotate(180deg); }
 .collection-content { padding-bottom: 1.25rem; }
 .carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: .9rem; color: var(--muted); font-size: .76rem; }
 .carousel-controls > div { display: flex; gap: .45rem; }
@@ -706,6 +706,58 @@ main > .section + .section { margin-top: var(--content-section-gap); }
     padding-top: var(--content-section-gap);
 }
 main > #contact { padding-bottom: 1.5rem; }
+
+.featured-mobile-controls { display: none; }
+
+@media (max-width: 800px) {
+    #featured-projects-container.featured-grid {
+        display: flex;
+        gap: 1rem;
+        width: 100%;
+        margin: 0;
+        padding: .25rem max(0px, calc((100% - min(290px, 78vw)) / 2)) 1rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: max(0px, calc((100% - min(290px, 78vw)) / 2));
+        scrollbar-width: none;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x pan-y;
+    }
+    #featured-projects-container.featured-grid::-webkit-scrollbar { display: none; }
+    #featured-projects-container .project-card {
+        flex: 0 0 min(290px, 78vw);
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+    }
+    .featured-mobile-controls {
+        display: grid;
+        grid-template-columns: 44px 1fr 44px;
+        gap: .75rem;
+        align-items: center;
+        width: min(260px, 82vw);
+        margin: .25rem auto 2.25rem;
+    }
+    .featured-mobile-controls .carousel-arrow { width: 44px; height: 44px; }
+    .featured-carousel-dots { display: flex; justify-content: center; gap: .5rem; }
+    .featured-carousel-dots button {
+        width: 9px;
+        height: 9px;
+        padding: 0;
+        border: 1px solid rgba(185,214,245,.7);
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        transition: width .2s ease, border-radius .2s ease, background .2s ease;
+    }
+    .featured-carousel-dots button.is-active {
+        width: 24px;
+        border-radius: 10px;
+        background: var(--blue);
+    }
+    .project-carousel { touch-action: pan-y; }
+    .project-carousel .project-card { scroll-snap-align: center; }
+    .collection-toggle:hover { padding-left: 0; }
+}
 
 /* Low FX keeps the engineering grid and stops every continuous visual effect. */
 html[data-effects="low"] .background-grid { display: block; }

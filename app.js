@@ -880,6 +880,60 @@ function renderFeaturedProjects(projects) {
         .sort((first, second) => (first.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (second.featuredOrder ?? Number.MAX_SAFE_INTEGER))
         .slice(0, 3)
         .forEach(project => container.appendChild(createProjectCard(project)));
+    setupFeaturedMobileCarousel(container);
+}
+
+function setupFeaturedMobileCarousel(container) {
+    const cards = [...container.querySelectorAll('.project-card')];
+    if (cards.length < 2) return;
+    const mobileView = window.matchMedia('(max-width: 800px)');
+    const controls = document.createElement('div');
+    controls.className = 'featured-mobile-controls';
+    controls.innerHTML = `<button class="carousel-arrow featured-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><div class="featured-carousel-dots" aria-label="Featured project position">${cards.map((_, index) => `<button aria-label="Show featured project ${index + 1}"${index === 0 ? ' class="is-active"' : ''}></button>`).join('')}</div><button class="carousel-arrow featured-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button>`;
+    container.after(controls);
+    const dots = [...controls.querySelectorAll('.featured-carousel-dots button')];
+    let currentIndex = 0;
+    let scrollFrame = 0;
+    const updateDots = index => {
+        currentIndex = Math.max(0, Math.min(index, cards.length - 1));
+        dots.forEach((dot, dotIndex) => dot.classList.toggle('is-active', dotIndex === currentIndex));
+    };
+    const nearestCardIndex = () => {
+        const center = container.scrollLeft + container.clientWidth / 2;
+        return cards.reduce((closest, card, index) => {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const distance = Math.abs(cardCenter - center);
+            return distance < closest.distance ? { index, distance } : closest;
+        }, { index: 0, distance: Number.POSITIVE_INFINITY }).index;
+    };
+    const scrollToCard = (index, behavior = 'smooth') => {
+        if (!mobileView.matches) return;
+        const normalizedIndex = (index + cards.length) % cards.length;
+        const card = cards[normalizedIndex];
+        const centeredLeft = card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
+        container.scrollTo({ left: centeredLeft, behavior });
+        updateDots(normalizedIndex);
+    };
+    controls.querySelector('.featured-prev').addEventListener('click', () => scrollToCard(currentIndex - 1));
+    controls.querySelector('.featured-next').addEventListener('click', () => scrollToCard(currentIndex + 1));
+    dots.forEach((dot, index) => dot.addEventListener('click', () => scrollToCard(index)));
+    container.addEventListener('scroll', () => {
+        if (!mobileView.matches || scrollFrame) return;
+        scrollFrame = window.requestAnimationFrame(() => {
+            updateDots(nearestCardIndex());
+            scrollFrame = 0;
+        });
+    }, { passive: true });
+    const resetForViewport = () => {
+        if (mobileView.matches) window.requestAnimationFrame(() => scrollToCard(currentIndex, 'auto'));
+        else {
+            container.scrollTo({ left: 0, behavior: 'auto' });
+            updateDots(0);
+        }
+    };
+    mobileView.addEventListener('change', resetForViewport);
+    window.addEventListener('resize', resetForViewport, { passive: true });
+    resetForViewport();
 }
 
 function buildTwoSentenceCardSummary(project) {
@@ -1008,6 +1062,7 @@ function setupCarousel(carousel, controls, autoplay = false) {
     let controlsFocused = false;
     let touchStartX = 0;
     let touchStartY = 0;
+    let touchStartScrollLeft = 0;
     let touchLastX = 0;
     let touchDirection = null;
     let suppressSwipeClick = false;
@@ -1019,13 +1074,16 @@ function setupCarousel(carousel, controls, autoplay = false) {
         const distance = card.getBoundingClientRect().width + gap;
         const visibleCount = Math.max(Math.round(carousel.clientWidth / distance), 1);
         const lastIndex = Math.max(originalCards.length - visibleCount, 0);
-        return { distance, lastIndex };
+        const centerOffset = window.matchMedia('(max-width: 800px)').matches
+            ? Math.max((carousel.clientWidth - card.getBoundingClientRect().width) / 2, 0)
+            : 0;
+        return { distance, lastIndex, centerOffset };
     };
     const initialize = () => {
         const metrics = getMetrics();
         if (!metrics || metrics.distance <= 0) return;
         window.cancelAnimationFrame(scrollAnimation);
-        carousel.scrollTo({ left: cloneCount * metrics.distance, behavior: 'auto' });
+        carousel.scrollTo({ left: cloneCount * metrics.distance - metrics.centerOffset, behavior: 'auto' });
         currentIndex = 0;
         initialized = true;
         isAnimating = false;
@@ -1034,7 +1092,7 @@ function setupCarousel(carousel, controls, autoplay = false) {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
-        const duration = 520;
+        const duration = Math.min(360, Math.max(180, Math.abs(change) * .55));
         const startedAt = performance.now();
         isAnimating = true;
         const frame = now => {
@@ -1054,7 +1112,6 @@ function setupCarousel(carousel, controls, autoplay = false) {
     };
     const move = (step, button) => {
         if (!initialized) initialize();
-        if (isAnimating) return;
         const metrics = getMetrics();
         if (!metrics || metrics.lastIndex <= 0) return;
         const positionCount = metrics.lastIndex + 1;
@@ -1071,9 +1128,9 @@ function setupCarousel(carousel, controls, autoplay = false) {
             resetIndex = cloneCount;
         }
         currentIndex = nextIndex;
-        animateScroll(physicalIndex * metrics.distance, () => {
+        animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
             if (resetIndex !== null) {
-                carousel.scrollTo({ left: resetIndex * metrics.distance, behavior: 'auto' });
+                carousel.scrollTo({ left: resetIndex * metrics.distance - metrics.centerOffset, behavior: 'auto' });
             }
         });
         if (button) {
@@ -1128,6 +1185,7 @@ function setupCarousel(carousel, controls, autoplay = false) {
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
         touchLastX = touch.clientX;
+        touchStartScrollLeft = carousel.scrollLeft;
         touchDirection = null;
         cancelAutoplay();
     }, { passive: true });
@@ -1142,13 +1200,20 @@ function setupCarousel(carousel, controls, autoplay = false) {
                 ? 'horizontal'
                 : 'vertical';
         }
-        if (touchDirection === 'horizontal') event.preventDefault();
+        if (touchDirection === 'horizontal') {
+            event.preventDefault();
+            window.cancelAnimationFrame(scrollAnimation);
+            isAnimating = false;
+            carousel.scrollTo({ left: touchStartScrollLeft - horizontalDistance, behavior: 'auto' });
+        }
     }, { passive: false });
     const finishSwipe = () => {
         const horizontalDistance = touchLastX - touchStartX;
         if (touchDirection === 'horizontal' && Math.abs(horizontalDistance) >= 42) {
             suppressSwipeClick = true;
-            move(horizontalDistance < 0 ? 1 : -1);
+            const metrics = getMetrics();
+            const cardSteps = metrics ? Math.max(1, Math.round(Math.abs(horizontalDistance) / metrics.distance)) : 1;
+            move((horizontalDistance < 0 ? 1 : -1) * cardSteps);
             window.setTimeout(() => { suppressSwipeClick = false; }, 420);
         }
         touchDirection = null;
