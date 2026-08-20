@@ -970,7 +970,7 @@ function renderProjectCollections(collections, projects) {
                 || project.additionalCategories?.some(category => collection.categories.includes(category)))
             .sort((first, second) => (first.collectionOrder ?? Number.MAX_SAFE_INTEGER) - (second.collectionOrder ?? Number.MAX_SAFE_INTEGER));
         const useCarousel = collection.carousel !== false && collectionProjects.length > 3;
-        gallery.className = useCarousel ? 'project-carousel' : 'project-grid compact-project-grid';
+        gallery.className = useCarousel ? 'project-carousel circular-project-carousel' : 'project-grid compact-project-grid';
         collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
         content.appendChild(gallery);
         let initializeCarousel = () => {};
@@ -980,7 +980,7 @@ function renderProjectCollections(collections, projects) {
             const itemLabel = collection.name === 'Classes' ? 'classes' : 'projects';
             controls.innerHTML = `<span>Browse with the arrows, swipe, or watch the ${itemLabel} advance</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous ${itemLabel}"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next ${itemLabel}"><i class="fa-solid fa-arrow-right"></i></button></div>`;
             content.prepend(controls);
-            initializeCarousel = setupCarousel(gallery, controls, true);
+            initializeCarousel = setupCarousel(gallery, controls, { autoplay: true, ring: true });
         }
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => {
@@ -997,7 +997,9 @@ function setupCarousel(carousel, controls, options = {}) {
     const settings = typeof options === 'boolean' ? { autoplay: options } : options;
     const originalCards = [...carousel.querySelectorAll('.project-card')];
     if (originalCards.length < 2) return () => {};
-    const cloneCount = Math.min(2, originalCards.length);
+    const ringSlots = settings.ring ? Math.min(originalCards.length, 8) : 0;
+    const cloneCount = Math.min(settings.ring ? Math.ceil(ringSlots / 2) : 2, originalCards.length);
+    originalCards.forEach((card, index) => { card.dataset.carouselIndex = String(index); });
     const beforeClones = document.createDocumentFragment();
     const prepareClone = card => {
         const clone = card.cloneNode(true);
@@ -1078,13 +1080,57 @@ function setupCarousel(carousel, controls, options = {}) {
         const metrics = getMetrics();
         if (!metrics) return;
         const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
-        cards.forEach(card => {
+        const cardStates = cards.map(card => {
             const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-            const position = Math.max(-2.25, Math.min(2.25, (cardCenter - carouselCenter) / metrics.distance));
+            const rawPosition = (cardCenter - carouselCenter) / metrics.distance;
+            const position = settings.ring ? rawPosition : Math.max(-2.25, Math.min(2.25, rawPosition));
+            return { card, position, logicalIndex: Number(card.dataset.carouselIndex) };
+        });
+        const ringRepresentatives = new Map();
+        if (settings.ring) {
+            cardStates.forEach(state => {
+                const current = ringRepresentatives.get(state.logicalIndex);
+                const closer = !current || Math.abs(state.position) < Math.abs(current.position) - .001;
+                const equalButForward = current
+                    && Math.abs(Math.abs(state.position) - Math.abs(current.position)) <= .001
+                    && state.position >= 0
+                    && current.position < 0;
+                if (closer || equalButForward) ringRepresentatives.set(state.logicalIndex, state);
+            });
+        }
+        cardStates.forEach(state => {
+            const { card, position } = state;
             const depth = Math.min(Math.abs(position), 1.65);
             card.style.setProperty('--carousel-position', position.toFixed(3));
             card.style.setProperty('--carousel-depth', depth.toFixed(3));
-            card.style.zIndex = String(10 - Math.round(depth * 3));
+            if (settings.ring) {
+                const halfRing = ringSlots / 2;
+                const atBackCenter = Math.abs(Math.abs(position) - halfRing) < .52;
+                const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
+                    && (Math.abs(position) < halfRing || (atBackCenter && position >= 0));
+                const angle = position * ((Math.PI * 2) / ringSlots);
+                const radius = Math.min(carousel.clientWidth * .47, 570);
+                const targetX = Math.sin(angle) * radius;
+                const naturalX = position * metrics.distance;
+                const circleDepth = (1 - Math.cos(angle)) * 190;
+                const circleScale = .52 + .48 * ((Math.cos(angle) + 1) / 2);
+                const circleRotation = Math.max(-78, Math.min(78, angle * (180 / Math.PI) * .64));
+                const circleOpacity = visibleOnRing ? Math.max(.2, .96 - Math.abs(position) * .13) : 0;
+                card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
+                card.style.setProperty('--carousel-ring-y', `${Math.min(circleDepth * .13, 38).toFixed(2)}px`);
+                card.style.setProperty('--carousel-ring-z', `${(-circleDepth).toFixed(2)}px`);
+                card.style.setProperty('--carousel-ring-rotate', `${circleRotation.toFixed(2)}deg`);
+                card.style.setProperty('--carousel-ring-scale', circleScale.toFixed(3));
+                card.style.setProperty('--carousel-ring-opacity', circleOpacity.toFixed(3));
+                card.style.zIndex = String(Math.round(50 + Math.cos(angle) * 40));
+                card.style.pointerEvents = visibleOnRing
+                    && !card.classList.contains('carousel-clone')
+                    && Math.abs(position) < .55
+                    ? 'auto'
+                    : 'none';
+            } else {
+                card.style.zIndex = String(10 - Math.round(depth * 3));
+            }
             card.classList.toggle('is-carousel-active', depth < .18);
         });
     };

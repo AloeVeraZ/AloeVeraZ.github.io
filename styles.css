@@ -761,6 +761,30 @@ main > #contact { padding-bottom: 1.5rem; }
         translateZ(calc(var(--carousel-depth, 0) * -88px))
         scale(calc(1 - (var(--carousel-depth, 0) * .07)));
 }
+
+/* The five dropdown carousels wrap their cards around a deeper circular stage. */
+html[data-effects="high"] .circular-project-carousel {
+    min-height: clamp(540px, 52vw, 720px);
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    perspective: 1400px;
+}
+html[data-effects="high"] .circular-project-carousel .project-card,
+html[data-effects="high"] .circular-project-carousel .project-card:hover {
+    position: relative;
+    opacity: var(--carousel-ring-opacity, 0);
+    transform:
+        perspective(1300px)
+        translateX(var(--carousel-ring-x, 0px))
+        translateY(var(--carousel-ring-y, 0px))
+        translateZ(var(--carousel-ring-z, 0px))
+        rotateY(var(--carousel-ring-rotate, 0deg))
+        scale(var(--carousel-ring-scale, 1));
+    transition: border-color .3s ease, box-shadow .3s ease, opacity .14s linear;
+}
+html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
+    box-shadow: 0 26px 64px rgba(0,0,0,.42), 0 0 0 1px rgba(123,168,216,.15);
+}
 .project-carousel.is-dragging,
 #featured-projects-container.featured-project-carousel.is-dragging {
     cursor: grabbing;
@@ -823,6 +847,11 @@ html[data-effects="low"] #featured-projects-container.featured-project-carousel 
     .project-carousel .project-card,
     #featured-projects-container.featured-project-carousel .project-card {
         flex-basis: min(290px, 72vw);
+    }
+    html[data-effects="high"] .circular-project-carousel {
+        min-height: 570px;
+        padding-top: 1.25rem;
+        padding-bottom: 2.25rem;
     }
     .featured-carousel-controls,
     .carousel-controls {
