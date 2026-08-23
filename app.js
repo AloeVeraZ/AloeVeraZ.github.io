@@ -1,4 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const updateViewportScale = () => {
+        const browserFrameWidth = window.outerWidth || window.screen?.availWidth || window.innerWidth;
+        const measuredScale = browserFrameWidth > 0 ? window.innerWidth / browserFrameWidth : 1;
+        const layoutScale = measuredScale > 1.08
+            ? Math.min(Math.max(measuredScale, 1), 4)
+            : 1;
+        const scalableDimensions = {
+            '--site-max-width': 1440,
+            '--hero-content-max-width': 1080,
+            '--project-stage-max-width': 2400,
+            '--carousel-card-min-width': 300,
+            '--carousel-card-max-width': 440,
+            '--project-image-height': 270,
+            '--carousel-image-height': 185,
+            '--ring-image-height': 170,
+            '--ring-image-height-compact': 160,
+            '--ring-height-min': 520,
+            '--ring-height-max': 560,
+            '--modal-max-width': 820,
+            '--modal-max-height': 860,
+            '--project-grid-gap': 20,
+            '--collection-grid-gap': 16,
+            '--carousel-gap-min': 16,
+            '--carousel-gap-max': 24
+        };
+        Object.entries(scalableDimensions).forEach(([property, pixels]) => {
+            document.documentElement.style.setProperty(property, `${(pixels * layoutScale).toFixed(2)}px`);
+        });
+        document.documentElement.dataset.viewportScale = layoutScale.toFixed(3);
+    };
+    updateViewportScale();
+    window.addEventListener('resize', updateViewportScale, { passive: true });
+    window.visualViewport?.addEventListener('resize', updateViewportScale, { passive: true });
+
     const backgroundGrid = document.createElement('div');
     backgroundGrid.className = 'background-grid';
     backgroundGrid.setAttribute('aria-hidden', 'true');
@@ -788,17 +822,28 @@ function setupGalaxyField(canvas, reducedMotion) {
 }
 
 function setupCursorEffects(cursorDot, reducedMotion) {
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return { move() {}, setEnabled() {} };
-
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     let enabled = true;
-    document.documentElement.classList.add('enhanced-pointer');
     let previousX = window.innerWidth / 2;
     let previousY = window.innerHeight / 2;
     let lastTarget = null;
     let lastSparkAt = 0;
 
+    const syncPointerMode = () => {
+        document.documentElement.classList.toggle('enhanced-pointer', enabled && finePointer.matches);
+        if (!enabled || !finePointer.matches) {
+            cursorDot.classList.remove('is-visible', 'is-interactive', 'is-pressed');
+        }
+    };
+    syncPointerMode();
+
     const move = event => {
-        if (!enabled) return;
+        if (!enabled || !finePointer.matches || event.pointerType !== 'mouse') {
+            if (event.pointerType && event.pointerType !== 'mouse') {
+                cursorDot.classList.remove('is-visible', 'is-interactive', 'is-pressed');
+            }
+            return;
+        }
         const movementX = event.clientX - previousX;
         const movementY = event.clientY - previousY;
         const movementSpeed = Math.hypot(movementX, movementY);
@@ -834,7 +879,9 @@ function setupCursorEffects(cursorDot, reducedMotion) {
 
     window.addEventListener('pointerdown', event => {
         if (!enabled || event.button !== 0) return;
-        cursorDot.classList.add('is-pressed');
+        const useMouseDot = finePointer.matches && event.pointerType === 'mouse';
+        cursorDot.classList.toggle('is-pressed', useMouseDot);
+        if (!useMouseDot) cursorDot.classList.remove('is-visible', 'is-interactive');
         if (reducedMotion.matches) return;
         const ripple = document.createElement('span');
         ripple.className = 'cursor-ripple';
@@ -849,9 +896,9 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     document.documentElement.addEventListener('pointerleave', () => cursorDot.classList.remove('is-visible', 'is-pressed'));
     const setEnabled = nextEnabled => {
         enabled = nextEnabled;
-        document.documentElement.classList.toggle('enhanced-pointer', enabled);
-        if (!enabled) cursorDot.classList.remove('is-visible', 'is-interactive', 'is-pressed');
+        syncPointerMode();
     };
+    finePointer.addEventListener('change', syncPointerMode);
     return { move, setEnabled };
 }
 
