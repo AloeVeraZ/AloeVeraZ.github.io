@@ -1,3 +1,5 @@
+const SWIPE_WAKE_RELEASE_DURATION = 500;
+
 document.addEventListener('DOMContentLoaded', () => {
     const updateViewportScale = () => {
         const browserFrameWidth = window.outerWidth || window.screen?.availWidth || window.innerWidth;
@@ -98,28 +100,58 @@ document.addEventListener('DOMContentLoaded', () => {
     let consecutiveSlowWindows = 0;
     let automaticDowngradeComplete = false;
     let backgroundIdleTimer = 0;
+    let backgroundFadeTimer = 0;
 
     const clearBackgroundIdleTimer = () => {
-        if (!backgroundIdleTimer) return;
-        window.clearTimeout(backgroundIdleTimer);
+        if (backgroundIdleTimer) window.clearTimeout(backgroundIdleTimer);
+        if (backgroundFadeTimer) window.clearTimeout(backgroundFadeTimer);
         backgroundIdleTimer = 0;
+        backgroundFadeTimer = 0;
     };
 
-    const wakeHighEffects = () => {
+    const wakeHighEffects = (activity = 'cursor') => {
         if (effectsMode !== 'high') return;
-        document.documentElement.classList.remove('effects-background-idle');
+        document.documentElement.classList.remove('effects-background-idle', 'effects-background-click-fading');
         clearBackgroundIdleTimer();
+
+        if (activity === 'click') {
+            backgroundFadeTimer = window.setTimeout(() => {
+                backgroundFadeTimer = 0;
+                if (effectsMode === 'high' && !document.hidden) {
+                    document.documentElement.classList.add('effects-background-click-fading');
+                }
+            }, 1000);
+            backgroundIdleTimer = window.setTimeout(() => {
+                backgroundIdleTimer = 0;
+                if (effectsMode === 'high' && !document.hidden) {
+                    document.documentElement.classList.remove('effects-background-click-fading');
+                    document.documentElement.classList.add('effects-background-idle');
+                }
+            }, 4500);
+            return;
+        }
+
+        if (activity === 'swipe-release') {
+            backgroundIdleTimer = window.setTimeout(() => {
+                backgroundIdleTimer = 0;
+                if (effectsMode === 'high' && !document.hidden) {
+                    document.documentElement.classList.add('effects-background-idle');
+                }
+            }, SWIPE_WAKE_RELEASE_DURATION);
+            return;
+        }
+
         backgroundIdleTimer = window.setTimeout(() => {
             backgroundIdleTimer = 0;
             if (effectsMode === 'high' && !document.hidden) {
                 document.documentElement.classList.add('effects-background-idle');
             }
-        }, 5000);
+        }, 2750);
     };
 
     const stopHighEffectsIdleClock = () => {
         clearBackgroundIdleTimer();
-        document.documentElement.classList.remove('effects-background-idle');
+        document.documentElement.classList.remove('effects-background-idle', 'effects-background-click-fading');
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -203,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetPerformanceWindow(performance.now());
         if (document.hidden) {
             clearBackgroundIdleTimer();
+            document.documentElement.classList.remove('effects-background-click-fading');
             if (effectsMode === 'high') document.documentElement.classList.add('effects-background-idle');
         } else {
             wakeHighEffects();
@@ -216,7 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let pointerFrame = 0;
     let latestPointerEvent;
-    window.addEventListener('pointermove', event => {
+    let highEffectsTouchSwipeActive = false;
+    let touchSwipeReleased = false;
+    const queueHighEffectsMovement = event => {
         if (effectsMode !== 'high') return;
         wakeHighEffects();
         latestPointerEvent = event;
@@ -231,9 +266,37 @@ document.addEventListener('DOMContentLoaded', () => {
             ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY - window.scrollY}px`);
             pointerFrame = 0;
         });
+    };
+    window.addEventListener('pointermove', queueHighEffectsMovement, { passive: true });
+    window.addEventListener('touchstart', () => {
+        highEffectsTouchSwipeActive = false;
+        touchSwipeReleased = false;
     }, { passive: true });
-    window.addEventListener('pointerdown', wakeHighEffects, { passive: true });
+    window.addEventListener('touchmove', event => {
+        const touch = event.touches[0] || event.changedTouches[0];
+        if (!touch) return;
+        if (effectsMode === 'high') highEffectsTouchSwipeActive = true;
+        queueHighEffectsMovement({
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            pointerType: 'touch',
+            target: event.target
+        });
+    }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(eventName => {
+        window.addEventListener(eventName, event => {
+            if (event.touches.length || !highEffectsTouchSwipeActive) return;
+            highEffectsTouchSwipeActive = false;
+            touchSwipeReleased = true;
+            wakeHighEffects('swipe-release');
+        }, { passive: true });
+    });
+    window.addEventListener('pointerdown', () => wakeHighEffects('click'), { passive: true });
     window.addEventListener('keydown', wakeHighEffects, { passive: true });
+    window.addEventListener('wheel', () => {
+        touchSwipeReleased = false;
+        wakeHighEffects();
+    }, { passive: true });
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
     let scrollFrame = 0;
     const updateScrollMotion = () => {
@@ -249,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollFrame = 0;
     };
     window.addEventListener('scroll', () => {
-        wakeHighEffects();
+        if (!touchSwipeReleased) wakeHighEffects();
         if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollMotion);
     }, { passive: true });
     window.addEventListener('resize', updateScrollMotion, { passive: true });
@@ -873,7 +936,7 @@ function setupSwipeWake(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
     if (!context) return { setEnabled() {} };
 
-    const trailLifetime = 3000;
+    const trailLifetime = SWIPE_WAKE_RELEASE_DURATION;
     const activeTouches = new Map();
     const activePointers = new Map();
     let trails = [];
@@ -903,17 +966,34 @@ function setupSwipeWake(canvas, reducedMotion) {
     };
 
     const traceTrail = trail => {
-        if (trail.points.length < 2) return;
         const points = trail.points;
+        if (points.length < 2) return;
         context.beginPath();
         context.moveTo(points[0].x, points[0].y);
-        for (let index = 1; index < points.length - 1; index += 1) {
-            const midpointX = (points[index].x + points[index + 1].x) / 2;
-            const midpointY = (points[index].y + points[index + 1].y) / 2;
-            context.quadraticCurveTo(points[index].x, points[index].y, midpointX, midpointY);
+        for (let index = 1; index < points.length; index += 1) {
+            context.lineTo(points[index].x, points[index].y);
         }
-        const lastPoint = points[points.length - 1];
-        context.lineTo(lastPoint.x, lastPoint.y);
+    };
+
+    const drawRippleOutline = (trail, lineWidth, edgeWidth, color, opacity, shadowBlur) => {
+        context.save();
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.strokeStyle = `rgba(${color}, ${opacity.toFixed(3)})`;
+        context.lineWidth = lineWidth;
+        context.shadowColor = `rgba(${color}, ${(opacity * .82).toFixed(3)})`;
+        context.shadowBlur = shadowBlur;
+        traceTrail(trail);
+        context.stroke();
+
+        context.globalCompositeOperation = 'destination-out';
+        context.strokeStyle = '#000';
+        context.lineWidth = Math.max(lineWidth - (edgeWidth * 2), 0);
+        context.lineCap = 'round';
+        context.shadowBlur = 0;
+        traceTrail(trail);
+        context.stroke();
+        context.restore();
     };
 
     const draw = timestamp => {
@@ -924,27 +1004,38 @@ function setupSwipeWake(canvas, reducedMotion) {
         const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
         trails.forEach(trail => {
             if (trail.points.length < 2) return;
-            const progress = trail.endedAt
-                ? Math.min(Math.max((timestamp - trail.endedAt) / trailLifetime, 0), 1)
-                : 0;
-            const strength = (1 - progress) ** 1.65;
+            const elapsed = trail.endedAt ? Math.max(timestamp - trail.endedAt, 0) : 0;
+            const fadeStrength = !trail.endedAt
+                ? 1
+                : elapsed <= 250
+                    ? 1 - (.25 * (elapsed / 250))
+                    : Math.max(.75 * (1 - ((elapsed - 250) / 250)), 0);
+            const animationAge = Math.max(timestamp - trail.startedAt, 0);
+            const rippleProgress = Math.min(animationAge / 650, 1);
+            const easedRipple = 1 - ((1 - rippleProgress) ** 3);
 
-            context.save();
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
-            context.shadowColor = `rgba(145, 200, 255, ${(.46 * strength).toFixed(3)})`;
-            context.shadowBlur = 22 * interfaceScale;
-            context.strokeStyle = `rgba(123, 168, 216, ${(.16 * strength).toFixed(3)})`;
-            context.lineWidth = 30 * interfaceScale;
-            traceTrail(trail);
-            context.stroke();
+            drawRippleOutline(
+                trail,
+                (10 + (30 * easedRipple)) * interfaceScale,
+                Math.max(1, interfaceScale),
+                '145, 200, 255',
+                .62 * fadeStrength,
+                7 * interfaceScale
+            );
 
-            context.shadowBlur = 10 * interfaceScale;
-            context.strokeStyle = `rgba(168, 213, 255, ${(.58 * strength).toFixed(3)})`;
-            context.lineWidth = 3 * interfaceScale;
-            traceTrail(trail);
-            context.stroke();
-            context.restore();
+            if (animationAge > 110) {
+                const echoProgress = Math.min((animationAge - 110) / 620, 1);
+                const easedEcho = 1 - ((1 - echoProgress) ** 3);
+                drawRippleOutline(
+                    trail,
+                    (8 + (24 * easedEcho)) * interfaceScale,
+                    Math.max(1, .7 * interfaceScale),
+                    '168, 213, 255',
+                    .3 * fadeStrength,
+                    4 * interfaceScale
+                );
+            }
+
         });
 
         if (trails.length) {
@@ -961,7 +1052,12 @@ function setupSwipeWake(canvas, reducedMotion) {
 
     const beginTrail = (identifier, x, y, collection) => {
         if (!enabled || reducedMotion.matches) return;
-        const trail = { points: [{ x, y }], endedAt: 0 };
+        const startedAt = performance.now();
+        const trail = {
+            points: [{ x, y }],
+            endedAt: 0,
+            startedAt
+        };
         trails.push(trail);
         collection.set(identifier, trail);
     };
@@ -971,7 +1067,9 @@ function setupSwipeWake(canvas, reducedMotion) {
         const trail = collection.get(identifier);
         if (!trail) return;
         const previous = trail.points[trail.points.length - 1];
-        if (Math.hypot(x - previous.x, y - previous.y) < 3) return;
+        const distance = Math.hypot(x - previous.x, y - previous.y);
+        const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
+        if (distance < 3 * interfaceScale) return;
         trail.points.push({ x, y });
         if (trail.points.length > 240) trail.points.splice(0, trail.points.length - 240);
         ensureAnimation();

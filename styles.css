@@ -190,6 +190,16 @@ html[data-effects="high"].effects-background-idle body { background-color: #000;
 html[data-effects="high"].effects-background-idle .galaxy-field,
 html[data-effects="high"].effects-background-idle .galaxy-nebula,
 html[data-effects="high"].effects-background-idle .ambient-glow { opacity: 0; }
+html[data-effects="high"].effects-background-click-fading body {
+    background-color: #000;
+    transition-duration: 3.5s;
+}
+html[data-effects="high"].effects-background-click-fading .galaxy-field,
+html[data-effects="high"].effects-background-click-fading .galaxy-nebula,
+html[data-effects="high"].effects-background-click-fading .ambient-glow {
+    opacity: 0;
+    transition-duration: 3.5s;
+}
 
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
 .page-scroll-progress {
