@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.dataset.effectsReason = reason;
         galaxy.setEnabled(useHighEffects);
         cursor.setEnabled(useHighEffects);
-        swipeWake.setEnabled(!useHighEffects);
+        swipeWake.setEnabled(useHighEffects);
         if (useHighEffects) wakeHighEffects();
         else stopHighEffectsIdleClock();
         performanceToggle.setAttribute('aria-checked', String(useHighEffects));
@@ -932,15 +932,15 @@ function setupSwipeWake(canvas, reducedMotion) {
             context.save();
             context.lineCap = 'round';
             context.lineJoin = 'round';
-            context.shadowColor = `rgba(112, 190, 255, ${(.42 * strength).toFixed(3)})`;
+            context.shadowColor = `rgba(145, 200, 255, ${(.46 * strength).toFixed(3)})`;
             context.shadowBlur = 22 * interfaceScale;
-            context.strokeStyle = `rgba(86, 164, 226, ${(.14 * strength).toFixed(3)})`;
+            context.strokeStyle = `rgba(123, 168, 216, ${(.16 * strength).toFixed(3)})`;
             context.lineWidth = 30 * interfaceScale;
             traceTrail(trail);
             context.stroke();
 
             context.shadowBlur = 10 * interfaceScale;
-            context.strokeStyle = `rgba(174, 222, 255, ${(.5 * strength).toFixed(3)})`;
+            context.strokeStyle = `rgba(168, 213, 255, ${(.58 * strength).toFixed(3)})`;
             context.lineWidth = 3 * interfaceScale;
             traceTrail(trail);
             context.stroke();

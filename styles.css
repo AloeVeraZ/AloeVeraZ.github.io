@@ -93,6 +93,7 @@ button { font: inherit; }
     contain: strict;
 }
 .swipe-wake.is-active { opacity: 1; }
+html[data-effects="high"] .swipe-wake { display: block; }
 .cursor-dot {
     position: fixed;
     top: 0;
@@ -996,7 +997,6 @@ html[data-effects="low"] .featured-project-carousel .project-card {
 
 /* Low FX keeps the engineering grid and stops every continuous visual effect. */
 html[data-effects="low"] .background-grid { display: block; }
-html[data-effects="low"] .swipe-wake { display: block; }
 html[data-effects="low"] .galaxy-field,
 html[data-effects="low"] .galaxy-nebula,
 html[data-effects="low"] .ambient-glow,
