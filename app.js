@@ -5,8 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const layoutScale = measuredScale > 1.08
             ? Math.min(Math.max(measuredScale, 1), 4)
             : 1;
+        document.documentElement.style.fontSize = `${(16 * layoutScale).toFixed(2)}px`;
+        document.documentElement.style.setProperty('--viewport-layout-scale', layoutScale.toFixed(3));
         const scalableDimensions = {
             '--site-max-width': 1440,
+            '--nav-max-width': 1440,
             '--hero-content-max-width': 1080,
             '--project-stage-max-width': 2400,
             '--carousel-card-min-width': 300,
@@ -42,13 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const galaxyNebula = document.createElement('div');
     galaxyNebula.className = 'galaxy-nebula';
     galaxyNebula.setAttribute('aria-hidden', 'true');
+    const swipeWakeCanvas = document.createElement('canvas');
+    swipeWakeCanvas.className = 'swipe-wake';
+    swipeWakeCanvas.setAttribute('aria-hidden', 'true');
     const ambientGlow = document.createElement('div');
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
     backgroundGrid.after(galaxyField);
     galaxyField.after(galaxyNebula);
-    galaxyNebula.after(ambientGlow);
+    galaxyNebula.after(swipeWakeCanvas);
+    swipeWakeCanvas.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
@@ -60,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(cursorDot);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const galaxy = setupGalaxyField(galaxyField, reducedMotion);
+    const swipeWake = setupSwipeWake(swipeWakeCanvas, reducedMotion);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
@@ -89,6 +97,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let performanceMonitorSevereFrames = 0;
     let consecutiveSlowWindows = 0;
     let automaticDowngradeComplete = false;
+    let backgroundIdleTimer = 0;
+
+    const clearBackgroundIdleTimer = () => {
+        if (!backgroundIdleTimer) return;
+        window.clearTimeout(backgroundIdleTimer);
+        backgroundIdleTimer = 0;
+    };
+
+    const wakeHighEffects = () => {
+        if (effectsMode !== 'high') return;
+        document.documentElement.classList.remove('effects-background-idle');
+        clearBackgroundIdleTimer();
+        backgroundIdleTimer = window.setTimeout(() => {
+            backgroundIdleTimer = 0;
+            if (effectsMode === 'high' && !document.hidden) {
+                document.documentElement.classList.add('effects-background-idle');
+            }
+        }, 5000);
+    };
+
+    const stopHighEffectsIdleClock = () => {
+        clearBackgroundIdleTimer();
+        document.documentElement.classList.remove('effects-background-idle');
+    };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
 
@@ -139,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.dataset.effectsReason = reason;
         galaxy.setEnabled(useHighEffects);
         cursor.setEnabled(useHighEffects);
+        swipeWake.setEnabled(!useHighEffects);
+        if (useHighEffects) wakeHighEffects();
+        else stopHighEffectsIdleClock();
         performanceToggle.setAttribute('aria-checked', String(useHighEffects));
         performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
         performanceToggle.title = reason === 'lag'
@@ -166,6 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         consecutiveSlowWindows = 0;
         resetPerformanceWindow(performance.now());
+        if (document.hidden) {
+            clearBackgroundIdleTimer();
+            if (effectsMode === 'high') document.documentElement.classList.add('effects-background-idle');
+        } else {
+            wakeHighEffects();
+        }
     });
     applyEffectsMode(effectsMode, false, effectsReason);
     performanceMonitorFrame = requestAnimationFrame(timestamp => {
@@ -177,17 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let latestPointerEvent;
     window.addEventListener('pointermove', event => {
         if (effectsMode !== 'high') return;
+        wakeHighEffects();
         latestPointerEvent = event;
         if (pointerFrame) return;
         pointerFrame = requestAnimationFrame(() => {
+            const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
+            const glowRadius = 140 * interfaceScale;
             cursor.move(latestPointerEvent);
             galaxy.move(latestPointerEvent);
-            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - 140}px, ${latestPointerEvent.clientY - 140}px, 0)`;
-            ambientGlow.style.setProperty('--grid-offset-x', `${140 - latestPointerEvent.clientX}px`);
-            ambientGlow.style.setProperty('--grid-offset-y', `${140 - latestPointerEvent.clientY - window.scrollY}px`);
+            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - glowRadius}px, ${latestPointerEvent.clientY - glowRadius}px, 0)`;
+            ambientGlow.style.setProperty('--grid-offset-x', `${glowRadius - latestPointerEvent.clientX}px`);
+            ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY - window.scrollY}px`);
             pointerFrame = 0;
         });
     }, { passive: true });
+    window.addEventListener('pointerdown', wakeHighEffects, { passive: true });
+    window.addEventListener('keydown', wakeHighEffects, { passive: true });
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
     let scrollFrame = 0;
     const updateScrollMotion = () => {
@@ -196,12 +242,14 @@ document.addEventListener('DOMContentLoaded', () => {
         pageScrollFill.style.transform = `scaleY(${progress})`;
         galaxy.scroll(window.scrollY);
         if (effectsMode === 'high' && latestPointerEvent) {
-            ambientGlow.style.setProperty('--grid-offset-y', `${140 - latestPointerEvent.clientY - window.scrollY}px`);
+            const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
+            ambientGlow.style.setProperty('--grid-offset-y', `${(140 * interfaceScale) - latestPointerEvent.clientY - window.scrollY}px`);
         }
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
     };
     window.addEventListener('scroll', () => {
+        wakeHighEffects();
         if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollMotion);
     }, { passive: true });
     window.addEventListener('resize', updateScrollMotion, { passive: true });
@@ -819,6 +867,165 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
     };
     return { move, scroll, setEnabled };
+}
+
+function setupSwipeWake(canvas, reducedMotion) {
+    const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    if (!context) return { setEnabled() {} };
+
+    const trailLifetime = 3000;
+    const activeTouches = new Map();
+    const activePointers = new Map();
+    let trails = [];
+    let enabled = false;
+    let animationFrame = 0;
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+
+    const resize = () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    };
+
+    const clear = () => {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+        trails = [];
+        activeTouches.clear();
+        activePointers.clear();
+        context.clearRect(0, 0, width, height);
+        canvas.classList.remove('is-active');
+    };
+
+    const traceTrail = trail => {
+        if (trail.points.length < 2) return;
+        const points = trail.points;
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let index = 1; index < points.length - 1; index += 1) {
+            const midpointX = (points[index].x + points[index + 1].x) / 2;
+            const midpointY = (points[index].y + points[index + 1].y) / 2;
+            context.quadraticCurveTo(points[index].x, points[index].y, midpointX, midpointY);
+        }
+        const lastPoint = points[points.length - 1];
+        context.lineTo(lastPoint.x, lastPoint.y);
+    };
+
+    const draw = timestamp => {
+        animationFrame = 0;
+        context.clearRect(0, 0, width, height);
+        trails = trails.filter(trail => !trail.endedAt || timestamp - trail.endedAt < trailLifetime);
+
+        const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
+        trails.forEach(trail => {
+            if (trail.points.length < 2) return;
+            const progress = trail.endedAt
+                ? Math.min(Math.max((timestamp - trail.endedAt) / trailLifetime, 0), 1)
+                : 0;
+            const strength = (1 - progress) ** 1.65;
+
+            context.save();
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.shadowColor = `rgba(112, 190, 255, ${(.42 * strength).toFixed(3)})`;
+            context.shadowBlur = 22 * interfaceScale;
+            context.strokeStyle = `rgba(86, 164, 226, ${(.14 * strength).toFixed(3)})`;
+            context.lineWidth = 30 * interfaceScale;
+            traceTrail(trail);
+            context.stroke();
+
+            context.shadowBlur = 10 * interfaceScale;
+            context.strokeStyle = `rgba(174, 222, 255, ${(.5 * strength).toFixed(3)})`;
+            context.lineWidth = 3 * interfaceScale;
+            traceTrail(trail);
+            context.stroke();
+            context.restore();
+        });
+
+        if (trails.length) {
+            canvas.classList.add('is-active');
+            animationFrame = requestAnimationFrame(draw);
+        } else {
+            canvas.classList.remove('is-active');
+        }
+    };
+
+    const ensureAnimation = () => {
+        if (!animationFrame) animationFrame = requestAnimationFrame(draw);
+    };
+
+    const beginTrail = (identifier, x, y, collection) => {
+        if (!enabled || reducedMotion.matches) return;
+        const trail = { points: [{ x, y }], endedAt: 0 };
+        trails.push(trail);
+        collection.set(identifier, trail);
+    };
+
+    const extendTrail = (identifier, x, y, collection) => {
+        if (!enabled || reducedMotion.matches) return;
+        const trail = collection.get(identifier);
+        if (!trail) return;
+        const previous = trail.points[trail.points.length - 1];
+        if (Math.hypot(x - previous.x, y - previous.y) < 3) return;
+        trail.points.push({ x, y });
+        if (trail.points.length > 240) trail.points.splice(0, trail.points.length - 240);
+        ensureAnimation();
+    };
+
+    const endTrail = (identifier, collection) => {
+        const trail = collection.get(identifier);
+        if (!trail) return;
+        collection.delete(identifier);
+        if (trail.points.length < 2) {
+            trails = trails.filter(candidate => candidate !== trail);
+            return;
+        }
+        trail.endedAt = performance.now();
+        ensureAnimation();
+    };
+
+    window.addEventListener('touchstart', event => {
+        Array.from(event.changedTouches).forEach(touch => {
+            beginTrail(touch.identifier, touch.clientX, touch.clientY, activeTouches);
+        });
+    }, { passive: true });
+    window.addEventListener('touchmove', event => {
+        Array.from(event.changedTouches).forEach(touch => {
+            extendTrail(touch.identifier, touch.clientX, touch.clientY, activeTouches);
+        });
+    }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(eventName => {
+        window.addEventListener(eventName, event => {
+            Array.from(event.changedTouches).forEach(touch => endTrail(touch.identifier, activeTouches));
+        }, { passive: true });
+    });
+
+    window.addEventListener('pointerdown', event => {
+        if (event.pointerType !== 'pen') return;
+        beginTrail(event.pointerId, event.clientX, event.clientY, activePointers);
+    }, { passive: true });
+    window.addEventListener('pointermove', event => {
+        if (event.pointerType !== 'pen') return;
+        extendTrail(event.pointerId, event.clientX, event.clientY, activePointers);
+    }, { passive: true });
+    ['pointerup', 'pointercancel'].forEach(eventName => {
+        window.addEventListener(eventName, event => endTrail(event.pointerId, activePointers), { passive: true });
+    });
+    window.addEventListener('resize', resize, { passive: true });
+    resize();
+
+    return {
+        setEnabled(nextEnabled) {
+            enabled = Boolean(nextEnabled);
+            canvas.dataset.enabled = String(enabled);
+            if (!enabled) clear();
+        }
+    };
 }
 
 function setupCursorEffects(cursorDot, reducedMotion) {
