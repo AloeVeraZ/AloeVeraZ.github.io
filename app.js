@@ -961,13 +961,28 @@ function renderFeaturedProjects(projects) {
 function setupFeaturedCarousel(container) {
     const cards = [...container.querySelectorAll('.project-card')];
     if (cards.length < 2) return;
-    container.classList.add('project-carousel', 'featured-project-carousel');
+    container.classList.add('featured-project-carousel');
     const controls = document.createElement('div');
     controls.className = 'carousel-controls featured-carousel-controls';
     controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
     container.before(controls);
-    const initialize = setupCarousel(container, controls, { autoplay: true, indicators: true });
-    window.requestAnimationFrame(initialize);
+    const initialize = setupCarousel(container, controls, {
+        autoplay: false,
+        finite: true,
+        indicators: true,
+        enabled: () => container.classList.contains('is-compact-carousel')
+    });
+    const featuredGridMinimumWidth = 752;
+    const updateLayout = () => {
+        const useCarousel = container.clientWidth < featuredGridMinimumWidth;
+        container.classList.toggle('project-carousel', useCarousel);
+        container.classList.toggle('is-compact-carousel', useCarousel);
+        controls.classList.toggle('is-active', useCarousel);
+        initialize();
+    };
+    const layoutObserver = new ResizeObserver(() => window.requestAnimationFrame(updateLayout));
+    layoutObserver.observe(container);
+    window.requestAnimationFrame(updateLayout);
 }
 
 function buildTwoSentenceCardSummary(project) {
@@ -1073,7 +1088,8 @@ function setupCarousel(carousel, controls, options = {}) {
     const originalCards = [...carousel.querySelectorAll('.project-card')];
     if (originalCards.length < 2) return () => {};
     const ringSlots = settings.ring ? originalCards.length : 0;
-    const cloneCount = Math.min(2, originalCards.length);
+    const cloneCount = settings.finite ? 0 : Math.min(settings.ring ? 3 : 2, originalCards.length);
+    const isEnabled = () => typeof settings.enabled !== 'function' || settings.enabled();
     if (settings.ring) carousel.style.setProperty('--ring-project-count', String(ringSlots));
     originalCards.forEach((card, index) => { card.dataset.carouselIndex = String(index); });
     const beforeClones = document.createDocumentFragment();
@@ -1085,13 +1101,15 @@ function setupCarousel(carousel, controls, options = {}) {
         clone.querySelectorAll('a, button, [tabindex]').forEach(item => item.setAttribute('tabindex', '-1'));
         return clone;
     };
-    originalCards.slice(-cloneCount).forEach(card => {
-        beforeClones.appendChild(prepareClone(card));
-    });
-    carousel.prepend(beforeClones);
-    originalCards.slice(0, cloneCount).forEach(card => {
-        carousel.appendChild(prepareClone(card));
-    });
+    if (cloneCount > 0) {
+        originalCards.slice(-cloneCount).forEach(card => {
+            beforeClones.appendChild(prepareClone(card));
+        });
+        carousel.prepend(beforeClones);
+        originalCards.slice(0, cloneCount).forEach(card => {
+            carousel.appendChild(prepareClone(card));
+        });
+    }
     let currentIndex = 0;
     let autoplayTimer;
     let scrollAnimation;
@@ -1125,6 +1143,8 @@ function setupCarousel(carousel, controls, options = {}) {
     const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
     const indicators = settings.indicators ? document.createElement('div') : null;
     const cards = [...carousel.querySelectorAll('.project-card')];
+    const previous = controls.querySelector('.carousel-prev');
+    const next = controls.querySelector('.carousel-next');
 
     if (indicators) {
         indicators.className = 'carousel-indicators';
@@ -1148,7 +1168,27 @@ function setupCarousel(carousel, controls, options = {}) {
         const cardWidth = card.offsetWidth;
         const distance = cardWidth + gap;
         const centerOffset = Math.max((carousel.clientWidth - cardWidth) / 2, 0);
-        return { distance, lastIndex: originalCards.length - 1, centerOffset };
+        return { cardWidth, gap, distance, lastIndex: originalCards.length - 1, centerOffset };
+    };
+
+    const getTargetForPhysicalIndex = physicalIndex => {
+        const card = cards[Math.max(0, Math.min(physicalIndex, cards.length - 1))];
+        if (!card) return 0;
+        return card.offsetLeft + card.offsetWidth / 2 - carousel.clientWidth / 2;
+    };
+
+    const getNearestPhysicalIndex = () => {
+        const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+        let nearestIndex = 0;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        cards.forEach((card, index) => {
+            const distance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - carouselCenter);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestIndex = index;
+            }
+        });
+        return nearestIndex;
     };
 
     const setInternalScrollPosition = left => {
@@ -1157,16 +1197,43 @@ function setupCarousel(carousel, controls, options = {}) {
     };
 
     const updateIndicators = () => {
-        if (!indicators) return;
-        [...indicators.children].forEach((indicator, index) => {
-            const active = index === currentIndex;
-            indicator.classList.toggle('is-active', active);
-            if (active) indicator.setAttribute('aria-current', 'true');
-            else indicator.removeAttribute('aria-current');
+        if (indicators) {
+            [...indicators.children].forEach((indicator, index) => {
+                const active = index === currentIndex;
+                indicator.classList.toggle('is-active', active);
+                if (active) indicator.setAttribute('aria-current', 'true');
+                else indicator.removeAttribute('aria-current');
+            });
+        }
+        if (settings.finite) {
+            previous.disabled = currentIndex <= 0;
+            next.disabled = currentIndex >= originalCards.length - 1;
+        }
+    };
+
+    const clearCardDepth = () => {
+        cards.forEach(card => {
+            [
+                '--carousel-position',
+                '--carousel-depth',
+                '--carousel-ring-x',
+                '--carousel-ring-y',
+                '--carousel-ring-z',
+                '--carousel-ring-rotate',
+                '--carousel-ring-scale',
+                '--carousel-ring-opacity'
+            ].forEach(property => card.style.removeProperty(property));
+            card.style.removeProperty('z-index');
+            card.style.removeProperty('pointer-events');
+            card.classList.remove('is-carousel-active');
         });
     };
 
     const updateCardDepth = () => {
+        if (!isEnabled()) {
+            clearCardDepth();
+            return;
+        }
         const metrics = getMetrics();
         if (!metrics) return;
         const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
@@ -1194,33 +1261,52 @@ function setupCarousel(carousel, controls, options = {}) {
             card.style.setProperty('--carousel-position', position.toFixed(3));
             card.style.setProperty('--carousel-depth', depth.toFixed(3));
             if (settings.ring) {
-                const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
-                    && Math.abs(position) <= 2.05;
-                const ringPosition = Math.max(-2, Math.min(2, position));
-                // Keep the front cards close while the next cards curve behind them.
-                // A shallower step leaves those future cards visible in the side gaps.
-                const angle = ringPosition * (Math.PI * .39);
-                const radius = Math.min(carousel.clientWidth * .385, 470);
-                const targetX = Math.sin(angle) * radius;
+                const rawAbsolutePosition = Math.abs(position);
+                const absolutePosition = Math.min(rawAbsolutePosition, 3);
+                const direction = Math.sign(position);
+                const scaleAt = value => value <= 1
+                    ? 1 - value * .08
+                    : Math.max(.38, .92 - (value - 1) * .28);
+                const spacingScaleAt = value => {
+                    if (value <= 1) return 1 - value * .08;
+                    if (value <= 2) return .92 - (value - 1) * .56;
+                    return Math.max(0, .36 - (value - 2) * .36);
+                };
+                const ringScale = scaleAt(absolutePosition);
+                const wholeSteps = Math.floor(absolutePosition);
+                let targetMagnitude = 0;
+                for (let step = 0; step < wholeSteps; step += 1) {
+                    targetMagnitude += metrics.cardWidth * (spacingScaleAt(step) + spacingScaleAt(step + 1)) / 2 + metrics.gap;
+                }
+                const remainingStep = absolutePosition - wholeSteps;
+                if (remainingStep > 0 && wholeSteps < 3) {
+                    targetMagnitude += remainingStep * (
+                        metrics.cardWidth * (spacingScaleAt(wholeSteps) + spacingScaleAt(wholeSteps + 1)) / 2 + metrics.gap
+                    );
+                }
+                const targetX = direction * targetMagnitude;
                 const naturalX = position * metrics.distance;
-                const circleDepth = (1 - Math.cos(angle)) * 210;
-                const absolutePosition = Math.abs(ringPosition);
-                const circleScale = absolutePosition <= 1
-                    ? 1 - absolutePosition * .08
-                    : .92 - (absolutePosition - 1) * .42;
                 const rotationMagnitude = absolutePosition <= 1
                     ? absolutePosition * 11
-                    : 11 + (absolutePosition - 1) * 42;
-                const circleRotation = Math.sign(ringPosition) * rotationMagnitude;
+                    : 11 + (absolutePosition - 1) * 22;
+                const circleRotation = direction * rotationMagnitude;
+                const ringDepth = absolutePosition <= 1
+                    ? absolutePosition * 88
+                    : 88 + (absolutePosition - 1) * 132;
                 const visibleOpacity = absolutePosition <= 1
                     ? .98 - absolutePosition * .16
-                    : .82 - (absolutePosition - 1) * .4;
-                const circleOpacity = visibleOnRing ? Math.max(.42, visibleOpacity) : 0;
+                    : Math.max(.4, .82 - (absolutePosition - 1) * .22);
+                const visiblePixels = carousel.clientWidth / 2
+                    - (Math.abs(targetX) - metrics.cardWidth * ringScale / 2);
+                const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
+                    && rawAbsolutePosition <= 3.05
+                    && visiblePixels >= 28;
+                const circleOpacity = visibleOnRing ? visibleOpacity : 0;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
-                card.style.setProperty('--carousel-ring-y', `${Math.min(circleDepth * .13, 38).toFixed(2)}px`);
-                card.style.setProperty('--carousel-ring-z', `${(-circleDepth).toFixed(2)}px`);
+                card.style.setProperty('--carousel-ring-y', `${Math.min(absolutePosition * 18, 46).toFixed(2)}px`);
+                card.style.setProperty('--carousel-ring-z', `${(-ringDepth).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-rotate', `${circleRotation.toFixed(2)}deg`);
-                card.style.setProperty('--carousel-ring-scale', circleScale.toFixed(3));
+                card.style.setProperty('--carousel-ring-scale', ringScale.toFixed(3));
                 card.style.setProperty('--carousel-ring-opacity', circleOpacity.toFixed(3));
                 card.style.zIndex = String(Math.round(90 - absolutePosition * 30));
                 card.style.pointerEvents = visibleOnRing
@@ -1236,11 +1322,22 @@ function setupCarousel(carousel, controls, options = {}) {
     };
 
     const initialize = () => {
+        if (!isEnabled()) {
+            window.cancelAnimationFrame(scrollAnimation);
+            initialized = false;
+            isAnimating = false;
+            queuedSteps = 0;
+            currentIndex = 0;
+            setInternalScrollPosition(0);
+            clearCardDepth();
+            updateIndicators();
+            return;
+        }
         const metrics = getMetrics();
         if (!metrics || metrics.distance <= 0) return;
         window.cancelAnimationFrame(scrollAnimation);
         if (!initialized) currentIndex = 0;
-        setInternalScrollPosition((cloneCount + currentIndex) * metrics.distance - metrics.centerOffset);
+        setInternalScrollPosition(getTargetForPhysicalIndex(cloneCount + currentIndex));
         initialized = true;
         isAnimating = false;
         queuedSteps = 0;
@@ -1249,10 +1346,10 @@ function setupCarousel(carousel, controls, options = {}) {
     };
 
     const syncIndexToNearestCard = () => {
-        const metrics = getMetrics();
-        if (!metrics) return;
-        const physicalIndex = Math.round((carousel.scrollLeft + metrics.centerOffset) / metrics.distance);
-        currentIndex = ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
+        const physicalIndex = getNearestPhysicalIndex();
+        currentIndex = settings.finite
+            ? Math.max(0, Math.min(physicalIndex, originalCards.length - 1))
+            : ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
         updateIndicators();
     };
 
@@ -1263,9 +1360,8 @@ function setupCarousel(carousel, controls, options = {}) {
             queuedSteps = 0;
             syncIndexToNearestCard();
         }
-        const metrics = getMetrics();
-        if (!metrics) return;
-        setInternalScrollPosition((cloneCount + currentIndex) * metrics.distance - metrics.centerOffset);
+        if (!getMetrics()) return;
+        setInternalScrollPosition(getTargetForPhysicalIndex(cloneCount + currentIndex));
         updateCardDepth();
         updateIndicators();
     };
@@ -1273,18 +1369,17 @@ function setupCarousel(carousel, controls, options = {}) {
     const snapToNearestCard = () => {
         const metrics = getMetrics();
         if (!metrics) return;
-        const physicalIndex = Math.max(0, Math.min(
-            Math.round((carousel.scrollLeft + metrics.centerOffset) / metrics.distance),
-            cards.length - 1
-        ));
-        currentIndex = ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
-        const resetIndex = physicalIndex < cloneCount || physicalIndex >= cloneCount + originalCards.length
+        const physicalIndex = getNearestPhysicalIndex();
+        currentIndex = settings.finite
+            ? Math.max(0, Math.min(physicalIndex, originalCards.length - 1))
+            : ((physicalIndex - cloneCount) % originalCards.length + originalCards.length) % originalCards.length;
+        const resetIndex = !settings.finite && (physicalIndex < cloneCount || physicalIndex >= cloneCount + originalCards.length)
             ? cloneCount + currentIndex
             : null;
         updateIndicators();
-        animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
+        animateScroll(getTargetForPhysicalIndex(physicalIndex), () => {
             if (resetIndex !== null) {
-                setInternalScrollPosition(resetIndex * metrics.distance - metrics.centerOffset);
+                setInternalScrollPosition(getTargetForPhysicalIndex(resetIndex));
                 updateCardDepth();
             }
         });
@@ -1318,6 +1413,7 @@ function setupCarousel(carousel, controls, options = {}) {
         scrollAnimation = window.requestAnimationFrame(frame);
     };
     const move = (step, button) => {
+        if (!isEnabled()) return;
         if (!initialized) initialize();
         if (button) {
             controls.querySelectorAll('.carousel-arrow').forEach(arrow => arrow.classList.remove('is-nudging'));
@@ -1332,23 +1428,30 @@ function setupCarousel(carousel, controls, options = {}) {
         if (!metrics || metrics.lastIndex <= 0) return;
         const direction = Math.sign(step);
         const positionCount = originalCards.length;
-        const nextIndex = (currentIndex + direction + positionCount) % positionCount;
+        const nextIndex = settings.finite
+            ? Math.max(0, Math.min(currentIndex + direction, metrics.lastIndex))
+            : (currentIndex + direction + positionCount) % positionCount;
+        if (settings.finite && nextIndex === currentIndex) {
+            queuedSteps = 0;
+            updateIndicators();
+            return;
+        }
         const wrappingBackward = currentIndex === 0 && direction < 0;
         const wrappingForward = currentIndex === metrics.lastIndex && direction > 0;
         let physicalIndex = cloneCount + nextIndex;
         let resetIndex = null;
-        if (wrappingBackward) {
+        if (!settings.finite && wrappingBackward) {
             physicalIndex = cloneCount - 1;
             resetIndex = cloneCount + metrics.lastIndex;
-        } else if (wrappingForward) {
+        } else if (!settings.finite && wrappingForward) {
             physicalIndex = cloneCount + originalCards.length;
             resetIndex = cloneCount;
         }
         currentIndex = nextIndex;
         updateIndicators();
-        animateScroll(physicalIndex * metrics.distance - metrics.centerOffset, () => {
+        animateScroll(getTargetForPhysicalIndex(physicalIndex), () => {
             if (resetIndex !== null) {
-                setInternalScrollPosition(resetIndex * metrics.distance - metrics.centerOffset);
+                setInternalScrollPosition(getTargetForPhysicalIndex(resetIndex));
                 updateCardDepth();
             }
             if (queuedSteps !== 0) {
@@ -1358,12 +1461,10 @@ function setupCarousel(carousel, controls, options = {}) {
             }
         });
     };
-    const previous = controls.querySelector('.carousel-prev');
-    const next = controls.querySelector('.carousel-next');
     const scheduleAutoplay = () => {
         window.clearTimeout(autoplayTimer);
         const modalOpen = document.getElementById('project-modal')?.classList.contains('active');
-        if (!autoplayEnabled || !carouselVisible || interactionActive || carouselHovered || carouselFocused || document.hidden || modalOpen) return;
+        if (!isEnabled() || !autoplayEnabled || !carouselVisible || interactionActive || carouselHovered || carouselFocused || document.hidden || modalOpen) return;
         const waitForInteraction = Math.max(manualPauseUntil - Date.now(), 0);
         autoplayTimer = window.setTimeout(() => {
             const projectOpen = document.getElementById('project-modal')?.classList.contains('active');
@@ -1476,18 +1577,23 @@ function setupCarousel(carousel, controls, options = {}) {
     }, { passive: true });
     indicators?.querySelectorAll('.carousel-indicator').forEach((indicator, targetIndex) => {
         indicator.addEventListener('click', () => {
+            if (!isEnabled()) return;
             stopAndCenterCurrentMotion();
             if (targetIndex === currentIndex) return;
             queuedSteps = 0;
-            const forward = (targetIndex - currentIndex + originalCards.length) % originalCards.length;
+            const directStep = targetIndex - currentIndex;
+            const forward = (directStep + originalCards.length) % originalCards.length;
             const backward = forward - originalCards.length;
-            const shortestStep = Math.abs(forward) <= Math.abs(backward) ? forward : backward;
+            const shortestStep = settings.finite
+                ? directStep
+                : (Math.abs(forward) <= Math.abs(backward) ? forward : backward);
             queuedSteps = Math.sign(shortestStep) * Math.max(Math.abs(shortestStep) - 1, 0);
             move(Math.sign(shortestStep));
             pauseAfterInteraction();
         });
     });
     carousel.addEventListener('pointerdown', event => {
+        if (!isEnabled()) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         interactionActive = true;
         dragPointerId = event.pointerId;
@@ -1541,6 +1647,7 @@ function setupCarousel(carousel, controls, options = {}) {
     carousel.addEventListener('pointerup', finishDrag, { passive: true });
     carousel.addEventListener('pointercancel', finishDrag, { passive: true });
     carousel.addEventListener('wheel', event => {
+        if (!isEnabled()) return;
         if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || Math.abs(event.deltaX) < 8) return;
         event.preventDefault();
         pauseAfterInteraction();
@@ -1557,6 +1664,7 @@ function setupCarousel(carousel, controls, options = {}) {
         }, 140);
     }, { passive: true });
     carousel.addEventListener('click', event => {
+        if (!isEnabled()) return;
         if (suppressSwipeClick) {
             event.preventDefault();
             event.stopPropagation();

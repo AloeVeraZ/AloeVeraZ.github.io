@@ -754,14 +754,14 @@ main > .section + .section { margin-top: var(--content-section-gap); }
 main > #contact { padding-bottom: 1.5rem; }
 
 .featured-carousel-controls {
-    display: flex;
+    display: none;
     width: 100%;
     padding-bottom: 1rem;
 }
+.featured-carousel-controls.is-active { display: flex; }
 
-/* Every project row uses the same centered, data driven carousel. */
-.project-carousel,
-#featured-projects-container.featured-project-carousel {
+/* Project rows use a centered, data-driven carousel when their layout needs one. */
+.project-carousel {
     display: flex;
     gap: clamp(1rem, 2vw, 1.5rem);
     width: 100%;
@@ -774,12 +774,10 @@ main > #contact { padding-bottom: 1.5rem; }
     overscroll-behavior-x: contain;
     touch-action: pan-y;
 }
-.project-carousel::-webkit-scrollbar,
-#featured-projects-container.featured-project-carousel::-webkit-scrollbar {
+.project-carousel::-webkit-scrollbar {
     display: none;
 }
-.project-carousel .project-card,
-#featured-projects-container.featured-project-carousel .project-card {
+.project-carousel .project-card {
     flex: 0 0 clamp(300px, 36vw, 440px);
     opacity: calc(1 - (var(--carousel-depth, 0) * .24));
     transform:
@@ -793,13 +791,11 @@ main > #contact { padding-bottom: 1.5rem; }
     transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear;
     will-change: transform, opacity;
 }
-.project-carousel .project-card.is-carousel-active,
-#featured-projects-container.featured-project-carousel .project-card.is-carousel-active {
+.project-carousel .project-card.is-carousel-active {
     border-color: rgba(123,168,216,.62);
     box-shadow: 0 22px 52px rgba(0,0,0,.34), 0 0 0 1px rgba(123,168,216,.12);
 }
-.project-carousel .project-card:hover,
-#featured-projects-container.featured-project-carousel .project-card:hover {
+.project-carousel .project-card:hover {
     transform:
         perspective(1100px)
         rotateY(calc(var(--carousel-position, 0) * 11deg))
@@ -809,6 +805,11 @@ main > #contact { padding-bottom: 1.5rem; }
 }
 
 /* Each dropdown ring calculates its geometry from the number of projects it receives. */
+.circular-project-carousel {
+    width: min(calc(100vw - 2rem), 2400px);
+    margin-left: 50%;
+    transform: translateX(-50%);
+}
 .circular-project-carousel .project-card {
     border-radius: 14px;
 }
@@ -843,17 +844,23 @@ html[data-effects="high"] .circular-project-carousel .project-image-wrapper {
 html[data-effects="high"] .circular-project-carousel .project-info {
     padding: 1.1rem;
 }
-.project-carousel.is-dragging,
-#featured-projects-container.featured-project-carousel.is-dragging {
+.project-carousel.is-dragging {
     cursor: grabbing;
     user-select: none;
 }
-.project-carousel:not(.is-dragging),
-#featured-projects-container.featured-project-carousel:not(.is-dragging) {
+.project-carousel:not(.is-dragging) {
     cursor: grab;
 }
 .carousel-controls .carousel-arrow {
     border-radius: 999px;
+}
+.carousel-controls .carousel-arrow:disabled {
+    opacity: .34;
+    color: var(--muted);
+    border-color: var(--line);
+    background: transparent;
+    cursor: not-allowed;
+    transform: none;
 }
 .carousel-controls > div {
     margin-left: auto;
@@ -891,20 +898,18 @@ html[data-effects="high"] .circular-project-carousel .project-info {
 }
 
 html[data-effects="low"] .project-carousel .project-card,
-html[data-effects="low"] #featured-projects-container.featured-project-carousel .project-card {
+html[data-effects="low"] .featured-project-carousel .project-card {
     opacity: 1;
     transform: none;
     will-change: auto;
 }
 
 @media (max-width: 800px) {
-    .project-carousel,
-    #featured-projects-container.featured-project-carousel {
+    .project-carousel {
         gap: 1rem;
         padding: .7rem 0 1.35rem;
     }
-    .project-carousel .project-card,
-    #featured-projects-container.featured-project-carousel .project-card {
+    .project-carousel .project-card {
         flex-basis: min(290px, 72vw);
     }
     html[data-effects="high"] .circular-project-carousel {
@@ -923,6 +928,29 @@ html[data-effects="low"] #featured-projects-container.featured-project-carousel 
         height: 44px;
     }
     .collection-toggle:hover { padding-left: 0; }
+    .circular-project-carousel {
+        width: 100%;
+        margin-left: 0;
+        transform: none;
+    }
+}
+
+/* Featured projects are a flat three-up row whenever three useful cards fit. */
+.featured-project-carousel.is-compact-carousel {
+    gap: 1rem;
+    padding: .7rem 0 1.35rem;
+}
+.featured-project-carousel.is-compact-carousel .project-card {
+    flex: 0 0 100%;
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+}
+.featured-project-carousel.is-compact-carousel .project-card:hover {
+    transform: none;
+}
+.featured-project-carousel:not(.is-compact-carousel) + .carousel-indicators {
+    display: none;
 }
 
 /* Low FX keeps the engineering grid and stops every continuous visual effect. */
