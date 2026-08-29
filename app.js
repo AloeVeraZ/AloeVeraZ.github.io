@@ -16,10 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
             '--project-stage-max-width': 2400,
             '--carousel-card-min-width': 300,
             '--carousel-card-max-width': 440,
+            '--project-card-height': 736,
+            '--project-card-height-mobile': 672,
             '--project-image-height': 270,
-            '--carousel-image-height': 185,
-            '--ring-image-height': 170,
-            '--ring-image-height-compact': 160,
+            '--carousel-image-height': 270,
+            '--ring-image-height': 270,
+            '--ring-image-height-compact': 270,
             '--ring-height-min': 520,
             '--ring-height-max': 560,
             '--modal-max-width': 820,
@@ -1249,7 +1251,8 @@ function renderProfile(profile) {
     const highlights = document.getElementById('about-highlights');
     if (highlights) {
         highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => {
-            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down"></i></span>` : ''}`;
+            const roles = (highlight.roles || []).map(role => `<div class="about-highlight-role"><h4>${role.title}</h4><p>${[role.position, role.period].filter(Boolean).join(' • ')}</p></div>`).join('');
+            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${roles}${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down"></i></span>` : ''}`;
             return highlight.targetCollection
                 ? `<a class="about-highlight about-highlight-link" href="#${highlight.targetCollection}" data-collection-target="${highlight.targetCollection}" aria-label="${highlight.cta || `View ${highlight.label}`}">${content}</a>`
                 : `<article class="about-highlight">${content}</article>`;
@@ -1324,7 +1327,7 @@ function setupFeaturedCarousel(container) {
         indicators: true,
         enabled: () => container.classList.contains('is-compact-carousel')
     });
-    const featuredGridMinimumWidth = 752;
+    const featuredGridMinimumWidth = 940;
     const updateLayout = () => {
         const useCarousel = container.clientWidth < featuredGridMinimumWidth;
         container.classList.toggle('project-carousel', useCarousel);
@@ -1368,8 +1371,9 @@ function createProjectCard(project) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `View ${project.title} details`);
+    const isCertificate = project.imagePresentation === 'certificate';
     const cardMedia = project.image
-        ? `<img src="${project.image}" alt="${project.title}" class="project-image" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
+        ? `<img src="${project.image}" alt="${project.title}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Preview coming soon</span></div>`;
     const projectPeriod = project.period
         ? `<div class="project-period"><i class="fa-regular fa-calendar"></i>${project.period}</div>`
@@ -2160,6 +2164,7 @@ function openModal(project) {
     const image = document.getElementById('modal-image');
     const leadMedia = project.motionImage || project.image;
     image.classList.toggle('has-motion-media', Boolean(project.motionImage));
+    image.classList.toggle('is-certificate', project.imagePresentation === 'certificate');
     image.innerHTML = leadMedia
         ? `<img src="${leadMedia}" alt="${project.title}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
         : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;

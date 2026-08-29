@@ -3,11 +3,11 @@
     "name": "Angelo Demetroulakos",
     "title": "Mechanical Engineering Major",
     "tagline": "Robotics • CAD • 3D Printing • Programming",
-    "bio": "I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like building robots and 3D printers, especially when I get to design the parts, make them, wire everything, and program the final build.",
+    "bio": "I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like designing and building robots and 3D printers from scratch.",
     "aboutHighlights": [
       {"label": "Education", "title": "City Tech, New York City College of Technology", "body": "Mechanical Engineering Technology, 2024 to present.", "subline": "John Dewey High School, 2022 to 2024", "targetCollection": "classes", "cta": "View classwork"},
-      {"label": "Robotics Experience", "title": "NYC FIRST STEM Center at Cornell Tech", "body": "I work at the New York City FIRST STEM Center on Roosevelt Island and run the AI & Automation Club at City Tech.", "subline": "FTC Team 9384, 2022 to 2024 • FRC Team 333, 2021 to 2024 • FTC captain in 2022 to 2023 and co captain in 2023 to 2024", "targetCollection": "internship-work-projects", "cta": "View internship and work projects"},
-      {"label": "Hands On Work", "title": "Robotics, 3D printers & prototyping", "body": "I have been building and modifying 3D printers since middle school. That eventually led me to designing robots that can move in any direction and learning more CAD, electronics, and programming along the way.", "targetCollection": "personal-projects", "cta": "Explore personal projects"}
+      {"label": "Robotics Experience", "title": "NYC FIRST STEM Center at Cornell Tech", "body": "I work at the New York City FIRST STEM Center on Roosevelt Island.", "roles": [{"title": "AI & Automation Club at City Tech", "position": "President", "period": "2026 to 2028"}], "subline": "FTC Team 9384, 2022 to 2024 • FRC Team 333, 2021 to 2024 • FTC captain in 2022 to 2023 and co captain in 2023 to 2024", "targetCollection": "internship-work-projects", "cta": "View internship and work projects"},
+      {"label": "Hands On Work", "title": "Robotics, 3D printers & prototyping", "body": "I have been building and modifying 3D printers since high school, which eventually led me to designing many robots from scratch. Through those projects, I learned CAD, electronics, programming, fabrication, CNC machining, CAM, and how to use shop tools to turn a design into a working machine.", "targetCollection": "personal-projects", "cta": "Explore personal projects"}
     ],
     "email": "angelojames2006@gmail.com",
     "resume": "",
@@ -575,6 +575,7 @@
       "cardSummary": "I worked on a printable geopolymer mix and a 3D printer that could push it through a nozzle. We tested the material, changed the printer, and compared the results.",
       "details": "",
       "image": "assets/cuny-geopolymer-research.png",
+      "imagePresentation": "certificate",
       "tags": ["CUNY Research", "Geopolymers", "Additive Manufacturing", "Materials Testing"],
       "sections": [
         {"heading": "Research", "body": "Our group tested fly ash geopolymer mixtures to see how well they could print and absorb CO2."},
@@ -594,6 +595,7 @@
       "cardSummary": "I joined a month long City Tech and NYU program about materials and manufacturing. We did lab testing, machining, welding, printing, and a final group project.",
       "details": "",
       "image": "assets/nsf-manufacturing-camp.png",
+      "imagePresentation": "certificate",
       "tags": ["City Tech", "NYU", "Advanced Manufacturing", "Materials Testing"],
       "sections": [
         {"heading": "Program", "body": "I completed the 2025 Advanced Materials & Manufacturing Summer Camp at City Tech and NYU."},
