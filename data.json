@@ -651,27 +651,41 @@
     },
     {
       "id": "research-project-03",
-      "title": "Placeholder 1",
+      "title": "STEM Research Academy Near-Peer Mentor",
       "category": "Awards & Certificates",
       "collectionOrder": 3,
-      "summary": "I have not added this research project yet.",
-      "cardSummary": "I have not added this research project yet. Pictures and details are coming soon.",
-      "details": "I have not added the pictures and full write up for this research project yet.",
-      "image": "",
-      "tags": ["Research", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "I completed a six-week near-peer mentoring program where I helped high school students learn robotics and build a complete mecanum robot.",
+      "cardSummary": "I served as a near-peer mentor for six weeks, teaching high school students how mechanical design, electronics, programming, and fabrication come together in a working robot.",
+      "details": "",
+      "image": "assets/stem-research-academy-certificate.jpg",
+      "imagePresentation": "certificate",
+      "tags": ["Near-Peer Mentoring", "Robotics Education", "City Tech", "Program Completion"],
+      "sections": [
+        {"heading": "Certificate", "body": "This certificate recognizes my completion of the 2026 STEM Research Academy near-peer mentoring program."},
+        {"heading": "Six Weeks of Robotics", "body": "The program paired mentors with high school students for six weeks. We spent the first half teaching core skills through smaller robot kits, then used those lessons during the final three weeks to build a larger mecanum robot."},
+        {"heading": "What I Taught", "body": "I helped students learn CAD, CAM, 3D printing, electronics, wiring, firmware, microcontrollers, Linux, Raspberry Pi setup, and programming. The goal was not only to assemble a robot, but to understand how its mechanical, electrical, and software systems work together."},
+        {"heading": "Final Project", "body": "The finished 3TSahur robot uses four mecanum wheels, a Raspberry Pi, a live camera, browser controls, and a servo-operated ramp for two smaller robots. The linked repository contains the project software, setup instructions, and full technical breakdown."}
+      ],
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/stem-research-academy", "label": "Mentoring Project on GitHub"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "research-project-04",
-      "title": "Placeholder 2",
+      "title": "NYC FIRST STEM Center Summer Internship",
       "category": "Awards & Certificates",
       "collectionOrder": 4,
-      "summary": "I have not added this research project yet.",
-      "cardSummary": "I have not added this research project yet. Pictures and details are coming soon.",
-      "details": "I have not added the pictures and full write up for this research project yet.",
-      "image": "",
-      "tags": ["Research", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "I completed a six-week internship at the NYC FIRST STEM Center where I developed an A301 mecanum chassis, custom swerve modules, and the final Swechanum robot.",
+      "cardSummary": "This certificate recognizes my six-week NYC FIRST internship. I built a mecanum test chassis, developed custom A301 swerve modules, and combined them in the final Swechanum robot.",
+      "details": "",
+      "image": "assets/nyc-first-summer-internship-certificate.png",
+      "imagePresentation": "certificate",
+      "tags": ["NYC FIRST", "Mechanical Design", "Swerve Drive", "CNC Machining"],
+      "sections": [
+        {"heading": "Certificate", "body": "This certificate recognizes my completion of the 2026 NYC FIRST STEM Center at Cornell Tech summer internship."},
+        {"heading": "Mecanum Test Chassis", "body": "I started with a simple mecanum chassis during the first week. It gave us a working platform for testing the new Systemcore and Motioncore electronics, A301 motors, battery, sensors, controls, and drivetrain layout."},
+        {"heading": "A301 Swerve Development", "body": "I spent the next several weeks designing, printing, machining, assembling, and testing custom two-motor swerve modules. Three main revisions simplified the steering, improved the gear layout, and led to the final CNC-machined pods."},
+        {"heading": "Final Swechanum Robot", "body": "The final robot combines the original lower mecanum structure with four powered swerve pods above it. The swerve system uses eight A301 motors and does all of the driving, while the lower mecanum wheels remain as passive support wheels. The linked repository documents the CAD, build history, and development path for all three stages."}
+      ],
+      "links": {"github": {"url": "https://github.com/NYC-FIRST/SystemcoreTesting/tree/Revlib4-testing/CAD%20Models", "label": "CAD & Build History"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "internship-project-01",
