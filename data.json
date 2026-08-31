@@ -239,15 +239,39 @@
     },
     {
       "id": "omnibot",
-      "title": "Omnibot",
-      "category": "Robotics",
-      "collectionOrder": 8,
-      "summary": "Project details are coming soon.",
-      "cardSummary": "I am still putting together the photos and write up for this project. More details will be added soon.",
-      "details": "I have not added the full write up for this robot yet.",
-      "image": "",
-      "tags": ["Robotics", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "title": "OmniBot",
+      "category": "Club Projects",
+      "collectionOrder": 1,
+      "summary": "We built this low-cost omnidirectional robot as a platform for City Tech students to learn robotics, CAD, programming, and computer vision.",
+      "cardSummary": "We built this mostly 3D-printed Raspberry Pi robot for under $100. Its three omni wheels, camera, servo, and web controls give club members one platform for learning mechanics, programming, and vision.",
+      "details": "",
+      "image": "https://raw.githubusercontent.com/AloeVeraZ/CityTechClubProjects/main/OmniBot/images/omnibot-assembled.jpg",
+      "tags": ["Raspberry Pi", "Omni Drive", "3D Printing", "Computer Vision"],
+      "sections": [
+        {"heading": "Purpose", "body": "The club wanted an affordable robot that students could build, understand, and change instead of treating it like a closed kit. OmniBot gives members a hands-on way to learn omnidirectional drive code, motors, servos, CAD, 3D printing, Raspberry Pi programming, and local image recognition."},
+        {"heading": "3D-Printed Build", "body": "Almost every structural part is printed, including the three-piece chassis, mounts, wheel bodies, and rollers. The rigid wheel bodies use flexible TPU rollers for grip, while heat-set inserts make the robot easier to assemble, take apart, and improve."},
+        {"heading": "Movement and Controls", "body": "Three omni wheels let the robot move forward, backward, sideways, diagonally, or rotate in place. Students can drive it with a Bluetooth controller or connect to the robot's private Wi-Fi network and use a dashboard from a phone or laptop with keyboard, touch, or gamepad controls."},
+        {"heading": "Camera and Interface", "body": "A USB webcam supplies live video and images, and a servo lets the camera move. The onboard screen and web dashboard show the camera feed, motor output, servo position, and robot status. Lightweight image recognition is being developed to run locally on the Raspberry Pi rather than through a large language model."},
+        {"heading": "Result", "body": "OmniBot is a working, low-cost club platform with open CAD, code, tests, and a one-command installer. Club members can start by driving it, then study or change the mechanics, controls, interface, camera system, and future vision features."}
+      ],
+      "media": [
+        {"type": "image", "src": "https://raw.githubusercontent.com/AloeVeraZ/CityTechClubProjects/main/OmniBot/images/Omni%20Bot%20CAD.png", "label": "OmniBot CAD assembly", "fit": "contain"},
+        {"type": "image", "src": "https://raw.githubusercontent.com/AloeVeraZ/CityTechClubProjects/main/OmniBot/images/onboard-interface.jpg", "label": "Control interface on the onboard screen", "fit": "contain"},
+        {"type": "image", "src": "https://raw.githubusercontent.com/AloeVeraZ/CityTechClubProjects/main/OmniBot/images/laptop-interface.jpg", "label": "Wi-Fi control dashboard on a laptop", "fit": "contain"},
+        {"type": "video", "src": "https://www.youtube.com/embed/8odiWHJd5yY?enablejsapi=1&playsinline=1&rel=0", "label": "Drive test at 50 percent speed"},
+        {"type": "video", "src": "https://www.youtube.com/embed/7Gmitm4C8bI?enablejsapi=1&playsinline=1&rel=0", "label": "Three-wheel motion test"},
+        {"type": "video", "src": "https://www.youtube.com/embed/Lm-0vsGEmf4?enablejsapi=1&playsinline=1&rel=0", "label": "Servo and camera test"}
+      ],
+      "links": {
+        "github": "",
+        "grabcad": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/OmniBot/CAD%20Models", "label": "CAD Files"},
+        "video": [
+          {"url": "https://youtube.com/shorts/8odiWHJd5yY", "label": "Drive Test"},
+          {"url": "https://youtube.com/shorts/7Gmitm4C8bI", "label": "Motion Test"},
+          {"url": "https://youtube.com/shorts/Lm-0vsGEmf4", "label": "Camera Test"}
+        ],
+        "projectUrl": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/OmniBot", "label": "GitHub Project"}
+      }
     },
     {
       "id": "digital-camera",
@@ -369,7 +393,7 @@
       "id": "self-balancing-robot",
       "title": "Self Balancing Robot",
       "category": "Club Projects",
-      "collectionOrder": 1,
+      "collectionOrder": 2,
       "summary": "We built three self balancing robots from parts at school using Raspberry Pi and Arduino boards.",
       "cardSummary": "We built three self balancing robots with Raspberry Pi and Arduino boards. They use a gyro and PID code to stay upright while moving.",
       "details": "",
@@ -390,7 +414,7 @@
       "id": "crab-crawler",
       "title": "Crab Crawler",
       "category": "Club Projects",
-      "collectionOrder": 2,
+      "collectionOrder": 3,
       "summary": "We built three small ESP32 walking robots to teach wireless programming, sensors, and servo movement.",
       "cardSummary": "We built three small walking robots with ESP32 boards, cameras, screens, and two servos each. Students can change the code and learn how the walking motion works.",
       "details": "",
@@ -408,7 +432,7 @@
       "id": "club-project-03",
       "title": "Placeholder 1",
       "category": "Club Projects",
-      "collectionOrder": 3,
+      "collectionOrder": 4,
       "summary": "Details for this club project are coming soon.",
       "cardSummary": "I have not added this club project yet. Photos and details are coming soon.",
       "details": "I have not added the pictures and full write up for this club project yet.",
@@ -420,7 +444,7 @@
       "id": "club-project-04",
       "title": "Placeholder 2",
       "category": "Club Projects",
-      "collectionOrder": 4,
+      "collectionOrder": 5,
       "summary": "Details for this club project are coming soon.",
       "cardSummary": "I have not added this club project yet. Photos and details are coming soon.",
       "details": "I have not added the pictures and full write up for this club project yet.",

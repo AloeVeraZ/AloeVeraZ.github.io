@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260820-outside-class-description')
+    fetch('data.json?v=20260831-omnibot-club-project')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
