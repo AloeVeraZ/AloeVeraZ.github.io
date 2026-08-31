@@ -299,7 +299,7 @@
     },
     {
       "id": "trainui",
-      "title": "TrainUI",
+      "title": "TrainUI XL",
       "category": "Software",
       "collectionOrder": 11,
       "summary": "I built this small screen to show live New York City train times, alerts, weather, and Raspberry Pi information.",
@@ -317,7 +317,7 @@
         {"heading": "Raspberry Pi Kiosk", "body": "The reference build uses an original Raspberry Pi Zero W and a 10.1 inch HDMI monitor in a custom three part printed enclosure. The software runs fullscreen and is designed to stay readable from a distance."},
         {"heading": "Installation and Reliability", "body": "The installer runs with one command and lets the owner choose a supported train and station. It also sets up automatic startup, stops the screen from going blank, and checks the internet connection so it can keep running for a long time."}
       ],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/TrainUI", "label": "GitHub Project"}}
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/TrainUI/tree/main/Train%20UI%20XL", "label": "GitHub Project"}}
     },
     {
       "id": "zerog-hydra-3d-printer",
@@ -451,6 +451,25 @@
       "image": "",
       "tags": ["Club Project", "Coming Soon"],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+    },
+    {
+      "id": "trainui-mini",
+      "title": "TrainUI Mini",
+      "category": "Club Projects",
+      "collectionOrder": 6,
+      "summary": "After building TrainUI XL, I turned the same idea into a small, low-cost ESP32 e-paper project that I could use to teach City Tech club members.",
+      "cardSummary": "I adapted my larger TrainUI project into a small ESP32-S3 e-paper display for the City Tech club. It gives students a useful way to learn microcontrollers, display programming, and public data feeds without requiring a large budget.",
+      "details": "",
+      "image": "https://raw.githubusercontent.com/AloeVeraZ/TrainUI/main/Train%20UI%20Mini/assets/train-ui-mini-desk.png",
+      "tags": ["ESP32-S3", "E-Paper", "MTA Realtime", "Teaching Project"],
+      "sections": [
+        {"heading": "Why I Made a Mini Version", "body": "After building the larger TrainUI XL for myself, I wanted to reuse the idea in something much smaller for the City Tech AI & Automation Club. The club does not have a large budget, so an ESP32-S3 board with a built-in 2.13-inch e-paper display made the project cheaper, simpler, and easier to teach than another Raspberry Pi and full-size monitor."},
+        {"heading": "A Teaching Tool With a Purpose", "body": "TrainUI Mini was more of a teaching exercise than a completely new product. Connecting it to a project I had already built gave every lesson a real purpose: by the end, the board could show useful train arrivals, service status, temperature, time, and connection information instead of only running isolated example code."},
+        {"heading": "ESP32 and E-Paper Lessons", "body": "I used the project to explain how ESP32 development boards are configured and programmed through Arduino IDE, how they connect to Wi-Fi, and how embedded code controls hardware. I also taught how e-paper behaves differently from a regular screen, including the way the display is refreshed and how information has to be arranged clearly in a very small space."},
+        {"heading": "Using Live Public Data", "body": "The software connects directly to public MTA and Open-Meteo data. This let me explain how a small device requests information from an online service, reads the response, selects the useful fields, and turns that data into a screen layout. The display does not need a phone app, account, separate server, or API key."},
+        {"heading": "Setup and Result", "body": "On first startup, the ESP32 creates its own setup network so the user can enter Wi-Fi details and choose a train and station. Those choices stay saved on the board. The finished project is a compact, useful display and a repeatable lesson for learning ESP32 boards, e-paper, Wi-Fi setup, APIs, and embedded interface design."}
+      ],
+      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/TrainUI/tree/main/Train%20UI%20Mini", "label": "GitHub Project"}}
     },
     {
       "id": "autocad-i",
