@@ -454,12 +454,12 @@ main { width: min(var(--site-max-width), calc(100% - clamp(2rem, 6vw, 7rem))); m
 .modal-period[hidden] { display: none; }
 .modal-program-summary { margin: -.3rem 0 1.1rem; max-width: 42.5rem; color: var(--muted); font-size: .88rem; line-height: 1.6; }
 .modal-program-summary[hidden] { display: none; }
-.modal-image { display: block; width: 100%; min-height: 0; margin-bottom: 1.4rem; overflow: visible; background: #0c0c0c; }
-.modal-image img { width: 100%; height: auto; display: block; object-fit: contain; object-position: center; }
-.modal-image.is-certificate { display: block; aspect-ratio: auto; overflow: visible; background: transparent; }
-.modal-image.is-certificate img { width: 100%; height: auto; object-fit: contain; }
-.modal-image.has-motion-media { display: block; height: auto; background: #0c0c0c; }
-.modal-image.has-motion-media img { width: 100%; height: auto; max-height: none; object-fit: contain; }
+.modal-image { display: block; width: 100%; height: auto; max-height: 410px; aspect-ratio: 16 / 9; min-height: 0; margin-bottom: 1.4rem; overflow: hidden; background: #0c0c0c; }
+.modal-image img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; }
+.modal-image.is-certificate { background: #0c0c0c; }
+.modal-image.is-certificate img { width: 100%; height: 100%; object-fit: contain; }
+.modal-image.has-motion-media { display: block; height: auto; max-height: 410px; aspect-ratio: 16 / 9; background: #0c0c0c; }
+.modal-image.has-motion-media img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
 .modal-summary { color: #dedee0; font-size: 1.12rem; font-weight: 600; }
 .modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
 .modal-overview { margin: 2rem 0; padding: 1.5rem 0; border-top: 1px solid var(--blue); border-bottom: 1px solid var(--line); }
