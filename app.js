@@ -1554,7 +1554,15 @@ function setupCarousel(carousel, controls, options = {}) {
 
     const setInternalScrollPosition = left => {
         suppressSnapUntil = performance.now() + 180;
-        carousel.scrollTo({ left, behavior: 'auto' });
+        carousel.scrollLeft = left;
+    };
+
+    const resetToPhysicalIndex = physicalIndex => {
+        carousel.classList.add('is-carousel-resetting');
+        setInternalScrollPosition(getTargetForPhysicalIndex(physicalIndex));
+        updateCardDepth();
+        void carousel.offsetWidth;
+        window.requestAnimationFrame(() => carousel.classList.remove('is-carousel-resetting'));
     };
 
     const updateIndicators = () => {
@@ -1728,8 +1736,7 @@ function setupCarousel(carousel, controls, options = {}) {
         updateIndicators();
         animateScroll(getTargetForPhysicalIndex(physicalIndex), () => {
             if (resetIndex !== null) {
-                setInternalScrollPosition(getTargetForPhysicalIndex(resetIndex));
-                updateCardDepth();
+                resetToPhysicalIndex(resetIndex);
             }
         });
     };
@@ -1738,7 +1745,7 @@ function setupCarousel(carousel, controls, options = {}) {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
-        const baseDuration = 620;
+        const baseDuration = 310;
         let animationProgress = reducedMotion.matches ? 1 : 0;
         let lastFrameAt = performance.now();
         isAnimating = true;
@@ -1800,8 +1807,7 @@ function setupCarousel(carousel, controls, options = {}) {
         updateIndicators();
         animateScroll(getTargetForPhysicalIndex(physicalIndex), () => {
             if (resetIndex !== null) {
-                setInternalScrollPosition(getTargetForPhysicalIndex(resetIndex));
-                updateCardDepth();
+                resetToPhysicalIndex(resetIndex);
             }
             if (queuedSteps !== 0) {
                 const queuedDirection = Math.sign(queuedSteps);

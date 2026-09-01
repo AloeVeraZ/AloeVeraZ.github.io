@@ -895,8 +895,11 @@ html[data-effects="high"] .circular-project-carousel .project-card:hover {
         translate3d(var(--carousel-ring-x, 0px), var(--carousel-ring-y, 0px), var(--carousel-ring-z, 0px))
         rotateY(var(--carousel-ring-rotate, 0deg))
         scale(var(--carousel-ring-scale, 1));
-    transition: border-color .3s ease, box-shadow .3s ease, opacity .08s linear;
+    transition: border-color .3s ease, box-shadow .3s ease;
     will-change: transform, opacity;
+}
+html[data-effects="high"] .circular-project-carousel.is-carousel-resetting .project-card {
+    transition: none !important;
 }
 html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
     box-shadow: 0 26px 64px rgba(0,0,0,.42), 0 0 0 1px rgba(123,168,216,.15);
