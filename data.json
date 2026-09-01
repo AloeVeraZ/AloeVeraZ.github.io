@@ -278,42 +278,50 @@
       "title": "Digital Camera",
       "category": "Electronics",
       "collectionOrder": 9,
-      "summary": "Project details are coming soon.",
-      "cardSummary": "I am still putting together the photos and write up for this project. More details will be added soon.",
-      "details": "I have not added the full write up for this electronics project yet.",
-      "image": "",
-      "tags": ["Electronics", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
-    },
-    {
-      "id": "open-mecanum",
-      "title": "Open Mecanum",
-      "category": "Robotics",
-      "collectionOrder": 10,
-      "summary": "Project details are coming soon.",
-      "cardSummary": "I am still putting together the photos and write up for this project. More details will be added soon.",
-      "details": "I have not added the full write up for this robot yet.",
-      "image": "",
-      "tags": ["Robotics", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
+      "summary": "I built a compact digital camera around an ESP32-S3, then redesigned it with a live viewfinder, physical controls, battery power, and MicroSD storage.",
+      "cardSummary": "I built this small ESP32-S3 digital camera in two versions. The final version has a live viewfinder, menus, physical buttons, a gallery, battery power, and MicroSD storage.",
+      "details": "",
+      "image": "assets/digital-camera-v2.png",
+      "tags": ["ESP32-S3", "Embedded UI", "MicroSD", "3D Printing"],
+      "overview": {
+        "problem": "I wanted to build a small camera from the electronics, enclosure, and software instead of only putting a camera module inside a printed box.",
+        "method": "I started with a screenless ESP32-S3 camera, learned from that version, and rebuilt it around a Freenove ESP32-S3 Media Kit with a display, controls, battery, storage, and a custom case.",
+        "result": "The final camera works as a self-contained handheld device with a live preview, menus, a photo gallery, and full-resolution images saved to a MicroSD card."
+      },
+      "sections": [
+        {"heading": "From V1 to V2", "body": "V1 used a Seeed Studio XIAO ESP32S3 Sense without a screen. I could take photos, but I had to use a Wi-Fi page to download them and could not see the picture before pressing the shutter. For V2, I changed to the Freenove ESP32-S3 Media Kit and added the features that the first version was missing."},
+        {"heading": "Viewfinder and Controls", "body": "V2 has a 1.14-inch color screen, a live viewfinder, menus, a directional control, and physical buttons. I used LVGL and TFT_eSPI for the interface, and the software scales the camera feed down for the preview while keeping the full image for the saved photo."},
+        {"heading": "Storage and Gallery", "body": "The camera saves full photos to a DCIM folder on a MicroSD card. I also made an onboard gallery so I can review saved pictures directly on the camera instead of moving the card or connecting to another device."},
+        {"heading": "Case and Power", "body": "I designed and printed a compact case around the screen, camera board, controls, and a 1500 mAh LiPo battery. The repository includes the complete enclosure as a STEP file and an editable Fusion 360 archive so the design can be rebuilt or changed."},
+        {"heading": "Open Documentation", "body": "I documented the parts, wiring warning, Arduino board settings, exact display libraries, setup process, firmware, and CAD files in the repository. The current battery percentage is not reliable, so I also documented that limitation instead of presenting it as an accurate charge reading."}
+      ],
+      "links": {
+        "github": {"url": "https://github.com/AloeVeraZ/Digital-Camera/tree/main/mainCamera", "label": "Camera Code"},
+        "grabcad": {"url": "https://github.com/AloeVeraZ/Digital-Camera/tree/main/CAD", "label": "CAD Files"},
+        "video": [
+          {"url": "https://youtube.com/shorts/e1hyfsS4Pfs", "label": "V1 Video"},
+          {"url": "https://youtube.com/shorts/tKdeSfX_wso", "label": "V2 Video"}
+        ],
+        "projectUrl": {"url": "https://github.com/AloeVeraZ/Digital-Camera", "label": "GitHub Project"}
+      }
     },
     {
       "id": "trainui",
       "title": "TrainUI XL",
       "category": "Software",
       "collectionOrder": 11,
-      "summary": "I built this small screen to show live New York City train times, alerts, weather, and Raspberry Pi information.",
-      "cardSummary": "I built a small screen that shows live New York City train times, service alerts, weather, and system info. It runs on a Raspberry Pi Zero W and starts by itself when powered on.",
+      "summary": "I built this full-size departure board to show live New York City train arrivals, alerts, weather, time, and Raspberry Pi information in one place.",
+      "cardSummary": "I built this 10.1-inch departure board for live New York City train arrivals, service alerts, weather, and system information. It runs on a Raspberry Pi Zero W and starts by itself when powered on.",
       "details": "",
-      "image": "assets/trainui.svg",
+      "image": "assets/trainui-xl-display.png",
       "tags": ["Raspberry Pi", "Python", "MTA Realtime", "Kiosk Display"],
       "overview": {
-        "problem": "I wanted one screen where I could quickly check New York City train information without using another tablet or touchscreen.",
+        "problem": "I wanted one always-on screen where I could quickly check New York City train information without opening an app or using another tablet.",
         "method": "I made a fullscreen interface for the original Raspberry Pi Zero W, connected it to official MTA realtime feeds, and wrote an installer where the user picks a train and station.",
         "result": "TrainUI starts by itself and shows arrivals, service alerts, weather, the time, and information about the Raspberry Pi."
       },
       "sections": [
-        {"heading": "Live Information", "body": "The screen shows arrival times and service alerts for the selected route, plus New York City weather, the current time, and the health of the Raspberry Pi. The public MTA and weather feeds do not need API keys."},
+        {"heading": "Live Information", "body": "The screen shows arrivals in both directions, service status and alerts for the selected route, New York City weather, the current time, connection information, and the health of the Raspberry Pi. The public MTA and weather feeds do not need API keys."},
         {"heading": "Raspberry Pi Kiosk", "body": "The reference build uses an original Raspberry Pi Zero W and a 10.1 inch HDMI monitor in a custom three part printed enclosure. The software runs fullscreen and is designed to stay readable from a distance."},
         {"heading": "Installation and Reliability", "body": "The installer runs with one command and lets the owner choose a supported train and station. It also sets up automatic startup, stops the screen from going blank, and checks the internet connection so it can keep running for a long time."}
       ],
@@ -427,30 +435,6 @@
         {"heading": "Result", "body": "The crawlers can walk, stream live video, and show their status on the screen. They use only a few parts and simple code, so students can understand them and add their own ideas."}
       ],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/crab-crawler", "label": "GitHub Project"}}
-    },
-    {
-      "id": "club-project-03",
-      "title": "Placeholder 1",
-      "category": "Club Projects",
-      "collectionOrder": 4,
-      "summary": "Details for this club project are coming soon.",
-      "cardSummary": "I have not added this club project yet. Photos and details are coming soon.",
-      "details": "I have not added the pictures and full write up for this club project yet.",
-      "image": "",
-      "tags": ["Club Project", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
-    },
-    {
-      "id": "club-project-04",
-      "title": "Placeholder 2",
-      "category": "Club Projects",
-      "collectionOrder": 5,
-      "summary": "Details for this club project are coming soon.",
-      "cardSummary": "I have not added this club project yet. Photos and details are coming soon.",
-      "details": "I have not added the pictures and full write up for this club project yet.",
-      "image": "",
-      "tags": ["Club Project", "Coming Soon"],
-      "links": {"github": "", "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "trainui-mini",
