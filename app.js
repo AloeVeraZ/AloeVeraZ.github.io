@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260831-camera-trainui-cleanup')
+    fetch('data.json?v=20260901-human-project-copy')
         .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -1341,29 +1341,13 @@ function setupFeaturedCarousel(container) {
 }
 
 function buildProjectCardSummary(project) {
-    const lastSection = project.sections?.[project.sections.length - 1]?.body;
-    const sources = [
-        project.cardSummary,
-        project.overview?.method,
-        project.overview?.result,
-        project.summary,
-        project.programSummary,
-        project.classRundown,
-        project.details,
-        lastSection,
-        ...(project.sections || []).map(section => section.body)
-    ].filter(Boolean);
-    const sentences = [];
-    sources.forEach(source => {
-        String(source).trim().split(/(?<=[.!?])\s+/).forEach(part => {
-            const clean = part.trim();
-            if (!clean) return;
-            const sentence = /[.!?]$/.test(clean) ? clean : `${clean}.`;
-            if (!sentences.some(existing => existing.toLowerCase() === sentence.toLowerCase())) sentences.push(sentence);
-        });
-    });
-    while (sentences.length < 3) sentences.push('Open the project to see the complete design and build details.');
-    return sentences.slice(0, 3).join(' ');
+    const summary = project.cardSummary
+        || project.summary
+        || project.details
+        || project.overview?.result
+        || project.sections?.[0]?.body
+        || 'Open the project to see the design and build details.';
+    return String(summary).trim();
 }
 
 function createProjectCard(project) {
