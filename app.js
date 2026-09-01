@@ -16,12 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
             '--project-stage-max-width': 2400,
             '--carousel-card-min-width': 300,
             '--carousel-card-max-width': 440,
-            '--project-card-height': 736,
-            '--project-card-height-mobile': 672,
-            '--project-image-height': 270,
-            '--carousel-image-height': 270,
-            '--ring-image-height': 270,
-            '--ring-image-height-compact': 270,
+            '--project-card-height': 680,
+            '--project-card-height-mobile': 650,
+            '--project-image-height': 240,
+            '--carousel-image-height': 240,
+            '--ring-image-height': 240,
+            '--ring-image-height-compact': 220,
             '--ring-height-min': 520,
             '--ring-height-max': 560,
             '--modal-max-width': 820,
@@ -1340,17 +1340,18 @@ function setupFeaturedCarousel(container) {
     window.requestAnimationFrame(updateLayout);
 }
 
-function buildTwoSentenceCardSummary(project) {
-  if (project.cardSummary) return project.cardSummary;
-
+function buildProjectCardSummary(project) {
     const lastSection = project.sections?.[project.sections.length - 1]?.body;
     const sources = [
+        project.cardSummary,
+        project.overview?.method,
+        project.overview?.result,
         project.summary,
         project.programSummary,
-        project.overview?.result,
         project.classRundown,
         project.details,
-        lastSection
+        lastSection,
+        ...(project.sections || []).map(section => section.body)
     ].filter(Boolean);
     const sentences = [];
     sources.forEach(source => {
@@ -1361,8 +1362,8 @@ function buildTwoSentenceCardSummary(project) {
             if (!sentences.some(existing => existing.toLowerCase() === sentence.toLowerCase())) sentences.push(sentence);
         });
     });
-    if (sentences.length < 2) sentences.push('Open the project to see the complete design and build details.');
-    return sentences.slice(0, 2).join(' ');
+    while (sentences.length < 3) sentences.push('Open the project to see the complete design and build details.');
+    return sentences.slice(0, 3).join(' ');
 }
 
 function createProjectCard(project) {
@@ -1378,8 +1379,8 @@ function createProjectCard(project) {
     const projectPeriod = project.period
         ? `<div class="project-period"><i class="fa-regular fa-calendar"></i>${project.period}</div>`
         : '';
-    const cardDescription = buildTwoSentenceCardSummary(project);
-    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><h3 class="project-title">${project.title}</h3>${projectPeriod}<p class="project-summary">${cardDescription}</p><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+    const cardDescription = buildProjectCardSummary(project);
+    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><div class="project-copy"><h3 class="project-title">${project.title}</h3>${projectPeriod}<p class="project-summary">${cardDescription}</p></div><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
     if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         card.addEventListener('pointerenter', () => {
