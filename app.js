@@ -1430,7 +1430,7 @@ function setupCarousel(carousel, controls, options = {}) {
     if (originalCards.length < 2) return () => {};
     const ringSlots = settings.ring ? originalCards.length : 0;
     const visibleRingRadius = settings.ring && originalCards.length === 4 ? 1.05 : 2.05;
-    const cloneCount = settings.finite ? 0 : Math.min(settings.ring ? 3 : 2, originalCards.length);
+    const cloneCount = settings.finite || settings.ring ? 0 : Math.min(2, originalCards.length);
     const isEnabled = () => typeof settings.enabled !== 'function' || settings.enabled();
     if (settings.ring) {
         carousel.style.setProperty('--ring-project-count', String(ringSlots));
@@ -1456,13 +1456,14 @@ function setupCarousel(carousel, controls, options = {}) {
         });
     }
     let currentIndex = 0;
+    let virtualIndex = 0;
+    let targetVirtualIndex = 0;
     let autoplayTimer;
     let scrollAnimation;
     let snapTimer;
     let resizeFrame;
     let initialized = false;
     let isAnimating = false;
-    let queuedSteps = 0;
     let carouselVisible = true;
     let carouselHovered = false;
     let carouselFocused = false;
@@ -1473,16 +1474,10 @@ function setupCarousel(carousel, controls, options = {}) {
     let dragStartX = 0;
     let dragStartY = 0;
     let dragStartScrollLeft = 0;
+    let dragStartVirtualIndex = 0;
     let dragLastX = 0;
     let dragDirection = null;
     let suppressSwipeClick = false;
-    let recentCarouselClicks = [];
-    let rapidClickStreak = 0;
-    let lastCarouselClickAt = 0;
-    let carouselSpeedMultiplier = 1;
-    let burstResetTimer;
-    let overdriveStopTimer;
-    let overdriveActive = false;
     let suppressSnapUntil = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
@@ -1590,11 +1585,20 @@ function setupCarousel(carousel, controls, options = {}) {
         const metrics = getMetrics();
         if (!metrics) return;
         const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+        const wrapRingPosition = logicalIndex => {
+            let position = logicalIndex - virtualIndex;
+            const halfRing = originalCards.length / 2;
+            while (position > halfRing) position -= originalCards.length;
+            while (position <= -halfRing) position += originalCards.length;
+            return position;
+        };
         const cardStates = cards.map(card => {
+            if (settings.ring) {
+                return { card, position: wrapRingPosition(Number(card.dataset.carouselIndex)) };
+            }
             const cardCenter = card.offsetLeft + card.offsetWidth / 2;
             const rawPosition = (cardCenter - carouselCenter) / metrics.distance;
-            const position = settings.ring ? rawPosition : Math.max(-2.25, Math.min(2.25, rawPosition));
-            return { card, position };
+            return { card, position: Math.max(-2.25, Math.min(2.25, rawPosition)) };
         });
         cardStates.forEach(state => {
             const { card, position } = state;
@@ -1626,7 +1630,7 @@ function setupCarousel(carousel, controls, options = {}) {
                     );
                 }
                 const targetX = direction * targetMagnitude;
-                const naturalX = position * metrics.distance;
+                const naturalX = card.offsetLeft + card.offsetWidth / 2 - carouselCenter;
                 const rotationMagnitude = absolutePosition <= 1
                     ? absolutePosition * 11
                     : 11 + (absolutePosition - 1) * 22;
@@ -1667,8 +1671,9 @@ function setupCarousel(carousel, controls, options = {}) {
             window.cancelAnimationFrame(scrollAnimation);
             initialized = false;
             isAnimating = false;
-            queuedSteps = 0;
             currentIndex = 0;
+            virtualIndex = 0;
+            targetVirtualIndex = 0;
             setInternalScrollPosition(0);
             clearCardDepth();
             updateIndicators();
@@ -1678,15 +1683,22 @@ function setupCarousel(carousel, controls, options = {}) {
         if (!metrics || metrics.distance <= 0) return;
         window.cancelAnimationFrame(scrollAnimation);
         if (!initialized) currentIndex = 0;
-        setInternalScrollPosition(getTargetForPhysicalIndex(cloneCount + currentIndex));
+        virtualIndex = currentIndex;
+        targetVirtualIndex = currentIndex;
+        setInternalScrollPosition(settings.ring ? 0 : getTargetForPhysicalIndex(cloneCount + currentIndex));
         initialized = true;
         isAnimating = false;
-        queuedSteps = 0;
         updateCardDepth();
         updateIndicators();
     };
 
     const syncIndexToNearestCard = () => {
+        if (settings.ring) {
+            targetVirtualIndex = Math.round(virtualIndex);
+            currentIndex = ((targetVirtualIndex % originalCards.length) + originalCards.length) % originalCards.length;
+            updateIndicators();
+            return;
+        }
         const physicalIndex = getNearestPhysicalIndex();
         currentIndex = settings.finite
             ? Math.max(0, Math.min(physicalIndex, originalCards.length - 1))
@@ -1698,10 +1710,17 @@ function setupCarousel(carousel, controls, options = {}) {
         window.cancelAnimationFrame(scrollAnimation);
         if (isAnimating) {
             isAnimating = false;
-            queuedSteps = 0;
             syncIndexToNearestCard();
         }
         if (!getMetrics()) return;
+        if (settings.ring) {
+            targetVirtualIndex = Math.round(targetVirtualIndex);
+            virtualIndex = targetVirtualIndex;
+            currentIndex = ((targetVirtualIndex % originalCards.length) + originalCards.length) % originalCards.length;
+            updateCardDepth();
+            updateIndicators();
+            return;
+        }
         setInternalScrollPosition(getTargetForPhysicalIndex(cloneCount + currentIndex));
         updateCardDepth();
         updateIndicators();
@@ -1710,6 +1729,13 @@ function setupCarousel(carousel, controls, options = {}) {
     const snapToNearestCard = () => {
         const metrics = getMetrics();
         if (!metrics) return;
+        if (settings.ring) {
+            targetVirtualIndex = Math.round(virtualIndex);
+            currentIndex = ((targetVirtualIndex % originalCards.length) + originalCards.length) % originalCards.length;
+            updateIndicators();
+            animateRingTo(targetVirtualIndex);
+            return;
+        }
         const physicalIndex = getNearestPhysicalIndex();
         currentIndex = settings.finite
             ? Math.max(0, Math.min(physicalIndex, originalCards.length - 1))
@@ -1736,7 +1762,7 @@ function setupCarousel(carousel, controls, options = {}) {
         const frame = now => {
             if (!reducedMotion.matches) {
                 const frameTime = Math.min(Math.max(now - lastFrameAt, 0), 64);
-                animationProgress = Math.min(animationProgress + (frameTime * carouselSpeedMultiplier / baseDuration), 1);
+                animationProgress = Math.min(animationProgress + (frameTime / baseDuration), 1);
                 lastFrameAt = now;
             }
             const progress = animationProgress;
@@ -1752,6 +1778,36 @@ function setupCarousel(carousel, controls, options = {}) {
         };
         scrollAnimation = window.requestAnimationFrame(frame);
     };
+    const animateRingTo = (target, onComplete) => {
+        window.cancelAnimationFrame(scrollAnimation);
+        const start = virtualIndex;
+        const change = target - start;
+        const baseDuration = 310;
+        const distanceFactor = Math.min(Math.max(Math.abs(change), .35), 1.5);
+        const duration = baseDuration * distanceFactor;
+        let animationProgress = reducedMotion.matches ? 1 : 0;
+        let lastFrameAt = performance.now();
+        isAnimating = true;
+        const frame = now => {
+            if (!reducedMotion.matches) {
+                const frameTime = Math.min(Math.max(now - lastFrameAt, 0), 64);
+                animationProgress = Math.min(animationProgress + (frameTime / duration), 1);
+                lastFrameAt = now;
+            }
+            const eased = animationProgress * animationProgress * (3 - 2 * animationProgress);
+            virtualIndex = start + change * eased;
+            updateCardDepth();
+            if (animationProgress < 1) {
+                scrollAnimation = window.requestAnimationFrame(frame);
+            } else {
+                virtualIndex = target;
+                isAnimating = false;
+                updateCardDepth();
+                onComplete?.();
+            }
+        };
+        scrollAnimation = window.requestAnimationFrame(frame);
+    };
     const move = (step, button) => {
         if (!isEnabled()) return;
         if (!initialized) initialize();
@@ -1760,19 +1816,27 @@ function setupCarousel(carousel, controls, options = {}) {
             void button.offsetWidth;
             button.classList.add('is-nudging');
         }
-        if (isAnimating) {
-            queuedSteps += step;
-            return;
-        }
         const metrics = getMetrics();
         if (!metrics || metrics.lastIndex <= 0) return;
         const direction = Math.sign(step);
         const positionCount = originalCards.length;
+        if (settings.ring) {
+            window.cancelAnimationFrame(scrollAnimation);
+            isAnimating = false;
+            targetVirtualIndex += direction;
+            currentIndex = ((Math.round(targetVirtualIndex) % positionCount) + positionCount) % positionCount;
+            updateIndicators();
+            animateRingTo(targetVirtualIndex);
+            return;
+        }
+        if (isAnimating) {
+            window.cancelAnimationFrame(scrollAnimation);
+            isAnimating = false;
+        }
         const nextIndex = settings.finite
             ? Math.max(0, Math.min(currentIndex + direction, metrics.lastIndex))
             : (currentIndex + direction + positionCount) % positionCount;
         if (settings.finite && nextIndex === currentIndex) {
-            queuedSteps = 0;
             updateIndicators();
             return;
         }
@@ -1792,11 +1856,6 @@ function setupCarousel(carousel, controls, options = {}) {
         animateScroll(getTargetForPhysicalIndex(physicalIndex), () => {
             if (resetIndex !== null) {
                 resetToPhysicalIndex(resetIndex);
-            }
-            if (queuedSteps !== 0) {
-                const queuedDirection = Math.sign(queuedSteps);
-                queuedSteps -= queuedDirection;
-                move(queuedDirection);
             }
         });
     };
@@ -1819,74 +1878,6 @@ function setupCarousel(carousel, controls, options = {}) {
         cancelAutoplay();
         scheduleAutoplay();
     };
-    const returnToFirstProject = () => {
-        const positionCount = originalCards.length;
-        if (!positionCount) return;
-        const forwardSteps = (positionCount - currentIndex) % positionCount;
-        const backwardSteps = forwardSteps - positionCount;
-        const stepsToFirst = Math.abs(forwardSteps) <= Math.abs(backwardSteps) ? forwardSteps : backwardSteps;
-        queuedSteps = 0;
-        if (stepsToFirst === 0) return;
-        if (isAnimating) {
-            queuedSteps = stepsToFirst;
-            return;
-        }
-        const direction = Math.sign(stepsToFirst);
-        queuedSteps = direction * Math.max(Math.abs(stepsToFirst) - 1, 0);
-        move(direction);
-    };
-    const finishOverdrive = () => {
-        if (!overdriveActive) return;
-        window.clearTimeout(overdriveStopTimer);
-        overdriveActive = false;
-        carousel.dataset.carouselOverdrive = 'false';
-        document.documentElement.classList.remove('carousel-overdrive');
-        returnToFirstProject();
-        pauseAfterInteraction(3000);
-    };
-    const scheduleOverdriveStop = () => {
-        window.clearTimeout(overdriveStopTimer);
-        overdriveStopTimer = window.setTimeout(finishOverdrive, 600);
-    };
-    const resetCarouselBurst = () => {
-        window.clearTimeout(burstResetTimer);
-        if (isAnimating || queuedSteps !== 0) {
-            burstResetTimer = window.setTimeout(resetCarouselBurst, 250);
-            return;
-        }
-        recentCarouselClicks = [];
-        rapidClickStreak = 0;
-        lastCarouselClickAt = 0;
-        carouselSpeedMultiplier = 1;
-        carousel.dataset.carouselSpeed = '1.00';
-        carousel.dataset.carouselBurst = '0';
-    };
-    const registerCarouselClick = () => {
-        const now = performance.now();
-        recentCarouselClicks = recentCarouselClicks.filter(timestamp => now - timestamp <= 3000);
-        recentCarouselClicks.push(now);
-        rapidClickStreak = now - lastCarouselClickAt <= 500 ? rapidClickStreak + 1 : 1;
-        lastCarouselClickAt = now;
-        const burstCount = Math.max(recentCarouselClicks.length, rapidClickStreak);
-        carouselSpeedMultiplier = burstCount <= 4
-            ? 1
-            : Math.min(3, 1 + ((burstCount - 4) / 8) * 2);
-        carousel.dataset.carouselSpeed = carouselSpeedMultiplier.toFixed(2);
-        carousel.dataset.carouselBurst = String(burstCount);
-        window.clearTimeout(burstResetTimer);
-        burstResetTimer = window.setTimeout(resetCarouselBurst, 3000);
-
-        if (rapidClickStreak >= 15) {
-            if (!overdriveActive) {
-                overdriveActive = true;
-                carousel.dataset.carouselOverdrive = 'true';
-                if (!reducedMotion.matches) {
-                    document.documentElement.classList.add('carousel-overdrive');
-                }
-            }
-            scheduleOverdriveStop();
-        }
-    };
     previous.addEventListener('pointerdown', () => {
         pauseAfterInteraction();
     });
@@ -1894,40 +1885,34 @@ function setupCarousel(carousel, controls, options = {}) {
         pauseAfterInteraction();
     });
     previous.addEventListener('click', () => {
-        registerCarouselClick();
         move(-1, previous);
         pauseAfterInteraction();
     });
     next.addEventListener('click', () => {
-        registerCarouselClick();
         move(1, next);
         pauseAfterInteraction();
     });
-    const arrowControlGroup = previous?.parentElement;
-    arrowControlGroup?.addEventListener('pointerleave', () => {
-        if (overdriveActive) {
-            finishOverdrive();
-            return;
-        }
-        // Let the step already on screen finish, but discard the rest of a
-        // normal click burst once the pointer leaves the arrow controls.
-        queuedSteps = 0;
-        pauseAfterInteraction(3000);
-    }, { passive: true });
     indicators?.querySelectorAll('.carousel-indicator').forEach((indicator, targetIndex) => {
         indicator.addEventListener('click', () => {
             if (!isEnabled()) return;
             stopAndCenterCurrentMotion();
             if (targetIndex === currentIndex) return;
-            queuedSteps = 0;
             const directStep = targetIndex - currentIndex;
             const forward = (directStep + originalCards.length) % originalCards.length;
             const backward = forward - originalCards.length;
             const shortestStep = settings.finite
                 ? directStep
                 : (Math.abs(forward) <= Math.abs(backward) ? forward : backward);
-            queuedSteps = Math.sign(shortestStep) * Math.max(Math.abs(shortestStep) - 1, 0);
-            move(Math.sign(shortestStep));
+            if (settings.ring) {
+                targetVirtualIndex += shortestStep;
+                currentIndex = targetIndex;
+                updateIndicators();
+                animateRingTo(targetVirtualIndex);
+            } else {
+                currentIndex = targetIndex;
+                updateIndicators();
+                animateScroll(getTargetForPhysicalIndex(cloneCount + currentIndex));
+            }
             pauseAfterInteraction();
         });
     });
@@ -1942,8 +1927,8 @@ function setupCarousel(carousel, controls, options = {}) {
         dragStartY = event.clientY;
         dragLastX = event.clientX;
         dragStartScrollLeft = carousel.scrollLeft;
+        dragStartVirtualIndex = virtualIndex;
         dragDirection = null;
-        queuedSteps = 0;
         carousel.classList.add('is-dragging');
     }, { passive: true });
     carousel.addEventListener('pointermove', event => {
@@ -1961,7 +1946,12 @@ function setupCarousel(carousel, controls, options = {}) {
             event.preventDefault();
             suppressSwipeClick = Math.abs(horizontalDistance) > 7;
             manualPauseUntil = Date.now() + 9000;
-            carousel.scrollTo({ left: dragStartScrollLeft - horizontalDistance, behavior: 'auto' });
+            if (settings.ring) {
+                const metrics = getMetrics();
+                if (metrics?.distance) virtualIndex = dragStartVirtualIndex - horizontalDistance / metrics.distance;
+            } else {
+                carousel.scrollTo({ left: dragStartScrollLeft - horizontalDistance, behavior: 'auto' });
+            }
             updateCardDepth();
         }
     }, { passive: false });
@@ -1974,7 +1964,18 @@ function setupCarousel(carousel, controls, options = {}) {
             carousel.releasePointerCapture(dragPointerId);
         }
         dragPointerId = null;
-        if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
+        if (settings.ring && dragDirection === 'horizontal') {
+            targetVirtualIndex = Math.round(dragStartVirtualIndex);
+            currentIndex = ((targetVirtualIndex % originalCards.length) + originalCards.length) % originalCards.length;
+            if (Math.abs(horizontalDistance) >= 36) {
+                move(horizontalDistance < 0 ? 1 : -1);
+            } else {
+                targetVirtualIndex = Math.round(virtualIndex);
+                currentIndex = ((targetVirtualIndex % originalCards.length) + originalCards.length) % originalCards.length;
+                updateIndicators();
+                animateRingTo(targetVirtualIndex);
+            }
+        } else if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
             move(horizontalDistance < 0 ? 1 : -1);
         } else if (dragDirection) {
             snapToNearestCard();
@@ -1996,6 +1997,7 @@ function setupCarousel(carousel, controls, options = {}) {
         window.setTimeout(() => { wheelLocked = false; }, 760);
     }, { passive: false });
     carousel.addEventListener('scroll', () => {
+        if (settings.ring) return;
         window.clearTimeout(snapTimer);
         if (isAnimating || interactionActive || performance.now() < suppressSnapUntil) return;
         snapTimer = window.setTimeout(() => {
