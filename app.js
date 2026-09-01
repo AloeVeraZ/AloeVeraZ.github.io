@@ -1444,9 +1444,13 @@ function setupCarousel(carousel, controls, options = {}) {
     const originalCards = [...carousel.querySelectorAll('.project-card')];
     if (originalCards.length < 2) return () => {};
     const ringSlots = settings.ring ? originalCards.length : 0;
+    const visibleRingRadius = settings.ring && originalCards.length === 4 ? 1.05 : 2.05;
     const cloneCount = settings.finite ? 0 : Math.min(settings.ring ? 3 : 2, originalCards.length);
     const isEnabled = () => typeof settings.enabled !== 'function' || settings.enabled();
-    if (settings.ring) carousel.style.setProperty('--ring-project-count', String(ringSlots));
+    if (settings.ring) {
+        carousel.style.setProperty('--ring-project-count', String(ringSlots));
+        carousel.dataset.ringVisibleCards = originalCards.length === 4 ? '3' : '5';
+    }
     originalCards.forEach((card, index) => { card.dataset.carouselIndex = String(index); });
     const beforeClones = document.createDocumentFragment();
     const prepareClone = card => {
@@ -1655,7 +1659,7 @@ function setupCarousel(carousel, controls, options = {}) {
                 const visiblePixels = carousel.clientWidth / 2
                     - (Math.abs(targetX) - metrics.cardWidth * ringScale / 2);
                 const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
-                    && rawAbsolutePosition <= 3.05
+                    && rawAbsolutePosition <= visibleRingRadius
                     && visiblePixels >= 28;
                 const circleOpacity = visibleOnRing ? visibleOpacity : 0;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
