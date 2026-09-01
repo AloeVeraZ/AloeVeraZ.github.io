@@ -382,7 +382,8 @@ main { width: min(var(--site-max-width), calc(100% - clamp(2rem, 6vw, 7rem))); m
 .project-card:hover .project-image { transform: scale(1.012); }
 .project-category-badge { position: absolute; top: .85rem; left: .85rem; padding: .32rem .5rem; color: var(--ink); background: rgba(21,22,25,.78); border: 1px solid rgba(244,244,241,.18); font-size: .67rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .project-info { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: 1.35rem; }
-.project-copy { margin-block: auto; }
+.project-heading { flex: 0 0 auto; }
+.project-copy { display: flex; flex: 1; align-items: center; min-height: 0; }
 .project-title { margin-bottom: .7rem; font-size: 1.2rem; letter-spacing: -.04em; line-height: 1.08; }
 .project-period { display: flex; align-items: center; gap: .45rem; margin: -.15rem 0 .8rem; color: #9dccff; font-size: .76rem; font-weight: 800; letter-spacing: .02em; }
 .project-program-summary { margin: 0 0 .85rem; color: var(--muted); font-size: .78rem; line-height: 1.55; }
@@ -887,15 +888,15 @@ html[data-effects="high"] .circular-project-carousel {
 html[data-effects="high"] .circular-project-carousel .project-card,
 html[data-effects="high"] .circular-project-carousel .project-card:hover {
     position: relative;
+    backface-visibility: hidden;
     opacity: var(--carousel-ring-opacity, 0);
     transform:
         perspective(81.25rem)
-        translateX(var(--carousel-ring-x, 0px))
-        translateY(var(--carousel-ring-y, 0px))
-        translateZ(var(--carousel-ring-z, 0px))
+        translate3d(var(--carousel-ring-x, 0px), var(--carousel-ring-y, 0px), var(--carousel-ring-z, 0px))
         rotateY(var(--carousel-ring-rotate, 0deg))
         scale(var(--carousel-ring-scale, 1));
-    transition: border-color .3s ease, box-shadow .3s ease;
+    transition: border-color .3s ease, box-shadow .3s ease, opacity .08s linear;
+    will-change: transform, opacity;
 }
 html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
     box-shadow: 0 26px 64px rgba(0,0,0,.42), 0 0 0 1px rgba(123,168,216,.15);

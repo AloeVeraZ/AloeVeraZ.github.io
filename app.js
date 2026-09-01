@@ -1380,7 +1380,7 @@ function createProjectCard(project) {
         ? `<div class="project-period"><i class="fa-regular fa-calendar"></i>${project.period}</div>`
         : '';
     const cardDescription = buildProjectCardSummary(project);
-    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><div class="project-copy"><h3 class="project-title">${project.title}</h3>${projectPeriod}<p class="project-summary">${cardDescription}</p></div><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><div class="project-heading"><h3 class="project-title">${project.title}</h3>${projectPeriod}</div><div class="project-copy"><p class="project-summary">${cardDescription}</p></div><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
     if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         card.addEventListener('pointerenter', () => {
@@ -1602,20 +1602,8 @@ function setupCarousel(carousel, controls, options = {}) {
             const cardCenter = card.offsetLeft + card.offsetWidth / 2;
             const rawPosition = (cardCenter - carouselCenter) / metrics.distance;
             const position = settings.ring ? rawPosition : Math.max(-2.25, Math.min(2.25, rawPosition));
-            return { card, position, logicalIndex: Number(card.dataset.carouselIndex) };
+            return { card, position };
         });
-        const ringRepresentatives = new Map();
-        if (settings.ring) {
-            cardStates.forEach(state => {
-                const current = ringRepresentatives.get(state.logicalIndex);
-                const closer = !current || Math.abs(state.position) < Math.abs(current.position) - .001;
-                const equalButForward = current
-                    && Math.abs(Math.abs(state.position) - Math.abs(current.position)) <= .001
-                    && state.position >= 0
-                    && current.position < 0;
-                if (closer || equalButForward) ringRepresentatives.set(state.logicalIndex, state);
-            });
-        }
         cardStates.forEach(state => {
             const { card, position } = state;
             const depth = Math.min(Math.abs(position), 1.65);
@@ -1657,12 +1645,12 @@ function setupCarousel(carousel, controls, options = {}) {
                 const visibleOpacity = absolutePosition <= 1
                     ? .98 - absolutePosition * .16
                     : Math.max(.4, .82 - (absolutePosition - 1) * .22);
-                const visiblePixels = carousel.clientWidth / 2
-                    - (Math.abs(targetX) - metrics.cardWidth * ringScale / 2);
-                const visibleOnRing = ringRepresentatives.get(state.logicalIndex) === state
-                    && rawAbsolutePosition <= visibleRingRadius
-                    && visiblePixels >= 28;
-                const circleOpacity = visibleOnRing ? visibleOpacity : 0;
+                const fadeStart = Math.max(0, visibleRingRadius - .05);
+                const fadeEnd = visibleRingRadius + .75;
+                const fadeProgress = Math.min(Math.max((rawAbsolutePosition - fadeStart) / (fadeEnd - fadeStart), 0), 1);
+                const edgeFade = 1 - (fadeProgress * fadeProgress * (3 - 2 * fadeProgress));
+                const circleOpacity = visibleOpacity * edgeFade;
+                const visibleOnRing = circleOpacity > .01;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-y', `${Math.min(absolutePosition * 18, 46).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-z', `${(-ringDepth).toFixed(2)}px`);
@@ -1750,7 +1738,7 @@ function setupCarousel(carousel, controls, options = {}) {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
-        const baseDuration = 470;
+        const baseDuration = 620;
         let animationProgress = reducedMotion.matches ? 1 : 0;
         let lastFrameAt = performance.now();
         isAnimating = true;
@@ -1761,7 +1749,7 @@ function setupCarousel(carousel, controls, options = {}) {
                 lastFrameAt = now;
             }
             const progress = animationProgress;
-            const eased = 1 - Math.pow(1 - progress, 4);
+            const eased = progress * progress * (3 - 2 * progress);
             carousel.scrollTo({ left: start + (change * eased), behavior: 'auto' });
             updateCardDepth();
             if (progress < 1) {
