@@ -523,7 +523,6 @@ footer { padding: 2.5rem 1.5rem; border-top: 1px solid var(--line); color: var(-
     .modal-media { grid-template-columns: 1fr; }
 }
 
-/* High-impact engineering portfolio direction */
 body { background-color: var(--bg); background-image: none; }
 .navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.96); }
 .nav-content, main { width: min(var(--site-max-width), calc(100% - clamp(2rem, 6vw, 7rem))); }
@@ -679,7 +678,7 @@ footer { background: transparent; }
     .hero-section::before, .hero-section::after { transition: none; }
 }
 
-/* Dedicated hero actions: identical at rest, cyan on interaction. */
+/* Keep the hero buttons quiet until someone interacts with them. */
 .hero-buttons > .hero-action {
     background: transparent;
     border-color: var(--line);
@@ -694,7 +693,7 @@ footer { background: transparent; }
     transform: translateY(-3px);
 }
 
-/* About and Skills use one identical three-card system. */
+/* About and skills cards share the same grid so both sections line up. */
 .about-highlights,
 .skills-categories {
     display: grid;
@@ -764,7 +763,6 @@ footer { background: transparent; }
     }
 }
 
-/* Use the same rounded corner language across the full interface. */
 :root {
     --radius-card: .875rem;
     --radius-control: .4375rem;
@@ -795,13 +793,11 @@ footer { background: transparent; }
     border-radius: var(--radius-control);
 }
 
-/* Static engineering details preserve the visual identity without continuous animation. */
 .hero-section::before,
 .hero-section::after {
     display: none;
 }
 
-/* One compact, consistent gap between each major portfolio group. */
 :root { --content-section-gap: clamp(2.75rem, 4vw, 3.75rem); }
 main > .section {
     margin: 0;
@@ -823,7 +819,7 @@ main > #contact { padding-bottom: 1.5rem; }
 }
 .featured-carousel-controls.is-active { display: flex; }
 
-/* Project rows use a centered, data-driven carousel when their layout needs one. */
+/* Cards switch to this track when a collection is too wide for the grid. */
 .project-carousel {
     display: flex;
     gap: var(--project-grid-gap);
@@ -867,7 +863,7 @@ main > #contact { padding-bottom: 1.5rem; }
         scale(calc(1 - (var(--carousel-depth, 0) * .07)));
 }
 
-/* Each dropdown ring calculates its geometry from the number of projects it receives. */
+/* Ring size is set in JavaScript from the number of projects in the collection. */
 .circular-project-carousel {
     width: 100%;
     margin-left: 0;
@@ -1006,7 +1002,7 @@ html[data-effects="low"] .featured-project-carousel .project-card {
     }
 }
 
-/* Featured projects are a flat three-up row whenever three useful cards fit. */
+/* On narrow screens, featured projects collapse to one card at a time. */
 .featured-project-carousel.is-compact-carousel {
     gap: 1rem;
     padding: .7rem 0 1.35rem;
@@ -1024,7 +1020,7 @@ html[data-effects="low"] .featured-project-carousel .project-card {
     display: none;
 }
 
-/* Low FX keeps the engineering grid and stops every continuous visual effect. */
+/* Low FX keeps the static grid and removes continuous animation. */
 html[data-effects="low"] .background-grid { display: block; }
 html[data-effects="low"] .galaxy-field,
 html[data-effects="low"] .galaxy-nebula,

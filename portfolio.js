@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 localStorage.setItem(performanceStorageKey, mode);
             } catch (error) {
-                // The visual mode still works when storage is unavailable.
+                // Private browsing can block storage, but the visual mode should still work.
             }
         }
     };
@@ -324,8 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('data.json?v=20260901-human-project-copy')
-        .then(response => { if (!response.ok) throw new Error('Failed to load data.json'); return response.json(); })
+    fetch('portfolio-data.json?v=20260901-cleanup')
+        .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
             renderSkills(data.skillCategories);

@@ -1,282 +1,34 @@
-<div align="center">
+# Angelo Demetroulakos — Engineering Portfolio
 
-# Angelo Demetroulakos | Engineering Portfolio
+This is the source for my personal engineering portfolio: [aloeveraz.github.io](https://aloeveraz.github.io/).
 
-### Mechanical engineering · robotics · CAD · prototyping
+I use the site to keep my robotics, CAD, controls, manufacturing, and 3D-printing work in one place. The project cards come from one JSON file, so I can add a build without rewriting the page layout each time.
 
-[![Live Portfolio](https://img.shields.io/badge/Live_Portfolio-Visit_Site-0ea5e9?style=flat-square&logo=githubpages&logoColor=white)](https://aloeveraz.github.io/)
-[![Projects](https://img.shields.io/badge/Projects-28-8b5cf6?style=flat-square)](https://aloeveraz.github.io/#projects)
-[![GitHub](https://img.shields.io/badge/GitHub-AloeVeraZ-111111?style=flat-square&logo=github&logoColor=white)](https://github.com/AloeVeraZ)
-[![Email](https://img.shields.io/badge/Email-Contact-f59e0b?style=flat-square)](mailto:angelojames2006@gmail.com)
+## Files
 
-The source for my engineering portfolio and the project pages behind it.
+- `index.html` contains the page structure and project modal.
+- `portfolio.css` handles the layout, responsive styles, and visual effects.
+- `portfolio.js` renders the profile, project collections, carousels, and modal content.
+- `portfolio-data.json` holds the profile, skills, project write-ups, media, and links.
+- `assets/` contains the project photos, GIFs, and graphics.
+- `project-example.json` is a project record I can copy when adding something new.
 
-<strong>Quick navigation:</strong><br>
-[Explore the Website](https://aloeveraz.github.io/) · [Jump to Projects](https://aloeveraz.github.io/#projects) · [View Source](https://github.com/AloeVeraZ/AloeVeraZ.github.io)
+## Run locally
 
-</div>
-
----
-
-> [!NOTE]
-> This repo holds the live portfolio, project writeups, images, and the JSON data used to build each project page.
-
-## Portfolio Preview
-
-<div align="center">
-  <a href="https://aloeveraz.github.io/#projects">
-    <img src="assets/kiwi-swerve-drive.gif" alt="Kiwi Swerve Drivetrain driving demonstration" width="780">
-  </a>
-
-  <sub>Kiwi Swerve Drivetrain — click the preview to explore the project collection.</sub>
-</div>
-
-## At a Glance
-
-| Area | Details |
-| --- | --- |
-| Focus | Mechanical engineering, robotics, 3D printing, controls, and prototyping |
-| Project library | 30 project cards across five collections |
-| Personal builds | 14 robotics, software, electronics, and custom 3D-printer projects |
-| Academic work | Six class archives covering CAD, CAM, computing, and machining |
-| Controls | Python, MATLAB, Arduino, Raspberry Pi, and Klipper |
-| CAD | Fusion 360, Autodesk Inventor, SolidWorks, AutoCAD, and Blender |
-| Front end | Semantic HTML, responsive CSS, vanilla JavaScript, and JSON |
-| Hosting | GitHub Pages |
-
-## About the Portfolio
-
-This site documents my work as a Mechanical Engineering Technology student and hands-on builder in New York City. It brings together competition robots, custom motion systems, modified 3D printers, academic work, electronics, software, and research—from early concepts to tested prototypes.
-
-Projects are grouped by where I made them. Personal projects open with a short overview, then a second page goes through the build in more detail.
-
-| View | Purpose | Structure |
-| --- | --- | --- |
-| **At a Glance** | A fast case-study overview | Problem · Method · Result |
-| **Technical Deep Dive** | The engineering story behind the build | Project-specific sections such as Challenge, Mechanical Design, Controls, Programming, Iterations, Status, and Result |
-
-> [!TIP]
-> Open any personal-project image or title on the live site to see the case-study modal. The first row is designed for quick scanning; the sections below preserve the full technical depth without repeating the same wording.
-
-## Featured Build: Kiwi Swerve Drivetrain
-
-The **Kiwi Swerve Drivetrain** is a low-power, affordable three-module omnidirectional drive platform built for robotics competitions and education.
-
-| System | Implementation |
-| --- | --- |
-| Drivetrain | Three independently steered modules |
-| Controller | Raspberry Pi |
-| Software | Python with Kiwi swerve kinematics |
-| Steering | Continuous-rotation servos with encoder feedback |
-| Electronics | Servo HAT, motor drivers, and a 12-bit encoder board |
-| Construction | 3D-printed parts, CNC-machined plates, and accessible hardware |
-| Current status | First prototype validated; V2 in development |
-
-[Open the project collection](https://aloeveraz.github.io/#projects) · [Browse the Dorito repository](https://github.com/AloeVeraZ/Dorito-Swerve)
-
-## Project Collections
-
-| Collection | Projects | Highlights |
-| --- | ---: | --- |
-| **Personal Projects** | 14 | Swerve drivetrains, TrainUI, custom odometry, competition robots, an animatronic AI assistant, electronics, and custom printers |
-| **Internship / Work Projects** | 4 | Reserved cards for internship and professional work that will be added when ready to share |
-| **Club Projects** | 4 | Self-balancing PID robots, ESP32 crab crawlers, and two reserved cards for future club work |
-| **Classes** | 6 | AutoCAD I & II, Mastercam, MATLAB, machine shop, and Autodesk Inventor |
-| **Awards & Research** | 2 | CUNY geopolymer printing research and NSF manufacturing training |
-
-<details>
-<summary><strong>See the complete project index</strong></summary>
-
-### Personal Projects
-
-- Kiwi Swerve Drivetrain
-- AI Eye Animatronic Chatbot
-- Coaxial Swerve Drive
-- Simple Swerve Drive
-- FTC 9384 Robot: EggWUUUHH
-- Tubba Odometry Pods
-- FTC 9384 Robot: Crabby
-- Omnibot
-- Digital Camera
-- Open Mecanum
-- TrainUI
-- ZeroG Hydra 3D Printer
-- Delta 3D Printer
-- Voron V0.2990
-
-### Club Projects
-
-- Self-Balancing Robot
-- Crab Crawler
-- Placeholder 1
-- Placeholder 2
-
-### Internship / Work Projects
-
-- Placeholder 1
-- Placeholder 2
-- Placeholder 3
-- Placeholder 4
-
-### Classes
-
-- AutoCAD I
-- AutoCAD II
-- Mastercam
-- MATLAB
-- MECH 1101 Machine Shop
-- Autodesk Inventor
-
-### Awards & Research
-
-- CUNY Research: 3D Printing With Geopolymers
-- NSF Advanced Manufacturing Training
-
-</details>
-
-## Engineering Toolkit
-
-| Discipline | Tools and Technologies |
-| --- | --- |
-| CAD & Design | AutoCAD, Fusion 360, Autodesk Inventor, SolidWorks, Blender, FEA, rendering, and animation |
-| Manufacturing | FDM/SLA/SLS printing, laser cutting, manual mills and lathes, hand tools, and rapid prototyping |
-| Software & Controls | Python, MATLAB, Arduino, Raspberry Pi, Klipper, and block coding |
-| Web | HTML5, CSS3, JavaScript, JSON, Font Awesome, and GitHub Pages |
-
-## How the Site Works
-
-<table>
-  <tr>
-    <th>Content</th>
-    <td align="center"><strong><code>data.json</code></strong><br>Profile, skills, and projects</td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong><code>app.js</code></strong><br>Rendering and interaction</td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong>Cards, Collections, and Case Studies</strong></td>
-  </tr>
-  <tr>
-    <th>Media</th>
-    <td align="center"><strong><code>assets/</code></strong><br>Photos, GIFs, and graphics</td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong>Project Cards</strong></td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong>Portfolio</strong></td>
-  </tr>
-  <tr>
-    <th>Presentation</th>
-    <td align="center"><strong><code>styles.css</code></strong><br>Responsive visual system</td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong>Cards, Collections, and Modals</strong></td>
-    <td align="center">&rarr;</td>
-    <td align="center"><strong>Portfolio</strong></td>
-  </tr>
-</table>
-
-The site is framework-free and data-driven:
-
-- [`data.json`](./data.json) stores profile information, skills, collections, project summaries, overview copy, technical sections, media, and links.
-- [`app.js`](./app.js) builds the interface, project cards, carousels, collection accordions, modal content, and visual interactions.
-- [`styles.css`](./styles.css) defines the responsive layout, engineering-inspired visual language, animations, and mobile behavior.
-- [`index.html`](./index.html) provides the semantic page structure and modal shell.
-- [`assets/`](./assets/) contains project photos, animated demonstrations, and coursework graphics.
-
-## Add a Project
-
-Copy [`project-template.json`](./project-template.json) into the `projects` list in [`data.json`](./data.json), fill in the project information, and add the image files to `assets`. The card, collection carousel, featured carousel, modal, media, and links are built automatically from that one entry. Set `featured` to `true` and choose a `featuredOrder` if the project should appear in Featured Projects.
-
-## Repository Layout
-
-```text
-.
-├── assets/                  # Project images, GIFs, and coursework art
-├── index.html               # Main portfolio document
-├── styles.css               # Responsive design system and effects
-├── app.js                   # Current rendering and interaction logic
-├── data.json                # Portfolio content and project case studies
-├── pages/                   # Legacy multipage project template
-├── js/                      # Legacy multipage application script
-└── README.md                # Repository documentation
-```
-
-> [!IMPORTANT]
-> The live one-page portfolio uses the root-level `index.html`, `app.js`, `styles.css`, and `data.json`. The `pages/` and `js/` folders are retained as legacy structure and are not the primary implementation.
-
-## Run Locally
-
-This is a static site, so no package installation or build step is required.
+The portfolio is a static site, but it needs a local server so the browser can load the JSON file.
 
 ```bash
-git clone https://github.com/AloeVeraZ/AloeVeraZ.github.io.git
-cd AloeVeraZ.github.io
 python -m http.server 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in a browser.
+Then open [http://localhost:8000](http://localhost:8000).
 
-> [!CAUTION]
-> Do not open `index.html` directly from the filesystem. The browser may block the `data.json` request. Use a local static server so project content loads correctly.
+## Add a project
 
-<details>
-<summary><strong>Alternative local servers</strong></summary>
+1. Add the project images to `assets/`.
+2. Copy the record in `project-example.json` into the `projects` array in `portfolio-data.json`.
+3. Replace the example values and set `category` and `collectionOrder`.
+4. Set `featured` to `true` and add a `featuredOrder` when the project belongs in the first row.
+5. Run the site locally and check the card, project modal, links, and mobile layout.
 
-With Node.js:
-
-```bash
-npx serve .
-```
-
-With PHP:
-
-```bash
-php -S localhost:8000
-```
-
-</details>
-
-## Add or Update a Project
-
-1. Add the project image or GIF to [`assets/`](./assets/).
-2. Add a project record to [`data.json`](./data.json).
-3. Set its `category` and `collectionOrder` so it appears in the intended collection.
-4. For a personal project, include a concise `overview` with `problem`, `method`, and `result` fields.
-5. Add distinct technical `sections` for the deeper engineering narrative.
-6. Include any available GitHub, GrabCAD, video, or project-page links.
-7. Serve the site locally and test the card, modal, media, and mobile layout.
-
-Example structure:
-
-```json
-{
-  "id": "project-slug",
-  "title": "Project Name",
-  "category": "Robotics",
-  "collectionOrder": 1,
-  "summary": "A one-sentence card description.",
-  "image": "assets/project-image.jpg",
-  "tags": ["CAD", "Python", "Controls"],
-  "overview": {
-    "problem": "The engineering need or constraint.",
-    "method": "The high-level design approach.",
-    "result": "The outcome or current status."
-  },
-  "sections": [
-    {"heading": "Challenge", "body": "The detailed project context."},
-    {"heading": "Mechanical Design", "body": "The physical implementation."},
-    {"heading": "Controls", "body": "The software and electronics approach."},
-    {"heading": "Result", "body": "The measured outcome and lessons learned."}
-  ]
-}
-```
-
-## Status
-
-> [!NOTE]
-> The portfolio is actively growing. New project write-ups, CAD resources, media, coursework, and technical documentation are added as builds are completed and documented.
-
----
-
-<div align="center">
-
-[Website](https://aloeveraz.github.io/) · [Projects](https://aloeveraz.github.io/#projects) · [Email](mailto:angelojames2006@gmail.com)
-
-</div>
+Empty links and media fields are skipped by the page, so unfinished material can stay out of the public portfolio until it is ready.

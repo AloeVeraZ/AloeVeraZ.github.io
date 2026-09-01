@@ -1,7 +1,7 @@
-# Auto detect text files and perform LF normalization
+# Keep source files consistent across Windows and Linux.
 * text=auto eol=lf
 
-# Force binary for images
+# Do not rewrite image bytes.
 *.jpg binary
 *.jpeg binary
 *.png binary
