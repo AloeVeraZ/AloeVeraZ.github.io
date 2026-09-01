@@ -413,6 +413,19 @@ main { width: min(var(--site-max-width), calc(100% - clamp(2rem, 6vw, 7rem))); m
 .carousel-arrow { width: 2.25rem; height: 2.25rem; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s, border-color .2s, color .2s; }
 .carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); transform: translateY(-1px); }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
+@keyframes carousel-overdrive-shake {
+    0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+    12% { transform: translate3d(-4px, 2px, 0) rotate(-.12deg); }
+    25% { transform: translate3d(5px, -2px, 0) rotate(.14deg); }
+    38% { transform: translate3d(-5px, -1px, 0) rotate(-.1deg); }
+    52% { transform: translate3d(4px, 2px, 0) rotate(.12deg); }
+    67% { transform: translate3d(-3px, 1px, 0) rotate(-.08deg); }
+    82% { transform: translate3d(3px, -1px, 0) rotate(.06deg); }
+}
+.carousel-overdrive .navbar,
+.carousel-overdrive main {
+    animation: carousel-overdrive-shake .22s linear infinite;
+}
 @keyframes nudge { 50% { transform: scale(.85); } }
 .project-carousel { display: flex; gap: var(--project-grid-gap); margin-top: -8px; padding-top: 8px; padding-bottom: 1.5rem; overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
 .project-carousel::-webkit-scrollbar { display: none; }
@@ -955,12 +968,6 @@ html[data-effects="low"] .featured-project-carousel .project-card {
     opacity: 1;
     transform: none;
     will-change: auto;
-}
-html[data-effects="low"] .circular-project-carousel .project-card {
-    opacity: var(--carousel-ring-opacity, 0);
-    transform:
-        translate3d(var(--carousel-ring-x, 0px), 0, 0)
-        scale(var(--carousel-ring-scale, 1));
 }
 
 @media (max-width: 1000px) {
