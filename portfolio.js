@@ -111,21 +111,20 @@ document.addEventListener('DOMContentLoaded', () => {
         backgroundFadeTimer = 0;
     };
 
-    const wakeHighEffects = (activity = 'cursor') => {
-        if (effectsMode !== 'high') return;
+    const wakeEffectsBackground = (activity = 'cursor') => {
         document.documentElement.classList.remove('effects-background-idle', 'effects-background-click-fading');
         clearBackgroundIdleTimer();
 
         if (activity === 'click') {
             backgroundFadeTimer = window.setTimeout(() => {
                 backgroundFadeTimer = 0;
-                if (effectsMode === 'high' && !document.hidden) {
+                if (!document.hidden) {
                     document.documentElement.classList.add('effects-background-click-fading');
                 }
             }, 1000);
             backgroundIdleTimer = window.setTimeout(() => {
                 backgroundIdleTimer = 0;
-                if (effectsMode === 'high' && !document.hidden) {
+                if (!document.hidden) {
                     document.documentElement.classList.remove('effects-background-click-fading');
                     document.documentElement.classList.add('effects-background-idle');
                 }
@@ -136,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activity === 'swipe-release') {
             backgroundIdleTimer = window.setTimeout(() => {
                 backgroundIdleTimer = 0;
-                if (effectsMode === 'high' && !document.hidden) {
+                if (!document.hidden) {
                     document.documentElement.classList.add('effects-background-idle');
                 }
             }, SWIPE_WAKE_RELEASE_DURATION);
@@ -145,15 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         backgroundIdleTimer = window.setTimeout(() => {
             backgroundIdleTimer = 0;
-            if (effectsMode === 'high' && !document.hidden) {
+            if (!document.hidden) {
                 document.documentElement.classList.add('effects-background-idle');
             }
         }, 2750);
-    };
-
-    const stopHighEffectsIdleClock = () => {
-        clearBackgroundIdleTimer();
-        document.documentElement.classList.remove('effects-background-idle', 'effects-background-click-fading');
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -206,8 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         galaxy.setEnabled(useHighEffects);
         cursor.setEnabled(useHighEffects);
         swipeWake.setEnabled(useHighEffects);
-        if (useHighEffects) wakeHighEffects();
-        else stopHighEffectsIdleClock();
+        wakeEffectsBackground();
         performanceToggle.setAttribute('aria-checked', String(useHighEffects));
         performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
         performanceToggle.title = reason === 'lag'
@@ -238,9 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.hidden) {
             clearBackgroundIdleTimer();
             document.documentElement.classList.remove('effects-background-click-fading');
-            if (effectsMode === 'high') document.documentElement.classList.add('effects-background-idle');
+            document.documentElement.classList.add('effects-background-idle');
         } else {
-            wakeHighEffects();
+            wakeEffectsBackground();
         }
     });
     applyEffectsMode(effectsMode, false, effectsReason);
@@ -254,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let highEffectsTouchSwipeActive = false;
     let touchSwipeReleased = false;
     const queueHighEffectsMovement = event => {
+        wakeEffectsBackground();
         if (effectsMode !== 'high') return;
-        wakeHighEffects();
         latestPointerEvent = event;
         if (pointerFrame) return;
         pointerFrame = requestAnimationFrame(() => {
@@ -290,14 +283,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
             touchSwipeReleased = true;
-            wakeHighEffects('swipe-release');
+            wakeEffectsBackground('swipe-release');
         }, { passive: true });
     });
-    window.addEventListener('pointerdown', () => wakeHighEffects('click'), { passive: true });
-    window.addEventListener('keydown', wakeHighEffects, { passive: true });
+    window.addEventListener('pointerdown', () => wakeEffectsBackground('click'), { passive: true });
+    window.addEventListener('keydown', wakeEffectsBackground, { passive: true });
     window.addEventListener('wheel', () => {
         touchSwipeReleased = false;
-        wakeHighEffects();
+        wakeEffectsBackground();
     }, { passive: true });
     const pageScrollFill = pageScrollProgress.querySelector('.page-scroll-fill');
     let scrollFrame = 0;
@@ -314,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollFrame = 0;
     };
     window.addEventListener('scroll', () => {
-        if (!touchSwipeReleased) wakeHighEffects();
+        if (!touchSwipeReleased) wakeEffectsBackground();
         if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollMotion);
     }, { passive: true });
     window.addEventListener('resize', updateScrollMotion, { passive: true });
@@ -324,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('portfolio-data.json?v=20260901-cleanup')
+    fetch('portfolio-data.json?v=20260901-overview-copy-idle')
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -2007,12 +2000,22 @@ function openModal(project) {
     const overviewTitle = document.getElementById('modal-overview-title');
     overviewLabel.textContent = isCoursework ? 'Coursework' : 'Quick Overview';
     overviewTitle.textContent = isCoursework ? 'What I Did in Class' : 'The Main Parts';
-    overviewGrid.classList.toggle('is-class-rundown', isCoursework);
-    const overviewItems = isCoursework
-        ? [['What I Did', project.classRundown || project.summary]]
-        : project.overview
-        ? [['Why I Made It', project.overview.problem], ['What I Did', project.overview.method], ['How It Turned Out', project.overview.result]]
-        : [];
+    overviewGrid.classList.remove('is-class-rundown');
+    const overviewItems = project.overview
+        ? isCoursework
+            ? [
+                ['What I Needed to Learn', project.overview.problem],
+                ['What I Worked On', project.overview.method],
+                ['What I Took From It', project.overview.result]
+            ]
+            : [
+                ['Why I Made It', project.overview.problem],
+                ['What I Did', project.overview.method],
+                ['How It Turned Out', project.overview.result]
+            ]
+        : (project.sections || [])
+            .slice(0, 3)
+            .map(section => [section.heading, section.body]);
     overviewGrid.innerHTML = overviewItems
         .map(([heading, body], index) => `<article class="modal-overview-item"><span>0${index + 1}</span><h4>${heading}</h4><p>${body}</p></article>`)
         .join('');
