@@ -44,22 +44,22 @@
       "collectionOrder": 1,
       "featured": true,
       "featuredOrder": 1,
-      "summary": "I built this three module drivetrain as a cheaper way to make a robot that can move in any direction.",
+      "summary": "I built this three-module swerve drivetrain to make an omnidirectional robot as inexpensive as possible.",
       "cardSummary": "Most swerve robots use four wheel modules. I wanted to see what I could get from three, since dropping one pod cuts roughly a quarter of the drivetrain cost. The triangular prototype still moves and turns in any direction, and its encoders keep each pod pointed where the Python code expects it.",
       "details": "",
       "image": "assets/kiwi-swerve-prototype.jpg",
       "motionImage": "assets/kiwi-swerve-drive.gif",
       "tags": ["Swerve Drive", "Raspberry Pi", "Python", "3D Printing"],
       "overview": {
-        "problem": "Most competition swerve drives use four modules, special parts, and a lot of money. That can make them hard for smaller teams to build and repair.",
-        "method": "I used three pods that can each turn, picked parts that were easy to find, and used encoders with Python on a Raspberry Pi to control the steering.",
-        "result": "The first robot moved smoothly in any direction with three modules, less power, and cheaper hardware. I am using what I learned from it to make version two."
+        "problem": "Most swerve drivetrains use four modules and expensive specialized parts. My goal was to keep full omnidirectional movement while cutting the cost as much as possible.",
+        "method": "I used three steering pods, COTS parts available from multiple online vendors, and standardized M3 and M4 metric hardware. I also selected the electronics and wrote custom Python code on a Raspberry Pi to control the robot.",
+        "result": "The first prototype proved that three modules can drive, rotate, and change direction smoothly while using less drivetrain hardware than a standard four-module design. Version two is now in progress."
       },
       "sections": [
         {"heading": "First Robot", "body": "This was my first time testing the Kiwi swerve idea with three modules. Everything I learned from it is going into the next version."},
-        {"heading": "Overview", "body": "Kiwi swerve can move in any direction, but it only needs three modules instead of four. I used normal mechanical parts, continuous rotation servos, and encoders to keep the cost down and make repairs easier. I also built the electronics and wrote the Python controls so it could be used for competitions or for teaching robotics."},
-        {"heading": "First Prototype Build", "body": "The first prototype uses gears and bearings from Amazon and ServoCity, so the pods cost less and the parts are easy to replace. I made the structure with 3D printed parts, CNC cut plates, and normal hardware. Each module has a continuous rotation servo and an encoder for steering feedback. An HTD5 belt connects the servo to the pod, while a longer and lighter HTD2 belt drives the wheel. This lets the drive motor and steering servo stay in place while the pod turns."},
-        {"heading": "Electronics", "body": "The robot runs on a Raspberry Pi. Each drive motor has a motor driver rated for 10 amps, a servo HAT controls the steering, and a 12 bit encoder board reads the angle of every module. I chose common parts so the system would be easier to fix or change."},
+        {"heading": "Overview", "body": "Kiwi swerve is an omnidirectional drivetrain that uses three modules instead of the usual four. The purpose of the project was to make a working swerve robot as inexpensive as possible, so I chose COTS parts that can be purchased from multiple online vendors. I also selected the electronics and wrote custom Python code on a Raspberry Pi to control the robot."},
+        {"heading": "First Prototype Build", "body": "The first prototype uses commercially available gears and bearings from vendors such as Amazon and ServoCity, which keeps the pods affordable and makes replacement parts easier to find. I made the structure from 3D-printed components, CNC-cut plates, and standardized M3 and M4 metric hardware. Each module has a continuous-rotation servo and an encoder for steering feedback. An HTD5 belt connects the servo to the pod, while a longer and lighter HTD2 belt drives the wheel. This lets the drive motor and steering servo stay in place while the pod turns."},
+        {"heading": "Electronics", "body": "I selected the electronics around a Raspberry Pi. Each drive motor has a motor driver rated for 10 amps, a servo HAT controls the steering, and a 12-bit encoder board reads the angle of every module. These are COTS components that can be sourced from multiple vendors, which makes the system easier to repair or revise."},
         {"heading": "Programming", "body": "I wrote the controls in Python on the Raspberry Pi. The code takes driver or autonomous commands and calculates what all three modules need to do. It constantly compares the encoder reading with the target angle and corrects the servos while keeping the drive and steering motion lined up."},
         {"heading": "Second Robot: V2 in Progress", "body": "I am working on the second Kiwi swerve robot now. It builds on the mechanical design, electronics, and code from the first prototype."}
       ],

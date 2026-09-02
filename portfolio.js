@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('portfolio-data.json?v=20260901-a301-clarity')
+    fetch('portfolio-data.json?v=20260901-kiwi-clarity')
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
