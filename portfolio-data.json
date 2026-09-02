@@ -44,22 +44,22 @@
       "collectionOrder": 1,
       "featured": true,
       "featuredOrder": 1,
-      "summary": "I built this three-module swerve drivetrain to make an omnidirectional robot as inexpensive as possible.",
-      "cardSummary": "Most swerve robots use four wheel modules. I wanted to see what I could get from three, since dropping one pod cuts roughly a quarter of the drivetrain cost. The triangular prototype still moves and turns in any direction, and its encoders keep each pod pointed where the Python code expects it.",
+      "summary": "Basically, I wanted a cheap swerve robot, so I built Kiwi with three modules instead of four.",
+      "cardSummary": "A normal swerve chassis has four modules, but Kiwi only has three. Leaving out that fourth pod dropped the drivetrain price by about one quarter. It still moves sideways, rotates, and drives at an angle, which is the part I cared about.",
       "details": "",
       "image": "assets/kiwi-swerve-prototype.jpg",
       "motionImage": "assets/kiwi-swerve-drive.gif",
       "tags": ["Swerve Drive", "Raspberry Pi", "Python", "3D Printing"],
       "overview": {
-        "problem": "Most swerve drivetrains use four modules and expensive specialized parts. My goal was to keep full omnidirectional movement while cutting the cost as much as possible.",
-        "method": "I used three steering pods, COTS parts available from multiple online vendors, and standardized M3 and M4 metric hardware. I also selected the electronics and wrote custom Python code on a Raspberry Pi to control the robot.",
-        "result": "The first prototype proved that three modules can drive, rotate, and change direction smoothly while using less drivetrain hardware than a standard four-module design. Version two is now in progress."
+        "problem": "I wasn't building this for competition. I wanted to see whether three pods could do the job without a pile of special parts.",
+        "method": "The gears and bearings are COTS parts I can buy from more than one seller. I used M4 hardware around most of the chassis and M3 for the smaller pieces. I picked the boards myself and wrote the robot code in Python for a Raspberry Pi.",
+        "result": "The first version moves sideways, spins, and drives diagonally. It also showed me what still needed work. Those problems are what I'm using for V2."
       },
       "sections": [
-        {"heading": "First Robot", "body": "This was my first time testing the Kiwi swerve idea with three modules. Everything I learned from it is going into the next version."},
-        {"heading": "Overview", "body": "Kiwi swerve is an omnidirectional drivetrain that uses three modules instead of the usual four. The purpose of the project was to make a working swerve robot as inexpensive as possible, so I chose COTS parts that can be purchased from multiple online vendors. I also selected the electronics and wrote custom Python code on a Raspberry Pi to control the robot."},
-        {"heading": "First Prototype Build", "body": "The first prototype uses commercially available gears and bearings from vendors such as Amazon and ServoCity, which keeps the pods affordable and makes replacement parts easier to find. I made the structure from 3D-printed components, CNC-cut plates, and standardized M3 and M4 metric hardware. Each module has a continuous-rotation servo and an encoder for steering feedback. An HTD5 belt connects the servo to the pod, while a longer and lighter HTD2 belt drives the wheel. This lets the drive motor and steering servo stay in place while the pod turns."},
-        {"heading": "Electronics", "body": "I selected the electronics around a Raspberry Pi. Each drive motor has a motor driver rated for 10 amps, a servo HAT controls the steering, and a 12-bit encoder board reads the angle of every module. These are COTS components that can be sourced from multiple vendors, which makes the system easier to repair or revise."},
+        {"heading": "First Robot", "body": "This was my first time testing the Kiwi swerve idea with three modules. Once it ran, I used it to check steering response, encoder feedback, and how the triangular layout behaved while driving."},
+        {"heading": "Overview", "body": "I wasn't trying to make a competition robot. This was a personal challenge to see if a three-pod layout could work without relying on expensive parts from one company. I used COTS parts that can be bought through multiple vendors and kept the hardware to standard M3 and M4 sizes."},
+        {"heading": "First Prototype Build", "body": "I printed the smaller parts and CNC cut the plates. Each pod has a continuous-rotation servo for steering and an encoder that tells me its angle. The servo turns the pod with an HTD5 belt, while a second, lighter HTD2 belt drives the wheel. Both motors stay fixed in the chassis instead of rotating with the bottom of the pod."},
+        {"heading": "Electronics", "body": "For electronics, I chose a Raspberry Pi, three 10-amp motor drivers, a servo HAT, and a 12-bit encoder board. I wrote the controls in Python. None of it came as a complete kit; I picked out the boards based on what the robot needed and how easy they would be to replace."},
         {"heading": "Programming", "body": "I wrote the controls in Python on the Raspberry Pi. The code takes driver or autonomous commands and calculates what all three modules need to do. It constantly compares the encoder reading with the target angle and corrects the servos while keeping the drive and steering motion lined up."},
         {"heading": "Second Robot: V2 in Progress", "body": "I am working on the second Kiwi swerve robot now. It builds on the mechanical design, electronics, and code from the first prototype."}
       ],
@@ -80,21 +80,21 @@
       "title": "AI Eye Animatronic Chatbot",
       "category": "Robotics",
       "collectionOrder": 15,
-      "summary": "I built a voice activated AI assistant that talks while moving a mechanical eye and eyelids.",
-      "cardSummary": "The eye originally was just a four-servo display model. I turned it into a small assistant that wakes up, listens, answers, and changes its expression while it talks. The Raspberry Pi pauses the servos whenever the microphone is active; otherwise the gears are loud enough to confuse speech recognition.",
+      "summary": "I turned a four-servo animatronic eye into a voice assistant that moves while it talks.",
+      "cardSummary": "The first version of the eye was only made to move around and blink. I wanted it to do something useful, so I connected it to a Raspberry Pi and a local language model. The hardest part wasn't the conversation code. It was stopping the servo noise from ruining the microphone input.",
       "details": "",
       "image": "assets/a-eye-animatronic.jpg",
       "tags": ["Animatronics", "Local LLM", "Python", "Servo Control"],
       "overview": {
-        "problem": "A voice assistant can answer you without feeling like it is really there. Adding moving parts helps, but servo noise can make it harder for the microphone to hear you.",
-        "method": "I made a small eye mechanism that moves in two directions and connected it to upper and lower eyelids. I also timed the movement with the microphone so the servos would not run while it was listening.",
-        "result": "The finished prototype can talk, listen, and react with smooth eye movements. The servo noise does not get in the way of a normal conversation."
+        "problem": "The gears are loud enough for the microphone to hear them. If the eye keeps moving while the assistant listens, speech recognition starts picking up the robot instead of the person talking.",
+        "method": "I pause the four servos whenever the microphone is active. Between listening periods, the software uses eased motion for the eye and both eyelids instead of jumping straight from one position to another.",
+        "result": "It can wake up, listen, answer, blink, and move its eye during a conversation. When I interrupt it, the program stops the response and resets without leaving the mechanism in a strange position."
       },
       "sections": [
-        {"heading": "Challenge", "body": "I wanted to make a voice activated assistant that could listen and answer while also feeling alive. The main problem was moving the eye without letting the servo noise mess with speech recognition."},
-        {"heading": "Mechanical Design", "body": "Two hidden servos move the eye up, down, left, and right from a small mechanism mounted to a monitor arm. The upper and lower eyelids are linked so they move together, and I reinforced the pivots to keep everything steady."},
-        {"heading": "Controls", "body": "The software handles the wake word, speech recognition, and conversation through a local large language model. Cosine easing makes the eye and eyelids move smoothly, and the servos pause whenever the microphone is listening so they do not add noise."},
-        {"heading": "Result", "body": "The finished prototype can wake up, listen, talk, be interrupted, and reset in real time. The smooth eye movement and blinking make it feel more natural without hurting the voice controls."}
+        {"heading": "Why I Added the Assistant", "body": "I already had a working eye mechanism, but it was basically a display piece. Giving it a wake word and a voice made the movement feel like part of an actual character instead of a looped animation."},
+        {"heading": "Mechanical Design", "body": "Two servos behind the eye handle left, right, up, and down. Two more move the eyelids. I linked the upper and lower lids and reinforced the pivots after seeing how much they flexed during faster motion."},
+        {"heading": "Controls", "body": "A local language model handles the conversation, and the Raspberry Pi takes care of the wake word and speech recognition. I used cosine easing on the servos because normal straight-line moves looked stiff. The servos shut off while the microphone is listening."},
+        {"heading": "What Worked", "body": "The assistant can be interrupted while it is speaking, which was important to me because waiting through an entire wrong response gets annoying. It returns to listening, moves again when it is safe, and keeps the mechanical noise out of the microphone."}
       ],
       "links": {
         "github": "",
@@ -108,22 +108,22 @@
       "title": "Coaxial Swerve Drive",
       "category": "Robotics",
       "collectionOrder": 3,
-      "summary": "I designed this small FTC swerve module to use cheaper parts and fit several common hardware systems.",
-      "cardSummary": "FTC teams do not have much room or money for swerve. My first coaxial pod fit within a four-inch cube, but the specialty hardware made a full robot too expensive. The second version uses easier-to-find bearings and gears, plus mounting holes for GoBILDA, REV, and AndyMark parts.",
+      "summary": "I designed two compact coaxial swerve pods for FTC, then reworked the expensive first version around parts that were easier to buy.",
+      "cardSummary": "My first pod fit inside a four-inch cube and worked, but one module cost about $350. Four of them would put the drivetrain near $1,300, which made no sense for the project. V2 is slightly wider, uses generic parts, and mounts to GoBILDA, REV, or AndyMark hardware.",
       "details": "",
       "image": "assets/coaxial-swerve.jpg",
       "motionImage": "assets/coaxial-swerve-field-test.gif",
       "tags": ["FTC", "Swerve Drive", "CAD", "3D Printing"],
       "overview": {
-        "problem": "A lot of FTC swerve modules are hard to fit inside a robot, expensive to copy, and made for only one type of hardware.",
-        "method": "I made two small coaxial pod designs. The first one proved that the layout worked, and the second one used more common parts and added more mounting options.",
-        "result": "The second design stayed small, cost less to repair, and became easier to use with hardware that teams already own."
+        "problem": "Four swerve pods have to fit inside an 18-inch FTC chassis, and paying $350 for each one was out of the question.",
+        "method": "V1 proved the coaxial setup worked. For V2 I changed the body, replaced hard-to-find gears and bearings, and added mounting holes for several common channel systems.",
+        "result": "It ended up a little wider, by less than a quarter inch. That trade was worth it because the new pod is cheaper and much easier to mount or repair."
       },
       "sections": [
-        {"heading": "Challenge", "body": "Many FTC swerve modules are too large or expensive for a team to use. I wanted to make a smaller coaxial pod that could fit inside a competition robot without needing a bunch of special parts."},
-        {"heading": "First Prototype", "body": "The first design fit inside a cube measuring four inches on each side and combined a printed structure with shafts, gears, and bearings. The drivetrain used four pods with one motor and one servo per module, proving the steering and drive arrangement worked as a complete chassis."},
-        {"heading": "Second Prototype", "body": "The second version replaced expensive specialty hardware with generic Amazon and AliExpress parts. The module changed from an L shape to a rectangular pod, added mounting support for GoBilda, REV, and AndyMark systems, and grew by less than a quarter inch."},
-        {"heading": "Result", "body": "The first pod worked, but it cost about $350 and put the full chassis near $1,300. The second design lowered the cost a lot and made the module easier to mount, repair, and keep developing."}
+        {"heading": "V1", "body": "The first pod squeezed into a four-inch cube. It used one motor for the wheel and one servo for steering, with the drive power passing through the center of the module. Mechanically it did what I wanted, but the parts list was the problem."},
+        {"heading": "The Cost Problem", "body": "One V1 pod was around $350. Once I multiplied that by four, I knew I had to redesign it instead of pretending the price was reasonable for FTC."},
+        {"heading": "V2", "body": "I changed the L-shaped body into a rectangular pod and switched to bearings and gears sold through Amazon and AliExpress. I included mounting patterns for GoBILDA, REV, and AndyMark because different teams already own different building systems."},
+        {"heading": "Where It Ended Up", "body": "The redesign is not dramatically smaller, but that was never the only goal. It stays compact, costs much less to reproduce, and no longer forces a team to rebuild the surrounding chassis around one uncommon part."}
       ],
       "links": {
         "github": "",
@@ -137,21 +137,21 @@
       "title": "Simple Swerve Drive",
       "category": "Robotics",
       "collectionOrder": 4,
-      "summary": "I made this differential swerve chassis to fit FTC size rules, use common hardware, and stay within an FTC budget.",
-      "cardSummary": "In differential swerve, the same two motors drive the wheel and rotate its pod. Getting that mechanism inside an 18-inch FTC chassis took several layouts, including versions for REV and GoBILDA motors. I ended up with two powered pods and two passive omni wheels, which kept the design compact without giving up traction.",
+      "summary": "I redesigned a differential swerve layout until it fit the FTC size limit and worked with either REV or GoBILDA motors.",
+      "cardSummary": "Differential swerve uses the same two motors for driving and steering, which saves actuators but makes the gearbox harder to package. My first chassis missed the FTC limit by a quarter inch. Rotating the motors and using only two powered pods finally got it inside the 18-inch box.",
       "details": "",
       "image": "assets/simple-swerve.jpg",
       "tags": ["FTC", "Differential Swerve", "Gearbox Design", "CAD"],
       "overview": {
-        "problem": "Differential swerve lets a robot move really well, but the gears, size, and number of parts make it hard to use in FTC.",
-        "method": "I simplified a working differential layout, put the bearings directly inside the gears, and moved the motors around until the chassis fit the size rules.",
-        "result": "The finished two pod chassis works with either REV or GoBILDA hardware. All four CAD versions are saved in the project repository."
+        "problem": "I wanted to build swerve between competition seasons, but a full four-pod setup was too expensive and difficult to fit into an FTC chassis.",
+        "method": "I started from FTC 11115's differential idea, simplified the gearbox, and used M3x45 bolts with bearings placed inside the gears. When the first layout measured 18.25 inches, I turned the motors 90 degrees.",
+        "result": "The final concept uses two powered pods and two passive omni wheels. I saved four CAD versions, including layouts for REV UltraPlanetary and GoBILDA Yellow Jacket motors."
       },
       "sections": [
-        {"heading": "Challenge", "body": "After the 2023 to 2024 NYC FTC championship, I wanted to build a swerve robot between seasons. The hard parts were fitting everything inside the robot and keeping the design affordable enough for FTC."},
-        {"heading": "Development", "body": "I started by studying differential swerve and making a simpler version of FTC 11115's design. I rebuilt the gearbox around M3x45 bolts and bearings placed inside the gears, which cut down on special hardware without changing how the main mechanism worked."},
-        {"heading": "Chassis Iteration", "body": "The first layout measured 18.25 inches, so the motors were rotated 90 degrees with REV Ultra 90 gearboxes to meet FTC sizing. The chassis used two pods, omni wheels at the other corners, and space for a slide mechanism. Version two added cheaper configurations for REV Ultraplanetary and GoBilda Yellow Jacket motors."},
-        {"heading": "Result", "body": "The project is finished. The repository has the full write up, development pictures, and four CAD packages that anyone can download."}
+        {"heading": "Why Differential Swerve", "body": "Each pod has two motors, but neither motor belongs only to steering or driving. Their combined motion controls the wheel, and their difference turns the pod. I liked the idea because it gets both jobs out of the same pair of motors."},
+        {"heading": "Simplifying the Gearbox", "body": "The design I studied worked, but I did not want to copy every special piece. I rebuilt the gear stack around long M3 bolts and let the gears carry their own bearings. That kept the basic differential action while making the pod easier for me to manufacture."},
+        {"heading": "Fixing the Size", "body": "My first complete layout came out at 18.25 inches, so it would not pass inspection. I rotated the motors 90 degrees with REV Ultra 90 gearboxes and used omni wheels at the two unpowered corners. Later CAD versions added cheaper motor options."},
+        {"heading": "Files", "body": "I finished four versions before closing the project. The repository includes the development pictures, my write-up, and every CAD package rather than only showing the last design."}
       ],
       "links": {"github": "", "grabcad": "", "video": "", "projectUrl": "https://github.com/AloeVeraZ/diffy-swerve"}
     },
@@ -160,21 +160,21 @@
       "title": "FTC 9384 Robot: EggWUUUHH",
       "category": "Robotics",
       "collectionOrder": 5,
-      "summary": "This was Team 9384's CENTERSTAGE robot, which we rebuilt four times to score pixels, launch a plane, and climb.",
-      "cardSummary": "EggWUUUHH was the last FTC robot I worked on in high school, and it changed constantly. We rebuilt it four times during CENTERSTAGE as the intake, lift, outtake, launcher, and climber exposed new problems at practice and competition. The final robot could do every main game task, but the useful part of the project is the record of how we got there.",
+      "summary": "EggWUUUHH was Team 9384's CENTERSTAGE robot and the last FTC robot I worked on in high school.",
+      "cardSummary": "We rebuilt this robot four times in one season. Every practice and competition found something new in the intake, lift, outtake, launcher, or climber, so the design never stayed finished for long. By the last version it could complete every major CENTERSTAGE task.",
       "details": "",
       "image": "assets/ftc-2023-24-eggwuuhh.jpg",
       "tags": ["FTC 9384", "Mecanum", "Mechanism Design", "Competition Robotics"],
       "overview": {
-        "problem": "CENTERSTAGE needed one robot to pick up pixels, place them on the backdrop, launch a plane, and climb. We knew the design would have to change as we tested it during the season.",
-        "method": "We tested each part of the robot on its own and changed the chassis, lift, intake, outtake, and endgame parts whenever a problem showed up in testing or at a match.",
-        "result": "After four versions, we had a robot that worked reliably and could do every major part of the game."
+        "problem": "CENTERSTAGE asked for several mechanisms on one FTC chassis: collecting pixels, scoring on the backdrop, launching the paper plane, and climbing at the end of a match.",
+        "method": "We treated every mechanism as something that could change. If a part jammed, flexed, or missed its target during testing, we rebuilt it instead of working around the problem in software.",
+        "result": "Version four was the reliable one. It combined the systems we kept from earlier builds with the fixes we learned at practice and competition."
       },
       "sections": [
-        {"heading": "Challenge", "body": "For CENTERSTAGE, the robot had to pick up and score pixels on the backdrop, launch a paper plane, and climb at the end of the match. We needed something we could keep changing quickly during the season."},
-        {"heading": "Core Systems", "body": "The robot used a custom mecanum chassis made from sheet aluminum, a lift built from stacked drawer slides with printed spacers and pulleys, and an active intake with three stages. The backdrop outtake evolved through multiple pivot and pincher designs as testing exposed alignment and reliability issues."},
-        {"heading": "Endgame and Autonomous", "body": "A plane launcher powered by a spring handled the season's launch task, while an autonomous pixel pincher improved repeatable placement. The final climbing system paired a winch with pivoting hooks and passive rubber assistance."},
-        {"heading": "Result", "body": "After four major versions, we had a reliable competition robot with a strong lift, intake, outtake, launcher, and climber. The CAD and engineering portfolio show how every version changed."}
+        {"heading": "Chassis and Lift", "body": "We made the mecanum chassis from sheet aluminum. The lift used stacked drawer slides, printed spacers, and printed pulleys. It went through several small changes because any looseness at the bottom became a much larger movement at full height."},
+        {"heading": "Intake and Outtake", "body": "The intake moved pixels through three stages before handing them to the outtake. Our backdrop mechanism changed more than once; early pivot and pincher ideas looked fine off the robot but had alignment problems once we tried to score repeatedly."},
+        {"heading": "Endgame", "body": "A spring-powered launcher handled the paper plane. For climbing, we ended up using a winch, pivoting hooks, and passive rubber assistance. Those parts had to fit without blocking the mechanisms we used during the first part of the match."},
+        {"heading": "Four Versions", "body": "The finished robot matters, but the four versions tell the better story. Our CAD and engineering portfolio show what failed, what stayed, and how the competition robot slowly became dependable."}
       ],
       "links": {
         "github": "",
@@ -195,9 +195,9 @@
       "image": "https://raw.githubusercontent.com/AloeVeraZ/tubba-odometry-/main/assets/images/assembly-render.png",
       "tags": ["FTC", "Odometry", "Robot Localization", "CAD"],
       "overview": {
-        "problem": "We needed the robot to track its position for autonomous and driver assistance, but small FTC odometry pods were not common yet. The choices we had were expensive, hard to fit, or still needed extra parts designed by the team.",
-        "method": "I designed a compact pod with a passive omni wheel measuring 2 inches in diameter and an encoder with a hollow bore. I built the plates, shaft support, preload system, and mounts around Team 9384's chassis, then helped calibrate the pods as part of the robot's localization system.",
-        "result": "We installed the finished pods on EggWUUUHH and used them in competition. They tracked the robot consistently, made autonomous paths more accurate, and gave the code position feedback during driver control."
+        "problem": "Back then, there weren't many small FTC odometry pods I could just buy. The ones I found were either expensive, awkward to fit, or still needed custom parts.",
+        "method": "I built mine around a two-inch passive omni wheel and a through-bore encoder. I also made the plates, shaft support, spring preload, and mounts to fit our chassis, then helped work through the calibration.",
+        "result": "We ran them during competition. They gave the code a steadier position estimate and made our autonomous paths more repeatable."
       },
       "sections": [
         {"heading": "Challenge", "body": "Good odometry takes more than putting an encoder on a wheel. The pod had to fit inside the robot, stay against the field, avoid dragging sideways, protect the sensor, and keep giving the same readings through hits and fast direction changes during a match."},
@@ -334,8 +334,8 @@
       "category": "3D Printing",
       "collectionOrder": 12,
       "featured": true,
-      "summary": "I am building this large CoreXY printer for good print quality, automatic calibration, and reliable hardware.",
-      "cardSummary": "Hydra is my large-format CoreXY build, and the main goal is consistency. The bed sits on three independently adjusted points, while a Beacon probe handles tramming and first-layer measurements. I have also added the smaller things that matter day to day—filament cutting, sensors, lighting, and a high-flow toolhead—even though the printer is still being finished.",
+      "summary": "I am building Hydra as a large CoreXY printer that I won't need to babysit constantly.",
+      "cardSummary": "The bed has three powered adjustment points, and a Beacon probe checks both the bed and first layer. I also added a filament cutter, enclosure sensors, lights, and a high-flow toolhead. It is still a work in progress, but the motion and calibration systems already run.",
       "details": "",
       "image": "assets/zerog-hydra.jpg",
       "tags": ["CoreXY", "Klipper", "Auto Tramming", "Toolhead Design"],
@@ -483,20 +483,20 @@
       "title": "AutoCAD II",
       "category": "Coursework",
       "collectionOrder": 2,
-      "summary": "This class went further into inch and metric drawings, reusable title blocks, 3D geometry, and a final with several parts.",
-      "cardSummary": "The second AutoCAD class added inch and metric drawing sets, auxiliary views, reusable title blocks, and 3D solids. I used sweeps, revolves, lofts, and Boolean tools, then had to present the results consistently across multiple sheets. That was the first time the organization of a drawing package felt as important as the geometry.",
+      "summary": "AutoCAD II moved past single drawings and into larger inch and metric drawing sets, reusable layouts, and 3D parts.",
+      "cardSummary": "This class was where AutoCAD started feeling less like a drafting exercise and more like a complete drawing package. I had to keep several sheets organized, reuse the same title block, and make the 2D and 3D work follow one format. A good model was not enough if the dimensions and layouts were hard to follow.",
       "classRundown": "Created advanced inch and metric drawings, reusable title blocks, 3D geometry, revisions, and a multiple part final project.",
       "details": "",
       "image": "assets/class-autocad-ii.png",
       "tags": ["AutoCAD", "3D Geometry", "Technical Drawings", "Title Blocks"],
       "overview": {
-        "problem": "The second AutoCAD class had more complicated drawings, different unit systems, and several assignments that all needed the same clean format.",
-        "method": "I worked through advanced exercises, reusable title blocks, 3D geometry, revisions, and a final project made up of several drawings.",
-        "result": "I became more comfortable organizing larger sets of drawings and keeping the dimensions, layouts, and formatting consistent."
+        "problem": "The assignments were getting too large to treat every sheet as its own file. Inch and metric drawings also had to stay consistent even though their standards were different.",
+        "method": "I built reusable title blocks, worked with auxiliary views, and modeled solids with sweeps, revolves, lofts, and Boolean operations. The final was split across several connected drawings.",
+        "result": "By the end, I was paying attention to the order of the sheets and the way someone else would read them, not only whether the geometry was correct."
       },
       "sections": [
-        {"heading": "Coursework", "body": "I completed chapter exercises, homework, tests, and a final that was split into several stages. The assignments included more complicated 2D and 3D work."},
-        {"heading": "Skills Developed", "body": "The work included different unit systems, reusable title blocks, revisions, 3D geometry, and keeping every drawing formatted the same way."}
+        {"heading": "Coursework", "body": "The regular work included chapter exercises, homework, and tests, followed by a final that was turned in over several stages. Some sheets were 2D drawings and others came from 3D geometry, so I had to keep both sides of the work organized."},
+        {"heading": "What Changed From AutoCAD I", "body": "AutoCAD I taught me the commands. AutoCAD II made me use those commands across a group of related drawings, make revisions without breaking the format, and think about how the full set would look when it was printed."}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/autocad/autocad-ii/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -505,22 +505,22 @@
       "title": "Mastercam",
       "category": "Coursework",
       "collectionOrder": 3,
-      "summary": "I completed seven Mastercam tutorials that turned part drawings into simulated toolpaths and CNC programs.",
-      "cardSummary": "Mastercam connected the CAD work I already knew to what a CNC mill actually needs. Across seven tutorials, I set up stock and work coordinates, chose tools and feeds, built operations, and checked them with backplot and simulation. Only after that did I post the NC code.",
+      "summary": "Seven Mastercam projects taught me how to take part geometry, plan the machining, and post usable CNC code.",
+      "cardSummary": "I already knew how to draw a part, but Mastercam made me decide how a mill would actually cut it. Every tutorial started with stock and a coordinate system, then moved through tools, feeds, operations, and simulation. I did not post the NC file until the backplot made sense and the toolpath cleared the stock correctly.",
       "classRundown": "Completed seven CAM tutorials covering stock setup, tool selection, milling operations, toolpath simulation, and posted CNC code.",
       "details": "",
       "image": "assets/class-mastercam-toolpath.png",
       "motionImage": "assets/class-mastercam.gif",
       "tags": ["Mastercam", "CNC", "CAM", "Toolpaths"],
       "overview": {
-        "problem": "I already knew how to model parts in CAD, but I still needed to learn how to turn those models into safe CNC operations.",
-        "method": "I created stock setups, selected tools, programmed milling operations, simulated each toolpath, and posted the results as CNC code.",
-        "result": "The class taught me the full CAM process and prepared me to use those skills later on real CNC machines."
+        "problem": "A CAD model does not tell the machine which cutter to use, where the stock begins, or what order the features should be cut in. Those choices were new to me.",
+        "method": "For each tutorial, I defined the stock, set the work origin, chose the tools, entered feeds and speeds, and built the operations one at a time. Backplot and simulation came before posting.",
+        "result": "The class gave me a process I could follow later at a real machine. It also showed me why a part that looks simple in CAD can still be slow or awkward to manufacture."
       },
       "sections": [
-        {"heading": "Coursework", "body": "I took this class during my freshman year after already learning some CAD. It taught me the manufacturing choices needed to turn a model into instructions for a CNC machine."},
-        {"heading": "Process", "body": "Projects covered 2D and 3D machining strategies, toolpath creation, stock setup, feeds and speeds, tool selection, and simulation. Each assignment connected model geometry to the physical sequence a mill would follow."},
-        {"heading": "Result", "body": "The class helped me understand the full process from CAD to CAM and how a design can change machining time, tool access, surface finish, and how easy a part is to make."}
+        {"heading": "Starting Point", "body": "I took Mastercam during my freshman year after learning some CAD. The geometry felt familiar, but everything around it was different because I now had to think about the cutter, the stock, and the order of operations."},
+        {"heading": "Seven Tutorials", "body": "The projects covered both 2D and 3D strategies. I set up pockets, contours, and other milling paths, checked tool access, and watched the simulated cut for crashes or wasted motion before creating the machine code."},
+        {"heading": "What I Took From It", "body": "CAM made me look at designs differently. Tool reach, setup time, surface finish, and the number of operations can matter just as much as whether the model itself is correct."}
       ],
       "media": [
         {"type": "gif", "src": "assets/class-mastercam.gif", "label": "Mastercam toolpath simulation"}
@@ -532,21 +532,21 @@
       "title": "MATLAB",
       "category": "Coursework",
       "collectionOrder": 4,
-      "summary": "I used MATLAB scripts, functions, matrices, and graphs to solve math and engineering assignments.",
-      "cardSummary": "I used MATLAB for more than a set of small equation exercises. Seven projects covered things such as orbital motion, atmospheric models, GPU data, audio synthesis, and demographic trends, alongside the regular labs and exams. Writing the work as functions and plots helped me see how an engineering calculation can become a reusable tool.",
+      "summary": "I used MATLAB for engineering calculations, data sets, plots, and seven projects that went beyond the normal weekly labs.",
+      "cardSummary": "The class started with scripts, matrices, and functions, but the larger projects were the useful part for me. I worked with orbital motion, atmospheric models, GPU data, generated audio, and demographic trends. Turning each problem into code made it easier to rerun the calculation with different inputs instead of solving it from scratch every time.",
       "classRundown": "Wrote scripts and reusable functions using matrices, imported data, engineering calculations, and plots across several class projects.",
       "details": "",
       "image": "assets/class-matlab-gpu.png",
       "tags": ["MATLAB", "Data Analysis", "Engineering Computing", "Visualization"],
       "overview": {
-        "problem": "I wanted to go beyond basic Python and learn a program made for engineering math, data, and graphs.",
-        "method": "I wrote scripts and functions that used matrices, imported data, solved math problems, and created plots for several class projects.",
-        "result": "By the end of the class, I could use MATLAB to organize calculations, look at data, and explain the results with graphs."
+        "problem": "I had written some Python before, but I had not used a language built around matrices and engineering data. MATLAB handled those problems in a different way.",
+        "method": "I wrote scripts and reusable functions, imported data, and used plots to check whether the output actually matched the problem. The projects gave me much better practice than isolated equations did.",
+        "result": "I finished the class able to turn a longer calculation into a program, test several cases quickly, and show the answer in a graph that another person could read."
       },
       "sections": [
-        {"heading": "Coursework", "body": "I took this class during my freshman year after learning some basic Python. MATLAB used different syntax and focused more on solving problems with numbers."},
-        {"heading": "Computing Skills", "body": "I wrote scripts and reusable functions that worked with matrices, arrays, and organized calculations. MATLAB also let me study data and test math relationships quickly."},
-        {"heading": "Application", "body": "I used plots and graphs to make the answers easier to read and explain. The class showed me how programming can work with math models and engineering data."}
+        {"heading": "Learning MATLAB", "body": "I took the class during my freshman year. Knowing a little Python helped with the logic, but MATLAB's syntax and matrix-first approach took some adjustment."},
+        {"heading": "Projects", "body": "Seven larger assignments covered very different subjects, including an orbit, an atmosphere model, GPU performance data, audio synthesis, and population trends. That variety forced me to figure out what the data meant before deciding how to code it."},
+        {"heading": "Plots and Functions", "body": "I used functions when a calculation needed to run more than once, then plotted the results to catch mistakes and explain what changed. A strange curve was often the first sign that I had made a bad assumption or entered the wrong units."}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/matlab/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -555,20 +555,20 @@
       "title": "MECH 1101 Machine Shop",
       "category": "Coursework",
       "collectionOrder": 5,
-      "summary": "My group started with a blank metal plate and machined it into a finished and inspected part.",
-      "cardSummary": "Our MECH 1101 project began as a blank aluminum plate. Over several shop sessions, my group laid it out, drilled and finished the holes, cut a square notch, tapped threads, filed the edges, and checked the final dimensions. It was a simple part, but it made the connection between a drawing, a machining sequence, and an inspection very real.",
+      "summary": "My group machined a blank aluminum plate into a finished part, then inspected every hole, edge, and dimension.",
+      "cardSummary": "The part looked simple on the drawing, but it needed several different hole operations and a square notch. We had to lay everything out before cutting, keep track of which holes were tapped or finished another way, and leave enough material to file the edges. The final inspection showed how one early mistake could carry into the rest of the work.",
       "classRundown": "Machined a plate from blank stock through layout, drilling, tapping, hole finishing, notching, filing, sanding, and final inspection.",
       "details": "",
       "image": "assets/class-machine-shop.jpg",
       "tags": ["Machining", "Drilling", "Tapping", "Inspection"],
       "overview": {
-        "problem": "Our team had to turn a blank metal plate into a finished part while learning how to work accurately and safely in the machine shop.",
-        "method": "We laid out the part, drilled and finished the holes, cut the notch, filed and sanded the edges, and inspected the final dimensions.",
-        "result": "The project gave me experience with common shop tools and showed me how a small mistake in one step can affect the final part."
+        "problem": "None of us could hide a bad setup with software. If a hole was misplaced or cut too large, the aluminum plate stayed that way.",
+        "method": "We marked the layout, drilled the starting holes, and then tapped, reamed, countersunk, or counterbored them as required. The notch and outside edges were finished by hand before inspection.",
+        "result": "I became more comfortable using the shop tools, but the larger lesson was planning the order of the work. Doing a correct operation at the wrong time could still make the next step harder."
       },
       "sections": [
-        {"heading": "Class Project", "body": "Our group turned a blank metal plate into a measured part with four types of holes, a square notch, finished edges, and checked dimensions."},
-        {"heading": "Skills Developed", "body": "We laid out, drilled, tapped, reamed, countersunk, counterbored, filed, sanded, and inspected the part."}
+        {"heading": "Class Project", "body": "We started with one rectangular aluminum blank. By the end it had four kinds of finished holes, a square notch, straight edges, and dimensions that could be checked against the print."},
+        {"heading": "Shop Work", "body": "I practiced layout, drilling, tapping, reaming, countersinking, and counterboring on the same part. We also filed and sanded by hand, which took more patience than simply running another machine operation."}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/mech-1101-machine-shop/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -577,20 +577,20 @@
       "title": "Autodesk Inventor",
       "category": "Coursework",
       "collectionOrder": 6,
-      "summary": "I used Inventor to make parts, assemblies, drawings, presentations, and a stress analysis.",
-      "cardSummary": "Inventor let me follow a design farther than I had in my earlier CAD classes. I built parametric parts, sheet-metal flat patterns, constrained assemblies, exploded presentations, ANSI drawings, and FEA studies. More than 200 working files went into the class archive, including the bottle assembly capstone.",
+      "summary": "Inventor was the class where I took CAD parts all the way into assemblies, drawings, exploded views, and a stress test.",
+      "cardSummary": "I made more than 200 working files during this class. The assignments moved between parametric parts, sheet metal, assemblies, ANSI drawings, presentations, and FEA instead of staying on one kind of model. My bottle assembly was the capstone that pulled most of those pieces together.",
       "classRundown": "Modeled parametric parts and assemblies, then created manufacturing drawings, exploded views, presentations, and a static stress analysis.",
       "details": "",
       "image": "assets/class-inventor.png",
       "tags": ["Inventor", "Parametric CAD", "Assemblies", "FEA"],
       "overview": {
-        "problem": "I wanted to get better at parametric CAD and understand how parts, assemblies, drawings, presentations, and simulations all connect.",
-        "method": "I modeled parts, constrained assemblies, created exploded views and manufacturing drawings, and completed a static stress analysis.",
-        "result": "The class made me better at organizing larger CAD projects and taking a design from separate parts to a fully documented assembly."
+        "problem": "Making one part was familiar by this point. Keeping a full assembly organized, editable, and documented was the part I still needed to practice.",
+        "method": "I built the models with dimensions and constraints, assembled them, and then made the drawings and exploded presentations from the same files. One assignment also used static stress analysis.",
+        "result": "I got much better at changing an early dimension without breaking everything that depended on it. The class also made file organization matter because every drawing pointed back to another model."
       },
       "sections": [
-        {"heading": "Coursework", "body": "The homework, class projects, midterm, mini project, and final covered part modeling, assembly constraints, drawings, and presentations."},
-        {"heading": "Skills Developed", "body": "I worked with parametric features, assembly constraints, exploded views, manufacturing drawings, revision history, and static stress analysis."}
+        {"heading": "Coursework", "body": "The homework, midterm, mini project, and final all built on each other. I went from individual features to constrained assemblies, then used those assemblies for drawings and presentations."},
+        {"heading": "What I Practiced", "body": "The class covered parametric features, sheet-metal flat patterns, exploded views, revision history, and a basic static stress study. The bottle project was the best test because it had enough parts for small mistakes to show up later."}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-2/inventor/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -599,18 +599,18 @@
       "title": "Geopolymer Research",
       "category": "Awards & Certificates",
       "collectionOrder": 1,
-      "summary": "I converted an Ender 5 Plus into a paste-extrusion printer while my research group studied printable fly-ash geopolymers and their potential to capture carbon dioxide.",
-      "cardSummary": "Paste extrusion is closer to squeezing concrete from a nozzle than feeding plastic filament into a hot end. For our fly-ash geopolymer research, I converted an Ender 5 Plus with a custom carriage, reinforced hose, peristaltic pump, second controller board, Raspberry Pi, and Klipper. While the group tested mixtures for printability and CO2 adsorption, I worked on making the machine place the dense material consistently.",
+      "summary": "I rebuilt an Ender 5 Plus for paste extrusion while our group tested fly-ash geopolymer mixes for printing and carbon-dioxide adsorption.",
+      "cardSummary": "This printer does not melt plastic. It pushes an uncured geopolymer paste through a hose and nozzle, so the material behaves more like wet concrete. My part of the research was converting the machine and getting that heavy mixture to come out at a useful, repeatable rate.",
       "details": "",
       "image": "assets/cuny-geopolymer-research.png",
       "imagePresentation": "certificate",
       "tags": ["CUNY Research", "Geopolymers", "Additive Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "Research Goal", "body": "Our group studied alkali-activated fly-ash geopolymers as lower-carbon construction materials. We compared mixtures for two related uses: holding their shape during 3D printing and developing enough internal surface area to adsorb carbon dioxide."},
-        {"heading": "What Paste Extrusion Means", "body": "A normal FDM printer melts plastic filament. Paste extrusion instead meters a thick, uncured material through a hose and nozzle, more like a controlled concrete pump. The mixture has to flow while it is under pressure, then stay in place as soon as the nozzle deposits it."},
-        {"heading": "Ender 5 Plus Conversion", "body": "I rebuilt an Ender 5 Plus around that process. The conversion uses a custom toolhead carriage, reinforced PTFE feed hose, an external peristaltic pump, a second controller board, and a Raspberry Pi running Klipper. I also kept CR Touch leveling and made slicing profiles for a material that cannot retract like filament."},
-        {"heading": "Testing the Material", "body": "We adjusted the fly ash, potassium silicate, potassium hydroxide, and water content until the paste could move through the system and retain a printed shape. Separate samples with porous additives were cured and tested as part of the carbon-dioxide adsorption study."},
-        {"heading": "My Role", "body": "I was responsible for the printer modification and system integration, and I also worked with the materials research team. The linked repository includes the machine configuration, research posters, formulation notes, and a video showing the mixing and extrusion tests."}
+        {"heading": "What We Were Testing", "body": "We worked with alkali-activated fly ash as a possible lower-carbon construction material. One question was whether a mixture could hold its shape after printing. The other was whether a more porous version could adsorb carbon dioxide after curing."},
+        {"heading": "Why Paste Is Different", "body": "Filament is solid until the hot end melts it. Our geopolymer started as a thick paste, which meant it had to move under pressure but stop flowing once it reached the print bed. Too stiff and the pump struggled; too wet and the layer flattened."},
+        {"heading": "Changing the Printer", "body": "I kept the Ender 5 Plus frame and motion system, then replaced the normal toolhead with my own carriage and a reinforced PTFE hose. An external peristaltic pump moved the paste. A second controller board and a Raspberry Pi running Klipper handled the added hardware, while CR Touch still leveled the bed."},
+        {"heading": "Mix and Print Tests", "body": "We changed the amounts of fly ash, potassium silicate, potassium hydroxide, and water between tests. I watched how each mix traveled through the hose and what happened after it left the nozzle. Other samples included porous additives for the adsorption work."},
+        {"heading": "My Part", "body": "The printer conversion and system integration were my main responsibility, although I also helped with the material tests. I documented the configuration, mixture notes, posters, and extrusion videos so the machine work and the research results stayed connected."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/IKa7OI-kLgc?enablejsapi=1&playsinline=1&rel=0", "label": "Research presentation"}
@@ -622,18 +622,18 @@
       "title": "City Tech & NYU Summer Camp",
       "category": "Awards & Certificates",
       "collectionOrder": 2,
-      "summary": "I completed a month-long City Tech and NYU program that moved from materials analysis into CAD, additive manufacturing, CNC machining, metrology, and product development.",
-      "cardSummary": "From May 27 to June 26, 2025, I moved between City Tech and NYU labs for an advanced materials and manufacturing program. One week might involve SEM/EDS or optical microscopy; another meant programming a CNC mill, printing parts, using SolidWorks, or inspecting geometry on a CMM. The capstone tied those lab sessions together by asking us to present the work as part of a product-development process.",
+      "summary": "This month-long summer program moved between materials labs, CAD, several kinds of 3D printing, CNC machining, inspection, and product development.",
+      "cardSummary": "The subject changed almost every week. I went from looking at microstructures with microscopes to programming a mill, printing parts, and checking dimensions on a CMM. The capstone was where those separate lab sessions finally came together as one product-development process.",
       "details": "",
       "image": "assets/nsf-manufacturing-camp.png",
       "imagePresentation": "certificate",
       "tags": ["City Tech", "NYU", "Advanced Manufacturing", "Materials Testing"],
       "sections": [
-        {"heading": "The Program", "body": "The Advanced Materials & Manufacturing Summer Camp ran from May 27 through June 26, 2025 across City Tech and NYU Tandon. It was structured as a month of lab and shop work rather than a lecture-only course."},
-        {"heading": "Materials Research", "body": "I used optical microscopy and SEM/EDS to look at microstructures, fracture surfaces, and elemental composition. Those sessions showed me how material behavior can be investigated at scales that are not visible to the eye."},
-        {"heading": "Manufacturing Work", "body": "The manufacturing portion covered SolidWorks, powder-bed, resin, and filament 3D printing, plus three-axis CNC milling. I programmed facing, pocketing, contouring, and engraving operations before machining an aluminum camp part."},
-        {"heading": "Inspection and Product Development", "body": "Later sessions covered GD&T and coordinate-measuring-machine inspection, along with intellectual property, commercialization, and medical-device development. The program ended with capstone presentations and an industry symposium, which connected the technical work to how a product is evaluated and introduced."},
-        {"heading": "Documentation", "body": "I kept a weekly record of the labs, machines, and parts from the program. The linked GitHub folder includes the full schedule, photos, technical notes, and five recap videos."}
+        {"heading": "A Month in Different Labs", "body": "The program ran from late May through late June 2025 and was mostly hands-on. We moved between two campuses depending on the equipment and subject for that week."},
+        {"heading": "Looking at Materials", "body": "I used optical microscopy and SEM/EDS to examine microstructures, broken surfaces, and elemental composition. It was my first time seeing how much information about a failure can be hidden in a surface that looks ordinary without magnification."},
+        {"heading": "Making the Parts", "body": "The manufacturing sessions included SolidWorks, powder-bed printing, resin printing, filament printing, and three-axis milling. For the CNC work, I programmed facing, pockets, contours, and engraving before cutting the aluminum camp part."},
+        {"heading": "Checking and Presenting the Work", "body": "Later we used GD&T and a coordinate-measuring machine to inspect geometry. We also covered patents, commercialization, and medical-device development. The capstone and industry symposium made us explain not only how something was made, but how it could become a real product."},
+        {"heading": "My Record of the Program", "body": "I kept notes and photos each week instead of trying to reconstruct the month afterward. The repository has that schedule, the technical notes, the parts we made, and five short recap videos."}
       ],
       "media": [
         {"type": "video", "src": "https://www.youtube.com/embed/S01YHTue9bU?enablejsapi=1&playsinline=1&rel=0", "label": "Program recap"}
@@ -645,17 +645,17 @@
       "title": "STEM Research Academy Near-Peer Mentor",
       "category": "Awards & Certificates",
       "collectionOrder": 3,
-      "summary": "I completed a six-week near-peer mentoring program where I helped high school students learn robotics and build a complete mecanum robot.",
-      "cardSummary": "For six weeks, I worked as a near-peer mentor for two high school students. We spent the first half on smaller builds and the skills behind them, then used the last three weeks to make the 3TSahur mecanum robot. I focused on the electrical and software side—wiring, microcontrollers, Linux, Raspberry Pi setup, and helping the students understand why the systems worked together.",
+      "summary": "I mentored two high school students for six weeks while they learned robotics and built a complete mecanum robot.",
+      "cardSummary": "We did not start with the final robot. The students spent three weeks on smaller kits and basic skills, then used the last three weeks to build 3TSahur. I mainly helped with wiring, microcontrollers, Linux, the Raspberry Pi, and explaining how the electrical and software pieces connected to the mechanical build.",
       "details": "",
       "image": "assets/stem-research-academy-certificate.jpg",
       "imagePresentation": "certificate",
       "tags": ["Near-Peer Mentoring", "Robotics Education", "City Tech", "Program Completion"],
       "sections": [
-        {"heading": "Certificate", "body": "This certificate recognizes my completion of the 2026 STEM Research Academy near-peer mentoring program."},
-        {"heading": "Six Weeks of Robotics", "body": "The program paired mentors with high school students for six weeks. We spent the first half teaching core skills through smaller robot kits, then used those lessons during the final three weeks to build a larger mecanum robot."},
-        {"heading": "What I Taught", "body": "I helped students learn CAD, CAM, 3D printing, electronics, wiring, firmware, microcontrollers, Linux, Raspberry Pi setup, and programming. The goal was not only to assemble a robot, but to understand how its mechanical, electrical, and software systems work together."},
-        {"heading": "Final Project", "body": "The finished 3TSahur robot uses four mecanum wheels, a Raspberry Pi, a live camera, browser controls, and a servo-operated ramp for two smaller robots. The linked repository contains the project software, setup instructions, and full technical breakdown."}
+        {"heading": "Certificate", "body": "The certificate is from the six-week near-peer mentoring program I completed in 2026."},
+        {"heading": "How the Six Weeks Were Split", "body": "For the first half, we used smaller robots so the students could make mistakes without getting lost in a large system. The final three weeks were for the full mecanum build, where all of those separate lessons had to work together."},
+        {"heading": "What I Helped With", "body": "I covered CAD and printing when the students needed mechanical parts, but most of my time went into electronics and software. That included wiring, firmware, microcontrollers, Linux, Raspberry Pi setup, and debugging code with them instead of just handing over an answer."},
+        {"heading": "The Robot", "body": "3TSahur drives on four mecanum wheels and hosts its controls on a Raspberry Pi. It has a live camera, a browser interface, and a servo ramp that carries the two smaller robots from the first half of the program. The repository includes the setup and code."}
       ],
       "links": {"github": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/stem-research-academy", "label": "Mentoring Project on GitHub"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -664,17 +664,17 @@
       "title": "NYC FIRST STEM Center Summer Internship",
       "category": "Awards & Certificates",
       "collectionOrder": 4,
-      "summary": "I completed a six-week internship at the NYC FIRST STEM Center where I developed an A301 mecanum chassis, custom swerve modules, and the final Swechanum robot.",
-      "cardSummary": "This certificate covers my six weeks at the NYC FIRST STEM Center at Cornell Tech. I began with a mecanum test chassis, then spent four weeks developing two-motor A301 swerve pods through three main revisions. Four machined pods went onto the final Swechanum robot, so the certificate represents one continuous build rather than three unrelated projects.",
+      "summary": "During this six-week internship, I built an A301 mecanum test chassis, developed the swerve pods, and combined them into Swechanum.",
+      "cardSummary": "These were not three unrelated projects. The mecanum base let us test the new electronics first, and the next four weeks of pod development turned that same platform into the final swerve robot. By the end, four machined modules were driving the complete chassis.",
       "details": "",
       "image": "assets/nyc-first-summer-internship-certificate.png",
       "imagePresentation": "certificate",
       "tags": ["NYC FIRST", "Mechanical Design", "Swerve Drive", "CNC Machining"],
       "sections": [
-        {"heading": "Certificate", "body": "This certificate recognizes my completion of the 2026 NYC FIRST STEM Center at Cornell Tech summer internship."},
-        {"heading": "Mecanum Test Chassis", "body": "I started with a simple mecanum chassis during the first week. It gave us a working platform for testing the new Systemcore and Motioncore electronics, A301 motors, battery, sensors, controls, and drivetrain layout."},
-        {"heading": "A301 Swerve Development", "body": "I spent the next several weeks designing, printing, machining, assembling, and testing custom two-motor swerve modules. Three main revisions simplified the steering, improved the gear layout, and led to the final CNC-machined pods."},
-        {"heading": "Final Swechanum Robot", "body": "The final robot combines the original lower mecanum structure with four powered swerve pods above it. The swerve system uses eight A301 motors and does all of the driving, while the lower mecanum wheels remain as passive support wheels. The linked repository documents the CAD, build history, and development path for all three stages."}
+        {"heading": "Certificate", "body": "This certificate marks the six-week summer internship I completed in 2026."},
+        {"heading": "Starting With Mecanum", "body": "I built the mecanum chassis during the first week because we needed something running quickly. It gave us a place to try the A301 motors, battery, sensors, controls, and the early Systemcore and Motioncore hardware before swerve was ready."},
+        {"heading": "Four Weeks of Pod Development", "body": "I printed and tested three major module versions, then machined the four V3 pods. The steering became simpler with each revision, and the gear layout changed as I found fit and assembly problems."},
+        {"heading": "Putting It Together", "body": "The finished robot kept the mecanum structure underneath and added the powered swerve system above it. Eight A301 motors in the upper pods did the driving and steering. The lower wheels rolled as supports, and the repository shows the CAD and build history from the first base through final testing."}
       ],
       "links": {"github": {"url": "https://github.com/NYC-FIRST/SystemcoreTesting/tree/Revlib4-testing/CAD%20Models", "label": "CAD & Build History"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
@@ -687,24 +687,24 @@
       "collectionOrder": 3,
       "featured": true,
       "featuredOrder": 2,
-      "summary": "This two-in-one teaching platform started as an A301 mecanum robot, then became a complete swerve chassis with four custom A301 modules.",
-      "cardSummary": "Swechanum brings both drivetrain stages from my NYC FIRST internship into one teaching platform. Students can begin with the mecanum base to learn basic omnidirectional movement, motors, and sensors before moving up to the four custom A301 swerve pods and their steering calibration. I was responsible for the CAD, CAM, printed prototypes, machining, and final mechanical assembly, while another intern handled the code.",
+      "summary": "Basically, Swechanum is a mecanum robot and a four-module A301 swerve robot built into one chassis.",
+      "cardSummary": "I built the mecanum part first because it gives a new student an easier place to start. They can learn omnidirectional movement, motors, IMUs, and sensors on that base, then move up to swerve instead of trying to learn everything at once. I handled the CAD, CAM, printed prototypes, machining, and mechanical assembly; another intern wrote the software.",
       "details": "",
       "image": "https://raw.githubusercontent.com/NYC-FIRST/SystemcoreTesting/Revlib4-testing/CAD%20Models/A301%20Chassis%20Swechanum/images/updated-chassis-front.png",
       "tags": ["NYC FIRST", "Swerve Drive", "Fusion 360", "CAD / CAM", "CNC Machining"],
       "overview": {
-        "problem": "The A301 motors and the early Systemcore and Motioncore hardware did not yet have a complete swerve platform. We also wanted a robot that would let students learn mecanum first instead of jumping directly into the harder steering and calibration work used by swerve.",
-        "method": "I first built the lower A301 mecanum chassis as an approachable test robot. Once that worked, I designed four two-motor swerve pods and added them as the upper drivetrain, creating one platform that shows both levels of omnidirectional drive.",
-        "result": "The project became a two-in-one learning path: students can start with mecanum movement, motor control, IMUs, and sensors, then move on to the four-pod swerve system. In the final test configuration, eight A301 motors power and steer the swerve pods while the lower mecanum wheels remain as passive supports."
+        "problem": "We had new A301 motors and control boards, but no complete swerve robot for testing them. Starting with mecanum also gave students something less complicated to learn first.",
+        "method": "I made the mecanum base, then spent four weeks going through three main swerve pod designs. The early versions were printed. The final four were machined.",
+        "result": "Both drivetrains stayed on the same chassis. During the swerve test, eight A301 motors in the upper pods handled driving and steering. The mecanum wheels underneath were only rolling supports."
       },
       "quickLink": {"url": "https://github.com/NYC-FIRST/SystemcoreTesting/tree/Revlib4-testing/CAD%20Models/A301%20Chassis%20Swechanum", "label": "Full Project Breakdown"},
       "featureVideo": {"src": "https://www.youtube.com/embed/389QB7FmU0I?autoplay=1&mute=1&loop=1&playlist=389QB7FmU0I&playsinline=1&rel=0&enablejsapi=1", "label": "A301 Swechanum drivetrain test"},
       "sections": [
-        {"heading": "Six Weeks From a Test Base to a Full Robot", "body": "I built the first plywood mecanum prototype in one day. I spent the rest of the first two weeks testing it, changing the layout, and making sure the electronics and drivetrain worked. I was also doing the required training for the CNC machines, laser cutter, and 3D printers during that time. I spent the final four weeks mainly designing, building, and testing the swerve system. During the last assembly week, I cut the finished mecanum parts from metal so the full robot could go together."},
+        {"heading": "Six Weeks From a Test Base to a Full Robot", "body": "The first mecanum base was plywood, and I finished that version on day one. I used the rest of the first two weeks to drive it, move parts around, and sort out the electronics. At the same time, I was completing the shop training for the CNC machines, laser cutter, and 3D printers. The last four weeks were mostly swerve work. During final assembly, I remade the mecanum pieces in metal and put both parts of the robot together."},
         {"heading": "Open Source Project", "body": "The CAD and robot code are open source. Students, teams, or anyone else can download the files, look through the design, and build their own version at home. As far as I know, this is the first open source A301 swerve project with a full chassis that has been built and tested."},
         {"heading": "What Made It Different", "body": "People had made individual A301 swerve modules before, but as far as I know, nobody had finished a full chassis that used four of them to steer and drive one robot. This robot uses four V3 pods. Each pod has one A301 motor for driving and another for steering, and the motors are controlled through Systemcore and Motioncore."},
-        {"heading": "From Belt Steering to Direct Steering", "body": "The first module used a belt to turn the pod. I simplified it by mounting the A301 steering motor directly in the center of rotation, so the motor shaft turns the complete lower pod with a one-to-one connection. This removes the steering belt, pulleys, and tensioning hardware. As far as we know, this is the only working swerve pod that places the steering motor directly on the center of rotation in this way."},
-        {"heading": "Designed for Education", "body": "The chassis was built as a step-by-step teaching platform. A new student can begin with the lower mecanum robot and learn omnidirectional movement, basic motor control, IMUs, and other sensors. Once that makes sense, the same platform introduces swerve code, steering calibration, and the new A301 modules. The pods stay open enough for students to watch the gears, wheel drive, and steering move while the robot is running."},
+        {"heading": "From Belt Steering to Direct Steering", "body": "My first steering design used a belt. I did not like how many extra pieces that added, so I moved the steering motor directly into the center of rotation. The motor shaft turns the lower pod one-to-one. There is no steering belt, no set of steering pulleys, and no tensioner to adjust. As far as we know, this is the only working swerve pod that has the steering motor centered like this."},
+        {"heading": "Designed for Education", "body": "The bottom half of Swechanum is still the original mecanum robot. I wanted students to learn on that part first, then move up to the swerve pods later. It gives them a way to understand basic omnidirectional movement before they have to calibrate four steering angles. The mechanisms are also left open so students can see what is moving."},
         {"heading": "Working as a Team", "body": "I did the CAD, CAM, printed prototypes, manufacturing, and mechanical assembly. Another intern wrote the software, while my supervisor and coworkers gave me ideas and feedback during the build. I used their input and what I saw during testing to make each new mechanical version."},
         {"heading": "Why the Robot Looks Slow", "body": "I designed the drivetrain for 2,000 RPM gearbox cartridges, but because this was alpha testing, we only had the 500 RPM versions. That made the test robot about four times slower than it was meant to be. It still showed that all four pods could steer together and drive the full chassis."},
         {"heading": "Final Configuration", "body": "The top drivetrain has four powered swerve pods and eight A301 motors in total. The four mecanum wheels underneath are not powered and only stayed on the robot as support wheels. There are no caster wheels, and the swerve assembly does all of the driving."}
@@ -728,16 +728,16 @@
       "image": "https://raw.githubusercontent.com/NYC-FIRST/SystemcoreTesting/Revlib4-testing/CAD%20Models/A301%20Swerve%20Module/images/a301-swerve-pods-installed.png",
       "tags": ["A301", "Swerve Module", "CNC", "3D Printing", "3.1:1 Reduction"],
       "overview": {
-        "problem": "The Systemcore robot needed a small pod that could both drive and steer with A301 motors. It had to work reliably without being too complicated for a student who was just learning swerve.",
-        "method": "I spent the final four weeks making three main versions of the module. The biggest change was removing the belt and placing the steering motor directly on the pod's center of rotation, where its shaft turns the lower module one-to-one.",
-        "result": "I machined four V3 pods and installed them on the final robot. As far as we know, no other working swerve pod uses this centered direct-steering layout. V3.1 keeps that design and the 3.1:1 drive reduction while fixing the tight bearing fit found during assembly."
+        "problem": "The new robot needed a pod that could drive and steer with two A301 motors. I also wanted the layout to stay understandable when a student opened it up.",
+        "method": "I went through three main versions in four weeks. The big change was removing the steering belt and putting that motor shaft right on the pod's turning axis.",
+        "result": "I machined four V3 pods and ran them on the robot. One bearing fit came out too tight, so V3.1 fixes that without changing the centered steering or 3.1:1 drive."
       },
       "quickLink": {"url": "https://github.com/NYC-FIRST/SystemcoreTesting/tree/Revlib4-testing/CAD%20Models/A301%20Swerve%20Module", "label": "Full Project Breakdown"},
       "featureVideo": {"src": "https://www.youtube.com/embed/2v5tu2qvoQQ?autoplay=1&mute=1&loop=1&playlist=2v5tu2qvoQQ&playsinline=1&rel=0&enablejsapi=1", "label": "A301 V3 swerve module test"},
       "sections": [
         {"heading": "Four Weeks and Three Major Iterations", "body": "After I finished the mecanum chassis, I spent the last four weeks on the swerve modules. I designed, printed, assembled, and tested three main versions. Each one made the steering simpler, changed the gear layout, and made the pod smaller without hiding how it worked."},
         {"heading": "Drive and Steering Layout", "body": "Each pod uses two A301 motors. One motor drives the wheel through two 1:1 spur stages and a 3.1:1 offset bevel set. The second motor sits directly at the center of rotation and turns the complete lower module."},
-        {"heading": "From Belts to Direct Turning", "body": "The first prototype used a belt to turn the pod. I replaced it by moving the A301 steering motor directly onto the center of rotation, where the motor shaft turns the complete lower module one-to-one. Removing the belt, pulleys, and tensioning hardware made the steering system much simpler. As far as we know, this is the only working swerve pod that uses this centered direct-steering arrangement."},
+        {"heading": "From Belts to Direct Turning", "body": "My first steering design used a belt. I did not like how many extra pieces that added, so I moved the steering motor directly into the center of rotation. The motor shaft turns the lower pod one-to-one. There is no steering belt, no set of steering pulleys, and no tensioner to adjust. As far as we know, this is the only working swerve pod that has the steering motor centered like this."},
         {"heading": "From Printing to CNC", "body": "I used printed parts to check the shape and fit before machining the plates. When I CNC machined V3, the main bearing hole came out too tight and squeezed the bearing enough to stop it from turning smoothly. I fixed the fit in V3.1 without changing the drivetrain layout that already worked."},
         {"heading": "Designed for Students", "body": "I wanted to handle the harder design problems so a student could focus on learning from the finished module. The mechanism stays simple, and the openings around the gears let students see the drive and steering parts move. They can use it while learning motor control, steering calibration, encoders, IMUs, and swerve programming."},
         {"heading": "Wheel and Future Ratchet", "body": "The wheel and TPU tread can print together on a multimaterial printer, so the tread does not need a separate assembly step and still grips the FTC mat well. I also added mounting holes for a ratchet that did not arrive in time. It can be installed later without redesigning the pod."},
@@ -759,15 +759,15 @@
       "period": "July 6 to August 14, 2026",
       "programSummary": "I was a mentor for two high school students during this six week STEM Research Academy program. They came in with limited robotics experience, so the mentors helped them learn the mechanical, electrical, and programming skills they needed to finish the robot.",
       "collectionOrder": 5,
-      "summary": "I mentored two high school students as they learned the skills needed to build, wire, and program a full robot. The finished mecanum robot carries the two smaller robots they made during the first half of the program.",
-      "cardSummary": "The STEM Research Academy build was a teaching project before it was a robot project. Two students spent three weeks learning with smaller kits, then three more building a Raspberry Pi mecanum robot with a camera, its own Wi-Fi network, browser controls, and a ramp for the two minibots. My job was to help them connect CAD, wiring, Linux, and code instead of treating each topic as a separate lesson.",
+      "summary": "I mentored two high school students while they learned how to build, wire, and program a robot.",
+      "cardSummary": "The students spent the first half of the program on small robot kits. During the second half, we built a larger Raspberry Pi mecanum robot that could carry those first two robots on a ramp. I helped with wiring, microcontrollers, Linux, and code, plus CAD and printing whenever a new part was needed. The point was for them to see how all of those jobs connect in one machine.",
       "details": "",
       "image": "https://raw.githubusercontent.com/AloeVeraZ/CityTechClubProjects/main/stem-research-academy/images/final-robot.jpg",
       "tags": ["Mentoring", "Raspberry Pi", "Mecanum", "Electronics", "CAD / CAM"],
       "overview": {
-        "problem": "The two students needed to learn more than how to assemble a robot. They needed enough experience with design, manufacturing, electronics, Linux, and programming to understand the full build and make it work themselves.",
-        "method": "The first three weeks were spent teaching and building smaller robot kits. During the last three weeks, the students and mentors used those skills to build the full 3TSahur mecanum robot and turn the first two kits into minibots that ride on the larger robot.",
-        "result": "The final robot drives on four mecanum wheels, carries both minibots on one ramp, streams video from a Logitech C270 camera, and can be controlled from a phone or computer through its own Raspberry Pi WiFi network."
+        "problem": "The students didn't have much robotics experience, so I couldn't start by giving them one large machine and a wiring diagram.",
+        "method": "We used smaller kits for three weeks. That gave them time to try CAD, printing, wiring, and basic code before we started the larger mecanum robot.",
+        "result": "By the end, the large robot could move in every direction, make its own Wi-Fi network, stream video, and use a servo ramp to carry the two little robots. The students wrote the drive and ramp code, while the mentors helped with the harder network and browser pieces."
       },
       "quickLink": {"url": "https://github.com/AloeVeraZ/CityTechClubProjects/tree/main/stem-research-academy", "label": "Full Project Breakdown"},
       "sections": [
