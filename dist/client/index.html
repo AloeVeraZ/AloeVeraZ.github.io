@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angelo Demetroulakos | Mechanical Engineering Portfolio</title>
+    <meta name="description" content="Angelo Demetroulakos's mechanical engineering portfolio with robots, CAD, 3D printers, and other projects.">
+    <link rel="stylesheet" href="styles.css?v=20260901-restored-stable-carousel">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 icons for GitHub, GrabCAD, CAD, Video, External Links -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header / Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="#" class="logo" id="nav-name">Angelo Demetroulakos</a>
+            <ul class="nav-links">
+                <li class="performance-control">
+                    <button class="performance-toggle" id="performance-toggle" type="button" role="switch" aria-checked="true" aria-label="Use low performance visual effects">
+                        <span class="performance-toggle-track" aria-hidden="true"><i></i></span>
+                        <span id="performance-toggle-label">High FX</span>
+                    </button>
+                </li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="hero" class="hero-section">
+        <div class="hero-content">
+            <span class="badge hero-badge"><i class="fa-solid fa-gear"></i> Mechanical Engineering & Robotics</span>
+            <h1 id="hero-name" class="hero-name">Angelo Demetroulakos</h1>
+            <p id="hero-tagline" class="hero-tagline">Robotics • CAD Design • Prototyping • Autonomous Systems</p>
+            <div class="social-links" id="hero-social">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="hero-buttons">
+                <a href="#projects" class="btn hero-action"><i class="fa-solid fa-cubes"></i> Explore Projects</a>
+                <a href="#contact" class="btn hero-action"><i class="fa-solid fa-paper-plane"></i> Get in Touch</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- About Section -->
+        <section id="about" class="section glass-panel">
+            <div class="section-header">
+                <span class="section-label">Overview</span>
+                <h2 class="section-title">About Me</h2>
+            </div>
+            <p id="about-bio" class="bio-text">
+                I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like designing and building robots and 3D printers from scratch.
+            </p>
+            <div id="about-highlights" class="about-highlights" aria-label="Education and experience"></div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills" class="section">
+            <div class="section-header">
+                <span class="section-label">Toolkit</span>
+                <h2 class="section-title">Skills & Expertise</h2>
+            </div>
+            <div class="skills-categories" id="skills-container">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="section">
+            <div class="section-header">
+                <span class="section-label">Portfolio</span>
+                <h2 class="section-title">Featured Projects</h2>
+                <p class="section-subtitle">Here are a few projects I have worked on. Open one to see how I made it and find the project files.</p>
+            </div>
+
+            <div class="projects-grid featured-grid" id="featured-projects-container">
+                <!-- Project cards rendered dynamically -->
+            </div>
+            <div class="project-library">
+                <div class="library-heading">
+                    <span class="section-label">Archive</span>
+                    <h3>My Projects</h3>
+                    <p>Open a category to explore more of my personal, club, class, and research work.</p>
+                </div>
+                <div class="project-collections" id="project-collections"></div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section glass-panel contact-section">
+            <div class="section-header">
+                <span class="section-label">Connect</span>
+                <h2 class="section-title">Contact & Links</h2>
+            </div>
+            <p class="contact-desc">If you want to talk about robotics, 3D printing, or another project, feel free to reach out or look through my code and CAD files.</p>
+            <div class="contact-links" id="contact-links-container">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Project Details Modal -->
+    <div id="project-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-card glass-panel">
+            <button class="modal-close" id="modal-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header">
+                <h3 id="modal-title" class="modal-title">Project Title</h3>
+            </div>
+            <div id="modal-image" class="modal-image" aria-label="Project media"></div>
+            <div class="modal-header-actions">
+                <span id="modal-category" class="tag">Category</span>
+                <a id="modal-quick-link" class="modal-quick-link" target="_blank" rel="noopener" hidden><i class="fa-brands fa-github"></i> Full Project Breakdown</a>
+            </div>
+            <p id="modal-period" class="modal-period" hidden><i class="fa-regular fa-calendar"></i><span></span></p>
+            <p id="modal-program-summary" class="modal-program-summary" hidden></p>
+            <p id="modal-summary" class="modal-summary"></p>
+            <section class="modal-overview" id="modal-overview" aria-labelledby="modal-overview-title" hidden>
+                <div class="modal-section-heading">
+                    <span>Quick Overview</span>
+                    <h3 id="modal-overview-title">The Main Parts</h3>
+                </div>
+                <div class="modal-overview-grid" id="modal-overview-grid"></div>
+            </section>
+            <section class="modal-feature-video" id="modal-feature-video" aria-labelledby="modal-feature-video-title" hidden>
+                <div class="modal-section-heading">
+                    <span>Video</span>
+                    <h3 id="modal-feature-video-title">Watch It Run</h3>
+                </div>
+                <div id="modal-feature-video-player" class="modal-feature-video-player"></div>
+            </section>
+            <div class="modal-section-heading modal-deep-dive-heading" id="modal-deep-dive-heading" hidden>
+                <span>More Details</span>
+                <h3>How I Built It</h3>
+            </div>
+            <div id="modal-details" class="modal-details"></div>
+            <div id="modal-media" class="modal-media" aria-label="Project media"></div>
+            <div id="modal-tags" class="project-tags"></div>
+            <div id="modal-links" class="project-action-links"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo Demetroulakos</span>. Mechanical Engineering Portfolio.</p>
+        </div>
+    </footer>
+
+    <script src="app.js?v=20260901-restored-stable-carousel"></script>
+</body>
+</html>

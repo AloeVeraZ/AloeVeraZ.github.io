@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Mastercam CNC coursework graphic</title>
+  <desc id="desc">A milling tool following a blue toolpath above a machined workpiece.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#080808"/><stop offset="1" stop-color="#181818"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#777"/><stop offset=".5" stop-color="#252525"/><stop offset="1" stop-color="#aaa"/></linearGradient>
+    <pattern id="grid" width="54" height="54" patternUnits="userSpaceOnUse"><path d="M54 0H0V54" fill="none" stroke="#7ba8d8" stroke-opacity=".12"/></pattern>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg)"/><rect width="1200" height="760" fill="url(#grid)"/>
+  <text x="72" y="105" fill="#7ba8d8" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="8">CNC MANUFACTURING</text>
+  <text x="68" y="190" fill="#f4f4f1" font-family="Arial,sans-serif" font-size="76" font-weight="800">MASTERCAM</text>
+  <g transform="translate(175 235)">
+    <path d="M70 270 505 90 925 235 487 430Z" fill="url(#metal)" stroke="#d9d9d4" stroke-opacity=".5" stroke-width="4"/>
+    <path d="M187 273 515 139 802 237 474 377Z" fill="#111" stroke="#7ba8d8" stroke-width="5"/>
+    <path d="M240 268C345 207 437 188 533 175S694 183 760 231 634 318 482 338 285 312 240 268Z" fill="none" stroke="#7ba8d8" stroke-width="9" stroke-dasharray="19 13"/>
+    <path d="M523 10v164" stroke="#e3e3df" stroke-width="28"/><path d="M493 8h60l18 92h-96Z" fill="#777"/><path d="M508 162h30l20 58h-70Z" fill="#d7d7d2"/>
+    <circle cx="523" cy="175" r="18" fill="#7ba8d8"/>
+  </g>
+  <text x="74" y="700" fill="#f4f4f1" font-family="Arial,sans-serif" font-size="23">GEOMETRY  /  TOOLPATHS  /  VERIFICATION  /  NC CODE</text>
+  <text x="1080" y="700" fill="#7ba8d8" font-family="Arial,sans-serif" font-size="28" font-weight="700">03</text>
+</svg>

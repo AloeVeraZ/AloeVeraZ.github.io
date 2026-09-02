@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">MATLAB engineering coursework graphic</title>
+  <desc id="desc">An abstract three-dimensional surface plot over a dark engineering grid.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#080808"/><stop offset="1" stop-color="#161616"/></linearGradient>
+    <linearGradient id="surface" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#214f80"/><stop offset=".45" stop-color="#7ba8d8"/><stop offset=".72" stop-color="#e09b3d"/><stop offset="1" stop-color="#c84b31"/></linearGradient>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#7ba8d8" stroke-opacity=".12"/></pattern>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg)"/><rect width="1200" height="760" fill="url(#grid)"/>
+  <text x="74" y="106" fill="#7ba8d8" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="8">ENGINEERING COMPUTING</text>
+  <text x="70" y="190" fill="#f4f4f1" font-family="Arial, sans-serif" font-size="78" font-weight="800">MATLAB</text>
+  <g transform="translate(120 240)">
+    <path d="M65 360 430 175 975 310 615 495Z" fill="#0e0e0e" stroke="#7ba8d8" stroke-opacity=".45" stroke-width="3"/>
+    <path d="M155 334C280 260 326 86 450 190S640 430 738 265 870 174 934 290L616 446C532 343 455 330 368 378S239 390 155 334Z" fill="url(#surface)" opacity=".95"/>
+    <g fill="none" stroke="#f4f4f1" stroke-opacity=".3" stroke-width="2"><path d="M155 334C280 260 326 86 450 190S640 430 738 265 870 174 934 290"/><path d="M224 355C334 294 374 142 482 228S644 424 735 297 856 226 898 308"/><path d="M296 379C388 331 421 207 513 270S654 415 729 330 825 281 860 326"/><path d="M373 401C448 368 472 275 545 314S666 407 724 365 795 336 819 344"/><path d="M456 424C514 403 528 344 580 357S682 402 719 398 766 390 777 364"/></g>
+  </g>
+  <text x="75" y="694" fill="#f4f4f1" font-family="Arial, sans-serif" font-size="23">SCRIPTS  /  MATRICES  /  DATA  /  VISUALIZATION</text>
+  <text x="1080" y="695" fill="#7ba8d8" font-family="Arial, sans-serif" font-size="28" font-weight="700">03</text>
+</svg>
