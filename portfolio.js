@@ -75,7 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
-    const performanceStorageKey = 'portfolio-effects-override-v2';
+    // v3 intentionally resets the old Low FX override once. The previous
+    // hardware gate was too strict for capable laptops, so an earlier manual
+    // or stale Low FX choice should not keep overriding the new baseline.
+    const performanceStorageKey = 'portfolio-effects-override-v3';
     let savedEffectsMode = '';
     try {
         savedEffectsMode = localStorage.getItem(performanceStorageKey) || '';
@@ -85,8 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const logicalCores = navigator.hardwareConcurrency || 4;
     const deviceMemory = navigator.deviceMemory || 0;
     const dataSaverEnabled = Boolean(navigator.connection?.saveData);
-    const meetsHighEffectsBaseline = logicalCores >= 8
-        && (!deviceMemory || deviceMemory >= 8)
+    // Start High FX for a normal modern laptop and let the sustained frame
+    // monitor below make the final call. Truly low-end devices still begin in
+    // Low FX, while capable machines are not penalized by an arbitrary
+    // desktop-class requirement.
+    const meetsHighEffectsBaseline = logicalCores >= 4
+        && (!deviceMemory || deviceMemory >= 4)
         && !dataSaverEnabled
         && !reducedMotion.matches;
     let effectsMode = ['low', 'high'].includes(savedEffectsMode)
