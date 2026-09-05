@@ -118,8 +118,17 @@ document.addEventListener('DOMContentLoaded', () => {
         backgroundFadeTimer = 0;
     };
 
+    // Long enough that a normal reading pause or a gap between scroll flicks
+    // does not trigger a whole fade-out/fade-in cycle. At 900ms the background
+    // visibly flashed any time the cursor rested for a moment.
+    const BACKGROUND_IDLE_DELAY = 2600;
     const wakeEffectsBackground = (activity = 'cursor') => {
-        document.documentElement.classList.remove('effects-background-idle', 'effects-background-click-fading');
+        const root = document.documentElement;
+        // Touching classList on every pointermove churns style + observers for
+        // no reason; only clear the state when it is actually set.
+        if (root.classList.contains('effects-background-idle') || root.classList.contains('effects-background-click-fading')) {
+            root.classList.remove('effects-background-idle', 'effects-background-click-fading');
+        }
         clearBackgroundIdleTimer();
 
         if (activity === 'click') {
@@ -154,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!document.hidden) {
                 document.documentElement.classList.add('effects-background-idle');
             }
-        }, 900);
+        }, BACKGROUND_IDLE_DELAY);
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -397,6 +406,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     let sleeping = false, sleepTimer = 0;
     let lastFrame = 0, sceneTime = 0;
     let protectedRects = [], visibleRects = [], regions = [], orbitingBodies = [], blackHoles = [], pulsars = [], layoutSignature = '';
+    let builtPageHeight = 0;
     const projectedHoles = [];
     let navigationBottom = 80;
     const spriteCache = new Map();
@@ -558,13 +568,16 @@ function setupGalaxyField(canvas, reducedMotion) {
     const makeObject = (rng, x, documentY, radius, color, options = {}) => ({
         x, documentY, radius, color,
         phase: rng() * TAU,
-        speed: .035 + rng() * .065,
-        drift: 1 + rng() * 5,
-        pulse: .035 + rng() * .12,
+        // Drift cycled about once every 180s and the orbit once every 350s,
+        // which reads as a still image. These periods land near 20-45s: clearly
+        // alive, still slow enough to stay cinematic rather than bobbing.
+        speed: .13 + rng() * .25,
+        drift: 3 + rng() * 10,
+        pulse: .1 + rng() * .22,
         alpha: .2 + rng() ** 2 * .75,
         stretch: .88 + rng() * .24,
         angle: rng() * TAU,
-        orbit: rng() < .28 ? 2 + rng() * 5 : 0,
+        orbit: rng() < .45 ? 4 + rng() * 9 : 0,
         ...options
     });
     const add = (name, object) => tiers[name].objects.push(object);
@@ -791,7 +804,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         const mobile = width < 700;
         const density = mobile ? .68 : 1;
         const segmentHeight = 680;
-        const segments = Math.ceil(pageHeight / segmentHeight);
+        // Build past the current page so the height churn that content-visibility
+        // causes while scrolling never crosses the rebuild threshold.
+        const sceneHeight = Math.max(builtPageHeight, pageHeight);
+        const segments = Math.ceil(sceneHeight / segmentHeight);
         // Each segment has its own seed: expanding a collection adds scenery
         // below without rerolling the entire universe above it.
         for (let segment = 0; segment < segments; segment++) {
@@ -835,7 +851,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                     bright ? 1.15 + rng() * 1.15 : .2 + rng() ** 1.9 * .9,
                     chooseDeepColor(rng), {
                     alpha: bright ? .64 + rng() * .3 : .1 + rng() ** 1.8 * .62,
-                    drift: .35 + depth * 2.2, pulse: .05 + rng() * .16,
+                    drift: .6 + depth * 3.4, pulse: .2 + rng() * .4,
                     glint: bright && rng() < .38,
                     staticField: !bright
                 }));
@@ -844,7 +860,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             // algorithmically empty between the larger seeded systems.
             for (let i = 0; i < Math.round(125 * density); i++) {
                 const position = around(rng, rng() < .6 ? region : companion, 1.4);
-                add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .24, pulse: .035 }));
+                add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .5, pulse: .16 }));
             }
             for (const group of [region, companion]) {
                 add('galaxies', makeObject(rng, group.x, group.y, group.radius * (type === 2 ? 1.1 : .75), group.color, {
@@ -892,7 +908,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             const offset = radius * randomRange(rng, .015, .075);
             const color = colors[[2, 1, 4, 3, 2][i]];
             add('massivePlanets', makeObject(rng, left ? -offset : width + offset,
-                i === 0 ? height * .39 : pageHeight * ([.065, .27, .49, .73, .94][i]), radius, color, {
+                i === 0 ? height * .39 : sceneHeight * ([.065, .27, .49, .73, .94][i]), radius, color, {
                     alpha: .22, sprite: lightSprite(color, 2), drift: 2, pulse: .025, orbit: 0,
                     interactive: true
                 }));
@@ -900,7 +916,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         buildMotionSystems();
         // Compact, multi-core star clusters share one depth, so their haze and
         // individual lights stay together as the page moves.
-        for (let i = 0; i < Math.min(7, Math.ceil(pageHeight / 1100)); i++) {
+        for (let i = 0; i < Math.min(7, Math.ceil(sceneHeight / 1100)); i++) {
             const clusterRng = createSeededRandom(0x57A2C ^ Math.imul(i + 1, 2654435761));
             const radius = randomRange(clusterRng, 60, 105) * (mobile ? .65 : 1);
             const clusterColumn = [ .18, .5, .82 ][i % 3];
@@ -1295,7 +1311,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 // The seeded anchor stays fixed; a bounded spring offset carries
                 // cursor impulses and gravity independently of camera parallax.
                 const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
-                const orbit = animated ? Math.sin(time * .018 + object.phase) * object.orbit : 0;
+                const orbit = animated ? Math.sin(time * .055 + object.phase) * object.orbit : 0;
                 let x = object.x + motion + orbit - cameraX * factor * factor * 10;
                 let y = (object.documentY - scrollPosition - height / 2) * factor + height / 2
                     + motion * .6 - cameraY * factor * factor * 7;
@@ -1425,9 +1441,16 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
             navigationBottom = document.querySelector('.navbar')?.getBoundingClientRect().bottom || 80;
             updateVisibleRects();
-            const signature = `${width}:${Math.round(pageHeight / 80)}:${quality}`;
-            if (signature !== layoutSignature) {
+            // A rebuild reruns clearance-based placement against whatever text was
+            // measured this pass, so the whole field visibly jumps. Page height
+            // churns constantly while scrolling as content-visibility sections
+            // resolve their real height, which was firing several rebuilds per
+            // scroll. Only a width/quality change, or real growth past what has
+            // already been built, justifies rerolling the scene.
+            const signature = `${width}:${quality}`;
+            if (signature !== layoutSignature || pageHeight > builtPageHeight * 1.12) {
                 layoutSignature = signature;
+                builtPageHeight = Math.max(pageHeight * 1.6, pageHeight + 1500, builtPageHeight);
                 buildScene();
             }
             requestDraw();
