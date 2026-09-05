@@ -376,7 +376,10 @@ function createSeededRandom(seed) {
 }
 
 function setupGalaxyField(canvas, reducedMotion) {
-    const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    // No desynchronized flag: the low-latency path presents this canvas outside
+    // the normal compositing sync, which shows up as flicker/tearing against the
+    // page behind it. It only exists to cut stylus latency, which we do not need.
+    const context = canvas.getContext('2d', { alpha: true });
     if (!context) return { move() {}, scroll() {}, setQuality() {}, refreshLayout() {} };
 
     // Keep the existing tiered, seeded canvas architecture. Regions now own
@@ -1531,7 +1534,10 @@ function setupGalaxyField(canvas, reducedMotion) {
 
 
 function setupSwipeWake(canvas, reducedMotion) {
-    const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    // No desynchronized flag: the low-latency path presents this canvas outside
+    // the normal compositing sync, which shows up as flicker/tearing against the
+    // page behind it. It only exists to cut stylus latency, which we do not need.
+    const context = canvas.getContext('2d', { alpha: true });
     if (!context) return { setEnabled() {} };
 
     const trailLifetime = SWIPE_WAKE_RELEASE_DURATION;
