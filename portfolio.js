@@ -479,6 +479,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         largePlanets: { factor: 1.26, points: false },
         massivePlanets: { factor: 1.58, points: false }
     };
+    const tierList = Object.values(tiers);
     let width = 0, height = 0, pixelRatio = 1;
     let pageHeight = 0, scrollPosition = window.scrollY;
     let quality = 'low', frameInterval = 1000 / 18;
@@ -499,14 +500,51 @@ function setupGalaxyField(canvas, reducedMotion) {
     // 3rem, matching the lattice the stylesheet used to paint. Measured in the
     // layout pass so a root font-size change carries through.
     let gridSpacing = 48;
+    let gridPaths = [], gridPathSignature = '';
+    // The lattice is the one layer anchored in page space, so it is the layer
+    // that can show the page being pulled. A scroll feeds `scrollVelocity`;
+    // `scrollDrag` is the lattice lagging behind it and springing back, and
+    // `dragGlow` lights the lattice while it does -- at rest the grid is almost
+    // invisible by design, and an invisible lattice cannot show it is moving.
+    let scrollVelocity = 0, scrollDrag = 0, dragGlow = 0, lastScrollAt = 0;
     // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
     const hasGiantLandmark = Math.random() < .08;
-    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false };
+    // One roll decides the whole sky. Every seeded generator below mixes this
+    // in, so each visit lands somewhere different -- but it is drawn once and
+    // held, so expanding a collection or rotating the phone rebuilds the same
+    // universe instead of dealing a new one mid-scroll.
+    const universeSeed = (Math.random() * 0x100000000) >>> 0;
+    const seedFor = (salt, index = 0) =>
+        (universeSeed ^ salt ^ Math.imul(index + 1, 2654435761)) >>> 0;
+    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false,
+        px: 0, py: 0, vx: 0, vy: 0, sampledAt: 0, speed: 0 };
+    const particles = Array.from({ length: 160 }, () => ({ active: false }));
+    const ripples = Array.from({ length: 5 }, () => ({ active: false }));
+    let pressedSpace = null, suppressSpaceClick = false;
+    const interactionSelector = 'a, button, input, textarea, select, summary, [role="button"], '
+        + '[contenteditable], .project-card, .project-carousel, .navbar, .modal, .modal-overlay';
+    const openSpace = event => !document.querySelector('.modal-overlay.active')
+        && !event.target.closest(interactionSelector)
+        && event.clientY > navigationBottom + 8
+        && clearanceAt(event.clientX, event.clientY + scrollPosition, 12, visibleRects) > .8;
     // A fingertip presses a dimple into the field. The sheet sags under it,
     // nearby scenery slides down the slope, and on release it springs back
     // through flat before settling. Wells live in screen space: the page
     // scrolls underneath while the finger stays where it is put.
     const touchWells = [];
+    // The cursor and every fingertip drive the scenery through one list and one
+    // force law, so a finger gliding over the field moves things exactly the way
+    // the mouse does. A finger carries two extras a mouse has no equivalent for:
+    // the sheet sags under it, and its own travel sweeps bodies along with it.
+    // `x/y` is the smoothed position the body physics reads -- raw pointer
+    // samples can flip force direction between frames and make bodies flash.
+    // `lx/ly` is the live position, which the light warp wants instead so the
+    // bending stays under the cursor rather than trailing a third of a second
+    // behind it. For a fingertip the two are the same: the well already lags.
+    const pushers = Array.from({ length: 8 }, () => ({
+        x: 0, y: 0, lx: 0, ly: 0, vx: 0, vy: 0, gain: 0, carry: 0, sag: 0, sagReach: 0
+    }));
+    let pusherCount = 0;
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const smoothstep = value => value * value * (3 - 2 * value);
     const randomRange = (rng, min, max) => min + rng() * (max - min);
@@ -628,6 +666,19 @@ function setupGalaxyField(canvas, reducedMotion) {
         return sprite;
     };
 
+    // A drifting world is the same soft, additive light sprite the seeded
+    // scenery uses -- no shaded terminator, no surface, nothing that would
+    // read as a photograph of a planet next to a field of drawn stars.
+    const drawPlanet = (body, x, y, radius, alpha) => {
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.save(); context.translate(x, y);
+        context.rotate(body.angle);
+        context.globalCompositeOperation = 'lighter'; context.globalAlpha = alpha;
+        const stretch = body.stretch || 1;
+        context.drawImage(body.sprite, -radius, -radius * stretch, radius * 2, radius * 2 * stretch);
+        context.restore();
+    };
+
     // Granular content protection leaves gutters and the spaces between
     // collection rows available. The fixed navigation is handled separately.
     const protectedSelector = '.hero-badge, .hero-name, .hero-tagline, .social-links a, '
@@ -648,6 +699,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             const dy = Math.max(rect.top - y, 0, y - rect.bottom);
             if (dx >= radius || dy >= radius) continue;
             const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance === 0) return 0;
             if (distance < radius) visibility = Math.min(visibility, smoothstep(distance / radius));
         }
         return visibility;
@@ -714,29 +766,39 @@ function setupGalaxyField(canvas, reducedMotion) {
 
     const buildMotionSystems = () => {
         blackHoles = []; orbitingBodies = []; pulsars = [];
-        const rng = createSeededRandom(0xB1AC4A);
+        const rng = createSeededRandom(seedFor(0xB1AC4A));
         const mobile = width < 700;
-        // Spread the extra wells across the document. The hero keeps its well
-        // out in the right gutter; the rest sit further in, since every well
-        // hugging an edge was part of what hollowed out the middle.
+        // Spread the extra wells across the document. The hero keeps a well out
+        // toward a gutter, but which gutter, how far down and how big are all
+        // rolled per visit -- a fixed ladder of fractions was the tell that the
+        // sky had been placed rather than found.
+        const heroSide = rng() < .5 ? 1 : -1;
         const slots = [
-            { x: width * .91, y: height * .62, radius: mobile ? 62 : 110, factor: .88 },
-            { x: width * .28, y: pageHeight * .72, radius: mobile ? 24 : 38, factor: .48 }
+            { x: width * (.5 + heroSide * randomRange(rng, .33, .44)), y: height * randomRange(rng, .42, .78),
+              radius: (mobile ? 62 : 110) * randomRange(rng, .82, 1.2), factor: randomRange(rng, .8, .95) },
+            { x: width * randomRange(rng, .18, .42), y: pageHeight * randomRange(rng, .6, .84),
+              radius: (mobile ? 24 : 38) * randomRange(rng, .8, 1.3), factor: randomRange(rng, .42, .56) }
         ];
+        // Walk down the page in shuffled bands so two wells never stack, while
+        // the column each one lands in stays free.
+        const bands = [.24, .45, .68, .88].sort(() => rng() - .5);
         for (let i = 0; i < (mobile ? 2 : 3); i++) slots.push({
-            x: width * ([.74, .26, .52][i]), y: pageHeight * [.31, .54, .9][i],
-            radius: mobile ? 45 + i * 5 : [72, 88, 60][i], factor: .82 + i * .07
+            x: width * randomRange(rng, .16, .84),
+            y: pageHeight * (bands[i] + randomRange(rng, -.06, .06)),
+            radius: (mobile ? 45 + i * 5 : [72, 88, 60][i]) * randomRange(rng, .8, 1.25),
+            factor: randomRange(rng, .78, 1.02)
         });
         if (!mobile && hasGiantLandmark) slots.push({
-            x: width + 95, y: pageHeight * .9, radius: 270, factor: 1.12
+            x: rng() < .5 ? -95 : width + 95, y: pageHeight * randomRange(rng, .55, .95),
+            radius: 270, factor: 1.12
         });
         for (const [index, slot] of slots.entries()) {
             const position = slot.radius > 200 ? slot : pickOpenPosition(rng, slot.x, slot.y, slot.radius, 120);
             const hole = {
                 x: position.x, documentY: position.y, radius: slot.radius,
                 parallaxFactor: slot.factor, angle: randomRange(rng, -.45, .45),
-                phase: rng() * TAU, color: index ? '190,215,239' : '239,218,187',
-                sprite: blackHoleSprite(index ? '190,215,239' : '239,218,187', index % 2)
+                phase: rng() * TAU, flare: 0, color: ['239,201,157', '190,215,239', '215,221,232'][index % 3],
+                sprite: blackHoleSprite(['239,201,157', '190,215,239', '215,221,232'][index % 3], index % 2)
             };
             blackHoles.push(hole);
             // A couple of nearby bodies give the cursor something reachable to
@@ -748,7 +810,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                     hole.x + Math.cos(angle) * hole.radius * 1.95,
                     hole.documentY + Math.sin(angle) * hole.radius * 1.6,
                     randomRange(rng, 18, 31), hole.color,
-                    { interactive: true, alpha: .72, sprite: lightSprite(hole.color, 1), drift: 2 }
+                    { interactive: true, reachable: true, alpha: .72, sprite: lightSprite(hole.color, 1), drift: 2 }
                 ));
             }
             // Just two tiny grains, faded at the shadow; no repeating explosion.
@@ -771,7 +833,8 @@ function setupGalaxyField(canvas, reducedMotion) {
             });
         }
         for (let i = 0; i < (mobile ? 1 : 2); i++) {
-            const pos = pickOpenPosition(rng, width * (i ? .71 : .33), pageHeight * (i ? .86 : .38), 35);
+            const pos = pickOpenPosition(rng, width * randomRange(rng, .18, .82),
+                pageHeight * (i ? randomRange(rng, .55, .95) : randomRange(rng, .12, .5)), 35);
             pulsars.push({ x: pos.x, documentY: pos.y, phase: rng() * TAU,
                 factor: .55, sprite: lightSprite('206,225,248', 0) });
         }
@@ -780,35 +843,53 @@ function setupGalaxyField(canvas, reducedMotion) {
     // One scheduler, driven by active scene time. Tab hiding, Low FX and
     // reduced motion pause time; no timers, catch-up storms, or page-length rate.
     const eventDefinitions = {
-        // Shooting stars are the one common rare event: roughly 3x the prior
-        // cadence while remaining High FX-only and limited to one at a time.
-        shootingStar: { minCooldown: 1.7, maxCooldown: 4, probability: 1, maxSimultaneous: 1, cost: 1, high: true, low: false },
-        meteor: { minCooldown: 70, maxCooldown: 145, probability: .68, maxSimultaneous: 1, cost: 2, high: true, low: false },
-        comet: { minCooldown: 180, maxCooldown: 340, probability: .55, maxSimultaneous: 1, cost: 2, high: true, low: false },
-        supernova: { minCooldown: 130, maxCooldown: 260, probability: .6, maxSimultaneous: 1, cost: 2, high: true, low: false },
-        distantExplosion: { minCooldown: 105, maxCooldown: 220, probability: .58, maxSimultaneous: 1, cost: 1, high: true, low: false }
+        // Common streaks share a capped event budget with the rarer spectacles.
+        shootingStar: { minCooldown: .8, maxCooldown: 2.8, probability: 1, maxSimultaneous: 3, cost: 1, high: true, low: false },
+        meteor: { minCooldown: 16, maxCooldown: 42, probability: .9, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        comet: { minCooldown: 42, maxCooldown: 110, probability: .85, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        supernova: { minCooldown: 65, maxCooldown: 155, probability: .85, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        distantExplosion: { minCooldown: 35, maxCooldown: 95, probability: .7, maxSimultaneous: 1, cost: 1, high: true, low: false }
     };
-    const eventPool = Array.from({ length: 3 }, () => ({ active: false }));
+    Object.assign(eventDefinitions, {
+        meteorShower: { minCooldown: 30, maxCooldown: 80, probability: .75, maxSimultaneous: 1, cost: 2, high: true },
+        binaryStar: { minCooldown: 35, maxCooldown: 85, probability: .8, maxSimultaneous: 1, cost: 1, high: true },
+        pulsar: { minCooldown: 45, maxCooldown: 100, probability: .75, maxSimultaneous: 1, cost: 1, high: true },
+        cosmicFlare: { minCooldown: 22, maxCooldown: 65, probability: .8, maxSimultaneous: 1, cost: 1, high: true },
+        satellite: { minCooldown: 90, maxCooldown: 210, probability: .6, maxSimultaneous: 1, cost: 1, high: true },
+        roguePlanet: { minCooldown: 100, maxCooldown: 220, probability: .65, maxSimultaneous: 1, cost: 2, high: true },
+        feeding: { minCooldown: 20, maxCooldown: 55, probability: .9, maxSimultaneous: 1, cost: 2, high: true },
+        // A lander picks a world in view, comes down on it, sits a while, then
+        // leaves. Two can be running at once, so the sky usually has traffic.
+        rocket: { minCooldown: 12, maxCooldown: 38, probability: .95, maxSimultaneous: 3, cost: 2, high: true },
+        // A running skirmish between two fleets, anchored wherever the sky is
+        // open. Rarer than the landers -- it should be a thing you catch.
+        dogfight: { minCooldown: 55, maxCooldown: 140, probability: .8, maxSimultaneous: 1, cost: 2, high: true }
+    });
+    const stationaryEvent = type => ['supernova', 'distantExplosion', 'binaryStar', 'pulsar', 'cosmicFlare', 'dogfight'].includes(type);
+    const eventEntries = Object.entries(eventDefinitions);
+    const eventPool = Array.from({ length: 8 }, () => ({ active: false }));
     const eventDue = {};
     let nextEventWindow = 0;
     const eventRandom = Math.random;
     const cooldown = definition => randomRange(eventRandom, definition.minCooldown, definition.maxCooldown) * (width > 0 && width < 700 ? 1.6 : 1);
     const resetEvents = () => {
         for (const event of eventPool) event.active = false;
-        for (const [type, definition] of Object.entries(eventDefinitions)) eventDue[type] = sceneTime + cooldown(definition);
+        for (const [type, definition] of eventEntries) eventDue[type] = sceneTime + cooldown(definition);
         nextEventWindow = sceneTime + 4;
     };
     // Select an entire trajectory against cached protected rectangles. Coordinates
     // are inverted through the depth projection so events begin in this viewport.
     const chooseEventPath = (type, factor) => {
-        const stationary = type === 'supernova' || type === 'distantExplosion';
+        const stationary = stationaryEvent(type);
         let best = null, bestScore = -1;
         for (let attempt = 0; attempt < 24; attempt++) {
             const fromLeft = eventRandom() < .5;
             const x = randomRange(eventRandom, .06, .94) * width;
             const y = randomRange(eventRandom, navigationBottom + 45, height - 40);
-            const dx = stationary ? 0 : (fromLeft ? 1 : -1) * Math.min(width * .72, randomRange(eventRandom, 200, 650)) * factor;
-            const dy = stationary ? 0 : dx * randomRange(eventRandom, -.65, .65);
+            const angle = randomRange(eventRandom, .08, 1.48);
+            const length = Math.min(width * .88, randomRange(eventRandom, 280, 1000));
+            const dx = stationary ? 0 : (fromLeft ? 1 : -1) * Math.cos(angle) * length;
+            const dy = stationary ? 0 : Math.sin(angle) * length * (eventRandom() < .12 ? -.6 : 1);
             const protection = type === 'meteor' ? 60 : type === 'comet' ? 95 : stationary ? 80 : 16;
             let score = 1;
             for (let sample = 0; sample <= 8; sample++) {
@@ -824,7 +905,223 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (score > .92) break;
         }
         // Bright effects wait for another opportunity if the viewport is crowded.
-        return bestScore < .55 && type !== 'shootingStar' ? null : best;
+        return bestScore < .4 && !['shootingStar', 'meteorShower', 'feeding'].includes(type) ? null : best;
+    };
+    // Where a body actually is on screen this frame, matching the tier loop's
+    // own projection so a rocket sits on the world rather than near it.
+    const bodySite = { x: 0, y: 0, radius: 0 };
+    const projectBody = (body, time, cameraX, cameraY) => {
+        const factor = body.factor || 1;
+        const motion = Math.sin(time * body.speed + body.phase) * body.drift;
+        const orbit = Math.sin(time * .055 + body.phase) * body.orbit;
+        bodySite.x = body.x + motion + orbit - cameraX * factor * factor * 10
+            + (body.physics ? body.physics.ox : 0);
+        bodySite.y = (body.documentY - scrollPosition - height / 2) * factor + height / 2
+            + motion * .6 - cameraY * factor * factor * 7
+            + (body.physics ? body.physics.oy : 0);
+        bodySite.radius = body.radius;
+        return bodySite;
+    };
+    // Landing sites are chosen when a rocket launches, not every frame: a full
+    // scan of the two mid-size planet tiers costs nothing once a minute.
+    const chooseLandingSite = (time, cameraX, cameraY) => {
+        let best = null, bestScore = 0;
+        for (const tier of [tiers.mediumPlanets, tiers.largePlanets]) {
+            for (const body of tier.objects) {
+                if (body.haze || body.radius < 24 || body.radius > 110) continue;
+                if (body.physics && (body.physics.capture || body.physics.respawnAt > time)) continue;
+                const site = projectBody(body, time, cameraX, cameraY);
+                if (site.y < navigationBottom + 110 || site.y > height - 90) continue;
+                if (site.x < 90 || site.x > width - 90) continue;
+                // Needs open sky around it, or the landing happens behind text.
+                const clearance = clearanceAt(site.x, site.y + scrollPosition, body.radius * 2.2, visibleRects);
+                if (clearance < .8) continue;
+                const score = clearance * (.4 + eventRandom());
+                if (score > bestScore) { best = body; bestScore = score; }
+            }
+        }
+        return best;
+    };
+    // A lander: hull, nose, two fins, and a plume that only burns when it is
+    // actually under thrust. Drawn solid rather than additive -- a craft should
+    // read as a silhouette against the glow, not as another light in it.
+    const drawRocket = (x, y, angle, scale, thrust, alpha, beacon) => {
+        context.save();
+        context.translate(x, y);
+        context.rotate(angle);
+        if (thrust > .01) {
+            const length = (11 + thrust * 30) * scale * (.82 + Math.random() * .36);
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = alpha;
+            const plume = context.createLinearGradient(0, 0, -length, 0);
+            plume.addColorStop(0, `rgba(255,231,190,${(.8 * thrust).toFixed(3)})`);
+            plume.addColorStop(.4, `rgba(255,176,102,${(.34 * thrust).toFixed(3)})`);
+            plume.addColorStop(1, 'rgba(255,140,70,0)');
+            context.fillStyle = plume;
+            context.beginPath();
+            context.moveTo(-scale * 2.8, -scale * 1.6);
+            context.lineTo(-length, 0);
+            context.lineTo(-scale * 2.8, scale * 1.6);
+            context.closePath();
+            context.fill();
+        }
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = alpha;
+        context.fillStyle = '#5d6b7d';
+        context.beginPath();
+        context.moveTo(-scale * 1.5, -scale * 1.75);
+        context.lineTo(-scale * 4.4, -scale * 3.5);
+        context.lineTo(-scale * 3.1, -scale * 1.5);
+        context.closePath(); context.fill();
+        context.beginPath();
+        context.moveTo(-scale * 1.5, scale * 1.75);
+        context.lineTo(-scale * 4.4, scale * 3.5);
+        context.lineTo(-scale * 3.1, scale * 1.5);
+        context.closePath(); context.fill();
+        context.fillStyle = '#d9e0e8';
+        context.beginPath();
+        context.moveTo(scale * 5.4, 0);
+        context.lineTo(scale * .8, -scale * 1.85);
+        context.lineTo(-scale * 3.1, -scale * 1.6);
+        context.lineTo(-scale * 3.1, scale * 1.6);
+        context.lineTo(scale * .8, scale * 1.85);
+        context.closePath(); context.fill();
+        context.fillStyle = '#8d9bab';
+        context.fillRect(-scale * .6, -scale * 1.7, scale * 1.1, scale * 3.4);
+        if (beacon > .01) {
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = alpha * beacon;
+            context.fillStyle = '#ff9f7a';
+            context.beginPath(); context.arc(scale * 2.4, 0, scale * .7, 0, TAU); context.fill();
+        }
+        context.restore();
+    };
+    // Two fleets, scattered around the anchor rather than lined up facing each
+    // other. Each ship picks the nearest enemy, circles it rather than ramming
+    // it, and fires when it is roughly on target. Bounded on every axis: six
+    // ships, sixteen bolts, no allocation once the arrays exist.
+    const HUMAN = 0, ALIEN = 1;
+    const armFleet = event => {
+        event.ships = event.ships || Array.from({ length: 6 }, () => ({}));
+        event.bolts = event.bolts || Array.from({ length: 16 }, () => ({ life: 0 }));
+        for (const [index, ship] of event.ships.entries()) {
+            const faction = index % 2 === 0 ? HUMAN : ALIEN;
+            const side = faction === HUMAN ? -1 : 1;
+            Object.assign(ship, {
+                faction, alive: true, wreck: 0, hp: 2 + Math.floor(eventRandom() * 2),
+                // Scattered: each ship gets its own offset and stand-off, so the
+                // two sides read as loose swarms instead of ranks.
+                x: side * randomRange(eventRandom, 55, 150) + randomRange(eventRandom, -40, 40),
+                y: randomRange(eventRandom, -85, 85),
+                vx: -side * randomRange(eventRandom, 10, 34), vy: randomRange(eventRandom, -18, 18),
+                angle: side > 0 ? Math.PI : 0,
+                fireAt: randomRange(eventRandom, .4, 2.6),
+                orbit: eventRandom() < .5 ? 1 : -1,
+                size: randomRange(eventRandom, .85, 1.25),
+                // The alien side flies a mixed fleet: saucers alongside the two
+                // hulls that also turn up as landers.
+                design: Math.floor(eventRandom() * 3)
+            });
+        }
+        for (const bolt of event.bolts) bolt.life = 0;
+    };
+    const drawHumanShip = (x, y, angle, size, alpha) => {
+        context.save();
+        context.translate(x, y); context.rotate(angle);
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = alpha * .8;
+        const plume = context.createLinearGradient(-size * 3, 0, -size * 11, 0);
+        plume.addColorStop(0, 'rgba(178,214,255,.5)');
+        plume.addColorStop(1, 'rgba(150,190,255,0)');
+        context.fillStyle = plume;
+        context.fillRect(-size * 11, -size * .8, size * 8, size * 1.6);
+        context.globalCompositeOperation = 'source-over';
+        context.globalAlpha = alpha;
+        // A hard-edged wedge: angular reads as built, next to the alien curve.
+        context.fillStyle = '#cfd9e4';
+        context.beginPath();
+        context.moveTo(size * 7, 0);
+        context.lineTo(-size * 2.5, -size * 3.2);
+        context.lineTo(-size * 3.4, 0);
+        context.lineTo(-size * 2.5, size * 3.2);
+        context.closePath(); context.fill();
+        context.fillStyle = '#71829a';
+        context.beginPath();
+        context.moveTo(size * 2.2, 0);
+        context.lineTo(-size * 2.5, -size * 1.5);
+        context.lineTo(-size * 2.5, size * 1.5);
+        context.closePath(); context.fill();
+        context.restore();
+    };
+    const drawAlienShip = (x, y, angle, size, alpha, time) => {
+        context.save();
+        context.translate(x, y); context.rotate(angle);
+        context.globalAlpha = alpha;
+        // A saucer, always level to its heading, with a lit underside rim.
+        context.fillStyle = '#2f4a42';
+        context.beginPath(); context.ellipse(0, 0, size * 6, size * 2.1, 0, 0, TAU); context.fill();
+        context.fillStyle = '#9fe6c4';
+        context.beginPath(); context.ellipse(0, -size * .5, size * 2.6, size * 1.25, 0, 0, TAU); context.fill();
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = alpha * (.45 + Math.sin(time * 3.4 + size * 9) * .2);
+        context.fillStyle = '#6ff0b0';
+        context.beginPath(); context.ellipse(0, size * 1.2, size * 4.4, size * .8, 0, 0, TAU); context.fill();
+        context.restore();
+    };
+    // Alien craft hold themselves up on light rather than on a flame, so their
+    // "thrust" reads as a brightening underglow instead of a plume. That is the
+    // cheapest way to make them legible as not-ours at background scale.
+    const drawAlienPod = (x, y, angle, scale, thrust, alpha, beacon, time) => {
+        context.save();
+        context.translate(x, y); context.rotate(angle);
+        context.globalAlpha = alpha;
+        context.strokeStyle = '#4e6f63'; context.lineWidth = Math.max(.5, scale * .28);
+        for (let i = -1; i <= 1; i++) {
+            context.beginPath();
+            context.moveTo(-scale * .8, i * scale * .9);
+            context.lineTo(-scale * 3.6, i * scale * 2.9);
+            context.stroke();
+        }
+        context.fillStyle = '#33544b';
+        context.beginPath(); context.ellipse(0, 0, scale * 4.2, scale * 2.4, 0, 0, TAU); context.fill();
+        context.fillStyle = '#a9efcd';
+        context.beginPath(); context.ellipse(scale * .7, -scale * .5, scale * 1.7, scale * 1, 0, 0, TAU); context.fill();
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = alpha * (.3 + thrust * .6 + beacon * .3);
+        context.drawImage(lightSprite('120,240,180', 2),
+            -scale * 5, -scale * 1.5, scale * 10, scale * 6);
+        context.restore();
+    };
+    const drawAlienDart = (x, y, angle, scale, thrust, alpha, beacon, time) => {
+        context.save();
+        context.translate(x, y); context.rotate(angle);
+        context.globalAlpha = alpha;
+        // A swept manta: one concave sweep back from the nose on each side.
+        context.fillStyle = '#3b3552';
+        context.beginPath();
+        context.moveTo(scale * 5.6, 0);
+        context.quadraticCurveTo(-scale * .5, -scale * 1.6, -scale * 3.6, -scale * 3.6);
+        context.quadraticCurveTo(-scale * 1.4, 0, -scale * 3.6, scale * 3.6);
+        context.quadraticCurveTo(-scale * .5, scale * 1.6, scale * 5.6, 0);
+        context.closePath(); context.fill();
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = alpha * (.45 + thrust * .5 + beacon * .35);
+        context.fillStyle = '#c79bff';
+        for (let i = -1; i <= 1; i += 2) {
+            context.beginPath();
+            context.ellipse(-scale * 1.6, i * scale * 1.5, scale * 1.5, scale * .5, 0, 0, TAU);
+            context.fill();
+        }
+        context.globalAlpha = alpha * (.3 + thrust * .55);
+        context.drawImage(lightSprite('190,150,255', 2),
+            -scale * 7, -scale * 3.4, scale * 8, scale * 6.8);
+        context.restore();
+    };
+    const CRAFT_HUMAN = 0, CRAFT_POD = 1, CRAFT_DART = 2;
+    const drawCraft = (design, x, y, angle, scale, thrust, alpha, beacon, time) => {
+        if (design === CRAFT_HUMAN) drawRocket(x, y, angle, scale, thrust, alpha, beacon);
+        else if (design === CRAFT_POD) drawAlienPod(x, y, angle, scale, thrust, alpha, beacon, time);
+        else drawAlienDart(x, y, angle, scale, thrust, alpha, beacon, time);
     };
     const cometTailSprite = color => {
         const key = `comet-tail:${color}`;
@@ -853,18 +1150,57 @@ function setupGalaxyField(canvas, reducedMotion) {
     const spawnEvent = type => {
         const event = eventPool.find(item => !item.active);
         if (!event) return false;
+        if (type === 'rocket') {
+            const target = chooseLandingSite(sceneTime, pointer.x, pointer.y);
+            if (!target) return false;
+            // Both sides fly the same errand. Which one turns up is a coin
+            // flip, so a human lander and an alien lander can end up at
+            // neighbouring worlds -- and then they see each other.
+            const alien = eventRandom() < .5;
+            event.bolts = event.bolts || Array.from({ length: 8 }, () => ({ life: 0 }));
+            for (const bolt of event.bolts) bolt.life = 0;
+            // It arrives along the same radial it will stand on, so the descent,
+            // the landing and the departure all read as one line of travel.
+            Object.assign(event, {
+                active: true, type, started: sceneTime, capture: null, body: target,
+                duration: randomRange(eventRandom, 26, 40),
+                siteAngle: eventRandom() * TAU,
+                entry: randomRange(eventRandom, 5.5, 9) * Math.max(60, target.radius),
+                sweep: randomRange(eventRandom, -.5, .5),
+                scale: Math.max(1.5, Math.min(3.4, target.radius / 22)),
+                puffed: false, faction: alien ? ALIEN : HUMAN,
+                design: alien ? (eventRandom() < .5 ? CRAFT_POD : CRAFT_DART) : CRAFT_HUMAN,
+                hp: 3, duel: null, duelStart: 0, dead: 0, hit: 0,
+                sx: undefined, sy: undefined, blendFrom: null, blendAt: -10,
+                fx: 0, fy: 0, fvx: 0, fvy: 0, fireAt: 0,
+                orbitDir: eventRandom() < .5 ? 1 : -1
+            });
+            return true;
+        }
         const depth = eventRandom();
-        const factor = .45 + depth * .6;
-        const path = chooseEventPath(type, factor);
+        let factor = .45 + depth * .6;
+        let path = chooseEventPath(type, factor);
+        let feedingHole = null;
+        if (type === 'feeding') {
+            feedingHole = projectedHoles.find(hole => hole.clearance > .65 && hole.screenY > navigationBottom + 60);
+            if (!feedingHole) return false;
+            factor = feedingHole.parallaxFactor;
+            path = { x: feedingHole.x - feedingHole.radius * 1.05, documentY: feedingHole.documentY, dx: 0, dy: 0 };
+        }
         if (!path) return false;
         const color = ['220,235,255', '246,231,208', '194,218,241'][Math.floor(eventRandom() * 3)];
         const duration = type === 'shootingStar' ? randomRange(eventRandom, .65, 1.5) - depth * .22
             : type === 'meteor' ? randomRange(eventRandom, 1.6, 2.6)
             : type === 'comet' ? randomRange(eventRandom, 18, 28)
-            : type === 'supernova' ? randomRange(eventRandom, 6, 9) : randomRange(eventRandom, 5, 8);
+            : type === 'supernova' ? randomRange(eventRandom, 8, 12)
+            : type === 'roguePlanet' || type === 'satellite' ? randomRange(eventRandom, 18, 30)
+            : type === 'binaryStar' || type === 'pulsar' ? randomRange(eventRandom, 10, 17)
+            : type === 'dogfight' ? randomRange(eventRandom, 22, 38) : randomRange(eventRandom, 5, 8);
         Object.assign(event, path, {
             active: true, type, factor, color, duration, started: sceneTime,
-            capture: null,
+            capture: null, burst: false, variant: type === 'shootingStar'
+                ? ['normal', 'normal', 'normal', 'long', 'distant', 'distant', 'double', 'bright'][Math.floor(eventRandom() * 8)] : '',
+            giant: type === 'comet' && eventRandom() < .12,
             depth, bend: randomRange(eventRandom, -12, 12),
             radius: type === 'meteor' ? 9 + depth * 6 : 4 + depth * 5,
             alpha: type === 'meteor' ? .38 : type === 'comet' ? .34 : type === 'supernova' ? .8 : type === 'distantExplosion' ? .6 : .3 + depth * .18,
@@ -872,27 +1208,47 @@ function setupGalaxyField(canvas, reducedMotion) {
             sprite: lightSprite(color, 0), bloom: lightSprite(color, 2),
             tailSprite: type === 'comet' ? cometTailSprite(color) : null
         });
+        if (event.variant === 'long') { event.tail = .42; event.duration *= 1.25; }
+        if (event.variant === 'distant') { event.radius *= .45; event.alpha *= .55; event.tail *= .6; }
+        if (event.variant === 'bright') { event.radius *= 1.8; event.alpha = .72; }
+        if (type === 'roguePlanet') { event.sprite = lightSprite(color, 1); event.radius = 42 + depth * 40; event.alpha = .55; }
+        if (type === 'feeding') {
+            const point = projectPosition(path.x, path.documentY, factor, pointer.x, pointer.y);
+            event.capture = beginCapture(feedingHole, point.x, point.y, sceneTime, 5.5);
+            event.sprite = lightSprite(color, 1); event.radius = 14; event.alpha = .8;
+        }
+        if (event.giant) { event.radius *= 1.7; event.tail = .95; }
+        if (type === 'dogfight') armFleet(event);
         return true;
     };
     const updateEvents = time => {
         for (const event of eventPool) if (event.active && (event.capture
             ? time - event.capture.started >= event.capture.duration
-            : time - event.started >= event.duration)) event.active = false;
-        for (const [type, definition] of Object.entries(eventDefinitions)) {
+            : time - event.started >= event.duration)) {
+            if (event.capture) {
+                const point = capturePoint(event.capture, 1, pointer.x, pointer.y);
+                feedHole(event.capture.hole, point.x, point.y);
+            }
+            event.active = false;
+        }
+        for (const [type, definition] of eventEntries) {
             if (eventDue[type] === undefined) eventDue[type] = time + cooldown(definition);
             if (time < eventDue[type] || time < nextEventWindow || !definition[quality]) continue;
-            const active = eventPool.filter(event => event.active);
-            const cost = active.reduce((total, event) => total + eventDefinitions[event.type].cost, 0);
-            if (active.length >= (width < 700 ? 1 : 2) || cost + definition.cost > (width < 700 ? 2 : 3)
-                || active.filter(event => event.type === type).length >= definition.maxSimultaneous) continue;
+            let count = 0, cost = 0, same = 0;
+            for (const event of eventPool) if (event.active) {
+                count++; cost += eventDefinitions[event.type].cost;
+                if (event.type === type) same++;
+            }
+            if (count >= (width < 700 ? 3 : 6) || cost + definition.cost > (width < 700 ? 4 : 8)
+                || same >= definition.maxSimultaneous) continue;
             eventDue[type] = time + cooldown(definition);
             if (eventRandom() > definition.probability || !spawnEvent(type)) continue;
-            nextEventWindow = time + randomRange(eventRandom, 2.5, 5);
+            nextEventWindow = time + randomRange(eventRandom, .3, .85);
         }
     };
 
     const buildScene = () => {
-        for (const tier of Object.values(tiers)) tier.objects = [];
+        for (const tier of tierList) tier.objects = [];
         regions = [];
         const mobile = width < 700;
         const density = mobile ? .68 : 1;
@@ -904,7 +1260,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         // Each segment has its own seed: expanding a collection adds scenery
         // below without rerolling the entire universe above it.
         for (let segment = 0; segment < segments; segment++) {
-            const rng = createSeededRandom(0xC0FFEE ^ Math.imul(segment + 1, 2654435761));
+            const rng = createSeededRandom(seedFor(0xC0FFEE, segment));
             const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
             const side = rng() < .5;
             // Anchoring three quarters of the systems in the gutters left a
@@ -948,10 +1304,12 @@ function setupGalaxyField(canvas, reducedMotion) {
 
             // Give the hero's open right side its own system, above the title's
             // baseline, instead of pushing every light below the large heading.
+            // The side is fixed by the layout -- the name owns the left -- but
+            // where it sits in that space is not.
             if (segment === 0 && !mobile) {
-                region.x = width * .90;
-                region.y = height * .35;
-                region.radius = width * .15;
+                region.x = width * randomRange(rng, .82, .96);
+                region.y = height * randomRange(rng, .24, .48);
+                region.radius = width * randomRange(rng, .12, .19);
             }
 
             // An even baseline under uneven systems, with many nearly invisible
@@ -1052,18 +1410,70 @@ function setupGalaxyField(canvas, reducedMotion) {
             for (let i = 0; i < Math.round(5 * density); i++) placeBody(rng, 'smallPlanets', midfield, 6, 15);
             for (let i = 0; i < Math.round(3 * density); i++) placeBody(rng, 'mediumStars', midfield, 10, 22);
             for (let i = 0; i < Math.round(1 * density); i++) placeBody(rng, 'mediumPlanets', midfield, 22, 44);
+
+            // Three systems per segment always leave holes between them, and a
+            // hole in a star field reads as a rendering failure rather than as
+            // space. Walk a jittered lattice over the segment; wherever a cell
+            // lands outside every system's envelope, give it its own faint
+            // scatter. Weighted toward baked stars because those cost nothing
+            // per frame, so filling the gaps does not cost what the systems do.
+            const systems = [region, companion, midfield];
+            const columns = mobile ? 3 : 5, rows = 3;
+            for (let column = 0; column < columns; column++) for (let row = 0; row < rows; row++) {
+                const gapX = (column + randomRange(rng, .15, .85)) / columns * width;
+                const gapY = segment * segmentHeight
+                    + (row + randomRange(rng, .15, .85)) / rows * segmentHeight;
+                let covered = 0;
+                for (const system of systems) {
+                    const dx = (gapX - system.x) / system.radius;
+                    const dy = (gapY - system.y) / (system.radius * system.flatten);
+                    covered = Math.max(covered, 1 - Math.min(1, Math.hypot(dx, dy) / 1.35));
+                }
+                // Anything already within reach of a system is left alone; the
+                // rest fills in proportionally to how bare it actually is.
+                if (covered > .3) continue;
+                const emptiness = 1 - covered / .3;
+                const patch = {
+                    x: gapX, y: gapY, radius: randomRange(rng, 110, 210),
+                    flatten: randomRange(rng, .6, 1)
+                };
+                for (let i = 0; i < Math.round(34 * density * emptiness); i++) {
+                    const p = around(rng, patch, 1.15);
+                    add('stars', makeObject(rng, p.x, p.y, .2 + rng() ** 1.9 * .8, chooseDeepColor(rng), {
+                        alpha: .09 + rng() ** 1.8 * .5, drift: .6,
+                        pulse: .2 + rng() * .35, staticField: true
+                    }));
+                }
+                for (let i = 0; i < Math.round(7 * density * emptiness); i++) {
+                    const p = around(rng, patch, 1.3);
+                    add('dust', makeObject(rng, p.x, p.y, .16 + rng() * .3, chooseDeepColor(rng),
+                        { alpha: .03 + rng() * .1, drift: .5, pulse: .16 }));
+                }
+                // One unresolved smudge now and then, so a gap has something to
+                // rest on rather than reading as evenly sprinkled noise.
+                if (rng() < .55 * emptiness) {
+                    const p = around(rng, patch, .8);
+                    const color = chooseDeepColor(rng);
+                    add('tinyDistant', makeObject(rng, p.x, p.y, 4 + rng() * 9, color, {
+                        sprite: rng() < .5 ? galaxySprite(rng, color) : lightSprite(color, 0),
+                        alpha: .07 + rng() * .18, stretch: .35 + rng() * .5,
+                        angle: rng() * TAU, drift: .35, haze: true
+                    }));
+                }
+            }
         }
         // A few much bigger crops sell scale. Their hot center stays close to
         // the edge and their atmospheric envelope extends far beyond it.
-        const rng = createSeededRandom(0x4A551);
+        const rng = createSeededRandom(seedFor(0x4A551));
         const anchorCount = 1;
         for (let i = 0; i < anchorCount; i++) {
             const radius = randomRange(rng, 270, 430) * (mobile ? .56 : 1);
-            const left = i % 2 !== 0;
+            // Which edge it crops against, and how far down, is part of the roll.
+            const left = rng() < .5;
             const offset = radius * randomRange(rng, .015, .075);
-            const color = colors[[2, 1, 4, 3, 2][i]];
+            const color = chooseColor(rng);
             add('massivePlanets', makeObject(rng, left ? -offset : width + offset,
-                i === 0 ? height * .39 : sceneHeight * ([.065, .27, .49, .73, .94][i]), radius, color, {
+                sceneHeight * randomRange(rng, .08, .92), radius, color, {
                     alpha: .22, sprite: lightSprite(color, 2), drift: 2, pulse: .025, orbit: 0,
                     interactive: true
                 }));
@@ -1072,14 +1482,12 @@ function setupGalaxyField(canvas, reducedMotion) {
         // Compact, multi-core star clusters share one depth, so their haze and
         // individual lights stay together as the page moves.
         for (let i = 0; i < Math.min(7, Math.ceil(sceneHeight / 1100)); i++) {
-            const clusterRng = createSeededRandom(0x57A2C ^ Math.imul(i + 1, 2654435761));
+            const clusterRng = createSeededRandom(seedFor(0x57A2C, i));
             const radius = randomRange(clusterRng, 60, 105) * (mobile ? .65 : 1);
-            // Five columns rather than three, weighted inward: the old
-            // left/centre/right rotation put two of every three clusters in a
-            // gutter, which is a pattern the eye picks up quickly.
-            const clusterColumn = [ .35, .5, .66, .2, .8 ][i % 5];
-            const p = pickOpenPosition(clusterRng, width * clusterColumn,
-                500 + i * 1050, radius, 180);
+            // A free column per cluster rather than a rotation through five
+            // fixed ones -- any repeating stride is a pattern the eye picks up.
+            const p = pickOpenPosition(clusterRng, width * randomRange(clusterRng, .12, .88),
+                (i + randomRange(clusterRng, .1, .9)) * 1050, radius, 180);
             const color = chooseColor(clusterRng);
             add('clusterHaze', makeObject(clusterRng, p.x, p.y, radius * 1.8, color,
                 { sprite: lightSprite(color, 2), alpha: .32, haze: true, drift: .5, orbit: 0 }));
@@ -1094,11 +1502,25 @@ function setupGalaxyField(canvas, reducedMotion) {
                     { alpha: .18 + clusterRng() * .56, drift: .5, orbit: 0, pulse: .08 }));
             }
         }
-        for (const tier of Object.values(tiers)) {
+        for (const tier of tierList) {
             tier.objects.sort((a, b) => a.documentY - b.documentY);
             tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
             if (tier.objects.some(item => item.interactive)) tier.margin += 360;
+            // Keep the full list for reduced motion, which draws the points
+            // directly. Animated frames only visit stars not already in tiles.
+            tier.liveObjects = tier === tiers.stars
+                ? tier.objects.filter(object => !object.staticField) : tier.objects;
+            for (const object of tier.objects) {
+                object.fillColor = `rgb(${object.color})`;
+                // Rockets have to find a world and follow it while it parallaxes,
+                // which means each body has to know its own depth.
+                object.factor = tier.factor;
+            }
         }
+        pressedSpace = null;
+        // Anything holding a reference into the old scene is now pointing at a
+        // world that no longer exists.
+        for (const event of eventPool) if (event.body) { event.active = false; event.body = null; }
         buildStaticStarTiles();
     };
 
@@ -1107,6 +1529,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         const stars = tiers.stars.objects.filter(object => object.staticField);
         if (!stars.length || !width || !pageHeight) return;
 
+        let starIndex = 0;
         for (let start = 0; start < pageHeight; start += staticStarTileHeight) {
             const end = Math.min(start + staticStarTileHeight, pageHeight);
             const tile = document.createElement('canvas');
@@ -1116,12 +1539,13 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (!tileContext) continue;
 
             tileContext.globalCompositeOperation = 'lighter';
-            for (const object of stars) {
+            while (starIndex < stars.length && stars[starIndex].documentY < start) starIndex++;
+            for (; starIndex < stars.length && stars[starIndex].documentY < end; starIndex++) {
+                const object = stars[starIndex];
                 // Keep each star in exactly one tile. Duplicating stars at a
                 // tile edge would make those few pixels visibly brighter.
-                if (object.documentY < start || object.documentY >= end) continue;
                 tileContext.globalAlpha = object.alpha;
-                tileContext.fillStyle = `rgb(${object.color})`;
+                tileContext.fillStyle = object.fillColor;
                 tileContext.beginPath();
                 tileContext.ellipse(
                     object.x,
@@ -1159,6 +1583,12 @@ function setupGalaxyField(canvas, reducedMotion) {
                 hole.documentY, hole.parallaxFactor, cameraX, cameraY);
             if (position.y < -hole.radius * 2 || position.y > height + hole.radius * 2) continue;
             hole.screenX = position.x; hole.screenY = position.y;
+            hole.disturbance = 0;
+            for (let i = 0; i < pusherCount; i++) {
+                const push = pushers[i];
+                hole.disturbance = Math.max(hole.disturbance, push.gain
+                    * Math.max(0, 1 - Math.hypot(push.lx - position.x, push.ly - position.y) / (hole.radius * 2.2)));
+            }
             hole.clearance = clearanceAt(position.x, position.y + scrollPosition, hole.radius * .8, visibleRects);
             projectedHoles.push(hole);
         }
@@ -1167,15 +1597,70 @@ function setupGalaxyField(canvas, reducedMotion) {
         const hole = capture.hole;
         const center = projectPosition(hole.x + Math.sin(sceneTime * .018 + hole.phase) * 3,
             hole.documentY, hole.parallaxFactor, cameraX, cameraY);
-        const angle = capture.angle + progress * capture.turn;
+        const angle = capture.angle + (progress * .35 + progress * progress * .65) * capture.turn;
         const radius = capture.radius * (1 - progress) ** 1.25;
         return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
     };
     const beginCapture = (hole, x, y, time, duration) => ({
         hole, started: time, duration, angle: Math.atan2(y - hole.screenY, x - hole.screenX),
         radius: Math.hypot(x - hole.screenX, y - hole.screenY),
-        turn: hole.angle < 0 ? -2.4 : 2.4
+        turn: (hole.angle < 0 ? -1 : 1) * TAU * 1.65
     });
+    const emitDust = (x, y, count, color, speed = 65, vx = 0, vy = 0) => {
+        const limit = width < 700 ? 64 : particles.length;
+        for (let i = 0; i < limit && count > 0; i++) {
+            const particle = particles[i];
+            if (particle.active) continue;
+            const angle = Math.random() * TAU, velocity = speed * (.25 + Math.random());
+            Object.assign(particle, { active: true, x, y: y + scrollPosition, vx: vx + Math.cos(angle) * velocity,
+                vy: vy + Math.sin(angle) * velocity, life: 0, duration: 1 + Math.random() * 2.2,
+                radius: .5 + Math.random() * 1.3, color: `rgb(${color})` });
+            count--;
+        }
+    };
+    const addRipple = (x, y, strength = 1) => {
+        const ripple = ripples.find(item => !item.active);
+        if (ripple) Object.assign(ripple, { active: true, x, y: y + scrollPosition,
+            started: sceneTime, strength, radius: 0 });
+    };
+    // Rebuilt once a frame rather than per body, so a thousand pieces of
+    // scenery all read the same cursor and the same fingertips.
+    const syncPushers = () => {
+        pusherCount = 0;
+        if (pointer.active && pusherCount < pushers.length) {
+            const push = pushers[pusherCount++];
+            push.x = (pointer.x + 1) * width / 2;
+            push.y = (pointer.y + 1) * height / 2;
+            push.lx = pointer.px; push.ly = pointer.py;
+            push.vx = pointer.vx; push.vy = pointer.vy;
+            // The cursor smears and sparks the light it passes, but does not
+            // drag bodies along behind it -- that stays a fingertip's job.
+            push.carry = push.sag = push.sagReach = 0;
+            push.gain = 1;
+        }
+        for (const well of touchWells) {
+            if (well.depth <= .02 || pusherCount >= pushers.length) continue;
+            const push = pushers[pusherCount++];
+            push.x = push.lx = well.x; push.y = push.ly = well.y;
+            push.vx = well.vx; push.vy = well.vy;
+            // A finger pushes as hard as the cursor once its dent is set.
+            push.gain = Math.min(1, well.depth / TOUCH_WELL_DEPTH);
+            push.carry = .32;
+            push.sag = well.depth;
+            push.sagReach = well.reach * 1.15;
+        }
+    };
+    const feedHole = (hole, x, y) => {
+        hole.flare = 1;
+        // Launch outside the horizon, otherwise gravity consumes every grain
+        // on the same frame as the flare that created it.
+        const count = width < 700 ? 9 : 22;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * TAU, dx = Math.cos(angle), dy = Math.sin(angle);
+            emitDust(x + dx * hole.radius * .62, y + dy * hole.radius * .36,
+                1, hole.color, 18, dx * 95, dy * 55);
+        }
+    };
     const interactBody = (body, baseX, baseY, delta, time, cameraX, cameraY) => {
         // Offsets keep the seeded anchors and sorted culling intact. Only the
         // visible body moves; far-away scenery never enters the physics loop.
@@ -1202,33 +1687,27 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
         const seconds = delta / 1000;
         let ax = -state.ox * .65, ay = -state.oy * .65;
-        if (pointer.active) {
-            // Use the eased cursor position here too. Physics driven by the
-            // raw pointer target can alternate force direction between frames
-            // when the mouse moves quickly, which reads as flashing bodies.
-            let dx = state.x - (pointer.x + 1) * width / 2;
-            let dy = state.y - (pointer.y + 1) * height / 2;
+        // Cursor and fingertips, same law. A gliding finger both shoves bodies
+        // out of its way and drags them along in its wake; the sag underneath
+        // it pulls them back down the slope, so a still finger gathers scenery
+        // and a moving one sweeps it.
+        for (let i = 0; i < pusherCount; i++) {
+            const push = pushers[i];
+            let dx = state.x - push.x, dy = state.y - push.y;
             let distance = Math.hypot(dx, dy);
             if (distance < .5) { dx = Math.cos(body.phase); dy = Math.sin(body.phase); distance = 1; }
             const reach = 155 + Math.min(105, body.radius * .62);
             if (distance < reach) {
-                const force = (1 - distance / reach) ** 2 * 1280 / (1 + body.radius / 150);
-                ax += (dx / distance - dy / distance * .16) * force;
-                ay += (dy / distance + dx / distance * .16) * force;
+                const influence = (1 - distance / reach) ** 2;
+                const force = influence * 1280 * push.gain / (1 + body.radius / 150);
+                ax += (dx / distance - dy / distance * .16) * force + push.vx * influence * push.carry;
+                ay += (dy / distance + dx / distance * .16) * force + push.vy * influence * push.carry;
             }
-        }
-        // Bodies fall down the slope toward the fingertip and pick up a little
-        // spin on the way in, the way the seeded wells pull them -- except a
-        // finger never captures anything, so they climb back out on release.
-        for (const well of touchWells) {
-            if (well.depth <= .02) continue;
-            const dx = well.x - state.x, dy = well.y - state.y;
-            const reach = well.reach * 1.15;
-            const distance = Math.max(1, Math.hypot(dx, dy));
-            if (distance > reach) continue;
-            const strength = (1 - distance / reach) ** 2 * 640 * well.depth / (1 + body.radius / 190);
-            ax += dx / distance * strength - dy / distance * strength * .24;
-            ay += dy / distance * strength + dx / distance * strength * .24;
+            if (push.sag && distance < push.sagReach) {
+                const slope = (1 - distance / push.sagReach) ** 2 * 380 * push.sag / (1 + body.radius / 190);
+                ax += (-dx / distance + dy / distance * .24) * slope;
+                ay += (-dy / distance - dx / distance * .24) * slope;
+            }
         }
         let nearest = null, nearestRatio = Infinity;
         for (const hole of projectedHoles) {
@@ -1299,20 +1778,40 @@ function setupGalaxyField(canvas, reducedMotion) {
         context.globalCompositeOperation = 'lighter';
         context.globalAlpha = 1;
         const wells = touchWells.filter(well => Math.abs(well.depth) > .012);
+        // A drag both slides the horizontals and stretches the gaps between
+        // them, so the sheet reads as elastic rather than merely offset.
+        const stretch = 1 + Math.abs(scrollDrag) * .0055;
+        // With no dents the path only changes on scroll or resize. Reuse its
+        // exact geometry; touch and drag frames retrace the whole lattice.
+        const signature = `${width}:${height}:${gridSpacing}:${scrollPosition}:${scrollDrag.toFixed(2)}`;
+        if (touchWells.length || signature !== gridPathSignature) gridPaths = [];
+        gridPathSignature = touchWells.length ? '' : signature;
         // Two densities, matching what the stylesheet drew before: a readable
         // major lattice and a much fainter minor one.
-        for (const [spacing, color] of [
-            [gridSpacing / 4, 'rgba(255,255,255,.0042)'],
-            [gridSpacing, 'rgba(145,200,255,.0125)']
+        for (const [baseSpacing, color, lit] of [
+            [gridSpacing / 4, 'rgba(255,255,255,.0042)', .012],
+            [gridSpacing, 'rgba(145,200,255,.0125)', .05]
         ]) {
-            const path = new Path2D();
-            for (let x = 0; x <= width; x += spacing) traceGridLine(path, x, 0, x, height, 'y');
-            for (let y = -(scrollPosition % spacing); y <= height; y += spacing) {
-                traceGridLine(path, 0, y, width, y, 'x');
+            const spacing = baseSpacing * stretch;
+            const pathIndex = baseSpacing === gridSpacing ? 1 : 0;
+            let path = gridPaths[pathIndex];
+            if (!path) {
+                path = new Path2D();
+                for (let x = 0; x <= width; x += spacing) traceGridLine(path, x, 0, x, height, 'y');
+                for (let y = -((scrollPosition - scrollDrag) % spacing); y <= height; y += spacing) {
+                    traceGridLine(path, 0, y, width, y, 'x');
+                }
+                gridPaths[pathIndex] = path;
             }
             context.lineWidth = 1;
             context.strokeStyle = color;
             context.stroke(path);
+            // Lit while it is actually being pulled, and only then -- this is
+            // what makes the drag visible at all against a near-black field.
+            if (dragGlow > .01) {
+                context.strokeStyle = `rgba(150, 196, 244, ${(dragGlow * lit).toFixed(4)})`;
+                context.stroke(path);
+            }
             // At rest the lattice is barely there, by design -- which would
             // also make the bend invisible, the one thing it is here to show.
             // So the sheet glows where it is stretched: the same path restroked
@@ -1377,19 +1876,120 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
         context.restore();
     };
+    const disturbLight = (object, x, y, factor, time) => {
+        warped.x = x; warped.y = y; warped.stretch = 1; warped.sink = 1;
+        // Background light bends around a fingertip on the same terms as the
+        // cursor, so the deep field responds to a glide too rather than only
+        // the bodies in front of it.
+        for (let i = 0; i < pusherCount; i++) {
+            const push = pushers[i];
+            const dx = push.lx - x, dy = push.ly - y, d2 = dx * dx + dy * dy;
+            if (d2 >= 19000 || d2 <= 1) continue;
+            const influence = (1 - d2 / 19000) ** 2 * push.gain;
+            const speed = Math.hypot(push.vx, push.vy);
+            warped.x += dx * influence * .1 + push.vx * influence * .006;
+            warped.y += dy * influence * .1 + push.vy * influence * .006;
+            warped.stretch += influence * Math.min(1.4, speed / 800);
+            warped.sink += influence * .7;
+            if (object.glint && speed > 850 && time > (object.sparkAt || 0)) {
+                object.sparkAt = time + 1.3;
+                emitDust(x, y, 2, object.color, 12, push.vx * .04, push.vy * .04);
+            }
+        }
+        for (const ripple of ripples) {
+            if (!ripple.active) continue;
+            const dx = x - ripple.x, dy = y + scrollPosition - ripple.y;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            const push = Math.max(0, 1 - Math.abs(distance - ripple.radius) / 30) * 7 * ripple.strength;
+            warped.x += dx / distance * push; warped.y += dy / distance * push;
+        }
+        return warped;
+    };
+    const drawSimulation = (delta, time) => {
+        const seconds = delta / 1000;
+        for (const ripple of ripples) {
+            if (!ripple.active) continue;
+            const age = time - ripple.started;
+            if (age > 1.8) { ripple.active = false; continue; }
+            ripple.radius = 12 + age * 125;
+            context.globalAlpha = (1 - age / 1.8) ** 2 * .15 * ripple.strength;
+            context.strokeStyle = '#aac9e5'; context.lineWidth = .7;
+            // Small arcs respect content even when a ring crosses a card.
+            for (let i = 0; i < 32; i++) {
+                const angle = i / 32 * TAU, x = ripple.x + Math.cos(angle) * ripple.radius;
+                const y = ripple.y - scrollPosition + Math.sin(angle) * ripple.radius;
+                if (y < navigationBottom || clearanceAt(x, y + scrollPosition, 12, visibleRects) < .8) continue;
+                context.beginPath(); context.arc(ripple.x, ripple.y - scrollPosition, ripple.radius, angle, angle + TAU / 33); context.stroke();
+            }
+        }
+        for (const particle of particles) {
+            if (!particle.active) continue;
+            particle.life += seconds;
+            if (particle.life > particle.duration) { particle.active = false; continue; }
+            const sy = particle.y - scrollPosition;
+            for (let i = 0; i < pusherCount; i++) {
+                const push = pushers[i];
+                const dx = push.lx - particle.x, dy = push.ly - sy, distance = Math.max(12, Math.hypot(dx, dy));
+                if (distance >= 140) continue;
+                const force = (1 - distance / 140) ** 2 * 90 * push.gain;
+                particle.vx += (dx / distance * force + push.vx * .08) * seconds;
+                particle.vy += (dy / distance * force + push.vy * .08) * seconds;
+            }
+            for (const hole of projectedHoles) {
+                const dx = hole.screenX - particle.x, dy = hole.screenY - sy;
+                const distance = Math.max(5, Math.hypot(dx, dy));
+                if (distance < hole.radius * .26) { particle.active = false; break; }
+                if (distance < hole.radius * 2) {
+                    const force = 90 * (1 - distance / (hole.radius * 2));
+                    particle.vx += (dx - dy * .35) / distance * force * seconds;
+                    particle.vy += (dy + dx * .35) / distance * force * seconds;
+                }
+            }
+            for (const ripple of ripples) {
+                if (!ripple.active) continue;
+                const dx = particle.x - ripple.x, dy = particle.y - ripple.y;
+                const distance = Math.max(1, Math.hypot(dx, dy));
+                const force = Math.max(0, 1 - Math.abs(distance - ripple.radius) / 28) * 230 * ripple.strength;
+                particle.vx += dx / distance * force * seconds;
+                particle.vy += dy / distance * force * seconds;
+            }
+            particle.x += particle.vx * seconds; particle.y += particle.vy * seconds;
+            if (!particle.active || sy < navigationBottom || sy > height + 10) continue;
+            context.globalAlpha = (1 - particle.life / particle.duration) * .6
+                * clearanceAt(particle.x, particle.y, 16, visibleRects);
+            context.strokeStyle = particle.color; context.lineWidth = particle.radius;
+            context.beginPath(); context.moveTo(particle.x, particle.y - scrollPosition);
+            context.lineTo(particle.x - particle.vx * .025, particle.y - scrollPosition - particle.vy * .025); context.stroke();
+        }
+    };
     const drawBlackHoles = () => {
         for (const hole of projectedHoles) {
             context.save();
             context.translate(hole.screenX, hole.screenY);
-            context.rotate(hole.angle);
+            context.rotate(hole.angle + Math.sin(sceneTime * .18 + hole.phase) * .025);
+            context.scale(1 + hole.disturbance * .085, 1 - hole.disturbance * .04);
             // Source-over is essential: additive black cannot obscure a star.
             context.globalCompositeOperation = 'source-over';
-            context.globalAlpha = 1;
+            context.globalAlpha = .1 + hole.clearance * .9;
             context.fillStyle = '#000';
             context.beginPath(); context.arc(0, 0, hole.radius * .28, 0, TAU); context.fill();
-            context.globalAlpha = .25 + hole.clearance * .65;
+            context.globalAlpha = .04 + hole.clearance * .86;
             const size = hole.radius * 2.6;
             context.drawImage(hole.sprite, -size / 2, -size / 2, size, size);
+            context.globalCompositeOperation = 'lighter';
+            // Travelling bright knots reveal rotation without spinning the disk plane.
+            for (let i = 0; i < 5; i++) {
+                const angle = sceneTime * (.32 + i * .017) + i * TAU / 5 + hole.phase;
+                const r = hole.radius * (.46 + i * .055);
+                const x = Math.cos(angle) * r, y = Math.sin(angle) * r * .27;
+                context.globalAlpha = hole.clearance * (.3 + hole.disturbance * .2);
+                context.drawImage(lightSprite(hole.color, 0), x - 6, y - 3, 12, 6);
+            }
+            if (hole.flare > .002) {
+                context.globalAlpha = hole.flare * hole.clearance * .65;
+                context.drawImage(lightSprite(hole.color, 2), -size * .65, -size * .25, size * 1.3, size * .5);
+                hole.flare *= .94;
+            }
             context.restore();
         }
     };
@@ -1485,13 +2085,325 @@ function setupGalaxyField(canvas, reducedMotion) {
         context.drawImage(event.sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
         context.restore();
     };
+    // Approach, descent, a stay on the surface, then liftoff and departure --
+    // all measured along the one radial the site sits on. The anchor is the
+    // world itself, so the lander rides its drift and parallax while it waits.
+    // Two landers of opposing sides that come within sight of each other break
+    // off and settle it first. Positions come from the previous frame, which is
+    // a frame of latency nobody can see and saves a second projection pass.
+    const LANDER_SIGHT = 320;
+    const updateDuels = time => {
+        for (const a of eventPool) {
+            if (!a.active || a.type !== 'rocket' || a.duel || a.dead || a.sx === undefined) continue;
+            for (const b of eventPool) {
+                if (b === a || !b.active || b.type !== 'rocket' || b.duel || b.dead) continue;
+                if (b.faction === a.faction || b.sx === undefined) continue;
+                if (Math.hypot(a.sx - b.sx, a.sy - b.sy) > LANDER_SIGHT) continue;
+                for (const [craft, foe] of [[a, b], [b, a]]) {
+                    craft.duel = foe; craft.duelStart = time;
+                    craft.fx = craft.sx; craft.fy = craft.sy;
+                    craft.fvx = craft.fvy = 0;
+                    craft.fireAt = randomRange(eventRandom, .25, 1.1);
+                    craft.orbitDir = eventRandom() < .5 ? 1 : -1;
+                }
+                break;
+            }
+        }
+    };
+    const drawLander = (event, time, cameraX, cameraY, delta) => {
+        const body = event.body;
+        if (!body) { event.active = false; return; }
+        const seconds = Math.min(delta / 1000, .05);
+        const site = projectBody(body, time, cameraX, cameraY);
+        // The world it came for has gone -- scrolled away, been eaten, or been
+        // rebuilt underneath it. Nothing to land on, so the flight is over.
+        if (!event.duel && !event.dead && (site.y < -260 || site.y > height + 260
+            || (body.physics && (body.physics.capture || body.physics.respawnAt > time)))) {
+            event.active = false; return;
+        }
+        const warm = event.faction === ALIEN ? '150,240,190' : '255,205,150';
+        if (event.dead) {
+            // A short bloom where it came apart, then the slot is free again.
+            const age = time - event.dead;
+            if (age > .9) { event.active = false; return; }
+            context.save();
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = (1 - age / .9) ** 2 * .8;
+            const r = 12 + age * 90;
+            context.drawImage(lightSprite(warm, 2), event.sx - r, event.sy - r, r * 2, r * 2);
+            context.restore();
+            return;
+        }
+        let x, y, nose, thrust, alpha = 1, beacon = 0;
+        if (event.duel) {
+            const foe = event.duel;
+            if (!foe.active || foe.dead || foe.duel !== event || time - event.duelStart > 14) {
+                // Disengage: hand back to the landing arc, but blend out of the
+                // free position so it does not snap onto the radial.
+                event.duel = null;
+                event.blendFrom = { x: event.sx, y: event.sy };
+                event.blendAt = time;
+                event.started = time - .26 * event.duration;
+                event.puffed = false;
+                return;
+            }
+            const dx = foe.fx - event.fx, dy = foe.fy - event.fy;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            // Hold a stand-off ring: pull hard when out of range, push apart
+            // inside it, and only circle once the range is roughly right. The
+            // orbit term has to fade with distance or the two spiral apart and
+            // never trade a shot.
+            const closing = clamp((distance - 130) / 130, -1, 1) * 90;
+            const circling = 62 * Math.min(1, 170 / distance) * event.orbitDir;
+            event.fvx += (dx / distance * closing - dy / distance * circling) * seconds;
+            event.fvy += (dy / distance * closing + dx / distance * circling) * seconds;
+            event.fvx += randomRange(eventRandom, -30, 30) * seconds;
+            event.fvy += randomRange(eventRandom, -30, 30) * seconds;
+            const speed = Math.hypot(event.fvx, event.fvy);
+            if (speed > 105) { event.fvx *= 105 / speed; event.fvy *= 105 / speed; }
+            event.fx += event.fvx * seconds; event.fy += event.fvy * seconds;
+            event.fireAt -= seconds;
+            if (event.fireAt <= 0 && distance < 260) {
+                event.fireAt = randomRange(eventRandom, .5, 1.5);
+                const bolt = event.bolts.find(item => item.life <= 0);
+                if (bolt) {
+                    const lead = distance / 320;
+                    const aimX = foe.fx + foe.fvx * lead - event.fx;
+                    const aimY = foe.fy + foe.fvy * lead - event.fy;
+                    const aim = Math.max(1, Math.hypot(aimX, aimY));
+                    bolt.x = event.fx; bolt.y = event.fy;
+                    bolt.vx = aimX / aim * 320; bolt.vy = aimY / aim * 320;
+                    bolt.life = .95;
+                }
+            }
+            x = event.fx; y = event.fy;
+            nose = Math.atan2(event.fvy, event.fvx);
+            thrust = .5 + Math.min(.5, speed / 210);
+            beacon = .35;
+        } else {
+            const progress = clamp((time - event.started) / event.duration, 0, 1);
+            // Sink into the world as it arrives rather than parking a craft on
+            // top of it: by touchdown it has faded out entirely, which at this
+            // scale reads as a landing instead of a decal.
+            const surface = site.radius * .34;
+            const hover = site.radius * 1.5 + 46;
+            let distance, facing;
+            if (progress < .42) {
+                const t = progress / .42;
+                distance = event.entry + (hover - event.entry) * smoothstep(t);
+                thrust = t > .55 ? (t - .55) / .45 * .85 : .12;
+                facing = distance > hover + 2 ? 1 : 0;
+            } else if (progress < .56) {
+                // The descent proper: down onto the surface, shrinking and
+                // dimming the whole way in.
+                const t = (progress - .42) / .14;
+                distance = hover + (surface - hover) * smoothstep(t);
+                thrust = .6 + Math.sin(t * Math.PI) * .3;
+                alpha = 1 - smoothstep(clamp((t - .45) / .55, 0, 1));
+                facing = 0;
+                if (t > .82 && !event.puffed) {
+                    event.puffed = true;
+                    emitDust(site.x + Math.cos(event.siteAngle) * site.radius * .6,
+                        site.y + Math.sin(event.siteAngle) * site.radius * .6, 10, body.color, 24);
+                }
+            } else if (progress < .76) {
+                // Down. Nothing to draw but the world it is sitting on.
+                event.sx = site.x; event.sy = site.y;
+                return;
+            } else if (progress < .88) {
+                const t = (progress - .76) / .12;
+                distance = surface + (hover - surface) * smoothstep(t);
+                thrust = 1;
+                alpha = smoothstep(clamp(t / .5, 0, 1));
+                facing = 0;
+                if (event.puffed) {
+                    event.puffed = false;
+                    emitDust(site.x + Math.cos(event.siteAngle) * site.radius * .6,
+                        site.y + Math.sin(event.siteAngle) * site.radius * .6, 14, warm, 54);
+                }
+            } else {
+                const t = (progress - .88) / .12;
+                distance = hover + (event.entry - hover) * t * t;
+                thrust = .9;
+                alpha = 1 - smoothstep(clamp((t - .5) / .5, 0, 1));
+                facing = 1;
+            }
+            // Bend the radial slightly through the flight so it arcs in and out
+            // rather than sliding up and down a rail.
+            const angle = event.siteAngle + event.sweep * (1 - smoothstep(clamp(progress / .56, 0, 1)))
+                + event.sweep * smoothstep(clamp((progress - .76) / .24, 0, 1));
+            x = site.x + Math.cos(angle) * distance;
+            y = site.y + Math.sin(angle) * distance;
+            // Nose points away from the world while braking; on approach and
+            // departure it points the way it is going.
+            nose = angle + (facing ? Math.PI : 0);
+            const settling = time - (event.blendAt || -10);
+            if (settling < .9 && event.blendFrom) {
+                const blend = smoothstep(settling / .9);
+                x = event.blendFrom.x + (x - event.blendFrom.x) * blend;
+                y = event.blendFrom.y + (y - event.blendFrom.y) * blend;
+            }
+            alpha *= smoothstep(clamp(progress / .06, 0, 1));
+        }
+        event.sx = x; event.sy = y;
+        // Bolts live in screen space and only ever look for this craft's foe.
+        for (const bolt of event.bolts) {
+            if (bolt.life <= 0) continue;
+            bolt.life -= seconds;
+            bolt.x += bolt.vx * seconds; bolt.y += bolt.vy * seconds;
+            const foe = event.duel;
+            if (foe && foe.active && !foe.dead && Math.hypot(foe.fx - bolt.x, foe.fy - bolt.y) < 13) {
+                bolt.life = 0; foe.hit = 1;
+                if (--foe.hp <= 0) {
+                    foe.dead = time; foe.duel = null; event.duel = null;
+                    event.blendFrom = { x: event.sx, y: event.sy };
+                    event.blendAt = time;
+                    event.started = time - .26 * event.duration;
+                    emitDust(foe.fx, foe.fy, 16,
+                        foe.faction === ALIEN ? '150,240,190' : '255,205,150', 70);
+                }
+            }
+            if (bolt.life <= 0) continue;
+            context.save();
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = Math.min(1, bolt.life * 2.6);
+            context.strokeStyle = event.faction === ALIEN ? '#7dffbe' : '#ffd9a0';
+            context.lineWidth = 1.5;
+            context.beginPath();
+            context.moveTo(bolt.x, bolt.y);
+            context.lineTo(bolt.x - bolt.vx * .035, bolt.y - bolt.vy * .035);
+            context.stroke();
+            context.restore();
+        }
+        if (x < -120 || x > width + 120 || y < -120 || y > height + 120) return;
+        if (alpha < .01) return;
+        const clearance = clearanceAt(x, y + scrollPosition, 26, visibleRects);
+        drawCraft(event.design, x, y, nose, event.scale, thrust,
+            alpha * (.1 + clearance * .9), beacon, time);
+        if (event.hit > .01) {
+            context.save();
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = event.hit * .9;
+            context.drawImage(lightSprite('255,236,200', 1), x - 15, y - 15, 30, 30);
+            context.restore();
+            event.hit = Math.max(0, event.hit - seconds * 4);
+        }
+    };
+    const drawDogfight = (event, time, cameraX, cameraY, delta) => {
+        const progress = clamp((time - event.started) / event.duration, 0, 1);
+        const anchor = projectPosition(event.x, event.documentY, event.factor, cameraX, cameraY);
+        const seconds = Math.min(delta / 1000, .05);
+        // Fade in, hold, fade out -- the fight is always already in progress.
+        const envelope = smoothstep(clamp(progress / .12, 0, 1))
+            * (1 - smoothstep(clamp((progress - .78) / .22, 0, 1)));
+        const ships = event.ships, bolts = event.bolts;
+        for (const ship of ships) {
+            if (!ship.alive) { ship.wreck = Math.max(0, ship.wreck - seconds * .55); continue; }
+            let target = null, nearest = Infinity;
+            for (const other of ships) {
+                if (!other.alive || other.faction === ship.faction) continue;
+                const distance = Math.hypot(other.x - ship.x, other.y - ship.y);
+                if (distance < nearest) { nearest = distance; target = other; }
+            }
+            if (target) {
+                const dx = target.x - ship.x, dy = target.y - ship.y;
+                const distance = Math.max(1, nearest);
+                // Close to a stand-off ring and circle it, rather than closing
+                // all the way in -- otherwise both fleets collapse to a point.
+                // Circling fades with distance so stragglers rejoin the fight.
+                const closing = clamp((distance - 78) / 78, -1, 1) * 74;
+                const circling = 52 * Math.min(1, 110 / distance) * ship.orbit;
+                ship.vx += (dx / distance * closing - dy / distance * circling) * seconds;
+                ship.vy += (dy / distance * closing + dx / distance * circling) * seconds;
+                ship.fireAt -= seconds;
+                if (ship.fireAt <= 0 && distance < 210) {
+                    ship.fireAt = randomRange(eventRandom, .55, 1.9);
+                    const bolt = bolts.find(item => item.life <= 0);
+                    if (bolt) {
+                        // Lead the shot, so bolts converge on where the target
+                        // is going rather than trailing behind it.
+                        const speed = 300, lead = distance / speed;
+                        const aimX = target.x + target.vx * lead - ship.x;
+                        const aimY = target.y + target.vy * lead - ship.y;
+                        const aim = Math.max(1, Math.hypot(aimX, aimY));
+                        bolt.x = ship.x; bolt.y = ship.y;
+                        bolt.vx = aimX / aim * speed; bolt.vy = aimY / aim * speed;
+                        bolt.faction = ship.faction; bolt.life = .9;
+                    }
+                }
+            }
+            ship.vx += randomRange(eventRandom, -26, 26) * seconds;
+            ship.vy += randomRange(eventRandom, -26, 26) * seconds;
+            const speed = Math.hypot(ship.vx, ship.vy);
+            if (speed > 95) { ship.vx *= 95 / speed; ship.vy *= 95 / speed; }
+            ship.x += ship.vx * seconds; ship.y += ship.vy * seconds;
+            if (speed > 4) ship.angle = Math.atan2(ship.vy, ship.vx);
+            ship.flash = Math.max(0, (ship.flash || 0) - seconds * 4);
+        }
+        for (const bolt of bolts) {
+            if (bolt.life <= 0) continue;
+            bolt.life -= seconds;
+            bolt.x += bolt.vx * seconds; bolt.y += bolt.vy * seconds;
+            for (const ship of ships) {
+                if (!ship.alive || ship.faction === bolt.faction) continue;
+                if (Math.hypot(ship.x - bolt.x, ship.y - bolt.y) > 9) continue;
+                bolt.life = 0; ship.flash = 1;
+                if (--ship.hp <= 0) {
+                    ship.alive = false; ship.wreck = 1;
+                    emitDust(anchor.x + ship.x, anchor.y + ship.y, 12,
+                        ship.faction === ALIEN ? '130,240,180' : '255,214,170', 58);
+                }
+                break;
+            }
+        }
+        if (anchor.y < -220 || anchor.y > height + 220) return;
+        const clearance = clearanceAt(anchor.x, anchor.y + scrollPosition, 110, visibleRects);
+        const alpha = envelope * (.05 + clearance * .95);
+        if (alpha < .01) return;
+        context.save();
+        for (const bolt of bolts) {
+            if (bolt.life <= 0) continue;
+            context.globalCompositeOperation = 'lighter';
+            context.globalAlpha = alpha * Math.min(1, bolt.life * 2.6);
+            context.strokeStyle = bolt.faction === ALIEN ? '#7dffbe' : '#ffd9a0';
+            context.lineWidth = 1.4;
+            context.beginPath();
+            context.moveTo(anchor.x + bolt.x, anchor.y + bolt.y);
+            context.lineTo(anchor.x + bolt.x - bolt.vx * .035, anchor.y + bolt.y - bolt.vy * .035);
+            context.stroke();
+        }
+        for (const ship of ships) {
+            const x = anchor.x + ship.x, y = anchor.y + ship.y;
+            if (!ship.alive) {
+                if (ship.wreck <= 0) continue;
+                context.globalCompositeOperation = 'lighter';
+                context.globalAlpha = alpha * ship.wreck * .5;
+                context.drawImage(lightSprite(ship.faction === ALIEN ? '130,240,180' : '255,196,140', 2),
+                    x - 26, y - 26, 52, 52);
+                continue;
+            }
+            if (ship.faction === HUMAN) drawHumanShip(x, y, ship.angle, ship.size * 1.6, alpha);
+            else if (ship.design === 1) drawAlienPod(x, y, ship.angle, ship.size * 1.5, .55, alpha, 0, time);
+            else if (ship.design === 2) drawAlienDart(x, y, ship.angle, ship.size * 1.5, .55, alpha, 0, time);
+            else drawAlienShip(x, y, ship.angle, ship.size * 1.6, alpha, time);
+            if (ship.flash > .01) {
+                context.globalCompositeOperation = 'lighter';
+                context.globalAlpha = alpha * ship.flash;
+                context.drawImage(lightSprite('255,236,200', 1), x - 14, y - 14, 28, 28);
+            }
+        }
+        context.restore();
+    };
     const drawEvents = (time, cameraX, cameraY, delta) => {
+        updateDuels(time);
         for (const event of eventPool) {
             if (!event.active) continue;
+            if (event.type === 'rocket') { drawLander(event, time, cameraX, cameraY, delta); continue; }
+            if (event.type === 'dogfight') { drawDogfight(event, time, cameraX, cameraY, delta); continue; }
             tryCaptureEvent(event, time, cameraX, cameraY, delta);
             if (event.capture) { drawCapturedEvent(event, time, cameraX, cameraY); continue; }
             const progress = clamp((time - event.started) / event.duration, 0, 1);
-            const stationary = event.type === 'supernova' || event.type === 'distantExplosion';
+            const stationary = stationaryEvent(event.type);
             const p = eventPoint(event, stationary ? 0 : progress, cameraX, cameraY);
             if (p.y < -150 || p.y > height + 150) continue;
             const protection = stationary ? 85 : event.type === 'meteor' ? 50 : 20;
@@ -1501,11 +2413,60 @@ function setupGalaxyField(canvas, reducedMotion) {
             const alpha = event.alpha * envelope * (.035 + clearance * .965);
             context.save();
             context.globalCompositeOperation = 'lighter';
-            if (stationary) {
+            if (['binaryStar', 'pulsar', 'cosmicFlare'].includes(event.type)) {
+                context.globalAlpha = alpha;
+                if (event.type === 'binaryStar') {
+                    for (let i = 0; i < 2; i++) {
+                        const angle = time * .65 + i * Math.PI, r = 10 + i * 5;
+                        const x = p.x + Math.cos(angle) * r, y = p.y + Math.sin(angle) * r * .5;
+                        context.drawImage(event.sprite, x - 11, y - 11, 22, 22);
+                    }
+                } else if (event.type === 'pulsar') {
+                    context.translate(p.x, p.y); context.rotate(time * .4);
+                    context.globalAlpha = alpha * (.3 + Math.sin(time * 4) ** 8 * .7);
+                    context.drawImage(event.sprite, -3, -58, 6, 116);
+                    context.drawImage(event.sprite, -14, -14, 28, 28);
+                } else {
+                    const r = 10 + Math.sin(progress * Math.PI) ** 6 * 34;
+                    context.drawImage(event.sprite, p.x - r, p.y - r, r * 2, r * 2);
+                }
+            } else if (event.type === 'roguePlanet') {
+                drawPlanet({ sprite: event.sprite, angle: .1 }, p.x, p.y, event.radius, alpha);
+            } else if (event.type === 'satellite') {
+                context.globalAlpha = alpha * (.4 + Math.sin(time * 2) ** 12 * .6);
+                context.strokeStyle = '#b6bec8'; context.lineWidth = .6;
+                context.strokeRect(p.x - 3, p.y - 1, 6, 2); context.fillStyle = '#dae0e6';
+                context.fillRect(p.x - .6, p.y - 2, 1.2, 4);
+            } else if (event.type === 'meteorShower') {
+                for (let i = 0; i < 7; i++) {
+                    const t = (progress * 2.1 - i * .13);
+                    if (t < 0 || t > 1) continue;
+                    const q = eventPoint(event, t, cameraX, cameraY), offset = i * 11;
+                    context.globalAlpha = .3 * Math.sin(t * Math.PI) * clearanceAt(q.x, q.y + offset + scrollPosition, 18, visibleRects);
+                    context.strokeStyle = '#c0d4e6'; context.lineWidth = .55;
+                    context.beginPath(); context.moveTo(q.x, q.y + offset);
+                    context.lineTo(q.x - event.dx * .035, q.y + offset - event.dy * event.factor * .035); context.stroke();
+                }
+            } else if (stationary) {
                 const radius = (event.type === 'supernova' ? 115 : 65) * (.55 + event.depth * .45);
                 context.globalAlpha = alpha;
                 context.drawImage(event.bloom, p.x - radius, p.y - radius, radius * 2, radius * 2);
                 context.drawImage(event.sprite, p.x - 19, p.y - 19, 38, 38);
+                if (event.type === 'supernova') {
+                    const flash = Math.exp(-(((progress - .18) / .055) ** 2));
+                    context.globalAlpha = alpha * (.25 + flash * .75);
+                    const core = 4 + flash * 42;
+                    context.drawImage(event.sprite, p.x - core, p.y - core, core * 2, core * 2);
+                    if (progress > .18) {
+                        const shell = 8 + (progress - .18) * radius * 1.5;
+                        context.globalAlpha = alpha * .38 * (1 - progress);
+                        context.strokeStyle = `rgb(${event.color})`; context.lineWidth = 1.1;
+                        context.beginPath(); context.arc(p.x, p.y, shell, 0, TAU); context.stroke();
+                    }
+                    if (progress > .19 && !event.burst) {
+                        event.burst = true; emitDust(p.x, p.y, 26, event.color, 48); addRipple(p.x, p.y, .45);
+                    }
+                }
                 if (event.type === 'distantExplosion') {
                     const ring = 4 + progress * radius * .55;
                     context.globalAlpha = alpha * .19;
@@ -1523,7 +2484,14 @@ function setupGalaxyField(canvas, reducedMotion) {
                     context.translate(p.x, p.y);
                     context.rotate(Math.atan2(event.dy * event.factor, event.dx));
                     context.globalAlpha = alpha;
-                    context.drawImage(event.tailSprite, -tailLength, -28, tailLength, 56);
+                    // Two soft tails: a narrow ion stream and a warmer, turbulent dust fan.
+                    context.drawImage(event.tailSprite, -tailLength, -18, tailLength, 36);
+                    for (let i = 0; i < 5; i++) {
+                        context.globalAlpha = alpha * .18;
+                        const offset = Math.sin(time * .7 + i * 1.7) * (3 + i * 2);
+                        context.drawImage(event.tailSprite, -tailLength * (1 - i * .1), -20 + offset,
+                            tailLength * (1 - i * .1), 48 + i * 3);
+                    }
                     context.restore();
                 } else for (let i = segments; i > 0; i--) {
                     const behind = i / segments;
@@ -1536,9 +2504,18 @@ function setupGalaxyField(canvas, reducedMotion) {
                     context.lineCap = 'butt';
                     context.beginPath(); context.moveTo(q.x, q.y); context.lineTo(r.x, r.y); context.stroke();
                 }
-                context.globalAlpha = alpha * 1.45;
+                if (event.variant === 'double') {
+                    context.globalAlpha = alpha * .7; context.strokeStyle = `rgb(${event.color})`; context.lineWidth = .7;
+                    context.beginPath(); context.moveTo(p.x - 14, p.y + 9);
+                    context.lineTo(p.x - 14 - event.dx * .1, p.y + 9 - event.dy * event.factor * .1); context.stroke();
+                }
+                if (meteor && progress > .57 && !event.burst) {
+                    event.burst = true;
+                    emitDust(p.x, p.y, 16, event.color, 65, event.dx / event.duration * .35, event.dy * event.factor / event.duration * .35);
+                }
+                context.globalAlpha = alpha * 1.45 * (meteor && event.burst ? (1 - progress) : 1);
                 context.drawImage(event.sprite, p.x - event.radius, p.y - event.radius, event.radius * 2, event.radius * 2);
-                if (meteor || comet) {
+                if (meteor || comet || event.variant === 'bright') {
                     context.globalAlpha = alpha * .65;
                     const glow = comet ? 48 : 23;
                     context.drawImage(event.bloom, p.x - glow, p.y - glow, glow * 2, glow * 2);
@@ -1624,7 +2601,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         // The ambient scene is paced down to 24-30fps because nothing on it is
         // being aimed at. A finger on the glass is, and the dent has to track
         // it: hold the higher rate for as long as one is down.
-        const interval = touchWells.length ? Math.min(frameInterval, 1000 / 48) : frameInterval;
+        const interval = touchWells.length || scrollDrag || pointer.speed > 120
+            ? Math.min(frameInterval, 1000 / 60) : frameInterval;
         if (animated && timestamp - lastFrame < interval - 1) {
             animationFrame = requestAnimationFrame(draw);
             return;
@@ -1638,21 +2616,36 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.y += ((animated && pointer.active ? pointer.targetY : 0) - pointer.y) * ease;
         const cameraX = animated ? pointer.x : 0;
         const cameraY = animated ? pointer.y : 0;
-        if (animated) updateTouchWells(delta);
+        if (animated) { updateTouchWells(delta); syncPushers(); } else pusherCount = 0;
+        if (performance.now() - pointer.sampledAt > 45) {
+            pointer.vx *= Math.exp(-delta / 85); pointer.vy *= Math.exp(-delta / 85);
+            pointer.speed = Math.hypot(pointer.vx, pointer.vy);
+        }
+        if (animated) {
+            // The sheet does not keep up with the page. It is pulled toward
+            // wherever the scroll is heading, then springs back once the flick
+            // stops -- which is the whole difference between a lattice that
+            // scrolls and a lattice that is being dragged.
+            const target = clamp(scrollVelocity * .02, -32, 32);
+            scrollDrag += (target - scrollDrag) * (1 - Math.exp(-delta / 75));
+            scrollVelocity *= Math.exp(-delta / 105);
+            if (performance.now() - lastScrollAt > 140) scrollVelocity = 0;
+            dragGlow = Math.min(1, Math.abs(scrollDrag) / 22);
+            if (Math.abs(scrollDrag) < .05) scrollDrag = 0;
+        } else { scrollDrag = 0; dragGlow = 0; scrollVelocity = 0; }
         context.clearRect(0, 0, width, height);
         context.globalCompositeOperation = 'lighter';
         drawBackgroundGrid(); // Furthest back: the sheet everything else sits on.
         prepareBlackHoles(time, cameraX, cameraY);
 
-        for (const tier of Object.values(tiers)) {
+        for (const tier of tierList) {
             const factor = reducedMotion.matches ? 1 : tier.factor;
             if (tier === tiers.stars) drawStaticStarField(cameraX, cameraY);
             const minY = scrollPosition + height / 2 - (height / 2 + tier.margin) / factor;
             const maxY = scrollPosition + height / 2 + (height / 2 + tier.margin) / factor;
-            const objects = tier.objects;
+            const objects = animated ? tier.liveObjects : tier.objects;
             for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
                 const object = objects[i];
-                if (tier === tiers.stars && object.staticField && !reducedMotion.matches) continue;
                 // The seeded anchor stays fixed; a bounded spring offset carries
                 // cursor impulses and gravity independently of camera parallax.
                 const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
@@ -1663,9 +2656,14 @@ function setupGalaxyField(canvas, reducedMotion) {
                 const physics = animated && object.interactive
                     ? interactBody(object, x, y, delta, time, cameraX, cameraY) : null;
                 if (physics) { x = physics.x; y = physics.y; }
+                let lightBoost = 1;
+                if (animated && !object.haze && (tier.points || object.glint || tier === tiers.mediumStars)) {
+                    disturbLight(object, x, y, factor, time);
+                    x = warped.x; y = warped.y; lightBoost = warped.sink;
+                }
                 // Only background light bends. A few cheap local mass checks,
                 // without touching page pixels or allocating per-star objects.
-                let lensStretch = 1;
+                let lensStretch = lightBoost > 1 ? warped.stretch : 1;
                 if (width >= 700 && !reducedMotion.matches && factor < .9) for (const hole of projectedHoles) {
                     if (factor >= hole.parallaxFactor) continue;
                     const dx = x - hole.screenX, dy = y - hole.screenY;
@@ -1674,7 +2672,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                     if (distanceSquared < reach * reach && distanceSquared > 1) {
                         const distance = Math.sqrt(distanceSquared);
                         const influence = (1 - distance / reach) ** 2;
-                        const shift = Math.min(5, hole.radius * .035) * influence;
+                        const shift = Math.min(9, hole.radius * .055) * influence * (1 + (hole.disturbance || 0));
                         x += dx / distance * shift; y += dy / distance * shift;
                         lensStretch = 1 + influence * .45;
                     }
@@ -1693,7 +2691,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
                 const radius = object.radius * scale * (physics ? physics.scale : 1) * clamp(sink, .3, 1.3);
                 if (x + radius < 0 || x - radius > width || y + radius < 0 || y - radius > height) continue;
-                let alpha = object.alpha * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
+                let alpha = object.alpha * lightBoost * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
                 if (physics) alpha *= physics.alpha;
                 // Partial, not proportional: light falling into the well dims
                 // but never blinks out, or the dent would read as a hole
@@ -1713,14 +2711,14 @@ function setupGalaxyField(canvas, reducedMotion) {
                 }
                 context.globalAlpha = clamp(alpha, 0, 1);
                 if (tier.points) {
-                    context.fillStyle = `rgb(${object.color})`;
+                    context.fillStyle = object.fillColor;
                     context.beginPath();
                     context.ellipse(x, y, radius * lensStretch, radius, 0, 0, TAU);
                     context.fill();
                     if (object.glint && radius > .8) {
                         context.save();
                         context.globalAlpha *= .42;
-                        context.strokeStyle = `rgb(${object.color})`;
+                        context.strokeStyle = object.fillColor;
                         context.lineWidth = Math.max(.35, radius * .22);
                         context.beginPath();
                         context.moveTo(x - radius * 2.8, y);
@@ -1731,19 +2729,23 @@ function setupGalaxyField(canvas, reducedMotion) {
                         context.restore();
                     }
                 } else {
-                    context.save();
+                    // Only the transform changes for these sprites. Reset it
+                    // without copying/restoring the entire canvas state. Keep
+                    // the original transform operations for identical rounding.
+                    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
                     context.translate(x, y);
                     context.rotate(object.angle);
                     context.drawImage(object.sprite, -radius, -radius * object.stretch, radius * 2, radius * 2 * object.stretch);
-                    context.restore();
                 }
             }
+            if (!tier.points) context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         }
         drawOrbitingBodies(delta, time, animated, cameraX, cameraY);
         drawPulsars(time, cameraX, cameraY);
         if (animated) {
             updateEvents(time);
             drawEvents(time, cameraX, cameraY, delta);
+            drawSimulation(delta, time);
         }
         drawBlackHoles(); // The dark horizon occludes captured bodies and trails.
         drawTouchWells();
@@ -1752,6 +2754,11 @@ function setupGalaxyField(canvas, reducedMotion) {
         if (animated && !sleeping) animationFrame = requestAnimationFrame(draw);
     };
     const requestDraw = () => {
+        // Anything asking for a frame while the backdrop is not idle is asking
+        // for the loop back, whether or not the observer has caught up yet.
+        if (sleeping && !document.documentElement.classList.contains('effects-background-idle')) {
+            sleeping = false; lastFrame = 0;
+        }
         if (!animationFrame && !sleeping && !document.hidden && quality === 'high') animationFrame = requestAnimationFrame(draw);
     };
 
@@ -1814,6 +2821,10 @@ function setupGalaxyField(canvas, reducedMotion) {
                 layoutSignature = signature;
                 builtPageHeight = Math.max(pageHeight * 1.6, pageHeight + 1500, builtPageHeight);
                 buildScene();
+            } else if (!staticStarTiles.length) {
+                // Low FX releases the tiles. Restore them when High FX returns
+                // without rerolling the unchanged scene or losing faint stars.
+                buildStaticStarTiles();
             }
             requestDraw();
         });
@@ -1826,7 +2837,12 @@ function setupGalaxyField(canvas, reducedMotion) {
     const setQuality = mode => {
         const changed = quality !== mode;
         quality = mode;
+        pressedSpace = null; pointer.active = false;
+        sleeping = false; clearTimeout(sleepTimer); sleepTimer = 0;
         touchWells.length = 0;
+        scrollVelocity = scrollDrag = dragGlow = 0; lastScrollAt = 0;
+        for (const particle of particles) particle.active = false;
+        for (const ripple of ripples) ripple.active = false;
         if (changed) resetEvents();
         canvas.hidden = mode !== 'high';
         cancelAnimationFrame(animationFrame);
@@ -1837,7 +2853,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
     // Radius of the depression. Kept in step with the reach used by the body
     // physics and the tile warp so all three describe the same dent.
-    const wellReach = () => Math.min(230, Math.max(140, Math.min(width, height) * .42));
+    const wellReach = () => Math.min(160, Math.max(105, Math.min(width, height) * .30));
     // Rubber-sheet profile. Zero at the exact centre and at the rim, greatest
     // a third of the way out -- displacing the centre point itself would just
     // translate the scene, which reads as a smear rather than a depression.
@@ -1848,6 +2864,10 @@ function setupGalaxyField(canvas, reducedMotion) {
     // a fingertip in a sheet, not a black hole -- deep enough to funnel, shy of
     // closing up.
     const WELL_PULL = .22;
+    // One shared amplitude softens the grid, light, body forces and rebound
+    // together, so touch feels like a shallow dimple rather than a deep dent.
+    // The sheet should acknowledge a finger, not lurch away from it.
+    const TOUCH_WELL_DEPTH = .25;
     // One displacement function for every layer. The grid, the scenery and the
     // star tiles have to bend by the same amount at the same place or the
     // background stops reading as a single surface and becomes a stack of
@@ -1869,9 +2889,11 @@ function setupGalaxyField(canvas, reducedMotion) {
             const pull = well.depth * wellProfile(u) * reach * WELL_PULL * (.55 + factor * .38);
             point.x -= dx / distance * pull;
             point.y -= dy / distance * pull;
-            // The sheet shears in the direction the finger is going.
-            point.x += well.vx * well.depth * rim * .05;
-            point.y += well.vy * well.depth * rim * .05;
+            // The sheet shears in the direction the finger is going. This is
+            // the part that reads as fabric being hauled, so it carries more
+            // of the effect now than the static depression does.
+            point.x += well.vx * well.depth * rim * .085;
+            point.y += well.vy * well.depth * rim * .085;
             point.sink *= 1 - well.depth * rim * .34;
             point.stretch *= 1 + Math.abs(well.depth) * wellProfile(u) * .4;
         }
@@ -1881,7 +2903,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     const findWell = identifier => touchWells.find(well => well.id === identifier);
 
     const touchStart = (identifier, x, y) => {
-        if (quality !== 'high' || reducedMotion.matches) return;
+        if (quality !== 'high' || reducedMotion.matches || touchWells.length >= 5) return;
         const existing = findWell(identifier);
         if (existing) { existing.releasedAt = 0; existing.releaseDepth = 0; return; }
         touchWells.push({
@@ -1911,34 +2933,80 @@ function setupGalaxyField(canvas, reducedMotion) {
             // The dimple trails the fingertip. That lag is what makes a drag
             // feel like pulling through a sheet instead of moving a cursor --
             // the fabric has to catch up to where the finger already is.
-            const follow = 1 - Math.exp(-seconds / .055);
+            const follow = 1 - Math.exp(-seconds / .045);
             const nextX = well.x + (well.targetX - well.x) * follow;
             const nextY = well.y + (well.targetY - well.y) * follow;
             well.vx = (nextX - well.x) / Math.max(seconds, .001);
             well.vy = (nextY - well.y) / Math.max(seconds, .001);
             well.x = nextX; well.y = nextY;
             if (!well.releasedAt) {
-                well.depth += (1 - well.depth) * (1 - Math.exp(-seconds / .11));
+                // A resting finger leaves the shallow dimple. A finger that is
+                // actually dragging presses harder, because a swipe should feel
+                // like hauling the sheet rather than sliding over it.
+                const speed = Math.hypot(well.vx, well.vy);
+                const target = TOUCH_WELL_DEPTH * (1 + Math.min(1, speed / 900) * .9);
+                well.depth += (target - well.depth) * (1 - Math.exp(-seconds / .075));
                 continue;
             }
             // Release is elastic: the sheet overshoots past flat into a slight
             // bulge before settling. A plain fade-out reads as a circle
             // disappearing; the rebound is what makes it a surface under
-            // tension that was being held down.
+            // tension that was being held down. Damped hard enough that it
+            // settles on the first bounce rather than wobbling after the lift.
             const since = sceneTime - well.releasedAt;
-            well.depth = well.releaseDepth * Math.exp(-since * 6.5) * Math.cos(since * 12.5);
+            well.depth = well.releaseDepth * Math.exp(-since * 9) * Math.cos(since * 12.5);
             if (since > .12 && Math.abs(well.depth) < .012) touchWells.splice(index, 1);
         }
     };
     const move = event => {
         if (quality !== 'high' || reducedMotion.matches || event.pointerType === 'touch') return;
+        const now = event.timeStamp || performance.now(), elapsed = now - pointer.sampledAt;
+        // pointerup and a queued pointermove can report the same position.
+        // They are not zero-speed samples: adding them erases a fresh throw.
+        if (pointer.sampledAt && event.clientX === pointer.px && event.clientY === pointer.py) {
+            pointer.active = true;
+            return;
+        }
+        if (pointer.sampledAt && elapsed > 0 && elapsed < 150) {
+            const mix = 1 - Math.exp(-elapsed / 28);
+            pointer.vx += (clamp((event.clientX - pointer.px) * 1000 / elapsed, -2400, 2400) - pointer.vx) * mix;
+            pointer.vy += (clamp((event.clientY - pointer.py) * 1000 / elapsed, -2400, 2400) - pointer.vy) * mix;
+        } else pointer.vx = pointer.vy = 0;
+        pointer.px = event.clientX; pointer.py = event.clientY; pointer.sampledAt = now;
+        pointer.speed = Math.hypot(pointer.vx, pointer.vy);
         pointer.targetX = clamp(event.clientX / width * 2 - 1, -1, 1);
         pointer.targetY = clamp(event.clientY / height * 2 - 1, -1, 1);
         pointer.active = true;
         requestDraw();
     };
+    // Scenery is never grabbed or thrown: a press on open sheet only records
+    // where it landed, so a clean click can send one ripple across the field.
+    window.addEventListener('pointerdown', event => {
+        if (quality !== 'high' || reducedMotion.matches || event.button !== 0 || !openSpace(event)) return;
+        pressedSpace = { x: event.clientX, y: event.clientY, id: event.pointerId };
+        suppressSpaceClick = false;
+    });
+    window.addEventListener('pointermove', event => {
+        if (pressedSpace && Math.hypot(event.clientX - pressedSpace.x, event.clientY - pressedSpace.y) > 9) suppressSpaceClick = true;
+    }, { passive: true });
+    window.addEventListener('pointerup', event => {
+        if (pressedSpace?.id === event.pointerId && !suppressSpaceClick && openSpace(event)) {
+            addRipple(event.clientX, event.clientY, event.pointerType === 'mouse' ? .5 : .2);
+        }
+        pressedSpace = null;
+    }, { passive: true });
+    window.addEventListener('pointercancel', () => { pressedSpace = null; }, { passive: true });
+    window.addEventListener('blur', () => { pointer.active = false; pressedSpace = null; });
     const scroll = y => {
         if (quality !== 'high') return;
+        // Sampled once per frame by the caller, so this is a real velocity and
+        // not a burst of coalesced scroll events.
+        const now = performance.now(), elapsed = now - lastScrollAt;
+        if (lastScrollAt && elapsed > 0 && elapsed < 220 && !reducedMotion.matches) {
+            const sample = clamp((y - scrollPosition) * 1000 / elapsed, -7000, 7000);
+            scrollVelocity += (sample - scrollVelocity) * .4;
+        } else scrollVelocity = 0;
+        lastScrollAt = now;
         scrollPosition = y;
         updateVisibleRects();
         requestDraw(); // Reduced motion redraws only on user/layout changes.
@@ -1947,12 +3015,20 @@ function setupGalaxyField(canvas, reducedMotion) {
     document.documentElement.addEventListener('pointerleave', () => { pointer.active = false; });
     window.addEventListener('resize', deferLayout, { passive: true });
     document.addEventListener('visibilitychange', () => {
+        pointer.active = false; touchWells.length = 0;
+        scrollVelocity = scrollDrag = dragGlow = 0; lastScrollAt = 0;
         cancelAnimationFrame(animationFrame);
         animationFrame = 0;
         lastFrame = 0;
         if (!document.hidden) refreshLayout();
     });
-    reducedMotion.addEventListener('change', () => { lastFrame = 0; resetEvents(); requestDraw(); });
+    reducedMotion.addEventListener('change', () => {
+        lastFrame = 0; pointer.active = false;
+        touchWells.length = 0;
+        for (const particle of particles) particle.active = false;
+        for (const ripple of ripples) ripple.active = false;
+        resetEvents(); requestDraw();
+    });
     document.addEventListener('contentvisibilityautostatechange', deferLayout, true);
     document.addEventListener('transitionend', event => {
         if (event.target.matches('.section, .collection-panel')) deferLayout();
@@ -1961,31 +3037,32 @@ function setupGalaxyField(canvas, reducedMotion) {
     observer.observe(document.body);
     document.querySelectorAll('main .section, .hero-section').forEach(section => observer.observe(section));
     document.fonts?.ready.then(refreshLayout);
-    // Once the idle fade has taken the canvas to opacity 0 there is nothing to
-    // look at, yet the scene was still compositing a full 30fps of sprites --
-    // which is the steady state on any page nobody is actively touching. Park
-    // the loop while it is invisible and restart it the instant it wakes.
+    // Once the idle fade has taken the backdrop to opacity 0 there is nothing
+    // left to look at, yet the scene would still be compositing a full scene's
+    // worth of sprites -- which is the steady state of any page nobody is
+    // touching. Park the loop while it is invisible, wake it the instant the
+    // fade reverses.
     const syncIdleSleep = () => {
         clearTimeout(sleepTimer);
         sleepTimer = 0;
-        // Never park the loop while a finger is still holding a dent open.
-        if (touchWells.some(well => !well.releasedAt)) return;
+        // Never park while a finger is still holding a dent open, or the well
+        // freezes mid-press and stays pressed into the field until something
+        // else happens to wake the loop.
+        if (touchWells.length) return;
         if (!document.documentElement.classList.contains('effects-background-idle')) {
             if (sleeping) { sleeping = false; lastFrame = 0; requestDraw(); }
             return;
         }
         // Let the opacity transition finish first, so the frame left on the
-        // canvas is a fully faded one and not a frozen mid-fade image.
+        // canvas is a fully faded one rather than a frozen mid-fade image.
         sleepTimer = window.setTimeout(() => {
             sleepTimer = 0;
+            if (touchWells.length) return;
             sleeping = true;
-            // A well only unwinds while frames are running. Parking the loop
-            // mid-rebound would leave the last dent pressed into the field
-            // until something else woke it.
-            touchWells.length = 0;
+            scrollVelocity = scrollDrag = dragGlow = 0;
             cancelAnimationFrame(animationFrame);
             animationFrame = 0;
-        }, 900);
+        }, 1600);
     };
     new MutationObserver(syncIdleSleep).observe(document.documentElement, { attributeFilter: ['class'] });
     syncIdleSleep();

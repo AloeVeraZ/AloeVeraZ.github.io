@@ -1046,27 +1046,40 @@ html[data-effects="high"] .ambient-glow {
 html[data-effects="high"] .ambient-glow.is-active {
     opacity: .72;
 }
-/* Only interaction lighting fades on idle; distant light remains visible. */
+/* Left alone, the whole backdrop goes to black together. Every layer fades on
+   exactly the same curve and the same clock as the grid -- one of them lagging
+   behind is what makes the page look like a stack of effects rather than a
+   single view that is settling. */
 html[data-effects="high"].effects-background-idle .background-grid,
-html[data-effects="high"].effects-background-idle .ambient-glow {
+html[data-effects="high"].effects-background-idle .ambient-glow,
+html[data-effects="high"].effects-background-idle .galaxy-field,
+html[data-effects="high"].effects-background-idle .galaxy-nebula {
     opacity: 0;
     transition-duration: 1.4s;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
-html[data-effects="high"].effects-background-idle .galaxy-field,
-html[data-effects="high"].effects-background-idle .galaxy-nebula,
+html[data-effects="high"].effects-background-click-fading .background-grid,
+html[data-effects="high"].effects-background-click-fading .ambient-glow,
 html[data-effects="high"].effects-background-click-fading .galaxy-field,
 html[data-effects="high"].effects-background-click-fading .galaxy-nebula {
     opacity: 0;
-    transition-duration: 1.4s;
-}
-html[data-effects="high"].effects-background-click-fading .background-grid,
-html[data-effects="high"].effects-background-click-fading .ambient-glow {
-    opacity: 0;
     transition-duration: 3.5s;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 
 @media (max-width: 800px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
     .performance-toggle { font-size: .68rem; }
+}
+
+/* Low FX keeps a static deep field without a canvas loop or sprite atlas. */
+html[data-effects="low"] .background-grid {
+    background-image:
+        radial-gradient(ellipse at 16% 24%, rgba(134,160,190,.055), transparent 35%),
+        radial-gradient(ellipse at 85% 66%, rgba(175,151,125,.035), transparent 30%),
+        radial-gradient(circle at 31px 43px, rgba(219,230,241,.32) .65px, transparent 1.2px),
+        radial-gradient(circle at 87px 117px, rgba(172,197,219,.23) .55px, transparent 1px),
+        radial-gradient(circle at 153px 71px, rgba(228,221,204,.22) .6px, transparent 1.1px);
+    background-size: 100% 100%, 100% 100%, 233px 271px, 347px 307px, 419px 389px;
 }
