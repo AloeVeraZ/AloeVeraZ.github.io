@@ -683,13 +683,15 @@ function setupGalaxyField(canvas, reducedMotion) {
         blackHoles = []; orbitingBodies = []; pulsars = [];
         const rng = createSeededRandom(0xB1AC4A);
         const mobile = width < 700;
-        // Spread the extra wells across the document, alternating open gutters.
+        // Spread the extra wells across the document. The hero keeps its well
+        // out in the right gutter; the rest sit further in, since every well
+        // hugging an edge was part of what hollowed out the middle.
         const slots = [
             { x: width * .91, y: height * .62, radius: mobile ? 62 : 110, factor: .88 },
-            { x: width * .09, y: pageHeight * .72, radius: mobile ? 24 : 38, factor: .48 }
+            { x: width * .28, y: pageHeight * .72, radius: mobile ? 24 : 38, factor: .48 }
         ];
         for (let i = 0; i < (mobile ? 2 : 3); i++) slots.push({
-            x: width * (i % 2 ? .88 : .12), y: pageHeight * [.31, .54, .9][i],
+            x: width * ([.74, .26, .52][i]), y: pageHeight * [.31, .54, .9][i],
             radius: mobile ? 45 + i * 5 : [72, 88, 60][i], factor: .82 + i * .07
         });
         if (!mobile && hasGiantLandmark) slots.push({
@@ -724,7 +726,10 @@ function setupGalaxyField(canvas, reducedMotion) {
                 sprite: lightSprite(hole.color, 0)
             });
         }
-        for (let index = 0; index < regions.length; index += mobile ? 6 : 4) {
+        // Stride widened alongside the third system per segment, so the number
+        // of orbiting bodies stays where it was while now sampling mid-field
+        // systems too.
+        for (let index = 0; index < regions.length; index += mobile ? 9 : 6) {
             const region = regions[index];
             orbitingBodies.push({
                 region, radius: randomRange(rng, 8, 20), angle: rng() * TAU,
@@ -733,7 +738,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             });
         }
         for (let i = 0; i < (mobile ? 1 : 2); i++) {
-            const pos = pickOpenPosition(rng, width * (i ? .88 : .14), pageHeight * (i ? .86 : .38), 35);
+            const pos = pickOpenPosition(rng, width * (i ? .71 : .33), pageHeight * (i ? .86 : .38), 35);
             pulsars.push({ x: pos.x, documentY: pos.y, phase: rng() * TAU,
                 factor: .55, sprite: lightSprite('206,225,248', 0) });
         }
@@ -869,18 +874,44 @@ function setupGalaxyField(canvas, reducedMotion) {
             const rng = createSeededRandom(0xC0FFEE ^ Math.imul(segment + 1, 2654435761));
             const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
             const side = rng() < .5;
-            const centerMass = rng() < .24;
+            // Anchoring three quarters of the systems in the gutters left a
+            // conspicuously empty column down the middle of the page. Half of
+            // them sit in the central band now, and the bands overlap so the
+            // field reads as one continuous scene instead of three stripes.
+            const centerMass = rng() < .5;
             const region = {
-                x: width * (centerMass ? randomRange(rng, .36, .64)
-                    : (side ? randomRange(rng, .015, .23) : randomRange(rng, .73, .985))),
+                x: width * (centerMass ? randomRange(rng, .3, .7)
+                    : (side ? randomRange(rng, .015, .3) : randomRange(rng, .7, .985))),
                 y: segment * segmentHeight + randomRange(rng, 170, 480),
                 radius: Math.min(width * .45, randomRange(rng, 220, 380)),
                 flatten: randomRange(rng, .45, .95),
                 color: chooseColor(rng), type
             };
             regions.push(region);
-            const companion = { ...region, x: width - region.x, y: region.y + randomRange(rng, -220, 240), radius: region.radius * .65 };
+            // An exact mirror produced matched pairs hugging both edges, which
+            // is what made the layout look placed rather than found. Drift the
+            // companion off the reflection so the two sit at unrelated
+            // distances from the centre.
+            const companion = {
+                ...region,
+                x: clamp(width - region.x + width * randomRange(rng, -.22, .22), width * .06, width * .94),
+                y: region.y + randomRange(rng, -220, 240),
+                radius: region.radius * .65
+            };
             regions.push(companion);
+            // A third, dimmer system in the middle band. It carries the fine
+            // scenery -- dust, unresolved smudges, small bodies -- rather than
+            // bright landmarks, so the centre fills in without competing with
+            // the text sitting over it.
+            const midfield = {
+                ...region,
+                x: width * randomRange(rng, .34, .66),
+                y: region.y + randomRange(rng, -300, 340),
+                radius: region.radius * randomRange(rng, .5, .78),
+                flatten: randomRange(rng, .5, 1),
+                color: chooseColor(rng)
+            };
+            regions.push(midfield);
 
             // Give the hero's open right side its own system, above the title's
             // baseline, instead of pushing every light below the large heading.
@@ -898,7 +929,8 @@ function setupGalaxyField(canvas, reducedMotion) {
             const count = Math.round((width * segmentHeight / 500) * density * (mobile ? .72 : 1));
             for (let i = 0; i < count; i++) {
                 const clustered = rng() < .48;
-                const group = rng() < .73 ? region : companion;
+                const groupRoll = rng();
+                const group = groupRoll < .5 ? region : groupRoll < .78 ? companion : midfield;
                 const position = clustered ? around(rng, group) : { x: rng() * width, y: (segment + rng()) * segmentHeight };
                 const depth = rng();
                 const bright = rng() < .022;
@@ -913,8 +945,9 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
             // A fine veil of unresolved dust prevents the field from feeling
             // algorithmically empty between the larger seeded systems.
-            for (let i = 0; i < Math.round(125 * density); i++) {
-                const position = around(rng, rng() < .6 ? region : companion, 1.4);
+            for (let i = 0; i < Math.round(150 * density); i++) {
+                const dustRoll = rng();
+                const position = around(rng, dustRoll < .44 ? region : dustRoll < .72 ? companion : midfield, 1.4);
                 add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .5, pulse: .16 }));
             }
             for (const group of [region, companion]) {
@@ -952,6 +985,40 @@ function setupGalaxyField(canvas, reducedMotion) {
                 }
             }
             if (type === 0) placeBody(rng, 'largePlanets', region, 85, 140, true);
+
+            // The middle band gets the same kinds of scenery at reduced weight:
+            // a soft galaxy, its haze, a scatter of unresolved smudges and a
+            // handful of small bodies. No large planets and no anchors -- the
+            // centre should read as depth behind the page, not as a subject.
+            add('galaxies', makeObject(rng, midfield.x, midfield.y, midfield.radius * .8, midfield.color, {
+                sprite: galaxySprite(rng, midfield.color), alpha: .32, drift: 2,
+                stretch: .6 + rng() * .35, haze: true
+            }));
+            add('smallPlanets', makeObject(rng, midfield.x, midfield.y, midfield.radius * 1.45, midfield.color, {
+                sprite: lightSprite(midfield.color, 2), alpha: .085, stretch: .7, haze: true, drift: 3
+            }));
+            for (let i = 0; i < Math.round(8 * density); i++) {
+                const p = around(rng, midfield, 1.35);
+                const color = rng() < .7 ? midfield.color : chooseColor(rng);
+                add('tinyDistant', makeObject(rng, p.x, p.y, 2.5 + rng() * 6.5, color, {
+                    sprite: lightSprite(color, 0), alpha: .13 + rng() * .38, drift: .7
+                }));
+            }
+            for (let i = 0; i < Math.round(2 * density); i++) {
+                const p = around(rng, midfield, 1.2);
+                const microColor = chooseDeepColor(rng);
+                add('tinyDistant', makeObject(rng, p.x, p.y, 6 + rng() * 11, microColor, {
+                    sprite: galaxySprite(rng, microColor), alpha: .07 + rng() * .13,
+                    stretch: .32 + rng() * .55, angle: rng() * TAU, drift: .32, haze: true
+                }));
+            }
+            // Bodies are the expensive half of a system -- the planet tiers are
+            // interactive, so each one is hit-tested every frame. The middle
+            // gets a restrained handful; its density comes from the dust and
+            // the unresolved smudges above, which are cheap.
+            for (let i = 0; i < Math.round(5 * density); i++) placeBody(rng, 'smallPlanets', midfield, 6, 15);
+            for (let i = 0; i < Math.round(3 * density); i++) placeBody(rng, 'mediumStars', midfield, 10, 22);
+            for (let i = 0; i < Math.round(1 * density); i++) placeBody(rng, 'mediumPlanets', midfield, 22, 44);
         }
         // A few much bigger crops sell scale. Their hot center stays close to
         // the edge and their atmospheric envelope extends far beyond it.
@@ -974,7 +1041,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         for (let i = 0; i < Math.min(7, Math.ceil(sceneHeight / 1100)); i++) {
             const clusterRng = createSeededRandom(0x57A2C ^ Math.imul(i + 1, 2654435761));
             const radius = randomRange(clusterRng, 60, 105) * (mobile ? .65 : 1);
-            const clusterColumn = [ .18, .5, .82 ][i % 3];
+            // Five columns rather than three, weighted inward: the old
+            // left/centre/right rotation put two of every three clusters in a
+            // gutter, which is a pattern the eye picks up quickly.
+            const clusterColumn = [ .35, .5, .66, .2, .8 ][i % 5];
             const p = pickOpenPosition(clusterRng, width * clusterColumn,
                 500 + i * 1050, radius, 180);
             const color = chooseColor(clusterRng);
