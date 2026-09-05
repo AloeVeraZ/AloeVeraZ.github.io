@@ -1,3 +1,5 @@
+// How long the background stays awake after a finger leaves the glass, so the
+// dent's rebound plays out before the idle fade starts.
 const SWIPE_WAKE_RELEASE_DURATION = 500;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -49,17 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const galaxyNebula = document.createElement('div');
     galaxyNebula.className = 'galaxy-nebula';
     galaxyNebula.setAttribute('aria-hidden', 'true');
-    const swipeWakeCanvas = document.createElement('canvas');
-    swipeWakeCanvas.className = 'swipe-wake';
-    swipeWakeCanvas.setAttribute('aria-hidden', 'true');
     const ambientGlow = document.createElement('div');
     ambientGlow.className = 'ambient-glow';
     ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
     backgroundGrid.after(galaxyField);
     galaxyField.after(galaxyNebula);
-    galaxyNebula.after(swipeWakeCanvas);
-    swipeWakeCanvas.after(ambientGlow);
+    galaxyNebula.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
@@ -71,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(cursorDot);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const galaxy = setupGalaxyField(galaxyField, reducedMotion);
-    const swipeWake = setupSwipeWake(swipeWakeCanvas, reducedMotion);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
@@ -269,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.dataset.effectsReason = reason;
         galaxy.setQuality(mode);
         cursor.setEnabled(useHighEffects);
-        swipeWake.setEnabled(useHighEffects);
         wakeEffectsBackground();
         performanceToggle.setAttribute('aria-checked', String(useHighEffects));
         performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
@@ -345,23 +341,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     window.addEventListener('pointermove', queueHighEffectsMovement, { passive: true });
-    window.addEventListener('touchstart', () => {
+    // Touch drives the field directly rather than being funnelled through the
+    // cursor path: a fingertip is a position on the sheet, not a hovering
+    // pointer, so it presses its own dent instead of tilting the whole scene.
+    window.addEventListener('touchstart', event => {
         highEffectsTouchSwipeActive = false;
         touchSwipeReleased = false;
+        wakeEffectsBackground();
+        if (effectsMode !== 'high') return;
+        Array.from(event.changedTouches).forEach(touch => {
+            galaxy.touchStart(touch.identifier, touch.clientX, touch.clientY);
+        });
     }, { passive: true });
     window.addEventListener('touchmove', event => {
-        const touch = event.touches[0] || event.changedTouches[0];
-        if (!touch) return;
+        if (!event.touches.length && !event.changedTouches.length) return;
         if (effectsMode === 'high') highEffectsTouchSwipeActive = true;
-        queueHighEffectsMovement({
-            clientX: touch.clientX,
-            clientY: touch.clientY,
-            pointerType: 'touch',
-            target: event.target
+        wakeEffectsBackground();
+        if (effectsMode !== 'high') return;
+        Array.from(event.changedTouches).forEach(touch => {
+            galaxy.touchMove(touch.identifier, touch.clientX, touch.clientY);
         });
     }, { passive: true });
     ['touchend', 'touchcancel'].forEach(eventName => {
         window.addEventListener(eventName, event => {
+            Array.from(event.changedTouches).forEach(touch => galaxy.touchEnd(touch.identifier));
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
             touchSwipeReleased = true;
@@ -369,7 +372,21 @@ document.addEventListener('DOMContentLoaded', () => {
             wakeEffectsBackground('swipe-release');
         }, { passive: true });
     });
-    window.addEventListener('pointerdown', () => wakeEffectsBackground('click'), { passive: true });
+    // A stylus is a fingertip with a finer point: same dent, same rebound.
+    window.addEventListener('pointerdown', event => {
+        wakeEffectsBackground('click');
+        if (effectsMode === 'high' && event.pointerType === 'pen') {
+            galaxy.touchStart(`pen-${event.pointerId}`, event.clientX, event.clientY);
+        }
+    }, { passive: true });
+    window.addEventListener('pointermove', event => {
+        if (event.pointerType === 'pen') galaxy.touchMove(`pen-${event.pointerId}`, event.clientX, event.clientY);
+    }, { passive: true });
+    ['pointerup', 'pointercancel'].forEach(eventName => {
+        window.addEventListener(eventName, event => {
+            if (event.pointerType === 'pen') galaxy.touchEnd(`pen-${event.pointerId}`);
+        }, { passive: true });
+    });
     document.documentElement.addEventListener('pointerleave', () => ambientGlow.classList.remove('is-active'));
     window.addEventListener('keydown', wakeEffectsBackground, { passive: true });
     window.addEventListener('wheel', () => {
@@ -432,7 +449,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // the normal compositing sync, which shows up as flicker/tearing against the
     // page behind it. It only exists to cut stylus latency, which we do not need.
     const context = canvas.getContext('2d', { alpha: true });
-    if (!context) return { move() {}, scroll() {}, setQuality() {}, refreshLayout() {} };
+    if (!context) return { move() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {} };
 
     // Keep the existing tiered, seeded canvas architecture. Regions now own
     // their lights and haze, so a system has a shared composition at every scale.
@@ -474,6 +491,11 @@ function setupGalaxyField(canvas, reducedMotion) {
     // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
     const hasGiantLandmark = Math.random() < .08;
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false };
+    // A fingertip presses a dimple into the field. The sheet sags under it,
+    // nearby scenery slides down the slope, and on release it springs back
+    // through flat before settling. Wells live in screen space: the page
+    // scrolls underneath while the finger stays where it is put.
+    const touchWells = [];
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const smoothstep = value => value * value * (3 - 2 * value);
     const randomRange = (rng, min, max) => min + rng() * (max - min);
@@ -1184,6 +1206,19 @@ function setupGalaxyField(canvas, reducedMotion) {
                 ay += (dy / distance + dx / distance * .16) * force;
             }
         }
+        // Bodies fall down the slope toward the fingertip and pick up a little
+        // spin on the way in, the way the seeded wells pull them -- except a
+        // finger never captures anything, so they climb back out on release.
+        for (const well of touchWells) {
+            if (well.depth <= .02) continue;
+            const dx = well.x - state.x, dy = well.y - state.y;
+            const reach = well.reach * 1.15;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            if (distance > reach) continue;
+            const strength = (1 - distance / reach) ** 2 * 640 * well.depth / (1 + body.radius / 190);
+            ax += dx / distance * strength - dy / distance * strength * .24;
+            ay += dy / distance * strength + dx / distance * strength * .24;
+        }
         let nearest = null, nearestRatio = Infinity;
         for (const hole of projectedHoles) {
             const dx = hole.screenX - state.x, dy = hole.screenY - state.y;
@@ -1212,6 +1247,35 @@ function setupGalaxyField(canvas, reducedMotion) {
         state.x = baseX + state.ox; state.y = baseY + state.oy;
         state.alpha = smoothstep(clamp((time - state.returnedAt) / 2.5, 0, 1));
         return state;
+    };
+    // The displacement alone is legible on a busy patch of sky and invisible
+    // on an empty one. A faint rim -- brightest where the slope is steepest --
+    // gives the depression an edge to read against in both cases, and the
+    // rebound shows in it too: on release the ring inverts with the sheet.
+    const drawTouchWells = () => {
+        if (!touchWells.length || reducedMotion.matches) return;
+        context.save();
+        context.globalCompositeOperation = 'lighter';
+        for (const well of touchWells) {
+            const depth = Math.abs(well.depth);
+            if (depth < .02) continue;
+            // A broad, soft band rather than a drawn outline. A crisp circle
+            // reads as an interface element sitting on top of the scene; this
+            // has to read as the sheet catching light along the slope, so it
+            // has no edge anywhere -- it fades in and out across most of the
+            // dent's width.
+            const rim = well.reach * (.58 + well.depth * .1);
+            const gradient = context.createRadialGradient(well.x, well.y, rim * .2, well.x, well.y, rim * 1.5);
+            gradient.addColorStop(0, 'rgba(150, 190, 240, 0)');
+            gradient.addColorStop(.5, `rgba(168, 205, 248, ${(depth * .05).toFixed(4)})`);
+            gradient.addColorStop(.74, `rgba(160, 198, 244, ${(depth * .028).toFixed(4)})`);
+            gradient.addColorStop(1, 'rgba(150, 190, 240, 0)');
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.arc(well.x, well.y, rim * 1.5, 0, TAU);
+            context.fill();
+        }
+        context.restore();
     };
     const drawBlackHoles = () => {
         for (const hole of projectedHoles) {
@@ -1396,18 +1460,72 @@ function setupGalaxyField(canvas, reducedMotion) {
         const cameraOffsetY = cameraY * factor * factor * 7;
         context.globalCompositeOperation = 'lighter';
         context.globalAlpha = 1;
-        for (const tile of staticStarTiles) {
-            const top = (tile.start - scrollPosition - height / 2) * factor + height / 2 - cameraOffsetY;
-            const scaledHeight = (tile.end - tile.start) * factor;
-            if (top > height || top + scaledHeight < 0) continue;
-            context.drawImage(tile.canvas, -cameraOffsetX, top, width, scaledHeight);
+        // minY/maxY cull in screen space. The full-field pass takes the
+        // viewport; a ring pass takes only the band it can possibly draw into,
+        // which keeps the warp from re-blitting tiles nowhere near the finger.
+        const paintTiles = (minY = 0, maxY = height) => {
+            for (const tile of staticStarTiles) {
+                const top = (tile.start - scrollPosition - height / 2) * factor + height / 2 - cameraOffsetY;
+                const scaledHeight = (tile.end - tile.start) * factor;
+                if (top > maxY || top + scaledHeight < minY) continue;
+                context.drawImage(tile.canvas, -cameraOffsetX, top, width, scaledHeight);
+            }
+        };
+        const wells = touchWells.filter(well => Math.abs(well.depth) > .015);
+        if (!wells.length) { paintTiles(); return; }
+
+        // The deep field is thousands of pre-rasterized points, so it cannot be
+        // displaced star by star. Paint it flat everywhere outside the dents...
+        context.save();
+        context.beginPath();
+        context.rect(0, 0, width, height);
+        for (const well of wells) {
+            context.moveTo(well.x + well.reach, well.y);
+            context.arc(well.x, well.y, well.reach, 0, TAU);
+        }
+        context.clip('evenodd');
+        paintTiles();
+        context.restore();
+
+        // ...and inside each dent redraw the same tiles as concentric rings,
+        // every ring scaled toward the centre by the sheet's displacement at
+        // that radius. Seven bands is enough that the seams vanish in a field
+        // of points, and it holds the whole warp to a few draws per finger.
+        const rings = 7;
+        for (const well of wells) {
+            for (let ring = 0; ring < rings; ring++) {
+                const outer = well.reach * (rings - ring) / rings;
+                const inner = well.reach * (rings - ring - 1) / rings;
+                const mid = (outer + inner) / 2;
+                const pull = well.depth * wellProfile(mid / well.reach) * well.reach * .3;
+                const squeeze = clamp((mid - pull) / mid, .35, 1.6);
+                // Under the scale, this band shows source content from a wider
+                // radius than it occupies, so the cull has to cover where that
+                // content comes from, not just where it lands.
+                const span = well.reach / Math.min(squeeze, 1) + 2;
+                context.save();
+                context.beginPath();
+                context.arc(well.x, well.y, outer, 0, TAU);
+                context.moveTo(well.x + inner, well.y);
+                context.arc(well.x, well.y, inner, 0, TAU);
+                context.clip('evenodd');
+                context.translate(well.x, well.y);
+                context.scale(squeeze, squeeze);
+                context.translate(-well.x, -well.y);
+                paintTiles(well.y - span, well.y + span);
+                context.restore();
+            }
         }
     };
     const draw = timestamp => {
         animationFrame = 0;
         if (document.hidden || quality !== 'high') return;
         const animated = !reducedMotion.matches;
-        if (animated && timestamp - lastFrame < frameInterval - 1) {
+        // The ambient scene is paced down to 24-30fps because nothing on it is
+        // being aimed at. A finger on the glass is, and the dent has to track
+        // it: hold the higher rate for as long as one is down.
+        const interval = touchWells.length ? Math.min(frameInterval, 1000 / 48) : frameInterval;
+        if (animated && timestamp - lastFrame < interval - 1) {
             animationFrame = requestAnimationFrame(draw);
             return;
         }
@@ -1420,6 +1538,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.y += ((animated && pointer.active ? pointer.targetY : 0) - pointer.y) * ease;
         const cameraX = animated ? pointer.x : 0;
         const cameraY = animated ? pointer.y : 0;
+        if (animated) updateTouchWells(delta);
         context.clearRect(0, 0, width, height);
         context.globalCompositeOperation = 'lighter';
         prepareBlackHoles(time, cameraX, cameraY);
@@ -1459,11 +1578,39 @@ function setupGalaxyField(canvas, reducedMotion) {
                         lensStretch = 1 + influence * .45;
                     }
                 }
+                // Everything on the sheet slides toward the dent, and sinks
+                // away from the viewer as it does -- smaller and dimmer at the
+                // bottom of the well is what turns an inward slide into depth.
+                let sink = 1;
+                if (touchWells.length && !reducedMotion.matches) for (const well of touchWells) {
+                    const dx = x - well.x, dy = y - well.y;
+                    const reach = well.reach;
+                    const distanceSquared = dx * dx + dy * dy;
+                    if (distanceSquared >= reach * reach) continue;
+                    const distance = Math.sqrt(distanceSquared) || .001;
+                    const u = distance / reach;
+                    const rim = (1 - u) * (1 - u);
+                    // Nearer layers move further for the same dent, so the
+                    // depression has depth of its own rather than sliding as
+                    // one flat picture.
+                    const pull = well.depth * wellProfile(u) * reach * .3 * (.55 + factor * .38);
+                    x -= dx / distance * pull;
+                    y -= dy / distance * pull;
+                    // The sheet shears in the direction the finger is going.
+                    x += well.vx * well.depth * rim * .05;
+                    y += well.vy * well.depth * rim * .05;
+                    sink *= 1 - well.depth * rim * .34;
+                    lensStretch *= 1 + Math.abs(well.depth) * wellProfile(u) * .4;
+                }
                 const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
-                const radius = object.radius * scale * (physics ? physics.scale : 1);
+                const radius = object.radius * scale * (physics ? physics.scale : 1) * clamp(sink, .3, 1.3);
                 if (x + radius < 0 || x - radius > width || y + radius < 0 || y - radius > height) continue;
                 let alpha = object.alpha * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
                 if (physics) alpha *= physics.alpha;
+                // Partial, not proportional: light falling into the well dims
+                // but never blinks out, or the dent would read as a hole
+                // punched through the field.
+                if (sink !== 1) alpha *= clamp(.58 + .42 * sink, .2, 1.2);
                 if (!tier.points) {
                     const clearance = clearanceAt(x, y + scrollPosition, Math.max(10, radius * .46), visibleRects);
                     // A dim remnant remains behind text; hotter objects emerge
@@ -1511,6 +1658,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             drawEvents(time, cameraX, cameraY, delta);
         }
         drawBlackHoles(); // The dark horizon occludes captured bodies and trails.
+        drawTouchWells();
         context.globalAlpha = 1;
         context.globalCompositeOperation = 'source-over';
         if (animated && !sleeping) animationFrame = requestAnimationFrame(draw);
@@ -1589,6 +1737,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     const setQuality = mode => {
         const changed = quality !== mode;
         quality = mode;
+        touchWells.length = 0;
         if (changed) resetEvents();
         canvas.hidden = mode !== 'high';
         cancelAnimationFrame(animationFrame);
@@ -1596,6 +1745,65 @@ function setupGalaxyField(canvas, reducedMotion) {
         lastFrame = 0;
         if (mode === 'high') refreshLayout();
         else staticStarTiles = [];
+    };
+    // Radius of the depression. Kept in step with the reach used by the body
+    // physics and the tile warp so all three describe the same dent.
+    const wellReach = () => Math.min(230, Math.max(140, Math.min(width, height) * .42));
+    // Rubber-sheet profile. Zero at the exact centre and at the rim, greatest
+    // a third of the way out -- displacing the centre point itself would just
+    // translate the scene, which reads as a smear rather than a depression.
+    const wellProfile = u => u * (1 - u) * (1 - u) * 6.75;
+    const findWell = identifier => touchWells.find(well => well.id === identifier);
+
+    const touchStart = (identifier, x, y) => {
+        if (quality !== 'high' || reducedMotion.matches) return;
+        const existing = findWell(identifier);
+        if (existing) { existing.releasedAt = 0; existing.releaseDepth = 0; return; }
+        touchWells.push({
+            id: identifier, x, y, targetX: x, targetY: y, vx: 0, vy: 0,
+            depth: 0, releasedAt: 0, releaseDepth: 0, reach: wellReach()
+        });
+        requestDraw();
+    };
+    const touchMove = (identifier, x, y) => {
+        const well = findWell(identifier);
+        if (!well) return;
+        well.targetX = x; well.targetY = y;
+        requestDraw();
+    };
+    const touchEnd = identifier => {
+        const well = findWell(identifier);
+        if (!well || well.releasedAt) return;
+        well.releasedAt = sceneTime;
+        well.releaseDepth = well.depth;
+        requestDraw();
+    };
+    const updateTouchWells = delta => {
+        if (!touchWells.length) return;
+        const seconds = Math.min(delta / 1000, .05);
+        for (let index = touchWells.length - 1; index >= 0; index--) {
+            const well = touchWells[index];
+            // The dimple trails the fingertip. That lag is what makes a drag
+            // feel like pulling through a sheet instead of moving a cursor --
+            // the fabric has to catch up to where the finger already is.
+            const follow = 1 - Math.exp(-seconds / .055);
+            const nextX = well.x + (well.targetX - well.x) * follow;
+            const nextY = well.y + (well.targetY - well.y) * follow;
+            well.vx = (nextX - well.x) / Math.max(seconds, .001);
+            well.vy = (nextY - well.y) / Math.max(seconds, .001);
+            well.x = nextX; well.y = nextY;
+            if (!well.releasedAt) {
+                well.depth += (1 - well.depth) * (1 - Math.exp(-seconds / .11));
+                continue;
+            }
+            // Release is elastic: the sheet overshoots past flat into a slight
+            // bulge before settling. A plain fade-out reads as a circle
+            // disappearing; the rebound is what makes it a surface under
+            // tension that was being held down.
+            const since = sceneTime - well.releasedAt;
+            well.depth = well.releaseDepth * Math.exp(-since * 6.5) * Math.cos(since * 12.5);
+            if (since > .12 && Math.abs(well.depth) < .012) touchWells.splice(index, 1);
+        }
     };
     const move = event => {
         if (quality !== 'high' || reducedMotion.matches || event.pointerType === 'touch') return;
@@ -1644,6 +1852,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         sleepTimer = window.setTimeout(() => {
             sleepTimer = 0;
             sleeping = true;
+            // A well only unwinds while frames are running. Parking the loop
+            // mid-rebound would leave the last dent pressed into the field
+            // until something else woke it.
+            touchWells.length = 0;
             cancelAnimationFrame(animationFrame);
             animationFrame = 0;
         }, 900);
@@ -1651,210 +1863,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     new MutationObserver(syncIdleSleep).observe(document.documentElement, { attributeFilter: ['class'] });
     syncIdleSleep();
     refreshLayout();
-    return { move, scroll, setQuality, refreshLayout };
+    return { move, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd };
 }
 
-
-function setupSwipeWake(canvas, reducedMotion) {
-    // No desynchronized flag: the low-latency path presents this canvas outside
-    // the normal compositing sync, which shows up as flicker/tearing against the
-    // page behind it. It only exists to cut stylus latency, which we do not need.
-    const context = canvas.getContext('2d', { alpha: true });
-    if (!context) return { setEnabled() {} };
-
-    const trailLifetime = SWIPE_WAKE_RELEASE_DURATION;
-    const activeTouches = new Map();
-    const activePointers = new Map();
-    let trails = [];
-    let enabled = false;
-    let animationFrame = 0;
-    let width = 0;
-    let height = 0;
-    let pixelRatio = 1;
-
-    const resize = () => {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
-        canvas.width = Math.round(width * pixelRatio);
-        canvas.height = Math.round(height * pixelRatio);
-        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    };
-
-    const clear = () => {
-        if (animationFrame) cancelAnimationFrame(animationFrame);
-        animationFrame = 0;
-        trails = [];
-        activeTouches.clear();
-        activePointers.clear();
-        context.clearRect(0, 0, width, height);
-        canvas.classList.remove('is-active');
-    };
-
-    const traceTrail = trail => {
-        const points = trail.points;
-        if (points.length < 2) return;
-        context.beginPath();
-        context.moveTo(points[0].x, points[0].y);
-        for (let index = 1; index < points.length; index += 1) {
-            context.lineTo(points[index].x, points[index].y);
-        }
-    };
-
-    const drawRippleOutline = (trail, lineWidth, edgeWidth, color, opacity, shadowBlur) => {
-        context.save();
-        // Additive blending so the trail glows into the starfield behind it
-        // instead of painting an opaque ribbon over it -- it should read as
-        // a light overlay, not a separate layer hiding the background.
-        context.globalCompositeOperation = 'lighter';
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        context.strokeStyle = `rgba(${color}, ${opacity.toFixed(3)})`;
-        context.lineWidth = lineWidth;
-        context.shadowColor = `rgba(${color}, ${(opacity * .82).toFixed(3)})`;
-        context.shadowBlur = shadowBlur;
-        traceTrail(trail);
-        context.stroke();
-
-        context.globalCompositeOperation = 'destination-out';
-        context.strokeStyle = '#000';
-        context.lineWidth = Math.max(lineWidth - (edgeWidth * 2), 0);
-        context.lineCap = 'round';
-        context.shadowBlur = 0;
-        traceTrail(trail);
-        context.stroke();
-        context.restore();
-    };
-
-    const draw = timestamp => {
-        animationFrame = 0;
-        context.clearRect(0, 0, width, height);
-        trails = trails.filter(trail => !trail.endedAt || timestamp - trail.endedAt < trailLifetime);
-
-        const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
-        trails.forEach(trail => {
-            if (trail.points.length < 2) return;
-            const elapsed = trail.endedAt ? Math.max(timestamp - trail.endedAt, 0) : 0;
-            const fadeStrength = !trail.endedAt
-                ? 1
-                : elapsed <= 250
-                    ? 1 - (.25 * (elapsed / 250))
-                    : Math.max(.75 * (1 - ((elapsed - 250) / 250)), 0);
-            const animationAge = Math.max(timestamp - trail.startedAt, 0);
-            const rippleProgress = Math.min(animationAge / 650, 1);
-            const easedRipple = 1 - ((1 - rippleProgress) ** 3);
-
-            drawRippleOutline(
-                trail,
-                (8 + (22 * easedRipple)) * interfaceScale,
-                Math.max(1, interfaceScale),
-                '145, 200, 255',
-                .42 * fadeStrength,
-                7 * interfaceScale
-            );
-
-            if (animationAge > 110) {
-                const echoProgress = Math.min((animationAge - 110) / 620, 1);
-                const easedEcho = 1 - ((1 - echoProgress) ** 3);
-                drawRippleOutline(
-                    trail,
-                    (6 + (16 * easedEcho)) * interfaceScale,
-                    Math.max(1, .7 * interfaceScale),
-                    '168, 213, 255',
-                    .2 * fadeStrength,
-                    4 * interfaceScale
-                );
-            }
-
-        });
-
-        if (trails.length) {
-            canvas.classList.add('is-active');
-            animationFrame = requestAnimationFrame(draw);
-        } else {
-            canvas.classList.remove('is-active');
-        }
-    };
-
-    const ensureAnimation = () => {
-        if (!animationFrame) animationFrame = requestAnimationFrame(draw);
-    };
-
-    const beginTrail = (identifier, x, y, collection) => {
-        if (!enabled || reducedMotion.matches) return;
-        const startedAt = performance.now();
-        const trail = {
-            points: [{ x, y }],
-            endedAt: 0,
-            startedAt
-        };
-        trails.push(trail);
-        collection.set(identifier, trail);
-    };
-
-    const extendTrail = (identifier, x, y, collection) => {
-        if (!enabled || reducedMotion.matches) return;
-        const trail = collection.get(identifier);
-        if (!trail) return;
-        const previous = trail.points[trail.points.length - 1];
-        const distance = Math.hypot(x - previous.x, y - previous.y);
-        const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
-        if (distance < 3 * interfaceScale) return;
-        trail.points.push({ x, y });
-        if (trail.points.length > 240) trail.points.splice(0, trail.points.length - 240);
-        ensureAnimation();
-    };
-
-    const endTrail = (identifier, collection) => {
-        const trail = collection.get(identifier);
-        if (!trail) return;
-        collection.delete(identifier);
-        if (trail.points.length < 2) {
-            trails = trails.filter(candidate => candidate !== trail);
-            return;
-        }
-        trail.endedAt = performance.now();
-        ensureAnimation();
-    };
-
-    window.addEventListener('touchstart', event => {
-        Array.from(event.changedTouches).forEach(touch => {
-            beginTrail(touch.identifier, touch.clientX, touch.clientY, activeTouches);
-        });
-    }, { passive: true });
-    window.addEventListener('touchmove', event => {
-        Array.from(event.changedTouches).forEach(touch => {
-            extendTrail(touch.identifier, touch.clientX, touch.clientY, activeTouches);
-        });
-    }, { passive: true });
-    ['touchend', 'touchcancel'].forEach(eventName => {
-        window.addEventListener(eventName, event => {
-            Array.from(event.changedTouches).forEach(touch => endTrail(touch.identifier, activeTouches));
-        }, { passive: true });
-    });
-
-    window.addEventListener('pointerdown', event => {
-        if (event.pointerType !== 'pen') return;
-        beginTrail(event.pointerId, event.clientX, event.clientY, activePointers);
-    }, { passive: true });
-    window.addEventListener('pointermove', event => {
-        if (event.pointerType !== 'pen') return;
-        extendTrail(event.pointerId, event.clientX, event.clientY, activePointers);
-    }, { passive: true });
-    ['pointerup', 'pointercancel'].forEach(eventName => {
-        window.addEventListener(eventName, event => endTrail(event.pointerId, activePointers), { passive: true });
-    });
-    window.addEventListener('resize', resize, { passive: true });
-    resize();
-
-    return {
-        setEnabled(nextEnabled) {
-            enabled = Boolean(nextEnabled);
-            canvas.dataset.enabled = String(enabled);
-            if (!enabled) clear();
-        }
-    };
-}
 
 function setupCursorEffects(cursorDot, reducedMotion) {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
