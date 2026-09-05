@@ -1069,6 +1069,13 @@ html[data-effects="high"].effects-background-idle .ambient-glow {
     opacity: 0;
     transition-duration: .65s;
 }
+html[data-effects="high"].effects-background-idle .galaxy-field,
+html[data-effects="high"].effects-background-idle .galaxy-nebula,
+html[data-effects="high"].effects-background-click-fading .galaxy-field,
+html[data-effects="high"].effects-background-click-fading .galaxy-nebula {
+    opacity: 0;
+    transition-duration: .65s;
+}
 html[data-effects="high"].effects-background-click-fading .background-grid,
 html[data-effects="high"].effects-background-click-fading .ambient-glow {
     opacity: 0;

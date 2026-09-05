@@ -354,6 +354,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     // their lights and haze, so a system has a shared composition at every scale.
     const TAU = Math.PI * 2;
     const colors = ['224,237,255', '174,206,237', '246,221,190', '207,199,227', '235,240,247', '205,168,156'];
+    // High FX uses a wider stellar palette for the deep-field layer. The
+    // warmer points remain uncommon so the field keeps its near-black tone.
+    const deepFieldColors = [...colors, '255,194,142', '214,226,255', '238,177,128'];
     const tiers = {
         galaxies: { factor: .23, points: false },
         dust: { factor: .34, points: true },
@@ -383,6 +386,12 @@ function setupGalaxyField(canvas, reducedMotion) {
     const smoothstep = value => value * value * (3 - 2 * value);
     const randomRange = (rng, min, max) => min + rng() * (max - min);
     const chooseColor = rng => colors[rng() < .82 ? Math.floor(rng() * 5) : 5];
+    const chooseDeepColor = rng => {
+        const roll = rng();
+        if (roll < .72) return deepFieldColors[Math.floor(rng() * 5)];
+        if (roll < .94) return deepFieldColors[5 + Math.floor(rng() * 2)];
+        return deepFieldColors[7];
+    };
     const createSprite = size => {
         const sprite = document.createElement('canvas');
         sprite.width = sprite.height = size;
@@ -638,7 +647,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     // One scheduler, driven by active scene time. Tab hiding, Low FX and
     // reduced motion pause time; no timers, catch-up storms, or page-length rate.
     const eventDefinitions = {
-        shootingStar: { minCooldown: 5, maxCooldown: 12, probability: .96, maxSimultaneous: 1, cost: 1, high: true, low: false },
+        // Shooting stars are the one common rare event: roughly 3x the prior
+        // cadence while remaining High FX-only and limited to one at a time.
+        shootingStar: { minCooldown: 1.7, maxCooldown: 4, probability: 1, maxSimultaneous: 1, cost: 1, high: true, low: false },
         meteor: { minCooldown: 70, maxCooldown: 145, probability: .68, maxSimultaneous: 1, cost: 2, high: true, low: false },
         comet: { minCooldown: 180, maxCooldown: 340, probability: .55, maxSimultaneous: 1, cost: 2, high: true, low: false },
         supernova: { minCooldown: 130, maxCooldown: 260, probability: .6, maxSimultaneous: 1, cost: 2, high: true, low: false },
@@ -781,19 +792,29 @@ function setupGalaxyField(canvas, reducedMotion) {
 
             // An even baseline under uneven systems, with many nearly invisible
             // points. No page-height cap that thins out expanded collections.
-            const count = Math.round((width * segmentHeight / 1550) * density);
+            // Deep-field stars are deliberately tiny and numerous in High FX,
+            // like a telescope exposure: density rises while individual alpha
+            // and radius stay restrained.
+            const count = Math.round((width * segmentHeight / 500) * density * (mobile ? .72 : 1));
             for (let i = 0; i < count; i++) {
-                const clustered = rng() < .58;
+                const clustered = rng() < .48;
                 const group = rng() < .73 ? region : companion;
                 const position = clustered ? around(rng, group) : { x: rng() * width, y: (segment + rng()) * segmentHeight };
                 const depth = rng();
-                add('stars', makeObject(rng, position.x, position.y, .34 + rng() ** 1.8 * 1.1, chooseColor(rng), {
-                    alpha: .13 + rng() ** 1.8 * .72, drift: .5 + depth * 2.5, pulse: .08 + rng() * .2
+                const bright = rng() < .022;
+                add('stars', makeObject(rng, position.x, position.y,
+                    bright ? 1.15 + rng() * 1.15 : .2 + rng() ** 1.9 * .9,
+                    chooseDeepColor(rng), {
+                    alpha: bright ? .64 + rng() * .3 : .1 + rng() ** 1.8 * .62,
+                    drift: .35 + depth * 2.2, pulse: .05 + rng() * .16,
+                    glint: bright && rng() < .38
                 }));
             }
-            for (let i = 0; i < Math.round(90 * density); i++) {
+            // A fine veil of unresolved dust prevents the field from feeling
+            // algorithmically empty between the larger seeded systems.
+            for (let i = 0; i < Math.round(125 * density); i++) {
                 const position = around(rng, rng() < .6 ? region : companion, 1.4);
-                add('dust', makeObject(rng, position.x, position.y, .2 + rng() * .42, region.color, { alpha: .06 + rng() * .16, drift: .3, pulse: .04 }));
+                add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .24, pulse: .035 }));
             }
             for (const group of [region, companion]) {
                 add('galaxies', makeObject(rng, group.x, group.y, group.radius * (type === 2 ? 1.1 : .75), group.color, {
@@ -809,6 +830,16 @@ function setupGalaxyField(canvas, reducedMotion) {
                     const color = rng() < .7 ? group.color : chooseColor(rng);
                     add('tinyDistant', makeObject(rng, p.x, p.y, 3 + rng() * 8, color, {
                         sprite: lightSprite(color, 0), alpha: .17 + rng() * .5, drift: .7
+                    }));
+                }
+                // Small, unresolved galaxy smudges echo deep-field exposures;
+                // they are sparse enough to remain landmarks rather than icons.
+                for (let i = 0; i < Math.round(2.5 * density); i++) {
+                    const p = around(rng, group, 1.15);
+                    const microColor = chooseDeepColor(rng);
+                    add('tinyDistant', makeObject(rng, p.x, p.y, 7 + rng() * 12, microColor, {
+                        sprite: galaxySprite(rng, microColor), alpha: .08 + rng() * .16,
+                        stretch: .32 + rng() * .55, angle: rng() * TAU, drift: .32, haze: true
                     }));
                 }
                 for (let i = 0; i < Math.round((type === 2 ? 11 : 16) * density); i++) placeBody(rng, 'smallPlanets', group, 7, 18);
@@ -1218,6 +1249,19 @@ function setupGalaxyField(canvas, reducedMotion) {
                     context.beginPath();
                     context.ellipse(x, y, radius * lensStretch, radius, 0, 0, TAU);
                     context.fill();
+                    if (object.glint && radius > .8) {
+                        context.save();
+                        context.globalAlpha *= .42;
+                        context.strokeStyle = `rgb(${object.color})`;
+                        context.lineWidth = Math.max(.35, radius * .22);
+                        context.beginPath();
+                        context.moveTo(x - radius * 2.8, y);
+                        context.lineTo(x + radius * 2.8, y);
+                        context.moveTo(x, y - radius * 2.8);
+                        context.lineTo(x, y + radius * 2.8);
+                        context.stroke();
+                        context.restore();
+                    }
                 } else {
                     context.save();
                     context.translate(x, y);
