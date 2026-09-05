@@ -60,7 +60,7 @@ button { font: inherit; }
     pointer-events: none;
     width: 100%;
     height: 100%;
-    opacity: .74;
+    opacity: .84;
     transition: opacity .65s ease;
     contain: strict;
 }
@@ -70,12 +70,19 @@ button { font: inherit; }
     z-index: 0;
     pointer-events: none;
     background-image:
-        radial-gradient(ellipse 48% 30% at 18% 18%, rgba(75,121,171,.1), transparent 74%),
-        radial-gradient(ellipse 44% 28% at 82% 64%, rgba(119,91,151,.065), transparent 76%),
-        radial-gradient(ellipse 50% 24% at 36% 88%, rgba(96,134,173,.045), transparent 78%);
+        radial-gradient(ellipse 38% 24% at 60% 8%, rgba(222,228,255,.035), transparent 80%),
+        radial-gradient(ellipse 48% 30% at 18% 18%, rgba(75,121,171,.12), transparent 74%),
+        radial-gradient(ellipse 42% 26% at 88% 30%, rgba(70,40,90,.05), transparent 78%),
+        radial-gradient(ellipse 55% 40% at 50% 42%, rgba(150,170,255,.09), transparent 70%),
+        radial-gradient(ellipse 46% 30% at 12% 46%, rgba(40,42,92,.05), transparent 76%),
+        radial-gradient(ellipse 40% 24% at 78% 55%, rgba(90,70,140,.045), transparent 78%),
+        radial-gradient(ellipse 44% 28% at 82% 64%, rgba(119,91,151,.08), transparent 76%),
+        radial-gradient(ellipse 40% 26% at 70% 76%, rgba(214,164,110,.05), transparent 78%),
+        radial-gradient(ellipse 50% 24% at 36% 88%, rgba(96,134,173,.055), transparent 78%),
+        radial-gradient(ellipse 44% 28% at 25% 96%, rgba(180,90,70,.05), transparent 78%);
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    opacity: .72;
+    opacity: .8;
     transition: opacity .65s ease;
 }
 .galaxy-nebula::after {
@@ -93,6 +100,9 @@ button { font: inherit; }
     height: 100%;
     pointer-events: none;
     opacity: 0;
+    /* Blend additively with the starfield behind it so the trail brightens
+       the background instead of painting an opaque layer over it. */
+    mix-blend-mode: screen;
     transition: opacity .18s ease;
     contain: strict;
 }
@@ -191,20 +201,26 @@ html[data-effects="high"] .swipe-wake { display: block; }
 }
 
 html.effects-background-idle body { background-color: #000; }
-html.effects-background-idle .background-grid,
+/* The planet canvas starts far brighter than the faint grid, so fading both
+   on the same curve leaves the planets visibly glowing after the grid has
+   already read as black. Front-loading this layer's curve sheds its
+   brightness early so the whole background reads as gone at one moment. */
 html.effects-background-idle .galaxy-field,
 html.effects-background-idle .galaxy-nebula,
-html.effects-background-idle .ambient-glow { opacity: 0; }
+html.effects-background-idle .ambient-glow {
+    opacity: 0;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
+}
 html.effects-background-click-fading body {
     background-color: #000;
     transition-duration: 3.5s;
 }
-html.effects-background-click-fading .background-grid,
 html.effects-background-click-fading .galaxy-field,
 html.effects-background-click-fading .galaxy-nebula,
 html.effects-background-click-fading .ambient-glow {
     opacity: 0;
     transition-duration: 3.5s;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
@@ -1026,7 +1042,16 @@ html[data-effects="low"] .featured-project-carousel .project-card {
 }
 
 /* Low FX keeps the static grid and removes continuous animation. */
-html[data-effects="low"] .background-grid { display: block; }
+html[data-effects="low"] .background-grid {
+    display: block;
+    background-image:
+        linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.095) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px);
+    background-size: 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
+    opacity: .78;
+}
 html[data-effects="low"] .galaxy-field,
 html[data-effects="low"] .galaxy-nebula,
 html[data-effects="low"] .ambient-glow,
@@ -1034,6 +1059,39 @@ html[data-effects="low"] .cursor-dot,
 html[data-effects="low"] .cursor-spark,
 html[data-effects="low"] .cursor-ripple {
     display: none !important;
+}
+
+/* High FX layers a quiet grid under the cursor-lit particles. */
+html[data-effects="high"] .background-grid {
+    display: block;
+    background-image:
+        linear-gradient(rgba(145,200,255,.042) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.042) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
+    background-size: 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
+    opacity: .28;
+}
+html[data-effects="high"] .ambient-glow {
+    opacity: 0;
+    transition: opacity .32s ease;
+}
+html[data-effects="high"] .ambient-glow.is-active {
+    opacity: .72;
+}
+/* The grid, the planet canvas, the nebula and the cursor glow must dim as one
+   -- same trigger, same duration -- or the grid blacks out while the planets
+   linger behind it. The cursor glow keeps its snappy .32s for is-active
+   toggling; only its idle/fade-out timing is matched to the other layers. */
+html[data-effects="high"].effects-background-idle .background-grid,
+html[data-effects="high"].effects-background-idle .ambient-glow {
+    opacity: 0;
+    transition-duration: .65s;
+}
+html[data-effects="high"].effects-background-click-fading .background-grid,
+html[data-effects="high"].effects-background-click-fading .ambient-glow {
+    opacity: 0;
+    transition-duration: 3.5s;
 }
 
 @media (prefers-reduced-motion: reduce) {

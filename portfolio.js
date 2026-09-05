@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!document.hidden) {
                 document.documentElement.classList.add('effects-background-idle');
             }
-        }, 2750);
+        }, 900);
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -256,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const glowRadius = 140 * interfaceScale;
             cursor.move(latestPointerEvent);
             galaxy.move(latestPointerEvent);
+            ambientGlow.classList.add('is-active');
             ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - glowRadius}px, ${latestPointerEvent.clientY - glowRadius}px, 0)`;
             ambientGlow.style.setProperty('--grid-offset-x', `${glowRadius - latestPointerEvent.clientX}px`);
             ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY - window.scrollY}px`);
@@ -283,10 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
             touchSwipeReleased = true;
+            ambientGlow.classList.remove('is-active');
             wakeEffectsBackground('swipe-release');
         }, { passive: true });
     });
     window.addEventListener('pointerdown', () => wakeEffectsBackground('click'), { passive: true });
+    document.documentElement.addEventListener('pointerleave', () => ambientGlow.classList.remove('is-active'));
     window.addEventListener('keydown', wakeEffectsBackground, { passive: true });
     window.addEventListener('wheel', () => {
         touchSwipeReleased = false;
@@ -326,29 +329,46 @@ document.addEventListener('DOMContentLoaded', () => {
             renderProjectCollections(data.projectCollections, data.projects);
             setupModal();
             updateScrollMotion();
+            window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
         })
         .catch(error => console.error('Error loading portfolio data:', error));
 });
 
+// Deterministic PRNG (mulberry32) so procedurally-placed objects keep the
+// same composition across reloads instead of reshuffling every visit.
+function createSeededRandom(seed) {
+    let state = seed >>> 0;
+    return () => {
+        state = (state + 0x6D2B79F5) | 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 function setupGalaxyField(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    if (!context) return { move() {}, scroll() {}, setEnabled() {} };
+    if (!context) return { move() {}, scroll() {}, setEnabled() {}, refreshLayout() {} };
 
     let width = window.innerWidth;
     let height = window.innerHeight;
     let stars = [];
-    let constellationLinks = [];
-    let meshNodes = [];
-    let meshLinks = [];
-    let constellationNodes = [];
-    let nodeLinks = [];
+    let dust = [];
+    let mediumStars = [];
+    let starClusterCenters = [];
+    let galaxies = [];
+    let tinyDistant = [];
+    let smallPlanets = [];
+    let mediumPlanets = [];
+    let largePlanets = [];
+    let massivePlanets = [];
     let animationFrame = 0;
     let enabled = true;
     let previousTime = performance.now();
     let lastDrawTime = 0;
-    let previousScrollY = window.scrollY;
     let scrollPosition = window.scrollY;
     let targetScrollPosition = window.scrollY;
+    let pageHeight = Math.max(document.documentElement.scrollHeight, height);
     let scrollEnergy = 0;
     const lowPowerDevice = (navigator.hardwareConcurrency || 4) <= 6
         || ('deviceMemory' in navigator && navigator.deviceMemory <= 8);
@@ -358,409 +378,389 @@ function setupGalaxyField(canvas, reducedMotion) {
         y: height / 2,
         targetX: width / 2,
         targetY: height / 2,
-        rotateX: 0,
-        rotateY: 0,
-        targetRotateX: 0,
-        targetRotateY: 0,
         velocityX: 0,
         velocityY: 0,
         active: false
     };
-    const colors = ['123,168,216', '145,177,210', '178,211,239', '240,246,252', '157,143,190'];
+    const colors = ['222,240,255', '157,205,243', '245,184,124', '247,247,255', '133,167,208', '255,214,170', '196,178,255', '227,138,112'];
 
+    // Parallax helper: scales an object's distance from the vertical center
+    // of the viewport by its tier's factor. >1 travels further per scroll
+    // pixel (feels close/fast), <1 travels less (feels distant/slow) -- while
+    // every object still passes through the viewport once at its assigned
+    // document position, so nothing fails to appear or double-appears.
+    const applyParallax = (baseScreenY, factor) => (baseScreenY - height / 2) * factor + height / 2;
+
+    // --- Star clusters: instead of one diagonal "galaxy band", scatter a
+    // handful of seeded cluster centers down the page so star density reads
+    // as organic clumps-and-quiet-regions rather than a uniform scatter.
+    const buildStarClusterCenters = () => {
+        const rng = createSeededRandom(0xC0FFEE ^ Math.round(pageHeight));
+        const count = Math.max(4, Math.round(pageHeight / 850));
+        starClusterCenters = Array.from({ length: count }, () => ({
+            x: rng() * width,
+            y: rng() * pageHeight,
+            radius: 110 + rng() * 220
+        }));
+    };
+
+    // Small-tier stars: size and brightness are rolled independently so the
+    // field mixes tiny-dim, tiny-bright, small-dim and small-bright points
+    // rather than always pairing "bigger" with "brighter".
     const makeStar = () => {
         const depth = .18 + Math.random() * .82;
-        const x = Math.random() * width;
-        const inGalaxyBand = Math.random() < .34;
-        const bandY = height * (.2 + (x / Math.max(width, 1)) * .52);
+        const sizeSeed = Math.random();
+        const brightnessSeed = Math.random();
+        let x;
+        let documentY;
+        if (starClusterCenters.length && Math.random() < .4) {
+            const cluster = starClusterCenters[Math.floor(Math.random() * starClusterCenters.length)];
+            const angle = Math.random() * Math.PI * 2;
+            const dist = (Math.random() * .5 + Math.random() * .5) * cluster.radius;
+            x = cluster.x + Math.cos(angle) * dist;
+            documentY = cluster.y + Math.sin(angle) * dist;
+        } else {
+            x = Math.random() * width;
+            documentY = Math.random() * pageHeight;
+        }
         return {
-            x,
-            y: inGalaxyBand
-                ? bandY + (Math.random() - .5) * height * .28
-                : Math.random() * height,
+            x: Math.min(width + 20, Math.max(-20, x)),
+            documentY: Math.min(pageHeight, Math.max(0, documentY)),
             depth,
-            radius: .25 + Math.random() * (depth > .75 ? 1.35 : .85),
+            radius: .16 + sizeSeed * 1.1,
+            brightness: brightnessSeed,
             driftX: (Math.random() - .5) * .06,
             driftY: -.02 - Math.random() * .07,
             phase: Math.random() * Math.PI * 2,
             twinkleSpeed: .0009 + Math.random() * .0011,
-            flare: depth > .78 && Math.random() < .09,
+            flare: brightnessSeed > .8 && Math.random() < .3,
             color: colors[Math.floor(Math.random() * colors.length)]
         };
     };
 
-    const buildConstellationLinks = () => {
-        constellationLinks = [];
-        const maximumLinks = width < 700 ? 8 : lowPowerDevice ? 12 : 18;
-        const maximumDistanceSquared = Math.pow(width < 700 ? 145 : 190, 2);
+    const makeDust = () => ({
+        x: Math.random() * width,
+        documentY: Math.random() * pageHeight,
+        depth: .2 + Math.random() * .8,
+        radius: .12 + Math.random() * .52,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: .001 + Math.random() * .0022,
+        color: colors[Math.floor(Math.random() * colors.length)]
+    });
 
-        for (let firstIndex = 0; firstIndex < stars.length && constellationLinks.length < maximumLinks; firstIndex += 2) {
-            let nearestIndex = -1;
-            let nearestDistanceSquared = maximumDistanceSquared;
-            for (let secondIndex = firstIndex + 1; secondIndex < stars.length; secondIndex += 1) {
-                const dx = stars[firstIndex].x - stars[secondIndex].x;
-                const dy = stars[firstIndex].y - stars[secondIndex].y;
-                const distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared < nearestDistanceSquared) {
-                    nearestDistanceSquared = distanceSquared;
-                    nearestIndex = secondIndex;
-                }
-            }
-            if (nearestIndex >= 0) constellationLinks.push([firstIndex, nearestIndex]);
-        }
+    // Medium tier (stars, not planets): sparse, prominent bright points with
+    // a large soft-edged white core, a faint color rim, and a wide soft halo
+    // -- always visible, unlike the small stars. They drift magnetically
+    // toward a nearby cursor, which is intentionally kept only on this tier.
+    const makeMediumStar = () => ({
+        x: Math.random() * width,
+        documentY: Math.random() * pageHeight,
+        depth: .3 + Math.random() * .7,
+        radius: 1.7 + Math.random() * 2.9,
+        brightness: .62 + Math.random() * .38,
+        driftY: -.01 - Math.random() * .03,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: .00035 + Math.random() * .0006,
+        offsetX: 0,
+        offsetY: 0,
+        velocityX: 0,
+        velocityY: 0,
+        color: colors[Math.floor(Math.random() * colors.length)]
+    });
+
+    // --- Distant galaxies: abstract elongated smudges of light, never a
+    // literal spiral graphic. A handful of fixed tiny star-points are baked
+    // in at build time so each reads as an unresolved cluster, not a blob.
+    const galaxyColors = ['150,170,230', '190,160,220', '210,150,150', '160,200,220', '230,210,180'];
+    const makeGalaxy = (rng, x, documentY) => {
+        const galaxyWidth = 110 + rng() * 170;
+        const spotCount = 7 + Math.floor(rng() * 8);
+        const spots = Array.from({ length: spotCount }, () => ({
+            ox: (rng() - .5) * galaxyWidth * .85,
+            oy: (rng() - .5) * galaxyWidth * .32,
+            r: .5 + rng() * 1.1,
+            a: .1 + rng() * .22
+        }));
+        return {
+            x,
+            documentY,
+            angle: rng() * Math.PI,
+            width: galaxyWidth,
+            height: galaxyWidth * (.24 + rng() * .16),
+            color: galaxyColors[Math.floor(rng() * galaxyColors.length)],
+            alpha: .05 + rng() * .05,
+            phase: rng() * Math.PI * 2,
+            parallaxFactor: .18 + rng() * .14,
+            spots
+        };
     };
 
-    const buildVantaMesh = () => {
-        const columns = width < 700 ? 3 : lowPowerDevice ? 4 : 5;
-        const rows = width < 700 ? 4 : lowPowerDevice ? 4 : 5;
-        meshNodes = [];
-        meshLinks = [];
-
-        for (let row = 0; row < rows; row += 1) {
-            for (let column = 0; column < columns; column += 1) {
-                meshNodes.push({
-                    x: (column + .5 + (Math.random() - .5) * .28) / columns,
-                    y: (row + .5 + (Math.random() - .5) * .26) / rows,
-                    depth: .24 + Math.random() * .76,
-                    phase: Math.random() * Math.PI * 2,
-                    screenX: 0,
-                    screenY: 0,
-                    proximity: 0
-                });
-            }
-        }
-
-        const nodeIndex = (row, column) => row * columns + column;
-        for (let row = 0; row < rows; row += 1) {
-            for (let column = 0; column < columns; column += 1) {
-                const current = nodeIndex(row, column);
-                if (column + 1 < columns) meshLinks.push([current, nodeIndex(row, column + 1)]);
-                if (row + 1 < rows) meshLinks.push([current, nodeIndex(row + 1, column)]);
-                if (row + 1 < rows && column + 1 < columns && (row + column) % 2 === 0) {
-                    meshLinks.push([current, nodeIndex(row + 1, column + 1)]);
-                }
-                if (row + 1 < rows && column > 0 && (row + column) % 3 === 0) {
-                    meshLinks.push([current, nodeIndex(row + 1, column - 1)]);
-                }
-            }
-        }
+    const buildGalaxies = () => {
+        const rng = createSeededRandom(0x6A1A5E ^ Math.round(pageHeight));
+        const maximum = width < 700 ? 5 : lowPowerDevice ? 7 : 9;
+        const minimum = width < 700 ? 3 : lowPowerDevice ? 5 : 6;
+        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 700)));
+        galaxies = Array.from({ length: count }, () => makeGalaxy(rng, rng() * width, rng() * pageHeight));
     };
 
-    const buildConstellationNodes = () => {
-        const nodeCount = width < 700 ? 4 : lowPowerDevice ? 5 : 7;
-        const sizeScale = width < 700 ? .72 : 1;
-        const anchors = [
-            [.09, .17], [.48, .11], [.88, .2], [.23, .42], [.64, .38],
-            [.47, .64], [.87, .61], [.13, .77], [.69, .86], [.36, .91]
-        ];
-        const planetColors = ['114,159,204', '132,151,188', '148,132,177', '109,174,184', '170,158,140'];
+    // --- Extremely distant celestial objects: cheap soft glow points that
+    // exist purely to sell scale. No sphere shading, no texture.
+    const distantColors = ['196,214,255', '255,214,170', '196,178,255', '210,225,255', '255,196,170'];
+    const buildTinyDistant = () => {
+        const rng = createSeededRandom(0x517A5E ^ Math.round(pageHeight));
+        const maximum = width < 700 ? 26 : lowPowerDevice ? 45 : 70;
+        const minimum = width < 700 ? 16 : lowPowerDevice ? 28 : 40;
+        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 90)));
+        tinyDistant = Array.from({ length: count }, () => ({
+            x: rng() * width,
+            documentY: rng() * pageHeight,
+            radius: 1.4 + rng() * 2.6,
+            brightness: .35 + rng() * .5,
+            phase: rng() * Math.PI * 2,
+            twinkleSpeed: .0002 + rng() * .0004,
+            parallaxFactor: .5 + rng() * .2,
+            color: distantColors[Math.floor(rng() * distantColors.length)]
+        }));
+    };
 
-        constellationNodes = anchors.slice(0, nodeCount).map(([anchorX, anchorY], index) => {
-            const isBlackHole = index === 2 || index === 7 || (index > 4 && Math.random() < .12);
-            const radius = (isBlackHole ? 21 + Math.random() * 13 : 31 + Math.random() * 30) * sizeScale;
-            const orbiterCount = lowPowerDevice ? 1 : (Math.random() < .7 ? 1 : 2);
-            return {
-                x: Math.min(.94, Math.max(.06, anchorX + (Math.random() - .5) * .055)),
-                y: Math.min(.93, Math.max(.07, anchorY + (Math.random() - .5) * .05)),
-                radius,
-                type: isBlackHole ? 'black-hole' : 'planet',
-                color: planetColors[Math.floor(Math.random() * planetColors.length)],
-                phase: Math.random() * Math.PI * 2,
-                scrollDepth: 1,
-                ringTilt: .28 + Math.random() * .3,
-                ringRotation: Math.random() * Math.PI,
-                ringSpeed: (.000025 + Math.random() * .000035) * (index % 2 ? -1 : 1),
-                ringBands: isBlackHole ? (lowPowerDevice ? 3 : 5) : (index % 3 === 0 ? 3 : 2),
-                offsetX: 0,
-                offsetY: 0,
-                velocityX: 0,
-                velocityY: 0,
-                orbiters: Array.from({ length: orbiterCount }, (_, orbiterIndex) => ({
-                    distance: 1.35 + orbiterIndex * .34 + Math.random() * .14,
-                    phase: Math.random() * Math.PI * 2,
-                    size: (isBlackHole ? 1.1 : 1.5) + Math.random() * (isBlackHole ? 1.3 : 1.8),
-                    speed: (isBlackHole ? .00028 : .0001) * (orbiterIndex % 2 ? -1 : 1) * (.78 + Math.random() * .45)
-                }))
-            };
+    // --- Planet instance factory shared by the small/medium/large/massive
+    // tiers. Same visual language as the reference field: a bright white
+    // center with a colored halo/rim around it, just at bigger sizes -- not
+    // a shaded sphere.
+    const makePlanetInstance = (rng, x, documentY, radius, parallaxFactor, color) => ({
+        x,
+        documentY,
+        radius,
+        parallaxFactor,
+        color: color || colors[Math.floor(rng() * colors.length)],
+        phase: rng() * Math.PI * 2,
+        pulseSpeed: .00005 + rng() * .00007,
+        alpha: .58 + rng() * .38,
+        driftY: -(.0015 + rng() * .004),
+        dim: false
+    });
+
+    // Every element that carries visible text (or is a clickable control),
+    // so planets can never land on top of something readable. The project
+    // modal is deliberately excluded -- it's a fixed-position overlay, so its
+    // rect is viewport-relative even when "closed" (opacity:0, not
+    // display:none); treating it as document-relative would produce a bogus
+    // protected zone that follows the current scroll position.
+    const largePlanetProtectedSelector = '.hero-badge, .hero-name, .hero-tagline, '
+        + '.social-links a, .resume-icon-unavailable, .hero-buttons .btn, '
+        + '.section-header, .section-label, .section-title, .section-subtitle, '
+        + '.bio-text, .about-highlight, .skill-group, .tag, '
+        + '.project-card, .project-title, .project-summary, .project-period, .project-category-badge, '
+        + '.project-library, .library-heading, .collection-toggle, .collection-copy, '
+        + '.contact-desc, .contact-links .btn, footer';
+
+    const collectProtectedRects = () => {
+        const rects = [];
+        document.querySelectorAll(largePlanetProtectedSelector).forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            rects.push({
+                left: rect.left,
+                right: rect.right,
+                top: rect.top + window.scrollY,
+                bottom: rect.bottom + window.scrollY
+            });
         });
-
-        nodeLinks = [];
-        const seenLinks = new Set();
-        const maximumLinks = Math.round(nodeCount * 1.5);
-        for (let firstIndex = 0; firstIndex < constellationNodes.length && nodeLinks.length < maximumLinks; firstIndex += 1) {
-            const neighbors = constellationNodes
-                .map((node, secondIndex) => {
-                    const dx = constellationNodes[firstIndex].x - node.x;
-                    const dy = constellationNodes[firstIndex].y - node.y;
-                    return { secondIndex, distanceSquared: dx * dx + dy * dy };
-                })
-                .filter(({ secondIndex }) => secondIndex !== firstIndex)
-                .sort((first, second) => first.distanceSquared - second.distanceSquared)
-                .slice(0, 2);
-
-            for (const { secondIndex } of neighbors) {
-                const lowerIndex = Math.min(firstIndex, secondIndex);
-                const upperIndex = Math.max(firstIndex, secondIndex);
-                const key = `${lowerIndex}-${upperIndex}`;
-                if (seenLinks.has(key)) continue;
-                seenLinks.add(key);
-                nodeLinks.push([lowerIndex, upperIndex]);
-                if (nodeLinks.length >= maximumLinks) break;
-            }
-        }
+        return rects;
     };
 
-    const drawVantaMesh = time => {
-        const verticalShift = scrollPosition;
-
-        for (const node of meshNodes) {
-            const wave = Math.sin(time * .00042 + node.phase) * (3 + node.depth * 7);
-            let screenX = node.x * width + pointer.rotateY * node.depth * 3.4;
-            let screenY = node.y * height - verticalShift + wave - pointer.rotateX * node.depth * 2.8;
-            const span = height + 140;
-            screenY = ((screenY + 70) % span + span) % span - 70;
-
-            let proximity = 0;
-            if (pointer.active) {
-                const dx = screenX - pointer.x;
-                const dy = screenY - pointer.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                proximity = Math.max(0, 1 - distance / 235);
-                if (distance > 1 && proximity > 0) {
-                    const deflection = proximity * proximity * (8 + node.depth * 13);
-                    screenX += dx / distance * deflection;
-                    screenY += dy / distance * deflection;
+    // Shared placement loop: pick seeded candidates (optionally biased toward
+    // a cluster center for a natural-looking clump), reject any that would
+    // land on top of real content (buffer scaled to the visible glow, not
+    // just the solid core), and build planet instances from what remains.
+    // On layouts with no side gutter (e.g. a narrow single-column viewport),
+    // a full-strength clearance can be impossible to satisfy everywhere for
+    // every requested slot -- clearance relaxes once as a second pass, but
+    // never drops to zero: it is never acceptable for a planet to sit on top
+    // of text, so a tier is allowed to come up short of its target count
+    // rather than risk covering content.
+    const placePlanets = (rng, options) => {
+        const {
+            count, minRadius, maxRadius, parallaxFactor,
+            clearanceScale, topExclusion = 0, clusterChance = 0, protectedRects = null,
+            minSeparation = 0
+        } = options;
+        const clusterCenters = clusterChance > 0
+            ? Array.from({ length: Math.max(2, Math.round(count / 4)) }, () => ({
+                x: rng() * width,
+                y: topExclusion + rng() * Math.max(1, pageHeight - topExclusion)
+            }))
+            : [];
+        const rollCandidate = () => {
+            const radius = minRadius + rng() * (maxRadius - minRadius);
+            let x;
+            let documentY;
+            if (clusterCenters.length && rng() < clusterChance) {
+                const center = clusterCenters[Math.floor(rng() * clusterCenters.length)];
+                const angle = rng() * Math.PI * 2;
+                const dist = rng() * 220;
+                x = center.x + Math.cos(angle) * dist;
+                documentY = center.y + Math.sin(angle) * dist * .6;
+            } else {
+                x = rng() * width;
+                documentY = topExclusion + rng() * Math.max(1, pageHeight - topExclusion);
+            }
+            x = Math.min(width - radius * .2, Math.max(radius * .2, x));
+            documentY = Math.min(pageHeight - radius * .1, Math.max(topExclusion + radius * .1, documentY));
+            return { radius, x, documentY };
+        };
+        const results = [];
+        const clearancePasses = protectedRects ? [clearanceScale, Math.max(.6, clearanceScale * .65)] : [0];
+        for (const passScale of clearancePasses) {
+            if (results.length >= count) break;
+            let attempts = 0;
+            const maxAttempts = (count - results.length) * 80;
+            while (results.length < count && attempts < maxAttempts) {
+                attempts += 1;
+                const candidate = rollCandidate();
+                if (passScale > 0) {
+                    const clearance = candidate.radius * passScale;
+                    const overlaps = protectedRects.some(rect => (
+                        candidate.x + clearance > rect.left
+                        && candidate.x - clearance < rect.right
+                        && candidate.documentY + clearance > rect.top
+                        && candidate.documentY - clearance < rect.bottom
+                    ));
+                    if (overlaps) continue;
                 }
+                // Keeps prominent tiers from piling into one overlapping
+                // "disc" -- small/medium tiers can still cluster (that reads
+                // as a star cluster), but large/massive need real gaps.
+                if (minSeparation > 0) {
+                    const tooClose = results.some(other => {
+                        const dx = candidate.x - other.x;
+                        const dy = candidate.documentY - other.documentY;
+                        const minDist = (candidate.radius + other.radius) * minSeparation;
+                        return dx * dx + dy * dy < minDist * minDist;
+                    });
+                    if (tooClose) continue;
+                }
+                const instance = makePlanetInstance(rng, candidate.x, candidate.documentY, candidate.radius, parallaxFactor);
+                if (rng() < .16) instance.dim = true;
+                results.push(instance);
             }
-
-            node.screenX = screenX;
-            node.screenY = screenY;
-            node.proximity = proximity;
         }
-
-        for (const [firstIndex, secondIndex] of meshLinks) {
-            const first = meshNodes[firstIndex];
-            const second = meshNodes[secondIndex];
-            if (!first || !second) continue;
-            const dx = second.screenX - first.screenX;
-            const dy = second.screenY - first.screenY;
-            const distanceSquared = dx * dx + dy * dy;
-            const maximumLength = Math.max(width / 3.2, 245);
-            if (distanceSquared > maximumLength * maximumLength) continue;
-            const response = Math.max(first.proximity, second.proximity);
-            const depth = (first.depth + second.depth) / 2;
-
-            context.beginPath();
-            context.strokeStyle = `rgba(104,157,209,${.014 + depth * .024 + response * .15})`;
-            context.lineWidth = .32 + depth * .28 + response * .5;
-            context.moveTo(first.screenX, first.screenY);
-            context.lineTo(second.screenX, second.screenY);
-            context.stroke();
-        }
-
-        for (const node of meshNodes) {
-            const pointRadius = .45 + node.depth * .85 + node.proximity * .7;
-            context.beginPath();
-            context.fillStyle = `rgba(171,207,237,${.08 + node.depth * .13 + node.proximity * .32})`;
-            context.arc(node.screenX, node.screenY, pointRadius, 0, Math.PI * 2);
-            context.fill();
-        }
+        return results;
     };
 
-    const drawConstellations = time => {
-        const maximumLinkLength = width < 700 ? 170 : 220;
-        for (const [firstIndex, secondIndex] of constellationLinks) {
-            const first = stars[firstIndex];
-            const second = stars[secondIndex];
-            if (!first || !second) continue;
-            const firstX = first.x + pointer.rotateY * first.depth * 1.35;
-            const firstY = first.y - pointer.rotateX * first.depth * 1.35;
-            const secondX = second.x + pointer.rotateY * second.depth * 1.35;
-            const secondY = second.y - pointer.rotateX * second.depth * 1.35;
-            const linkX = secondX - firstX;
-            const linkY = secondY - firstY;
-            if (linkX * linkX + linkY * linkY > maximumLinkLength * maximumLinkLength) continue;
-
-            let illumination = 0;
-            if (pointer.active) {
-                const midpointX = (firstX + secondX) / 2;
-                const midpointY = (firstY + secondY) / 2;
-                const dx = midpointX - pointer.x;
-                const dy = midpointY - pointer.y;
-                illumination = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 210);
-            }
-            const shimmer = .78 + Math.sin(time * .0008 + first.phase) * .16;
-            context.beginPath();
-            context.strokeStyle = `rgba(123,168,216,${(.035 + illumination * .22) * shimmer})`;
-            context.lineWidth = .4 + illumination * .8;
-            context.moveTo(firstX, firstY);
-            context.lineTo(secondX, secondY);
-            context.stroke();
-        }
+    // Large planets: prominent but not massive, kept clear of real content.
+    const buildLargePlanets = () => {
+        const rng = createSeededRandom(0x1A46E ^ Math.round(pageHeight));
+        const maximum = width < 700 ? 6 : lowPowerDevice ? 9 : 12;
+        const minimum = width < 700 ? 4 : lowPowerDevice ? 6 : 7;
+        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 340)));
+        largePlanets = placePlanets(rng, {
+            count, minRadius: 34, maxRadius: 62, parallaxFactor: 1.22,
+            clearanceScale: 1.5, topExclusion: 150, clusterChance: 0, minSeparation: 2.1,
+            protectedRects: collectProtectedRects()
+        });
     };
 
-    const drawRingBands = (node, radius, time, alpha, frontHalf) => {
-        const rotation = node.ringRotation + time * node.ringSpeed + Math.sin(time * .00019 + node.phase) * .08;
+    // Medium planets: a distinct tier from the bright "medium star" points
+    // above -- these are the main mid-ground depth layer.
+    const buildMediumPlanets = () => {
+        const rng = createSeededRandom(0x2CE55 ^ Math.round(pageHeight));
+        const maximum = width < 700 ? 9 : lowPowerDevice ? 14 : 20;
+        const minimum = width < 700 ? 6 : lowPowerDevice ? 9 : 12;
+        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 220)));
+        mediumPlanets = placePlanets(rng, {
+            count, minRadius: 12, maxRadius: 24, parallaxFactor: 1,
+            clearanceScale: 1.3, topExclusion: 90, clusterChance: .3, minSeparation: 1.5,
+            protectedRects: collectProtectedRects()
+        });
+    };
+
+    // Small planets: numerous, mostly free to scatter (too small to threaten
+    // legibility), some deliberately dim so they half-blend into the starfield.
+    const buildSmallPlanets = () => {
+        const rng = createSeededRandom(0x3D166 ^ Math.round(pageHeight));
+        const maximum = width < 700 ? 16 : lowPowerDevice ? 26 : 40;
+        const minimum = width < 700 ? 10 : lowPowerDevice ? 16 : 22;
+        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 120)));
+        smallPlanets = placePlanets(rng, {
+            count, minRadius: 4, maxRadius: 11, parallaxFactor: .85,
+            clearanceScale: 1.2, topExclusion: 0, clusterChance: .3, minSeparation: 1.1,
+            protectedRects: collectProtectedRects()
+        });
+    };
+
+    // Massive foreground planets: curated anchors (not fully random) spread
+    // across the whole page length, each pushed off a screen edge so only a
+    // crop of the sphere shows -- this is what sells "enormous".
+    const massiveAnchors = [
+        { side: 'left', frac: .02, color: '245,184,124' },
+        { side: 'right', frac: .24, color: '133,167,208' },
+        { side: 'left', frac: .5, color: '157,205,243' },
+        { side: 'right', frac: .74, color: '196,178,255' },
+        { side: 'left', frac: .95, color: '255,214,170' }
+    ];
+    const buildMassivePlanets = () => {
+        const rng = createSeededRandom(0x4A551);
+        const sizeScale = width < 700 ? .55 : lowPowerDevice ? .75 : 1;
+        massivePlanets = massiveAnchors.map(anchor => {
+            const radius = (72 + rng() * 46) * sizeScale;
+            const occlusion = radius * (rng() * .55 - .05);
+            const x = anchor.side === 'left' ? occlusion : width - occlusion;
+            const documentY = Math.max(radius * .3, Math.min(pageHeight - radius * .3, pageHeight * anchor.frac));
+            return makePlanetInstance(rng, x, documentY, radius, 1.55, anchor.color);
+        });
+    };
+
+    // --- Rendering ---------------------------------------------------------
+
+    // Matches how the reference field renders its points of light: one
+    // continuous bloom -- a solid white core that decays smoothly through the
+    // tint to nothing -- drawn additively so overlapping glows brighten each
+    // other like real light instead of stacking up as translucent discs.
+    // No ring, no outline, no second pass: any hard edge anywhere in here is
+    // what made the big ones read as flat discs with rings around them.
+    const drawPlanet = (planet, screenX, screenY, time) => {
+        const { radius, color } = planet;
+        const alpha = planet.dim ? planet.alpha * .45 : planet.alpha;
+        const pulse = .88 + Math.sin(time * planet.pulseSpeed + planet.phase) * .12;
+        const intensity = Math.min(1, alpha * pulse);
+
         context.save();
-        context.rotate(rotation);
-        context.scale(1, node.ringTilt);
+        context.translate(screenX, screenY);
+        context.globalCompositeOperation = 'lighter';
 
-        for (let bandIndex = 0; bandIndex < node.ringBands; bandIndex += 1) {
-            const bandRadius = radius * (1.18 + bandIndex * .16);
-            const isAccent = bandIndex === Math.floor(node.ringBands / 2);
-            const color = isAccent ? '164,132,194' : node.color;
-            const startAngle = frontHalf ? 0 : Math.PI;
-            const endAngle = frontHalf ? Math.PI : Math.PI * 2;
-            context.beginPath();
-            context.strokeStyle = `rgba(${color},${alpha * (frontHalf ? .92 : .35) * (1 - bandIndex * .09)})`;
-            context.lineWidth = (frontHalf ? 1.1 : .65) - bandIndex * .08;
-            context.arc(0, 0, bandRadius, startAngle, endAngle);
-            context.stroke();
-        }
+        const bloom = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+        bloom.addColorStop(0, `rgba(255,255,255,${intensity.toFixed(3)})`);
+        bloom.addColorStop(.05, `rgba(255,255,255,${(intensity * .97).toFixed(3)})`);
+        bloom.addColorStop(.1, `rgba(255,255,255,${(intensity * .86).toFixed(3)})`);
+        bloom.addColorStop(.16, `rgba(${color},${(intensity * .66).toFixed(3)})`);
+        bloom.addColorStop(.25, `rgba(${color},${(intensity * .4).toFixed(3)})`);
+        bloom.addColorStop(.38, `rgba(${color},${(intensity * .19).toFixed(3)})`);
+        bloom.addColorStop(.56, `rgba(${color},${(intensity * .075).toFixed(3)})`);
+        bloom.addColorStop(.78, `rgba(${color},${(intensity * .022).toFixed(3)})`);
+        bloom.addColorStop(1, `rgba(${color},0)`);
+        context.fillStyle = bloom;
+        context.beginPath();
+        context.arc(0, 0, radius, 0, Math.PI * 2);
+        context.fill();
+
         context.restore();
     };
 
-    const drawCircularConstellation = (time, delta) => {
-        for (const node of constellationNodes) {
-            const margin = node.radius * 2.8;
-            const verticalSpan = height + margin * 2;
-            const rawY = node.y * height - scrollPosition * node.scrollDepth;
-            const baseX = node.x * width + pointer.rotateY * 2.2;
-            const baseY = ((rawY + margin) % verticalSpan + verticalSpan) % verticalSpan - margin - pointer.rotateX * 2.2;
-
-            if (pointer.active) {
-                let dx = baseX + node.offsetX - pointer.x;
-                let dy = baseY + node.offsetY - pointer.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-                const influenceRadius = node.radius + 145;
-                if (distance < influenceRadius) {
-                    if (distance < 1) {
-                        dx = Math.cos(node.phase);
-                        dy = Math.sin(node.phase);
-                        distance = 1;
-                    }
-                    const mass = .8 + node.radius / 58;
-                    const force = (1 - distance / influenceRadius) * .38 * delta / mass;
-                    node.velocityX += dx / distance * force;
-                    node.velocityY += dy / distance * force;
-                }
-            }
-
-            node.velocityX += -node.offsetX * .0065 * delta;
-            node.velocityY += -node.offsetY * .0065 * delta;
-            const damping = Math.pow(.88, delta);
-            node.velocityX *= damping;
-            node.velocityY *= damping;
-            node.offsetX += node.velocityX * delta;
-            node.offsetY += node.velocityY * delta;
-
-            const offsetDistance = Math.sqrt(node.offsetX * node.offsetX + node.offsetY * node.offsetY);
-            if (offsetDistance > 110) {
-                const offsetScale = 110 / offsetDistance;
-                node.offsetX *= offsetScale;
-                node.offsetY *= offsetScale;
-            }
-
-            node.screenX = baseX + node.offsetX;
-            node.screenY = baseY + node.offsetY;
-        }
-
-        for (const [firstIndex, secondIndex] of nodeLinks) {
-            const first = constellationNodes[firstIndex];
-            const second = constellationNodes[secondIndex];
-            if (!first || !second) continue;
-            const firstX = first.screenX;
-            const firstY = first.screenY;
-            const secondX = second.screenX;
-            const secondY = second.screenY;
-            const linkX = secondX - firstX;
-            const linkY = secondY - firstY;
-            const maximumLinkLength = Math.max(260, Math.min(width, height) * .72);
-            if (linkX * linkX + linkY * linkY > maximumLinkLength * maximumLinkLength) continue;
-            const midpointX = (firstX + secondX) / 2;
-            const midpointY = (firstY + secondY) / 2;
-            const dx = midpointX - pointer.x;
-            const dy = midpointY - pointer.y;
-            const proximity = pointer.active ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / 270) : 0;
-
-            context.beginPath();
-            context.strokeStyle = `rgba(123,168,216,${.032 + proximity * .2})`;
-            context.lineWidth = .45 + proximity * .65;
-            context.moveTo(firstX, firstY);
-            context.lineTo(secondX, secondY);
-            context.stroke();
-        }
-
-        for (const node of constellationNodes) {
-            const x = node.screenX;
-            const y = node.screenY;
-            const pulse = .84 + Math.sin(time * .001 + node.phase) * .12;
-            const alpha = .075 * pulse;
-            const radius = node.radius;
-
-            context.save();
-            context.translate(x, y);
-            drawRingBands(node, radius, time, alpha, false);
-
-            if (node.type === 'black-hole') {
-                context.fillStyle = 'rgba(1,2,5,.82)';
-                context.beginPath();
-                context.arc(0, 0, radius * .72, 0, Math.PI * 2);
-                context.fill();
-
-                context.beginPath();
-                context.strokeStyle = `rgba(207,226,244,${alpha * .82})`;
-                context.lineWidth = .65;
-                context.arc(0, 0, radius * .76, 0, Math.PI * 2);
-                context.stroke();
-            } else {
-                context.fillStyle = `rgba(${node.color},${alpha * .42})`;
-                context.beginPath();
-                context.arc(0, 0, radius, 0, Math.PI * 2);
-                context.fill();
-
-                context.fillStyle = 'rgba(4,7,11,.18)';
-                context.beginPath();
-                context.arc(radius * .22, radius * .08, radius * .92, 0, Math.PI * 2);
-                context.fill();
-
-                context.beginPath();
-                context.strokeStyle = `rgba(${node.color},${alpha * 1.18})`;
-                context.lineWidth = .75;
-                context.arc(0, 0, radius, 0, Math.PI * 2);
-                context.stroke();
-                context.beginPath();
-                context.strokeStyle = `rgba(210,229,245,${alpha * .38})`;
-                context.lineWidth = .45;
-                context.arc(0, 0, radius * .78, node.phase, node.phase + Math.PI * 1.15);
-                context.stroke();
-            }
-
-            drawRingBands(node, radius, time, alpha, true);
-
-            for (const orbiter of node.orbiters) {
-                const orbitRadius = radius * orbiter.distance;
-                const orbitAngle = time * orbiter.speed + orbiter.phase;
-                const orbiterX = Math.cos(orbitAngle) * orbitRadius;
-                const orbitTilt = .58 + node.ringTilt * .32;
-                const orbiterY = Math.sin(orbitAngle) * orbitRadius * orbitTilt;
-
-                context.beginPath();
-                context.strokeStyle = `rgba(145,190,232,${alpha * (node.type === 'black-hole' ? .35 : .2)})`;
-                context.lineWidth = .4;
-                context.ellipse(0, 0, orbitRadius, orbitRadius * orbitTilt, 0, 0, Math.PI * 2);
-                context.stroke();
-                context.beginPath();
-                context.fillStyle = `rgba(198,222,243,${alpha * 1.45})`;
-                context.arc(orbiterX, orbiterY, orbiter.size, 0, Math.PI * 2);
-                context.fill();
-                context.beginPath();
-                context.strokeStyle = `rgba(123,168,216,${alpha * .5})`;
-                context.ellipse(0, 0, orbitRadius, orbitRadius * orbitTilt, 0, orbitAngle - .48, orbitAngle);
-                context.stroke();
-            }
-            context.restore();
-        }
+    const syncPageHeight = () => {
+        const nextPageHeight = Math.max(document.documentElement.scrollHeight, height);
+        if (nextPageHeight === pageHeight) return;
+        const scale = nextPageHeight / Math.max(pageHeight, 1);
+        stars.forEach(star => { star.documentY *= scale; });
+        dust.forEach(mote => { mote.documentY *= scale; });
+        mediumStars.forEach(star => { star.documentY *= scale; });
+        galaxies.forEach(obj => { obj.documentY *= scale; });
+        tinyDistant.forEach(obj => { obj.documentY *= scale; });
+        smallPlanets.forEach(obj => { obj.documentY *= scale; });
+        mediumPlanets.forEach(obj => { obj.documentY *= scale; });
+        largePlanets.forEach(obj => { obj.documentY *= scale; });
+        massivePlanets.forEach(obj => { obj.documentY *= scale; });
+        pageHeight = nextPageHeight;
     };
 
     const draw = (time, force = false) => {
@@ -776,46 +776,115 @@ function setupGalaxyField(canvas, reducedMotion) {
         context.clearRect(0, 0, width, height);
         pointer.x += (pointer.targetX - pointer.x) * .16;
         pointer.y += (pointer.targetY - pointer.y) * .16;
-        pointer.rotateX += (pointer.targetRotateX - pointer.rotateX) * .12;
-        pointer.rotateY += (pointer.targetRotateY - pointer.rotateY) * .12;
         pointer.velocityX *= .8;
         pointer.velocityY *= .8;
         scrollPosition = targetScrollPosition;
         scrollEnergy *= .84;
-        drawVantaMesh(time);
-        drawConstellations(time);
-        drawCircularConstellation(time, delta);
+        syncPageHeight();
+
+        // LAYER: distant galaxies -- almost stationary, barely noticed.
+        for (const galaxy of galaxies) {
+            const baseY = galaxy.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, galaxy.parallaxFactor);
+            if (drawY < -galaxy.width || drawY > height + galaxy.width) continue;
+            const pulse = .85 + Math.sin(time * .00004 + galaxy.phase) * .15;
+            context.save();
+            context.translate(galaxy.x, drawY);
+            context.rotate(galaxy.angle);
+            context.save();
+            context.scale(1, galaxy.height / galaxy.width);
+            const smudge = context.createRadialGradient(0, 0, 0, 0, 0, galaxy.width / 2);
+            smudge.addColorStop(0, `rgba(${galaxy.color},${(galaxy.alpha * pulse).toFixed(3)})`);
+            smudge.addColorStop(.55, `rgba(${galaxy.color},${(galaxy.alpha * .45 * pulse).toFixed(3)})`);
+            smudge.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = smudge;
+            context.beginPath();
+            context.arc(0, 0, galaxy.width / 2, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+            for (const spot of galaxy.spots) {
+                context.beginPath();
+                context.fillStyle = `rgba(${galaxy.color},${spot.a})`;
+                context.arc(spot.ox, spot.oy, spot.r, 0, Math.PI * 2);
+                context.fill();
+            }
+            context.restore();
+        }
+
+        // LAYER: tiny distant objects -- pure scale cues, cheapest to draw.
+        for (const obj of tinyDistant) {
+            const baseY = obj.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, obj.parallaxFactor);
+            if (drawY < -20 || drawY > height + 20) continue;
+            const twinkle = .75 + Math.sin(time * obj.twinkleSpeed + obj.phase) * .25;
+            const alpha = obj.brightness * twinkle;
+            const glow = context.createRadialGradient(obj.x, drawY, 0, obj.x, drawY, obj.radius * 4.5);
+            glow.addColorStop(0, `rgba(${obj.color},${(alpha * .5).toFixed(3)})`);
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = glow;
+            context.beginPath();
+            context.arc(obj.x, drawY, obj.radius * 4.5, 0, Math.PI * 2);
+            context.fill();
+            context.beginPath();
+            context.fillStyle = `rgba(${obj.color},${alpha.toFixed(3)})`;
+            context.arc(obj.x, drawY, obj.radius, 0, Math.PI * 2);
+            context.fill();
+        }
+
+        // LAYER: small planets.
+        for (const planet of smallPlanets) {
+            const baseY = planet.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, planet.parallaxFactor);
+            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
+            planet.documentY += planet.driftY * delta;
+            drawPlanet(planet, planet.x, drawY, time);
+        }
 
         for (const star of stars) {
-            const oldY = star.y;
+            const oldY = star.documentY - scrollPosition;
             const speed = .55 + star.depth * 1.2;
             star.x += star.driftX * speed * delta;
-            star.y += (star.driftY * speed - scrollEnergy * star.depth * .006) * delta;
+            star.documentY += (star.driftY * speed - scrollEnergy * star.depth * .006) * delta;
 
             let illumination = 0;
             if (pointer.active) {
                 const dx = star.x - pointer.x;
-                const dy = star.y - pointer.y;
+                const dy = (star.documentY - scrollPosition) - pointer.y;
                 const distanceSquared = dx * dx + dy * dy;
                 if (distanceSquared < 44100) {
-                    illumination = Math.max(0, 1 - Math.sqrt(distanceSquared) / 210);
+                    illumination = Math.max(0, 1 - Math.sqrt(distanceSquared) / 250);
                 }
-                if (distanceSquared > 1 && distanceSquared < 19600) {
+                if (distanceSquared > 1 && distanceSquared < 57600) {
                     const distance = Math.sqrt(distanceSquared);
-                    const force = (1 - distance / 140) * star.depth * .38 * delta;
-                    star.x += dx / distance * force + pointer.velocityX * force * .018;
-                    star.y += dy / distance * force + pointer.velocityY * force * .018;
+                    const response = (1 - distance / 240) ** 2;
+                    const force = response * star.depth * .72 * delta;
+                    const swirl = response * .24 * delta;
+                    star.x += dx / distance * force - dy / distance * swirl + pointer.velocityX * force * .018;
+                    star.documentY += dy / distance * force + dx / distance * swirl + pointer.velocityY * force * .018;
                 }
             }
 
-            if (star.y < -8) star.y = height + 8;
-            else if (star.y > height + 8) star.y = -8;
+            if (star.documentY < -8) star.documentY = pageHeight + 8;
+            else if (star.documentY > pageHeight + 8) star.documentY = -8;
             if (star.x < -8) star.x = width + 8;
             else if (star.x > width + 8) star.x = -8;
 
-            const alpha = Math.min(.92, (.1 + star.depth * .48) * (.64 + Math.sin(time * star.twinkleSpeed + star.phase) * .18) + illumination * .38);
-            const drawX = star.x + pointer.rotateY * star.depth * 1.35;
-            const drawY = star.y - pointer.rotateX * star.depth * 1.35;
+            const alpha = Math.min(.94, (.035 + star.brightness * .62) * (.72 + Math.sin(time * star.twinkleSpeed + star.phase) * .16) + illumination * .72);
+            const drawX = star.x;
+            const drawY = star.documentY - scrollPosition;
+
+            if (star.brightness > .4 && (illumination > .04 || star.flare)) {
+                const glowRadius = star.radius * (4.5 + illumination * 14);
+                const glow = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, glowRadius);
+                glow.addColorStop(0, `rgba(${star.color},${Math.min(.2, .035 + illumination * .16)})`);
+                glow.addColorStop(.34, `rgba(${star.color},${Math.min(.08, illumination * .06)})`);
+                glow.addColorStop(1, 'rgba(0,0,0,0)');
+                context.fillStyle = glow;
+                context.beginPath();
+                context.arc(drawX, drawY, glowRadius, 0, Math.PI * 2);
+                context.fill();
+            }
+
             context.beginPath();
             context.fillStyle = `rgba(${star.color},${alpha})`;
             context.arc(drawX, drawY, star.radius * (.65 + star.depth) * (1 + illumination * .65), 0, Math.PI * 2);
@@ -851,6 +920,140 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
         }
 
+        for (const mote of dust) {
+            const baseY = mote.documentY - scrollPosition;
+            if (baseY < -3 || baseY > height + 3) continue;
+            let drawX = mote.x;
+            let drawY = baseY;
+            let illumination = 0;
+            if (pointer.active) {
+                const dx = drawX - pointer.x;
+                const dy = drawY - pointer.y;
+                const distance = Math.hypot(dx, dy);
+                if (distance < 190) {
+                    const response = (1 - distance / 190) ** 2;
+                    illumination = response;
+                    if (distance > 1) {
+                        drawX += dx / distance * response * 8;
+                        drawY += dy / distance * response * 8;
+                    }
+                }
+            }
+            const alpha = Math.min(.76, (.018 + mote.depth * .11) * (.72 + Math.sin(time * mote.twinkleSpeed + mote.phase) * .22) + illumination * .42);
+            if (illumination > .08 && mote.depth > .4) {
+                const glowRadius = mote.radius * (4 + illumination * 9);
+                const glow = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, glowRadius);
+                glow.addColorStop(0, `rgba(${mote.color},${Math.min(.16, .02 + illumination * .1)})`);
+                glow.addColorStop(1, 'rgba(0,0,0,0)');
+                context.fillStyle = glow;
+                context.beginPath();
+                context.arc(drawX, drawY, glowRadius, 0, Math.PI * 2);
+                context.fill();
+            }
+            context.beginPath();
+            context.fillStyle = `rgba(${mote.color},${alpha})`;
+            context.arc(drawX, drawY, mote.radius * (1 + illumination * .6), 0, Math.PI * 2);
+            context.fill();
+        }
+
+        // LAYER: medium planets.
+        for (const planet of mediumPlanets) {
+            const baseY = planet.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, planet.parallaxFactor);
+            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
+            planet.documentY += planet.driftY * delta;
+            drawPlanet(planet, planet.x, drawY, time);
+        }
+
+        for (const bright of mediumStars) {
+            const baseY = bright.documentY - scrollPosition;
+            if (baseY < -80 || baseY > height + 80) continue;
+            bright.documentY += bright.driftY * (.55 + bright.depth) * delta;
+
+            let illumination = 0;
+            if (pointer.active) {
+                const dx = (bright.x + bright.offsetX) - pointer.x;
+                const dy = (baseY + bright.offsetY) - pointer.y;
+                const distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared > 1 && distanceSquared < 152100) {
+                    const distance = Math.sqrt(distanceSquared);
+                    illumination = Math.max(0, 1 - distance / 390);
+                    const response = illumination ** 2;
+                    const pull = response * .85 * delta;
+                    bright.velocityX += -dx / distance * pull;
+                    bright.velocityY += -dy / distance * pull;
+                }
+            }
+            const damping = Math.pow(.9, delta);
+            bright.velocityX *= damping;
+            bright.velocityY *= damping;
+            bright.offsetX += bright.velocityX * delta;
+            bright.offsetY += bright.velocityY * delta;
+            const offsetDistance = Math.hypot(bright.offsetX, bright.offsetY);
+            if (offsetDistance > 30) {
+                const offsetScale = 30 / offsetDistance;
+                bright.offsetX *= offsetScale;
+                bright.offsetY *= offsetScale;
+            }
+
+            const drawX = bright.x + bright.offsetX;
+            const drawY = baseY + bright.offsetY;
+            const twinkle = .8 + Math.sin(time * bright.twinkleSpeed + bright.phase) * .2;
+            const alpha = Math.min(1, bright.brightness * twinkle + illumination * .45);
+            const radius = bright.radius * (1 + illumination * .4);
+
+            context.save();
+            context.translate(drawX, drawY);
+
+            const haloRadius = radius * (7.5 + illumination * 3);
+            const halo = context.createRadialGradient(0, 0, 0, 0, 0, haloRadius);
+            halo.addColorStop(0, `rgba(${bright.color},${alpha * .34})`);
+            halo.addColorStop(.4, `rgba(${bright.color},${alpha * .12})`);
+            halo.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = halo;
+            context.beginPath();
+            context.arc(0, 0, haloRadius, 0, Math.PI * 2);
+            context.fill();
+
+            const coreRadius = radius * 1.15;
+            const core = context.createRadialGradient(0, 0, 0, 0, 0, coreRadius);
+            core.addColorStop(0, `rgba(255,255,255,${Math.min(1, alpha * 1.05)})`);
+            core.addColorStop(.62, `rgba(255,255,255,${alpha * .88})`);
+            core.addColorStop(.88, `rgba(${bright.color},${alpha * .55})`);
+            core.addColorStop(1, `rgba(${bright.color},0)`);
+            context.fillStyle = core;
+            context.beginPath();
+            context.arc(0, 0, coreRadius, 0, Math.PI * 2);
+            context.fill();
+
+            context.beginPath();
+            context.strokeStyle = `rgba(${bright.color},${alpha * .5})`;
+            context.lineWidth = Math.max(.5, radius * .1);
+            context.arc(0, 0, coreRadius * .92, 0, Math.PI * 2);
+            context.stroke();
+
+            context.restore();
+        }
+
+        // LAYER: large planets.
+        for (const planet of largePlanets) {
+            const baseY = planet.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, planet.parallaxFactor);
+            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
+            planet.documentY += planet.driftY * delta;
+            drawPlanet(planet, planet.x, drawY, time);
+        }
+
+        // LAYER: massive foreground planets -- drawn last so they read as
+        // closest to the camera.
+        for (const planet of massivePlanets) {
+            const baseY = planet.documentY - scrollPosition;
+            const drawY = applyParallax(baseY, planet.parallaxFactor);
+            if (drawY < -planet.radius * 2.2 || drawY > height + planet.radius * 2.2) continue;
+            planet.documentY += planet.driftY * delta * .4;
+            drawPlanet(planet, planet.x, drawY, time);
+        }
+
         if (enabled && !reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(draw);
     };
 
@@ -862,13 +1065,27 @@ function setupGalaxyField(canvas, reducedMotion) {
         canvas.height = height;
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
-        const maximumStars = width < 700 ? 28 : lowPowerDevice ? 36 : 56;
-        const minimumStars = width < 700 ? 18 : lowPowerDevice ? 24 : 34;
-        const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, width * height / 27000)));
+        pageHeight = Math.max(document.documentElement.scrollHeight, height);
+        const pageRatio = Math.min(Math.max(pageHeight / Math.max(height, 1), 1), 4);
+        const maximumStars = width < 700 ? 680 : lowPowerDevice ? 1300 : 2200;
+        const minimumStars = width < 700 ? 300 : lowPowerDevice ? 520 : 680;
+        const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, (width * height / 2700) * pageRatio)));
+        const maximumDust = width < 700 ? 230 : lowPowerDevice ? 360 : 500;
+        const minimumDust = width < 700 ? 130 : lowPowerDevice ? 200 : 260;
+        const dustCount = Math.round(Math.min(maximumDust, Math.max(minimumDust, pageHeight / 22)));
+        const maximumMediumStars = width < 700 ? 16 : lowPowerDevice ? 26 : 38;
+        const minimumMediumStars = width < 700 ? 7 : lowPowerDevice ? 11 : 15;
+        const mediumStarCount = Math.round(Math.min(maximumMediumStars, Math.max(minimumMediumStars, pageHeight / 150)));
+        buildStarClusterCenters();
         stars = Array.from({ length: starCount }, makeStar);
-        buildVantaMesh();
-        buildConstellationLinks();
-        buildConstellationNodes();
+        dust = Array.from({ length: dustCount }, makeDust);
+        mediumStars = Array.from({ length: mediumStarCount }, makeMediumStar);
+        buildGalaxies();
+        buildTinyDistant();
+        buildSmallPlanets();
+        buildMediumPlanets();
+        buildLargePlanets();
+        buildMassivePlanets();
         if (reducedMotion.matches) draw(performance.now(), true);
     };
 
@@ -887,28 +1104,18 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.velocityY = Math.max(-28, Math.min(28, event.clientY - pointer.targetY));
         pointer.targetX = event.clientX;
         pointer.targetY = event.clientY;
-        pointer.targetRotateX = -((event.clientY / height) - .5) * 4;
-        pointer.targetRotateY = ((event.clientX / width) - .5) * 5;
         pointer.active = true;
     };
 
     const scroll = scrollY => {
         if (!enabled) return;
-        const scrollDelta = scrollY - previousScrollY;
         targetScrollPosition = scrollY;
         scrollPosition = scrollY;
         scrollEnergy = 0;
-        for (const star of stars) {
-            const verticalSpan = height + 16;
-            star.y = ((star.y - scrollDelta + 8) % verticalSpan + verticalSpan) % verticalSpan - 8;
-        }
-        previousScrollY = scrollY;
     };
 
     document.documentElement.addEventListener('pointerleave', () => {
         pointer.active = false;
-        pointer.targetRotateX = 0;
-        pointer.targetRotateY = 0;
     });
     window.addEventListener('resize', resize, { passive: true });
     document.addEventListener('visibilitychange', start);
@@ -924,7 +1131,14 @@ function setupGalaxyField(canvas, reducedMotion) {
             start();
         }
     };
-    return { move, scroll, setEnabled };
+    // Rebuild only the placement that depends on real DOM layout (large and
+    // medium planets check against rendered content); everything else is
+    // already positioned from page-length alone.
+    const refreshLayout = () => {
+        buildLargePlanets();
+        buildMediumPlanets();
+    };
+    return { move, scroll, setEnabled, refreshLayout };
 }
 
 function setupSwipeWake(canvas, reducedMotion) {
@@ -972,6 +1186,10 @@ function setupSwipeWake(canvas, reducedMotion) {
 
     const drawRippleOutline = (trail, lineWidth, edgeWidth, color, opacity, shadowBlur) => {
         context.save();
+        // Additive blending so the trail glows into the starfield behind it
+        // instead of painting an opaque ribbon over it -- it should read as
+        // a light overlay, not a separate layer hiding the background.
+        context.globalCompositeOperation = 'lighter';
         context.lineCap = 'round';
         context.lineJoin = 'round';
         context.strokeStyle = `rgba(${color}, ${opacity.toFixed(3)})`;
@@ -1011,10 +1229,10 @@ function setupSwipeWake(canvas, reducedMotion) {
 
             drawRippleOutline(
                 trail,
-                (10 + (30 * easedRipple)) * interfaceScale,
+                (8 + (22 * easedRipple)) * interfaceScale,
                 Math.max(1, interfaceScale),
                 '145, 200, 255',
-                .62 * fadeStrength,
+                .42 * fadeStrength,
                 7 * interfaceScale
             );
 
@@ -1023,10 +1241,10 @@ function setupSwipeWake(canvas, reducedMotion) {
                 const easedEcho = 1 - ((1 - echoProgress) ** 3);
                 drawRippleOutline(
                     trail,
-                    (8 + (24 * easedEcho)) * interfaceScale,
+                    (6 + (16 * easedEcho)) * interfaceScale,
                     Math.max(1, .7 * interfaceScale),
                     '168, 213, 255',
-                    .3 * fadeStrength,
+                    .2 * fadeStrength,
                     4 * interfaceScale
                 );
             }

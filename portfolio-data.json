@@ -44,20 +44,20 @@
       "collectionOrder": 1,
       "featured": true,
       "featuredOrder": 1,
-      "summary": "Basically, I wanted a cheap swerve robot, so I built Kiwi with three modules instead of four.",
-      "cardSummary": "A normal swerve chassis has four modules, but Kiwi only has three. Leaving out that fourth pod dropped the drivetrain price by about one quarter. It still moves sideways, rotates, and drives at an angle, which is the part I cared about.",
+      "summary": "Dorito grew out of my FTC coaxial swerve work. Instead of selling one pod, I built a lower-cost three-module chassis and kept developing the idea.",
+      "cardSummary": "Dorito grew out of the coaxial swerve modules I originally hoped to sell to FTC teams. After FTC announced it was moving away from the brushed motors and standalone servos those modules used, I carried the idea into a complete three-module chassis instead. Leaving out the fourth pod cuts about one quarter of the actuators, drivers, and gearing while keeping sideways, diagonal, and turning motion.",
       "details": "",
       "image": "assets/kiwi-swerve-prototype.jpg",
       "motionImage": "assets/kiwi-swerve-drive.gif",
       "tags": ["Swerve Drive", "Raspberry Pi", "Python", "3D Printing"],
       "overview": {
-        "problem": "I wasn't building this for competition. I wanted to see whether three pods could do the job without a pile of special parts.",
+        "problem": "I originally planned to turn the coaxial module into a product for FTC teams, but FTC's planned actuator change made that hardware a poor fit for a product. I still wanted a cheaper complete drivetrain that could work for robotics, assistive platforms, and teaching.",
         "method": "The gears and bearings are COTS parts I can buy from more than one seller. I used M4 hardware around most of the chassis and M3 for the smaller pieces. I picked the boards myself and wrote the robot code in Python for a Raspberry Pi.",
         "result": "The first version moves sideways, spins, and drives diagonally. It also showed me what still needed work. Those problems are what I'm using for V2."
       },
       "sections": [
         {"heading": "First Robot", "body": "This was my first time testing the Kiwi swerve idea with three modules. Once it ran, I used it to check steering response, encoder feedback, and how the triangular layout behaved while driving."},
-        {"heading": "Overview", "body": "I wasn't trying to make a competition robot. This was a personal challenge to see if a three-pod layout could work without relying on expensive parts from one company. I used COTS parts that can be bought through multiple vendors and kept the hardware to standard M3 and M4 sizes."},
+        {"heading": "Where Dorito Came From", "body": "This project branched from my FTC Coaxial Swerve work. I had been moving toward a pod that teams could buy, but FTC announced a shift away from the brushed DC motors and standalone servos it used. Rather than keep developing that product around outgoing hardware, I built Dorito as a complete three-module chassis using general-purpose parts."},
         {"heading": "First Prototype Build", "body": "I printed the smaller parts and CNC cut the plates. Each pod has a continuous-rotation servo for steering and an encoder that tells me its angle. The servo turns the pod with an HTD5 belt, while a second, lighter HTD2 belt drives the wheel. Both motors stay fixed in the chassis instead of rotating with the bottom of the pod."},
         {"heading": "Electronics", "body": "For electronics, I chose a Raspberry Pi, three 10-amp motor drivers, a servo HAT, and a 12-bit encoder board. I wrote the controls in Python. None of it came as a complete kit; I picked out the boards based on what the robot needed and how easy they would be to replace."},
         {"heading": "Programming", "body": "I wrote the controls in Python on the Raspberry Pi. The code takes driver or autonomous commands and calculates what all three modules need to do. It constantly compares the encoder reading with the target angle and corrects the servos while keeping the drive and steering motion lined up."},
@@ -108,22 +108,22 @@
       "title": "Coaxial Swerve Drive",
       "category": "Robotics",
       "collectionOrder": 3,
-      "summary": "I designed two compact coaxial swerve pods for FTC, then reworked the expensive first version around parts that were easier to buy.",
-      "cardSummary": "My first pod fit inside a four-inch cube and worked, but one module cost about $350. Four of them would put the drivetrain near $1,300, which made no sense for the project. V2 is slightly wider, uses generic parts, and mounts to GoBILDA, REV, or AndyMark hardware.",
+      "summary": "I redesigned my coaxial swerve pod as a lower-cost product for FTC teams, then stopped the product plan when FTC announced a new actuator system.",
+      "cardSummary": "V1 fit inside a four-inch cube and worked, but its custom parts pushed one module to about $400. V2 used easier-to-buy gears, bearings, and shafts and added GoBILDA, REV, and AndyMark mounting patterns because I planned to sell it to FTC teams. I stopped that plan after FTC announced a move away from the brushed motors and standalone servos the pod used.",
       "details": "",
       "image": "assets/coaxial-swerve.jpg",
       "motionImage": "assets/coaxial-swerve-field-test.gif",
       "tags": ["FTC", "Swerve Drive", "CAD", "3D Printing"],
       "overview": {
-        "problem": "Four swerve pods have to fit inside an 18-inch FTC chassis, and paying $350 for each one was out of the question.",
-        "method": "V1 proved the coaxial setup worked. For V2 I changed the body, replaced hard-to-find gears and bearings, and added mounting holes for several common channel systems.",
-        "result": "It ended up a little wider, by less than a quarter inch. That trade was worth it because the new pod is cheaper and much easier to mount or repair."
+        "problem": "I wanted a compact pod that fit an 18-inch FTC chassis and was affordable enough to become a real product, but V1's custom shafts and printed housing put one module near $400.",
+        "method": "V1 proved the coaxial layout. For V2 I simplified the housing, switched to standard gears, bearings, and shafts, and added GoBILDA, REV, and AndyMark mounting patterns.",
+        "result": "V2 was cheaper and easier to reproduce, but FTC then announced a transition away from the brushed DC motors and standalone servos it used. I stopped the product plan and left the CAD and notes as a completed reference."
       },
       "sections": [
         {"heading": "V1", "body": "The first pod squeezed into a four-inch cube. It used one motor for the wheel and one servo for steering, with the drive power passing through the center of the module. Mechanically it did what I wanted, but the parts list was the problem."},
-        {"heading": "The Cost Problem", "body": "One V1 pod was around $350. Once I multiplied that by four, I knew I had to redesign it instead of pretending the price was reasonable for FTC."},
-        {"heading": "V2", "body": "I changed the L-shaped body into a rectangular pod and switched to bearings and gears sold through Amazon and AliExpress. I included mounting patterns for GoBILDA, REV, and AndyMark because different teams already own different building systems."},
-        {"heading": "Where It Ended Up", "body": "The redesign is not dramatically smaller, but that was never the only goal. It stays compact, costs much less to reproduce, and no longer forces a team to rebuild the surrounding chassis around one uncommon part."}
+        {"heading": "The Cost Problem", "body": "V1 worked, but the custom shafts and complicated printed housing put one module near $400. Four modules at that price were not practical, so I redesigned it around parts teams could source more easily."},
+        {"heading": "V2", "body": "V2 was meant to move the pod toward something FTC teams could buy. I changed the L-shaped body into a rectangular module, switched to standard gears, bearings, and shafts, and added GoBILDA, REV, and AndyMark mounting patterns."},
+        {"heading": "Why I Stopped the Product", "body": "When FTC announced it would transition away from existing brushed DC motors and standalone servos toward a new actuator system, I decided not to sell a design built around outgoing hardware. I left the completed CAD and notes online as a reference for compact coaxial swerve packaging."}
       ],
       "links": {
         "github": "",
@@ -189,8 +189,8 @@
       "category": "Robotics",
       "collectionOrder": 6,
       "featured": true,
-      "summary": "I designed these dead wheel odometry pods before small FTC pods were easy to buy, and we used them in competition.",
-      "cardSummary": "Small odometry pods were not easy to buy when I designed Tubba. Each one keeps a two-inch omni wheel pressed against the field and reads it with a through-bore encoder, so wheel slip from the drivetrain does not ruin the position estimate. We ran the pods on EggWUUUHH in competition and got more repeatable autonomous paths.",
+      "summary": "I designed these dead-wheel odometry pods for Team 9384's 2023-2024 CENTERSTAGE robot, EggWUUUHH, before small FTC pods were easy to buy.",
+      "cardSummary": "I developed Tubba while I was on FTC Team 9384 Hydraulic Hydras, specifically for our 2023-2024 CENTERSTAGE robot, EggWUUUHH. Each pod keeps a two-inch omni wheel pressed against the field and reads it with a through-bore encoder, so drivetrain slip does not throw off the position estimate. We used the pods in competition and got more repeatable autonomous paths.",
       "details": "",
       "image": "https://raw.githubusercontent.com/AloeVeraZ/tubba-odometry-/main/assets/images/assembly-render.png",
       "tags": ["FTC", "Odometry", "Robot Localization", "CAD"],
@@ -202,7 +202,7 @@
       "sections": [
         {"heading": "Challenge", "body": "Good odometry takes more than putting an encoder on a wheel. The pod had to fit inside the robot, stay against the field, avoid dragging sideways, protect the sensor, and keep giving the same readings through hits and fast direction changes during a match."},
         {"heading": "Core System", "body": "At its center, each pod used a REV encoder with a hollow bore and a passive AndyMark Dualie omni wheel measuring 2 inches in diameter. The tracking wheel rotated independently from the drivetrain, allowing the localization software to measure the robot's actual movement instead of estimating position only from the motion and slip of powered wheels."},
-        {"heading": "Designed From Scratch", "body": "There was no complete pod we could buy that did what we needed, so I designed the plates, shafts, bearings, wheel support, spring pressure, and chassis mounts as one small assembly. The finished pod fit between the parallel plates on EggWUUUHH, and I saved the full STEP assembly and separate manufacturing files."},
+        {"heading": "Designed From Scratch", "body": "I developed Tubba specifically for EggWUUUHH because there was no complete pod we could buy that did what we needed. I designed the plates, shafts, bearings, wheel support, spring pressure, and chassis mounts as one small assembly that fit between the robot's parallel plates. I saved the full STEP assembly and separate manufacturing files."},
         {"heading": "Cost and Accessibility", "body": "Each pod cost about $100 in 2024. The encoder was the most expensive part, while the rest used a printed frame, a standard omni wheel, common bearings, shaft stock, tubing, and regular fasteners. This kept the design practical to repair and reproduce."},
         {"heading": "Competition Result", "body": "We installed and calibrated the pods on our competition robot, where they made autonomous movement more repeatable. The live position estimate also gave the control system useful feedback during driver control. Most importantly, the team could trust the readings during a match."}
       ],
@@ -476,7 +476,7 @@
         {"heading": "Coursework", "body": "I completed classwork, homework, quizzes, a midterm, and a final while learning the basics of technical drafting."},
         {"heading": "Skills Developed", "body": "The work included 2D geometry, object snaps, repeated features, dimensions, sheet layouts, title blocks, and saving drawings as PDFs."}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/autocad/autocad-i/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/autocad/autocad-i/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "autocad-ii",
@@ -498,7 +498,7 @@
         {"heading": "Coursework", "body": "The regular work included chapter exercises, homework, and tests, followed by a final that was turned in over several stages. Some sheets were 2D drawings and others came from 3D geometry, so I had to keep both sides of the work organized."},
         {"heading": "What Changed From AutoCAD I", "body": "AutoCAD I taught me the commands. AutoCAD II made me use those commands across a group of related drawings, make revisions without breaking the format, and think about how the full set would look when it was printed."}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/autocad/autocad-ii/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/autocad/autocad-ii/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "mastercam-coursework",
@@ -525,7 +525,7 @@
       "media": [
         {"type": "gif", "src": "assets/class-mastercam.gif", "label": "Mastercam toolpath simulation"}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/mastercam/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/mastercam/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "matlab-coursework",
@@ -548,7 +548,7 @@
         {"heading": "Projects", "body": "Seven larger assignments covered very different subjects, including an orbit, an atmosphere model, GPU performance data, audio synthesis, and population trends. That variety forced me to figure out what the data meant before deciding how to code it."},
         {"heading": "Plots and Functions", "body": "I used functions when a calculation needed to run more than once, then plotted the results to catch mistakes and explain what changed. A strange curve was often the first sign that I had made a bad assumption or entered the wrong units."}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/matlab/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/matlab/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "mech-1101-machine-shop",
@@ -570,7 +570,7 @@
         {"heading": "Class Project", "body": "We started with one rectangular aluminum blank. By the end it had four kinds of finished holes, a square notch, straight edges, and dimensions that could be checked against the print."},
         {"heading": "Shop Work", "body": "I practiced layout, drilling, tapping, reaming, countersinking, and counterboring on the same part. We also filed and sanded by hand, which took more patience than simply running another machine operation."}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-1/mech-1101-machine-shop/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/mech-1101-machine-shop/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "autodesk-inventor",
@@ -592,7 +592,7 @@
         {"heading": "Coursework", "body": "The homework, midterm, mini project, and final all built on each other. I went from individual features to constrained assemblies, then used those assemblies for drawings and presentations."},
         {"heading": "What I Practiced", "body": "The class covered parametric features, sheet-metal flat patterns, exploded views, revision history, and a basic static stress study. The bottle project was the best test because it had enough parts for small mistakes to show up later."}
       ],
-      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/year-2/inventor/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
+      "links": {"github": {"url": "https://github.com/AloeVeraZ/CollegeClasses-Projects/blob/main/coursework/inventor/README.md", "label": "Class README"}, "grabcad": "", "video": "", "projectUrl": ""}
     },
     {
       "id": "cuny-geopolymer-research",

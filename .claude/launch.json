@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "portfolio-static",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\angel\\AppData\\Local\\Temp\\claude\\C--Users-angel-OneDrive-Documents-Github-AloeVeraZ-github-io\\f180b645-a9a0-4850-b337-71b74cd48bb9\\scratchpad\\static-server.ps1",
+        "-Port",
+        "8843"
+      ],
+      "port": 8843
+    }
+  ]
+}
