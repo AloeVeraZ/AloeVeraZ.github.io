@@ -379,6 +379,12 @@ function setupGalaxyField(canvas, reducedMotion) {
     const projectedHoles = [];
     let navigationBottom = 80;
     const spriteCache = new Map();
+    // The deep-field layer contains thousands of tiny, non-interactive stars.
+    // Rasterize those once per scene segment and composite the tiles each
+    // frame. The larger bodies and bright stars remain live so High FX keeps
+    // its motion, parallax, and interaction quality.
+    const staticStarTileHeight = 680;
+    let staticStarTiles = [];
     // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
     const hasGiantLandmark = Math.random() < .08;
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false };
@@ -809,7 +815,8 @@ function setupGalaxyField(canvas, reducedMotion) {
                     chooseDeepColor(rng), {
                     alpha: bright ? .64 + rng() * .3 : .1 + rng() ** 1.8 * .62,
                     drift: .35 + depth * 2.2, pulse: .05 + rng() * .16,
-                    glint: bright && rng() < .38
+                    glint: bright && rng() < .38,
+                    staticField: !bright
                 }));
             }
             // A fine veil of unresolved dust prevents the field from feeling
@@ -892,6 +899,44 @@ function setupGalaxyField(canvas, reducedMotion) {
             tier.objects.sort((a, b) => a.documentY - b.documentY);
             tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
             if (tier.objects.some(item => item.interactive)) tier.margin += 360;
+        }
+        buildStaticStarTiles();
+    };
+
+    const buildStaticStarTiles = () => {
+        staticStarTiles = [];
+        const stars = tiers.stars.objects.filter(object => object.staticField);
+        if (!stars.length || !width || !pageHeight) return;
+
+        for (let start = 0; start < pageHeight; start += staticStarTileHeight) {
+            const end = Math.min(start + staticStarTileHeight, pageHeight);
+            const tile = document.createElement('canvas');
+            tile.width = Math.max(1, Math.ceil(width));
+            tile.height = Math.max(1, Math.ceil(end - start));
+            const tileContext = tile.getContext('2d', { alpha: true });
+            if (!tileContext) continue;
+
+            tileContext.globalCompositeOperation = 'lighter';
+            for (const object of stars) {
+                // Keep each star in exactly one tile. Duplicating stars at a
+                // tile edge would make those few pixels visibly brighter.
+                if (object.documentY < start || object.documentY >= end) continue;
+                tileContext.globalAlpha = object.alpha;
+                tileContext.fillStyle = `rgb(${object.color})`;
+                tileContext.beginPath();
+                tileContext.ellipse(
+                    object.x,
+                    object.documentY - start,
+                    object.radius,
+                    object.radius,
+                    0,
+                    0,
+                    TAU
+                );
+                tileContext.fill();
+            }
+            tileContext.globalAlpha = 1;
+            staticStarTiles.push({ canvas: tile, start, end });
         }
     };
 
@@ -1175,6 +1220,20 @@ function setupGalaxyField(canvas, reducedMotion) {
             context.restore();
         }
     };
+    const drawStaticStarField = (cameraX, cameraY) => {
+        if (reducedMotion.matches || !staticStarTiles.length) return;
+        const factor = tiers.stars.factor;
+        const cameraOffsetX = cameraX * factor * factor * 10;
+        const cameraOffsetY = cameraY * factor * factor * 7;
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = 1;
+        for (const tile of staticStarTiles) {
+            const top = (tile.start - scrollPosition - height / 2) * factor + height / 2 - cameraOffsetY;
+            const scaledHeight = (tile.end - tile.start) * factor;
+            if (top > height || top + scaledHeight < 0) continue;
+            context.drawImage(tile.canvas, -cameraOffsetX, top, width, scaledHeight);
+        }
+    };
     const draw = timestamp => {
         animationFrame = 0;
         if (document.hidden || quality !== 'high') return;
@@ -1198,11 +1257,13 @@ function setupGalaxyField(canvas, reducedMotion) {
 
         for (const tier of Object.values(tiers)) {
             const factor = reducedMotion.matches ? 1 : tier.factor;
+            if (tier === tiers.stars) drawStaticStarField(cameraX, cameraY);
             const minY = scrollPosition + height / 2 - (height / 2 + tier.margin) / factor;
             const maxY = scrollPosition + height / 2 + (height / 2 + tier.margin) / factor;
             const objects = tier.objects;
             for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
                 const object = objects[i];
+                if (tier === tiers.stars && object.staticField && !reducedMotion.matches) continue;
                 // The seeded anchor stays fixed; a bounded spring offset carries
                 // cursor impulses and gravity independently of camera parallax.
                 const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
@@ -1358,6 +1419,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         animationFrame = 0;
         lastFrame = 0;
         if (mode === 'high') refreshLayout();
+        else staticStarTiles = [];
     };
     const move = event => {
         if (quality !== 'high' || reducedMotion.matches || event.pointerType === 'touch') return;

@@ -853,7 +853,6 @@ main > #contact { padding-bottom: 1.5rem; }
     transform-origin: center center;
     transform-style: preserve-3d;
     transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear;
-    will-change: transform, opacity;
 }
 .project-carousel .project-card.is-carousel-active {
     border-color: rgba(123,168,216,.62);
@@ -897,7 +896,6 @@ html[data-effects="high"] .circular-project-carousel .project-card:hover {
         rotateY(var(--carousel-ring-rotate, 0deg))
         scale(var(--carousel-ring-scale, 1));
     transition: border-color .3s ease, box-shadow .3s ease;
-    will-change: transform, opacity;
 }
 html[data-effects="high"] .circular-project-carousel.is-carousel-resetting .project-card {
     transition: none !important;
@@ -969,6 +967,12 @@ html[data-effects="low"] .featured-project-carousel .project-card {
     opacity: 1;
     transform: none;
     will-change: auto;
+}
+
+/* Promote only while a ring is actively moving. Keeping every card on its
+   own compositor layer makes large collections expensive on laptop GPUs. */
+html[data-effects="high"] .project-carousel.is-dragging .project-card {
+    will-change: transform, opacity;
 }
 
 @media (max-width: 1000px) {
