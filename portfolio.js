@@ -100,12 +100,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ? savedEffectsMode
         : (meetsHighEffectsBaseline ? 'high' : 'low');
     let effectsReason = savedEffectsMode ? 'manual' : 'hardware';
+    // The automatic downgrade is a safety net for hardware that genuinely
+    // cannot keep up -- not for the ordinary hitches every machine produces
+    // (first paint, font swap, a GC pause, the compositor waking up). All of
+    // the numbers below are deliberately conservative: a window only counts as
+    // slow when the page is visibly bad, and it takes several of those in a row
+    // before Low FX takes over.
+    const PERFORMANCE_WINDOW_MS = 5000;
+    const PERFORMANCE_WARMUP_MS = 8000;
+    const PERFORMANCE_RESUME_DELAY_MS = 2000;
+    const SLOW_WINDOWS_BEFORE_DOWNGRADE = 3;
+    const MIN_ACCEPTABLE_FPS = 24;
     let performanceMonitorFrame = 0;
     let performanceMonitorStartedAt = 0;
     let performanceMonitorLastFrame = 0;
-    let performanceMonitorFrames = 0;
-    let performanceMonitorLongFrames = 0;
-    let performanceMonitorSevereFrames = 0;
+    const performanceMonitorFrameTimes = [];
+    let performanceSamplingResumesAt = 0;
     let consecutiveSlowWindows = 0;
     let automaticDowngradeComplete = false;
     let backgroundIdleTimer = 0;
@@ -171,9 +181,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetPerformanceWindow = timestamp => {
         performanceMonitorStartedAt = timestamp;
         performanceMonitorLastFrame = timestamp;
-        performanceMonitorFrames = 0;
-        performanceMonitorLongFrames = 0;
-        performanceMonitorSevereFrames = 0;
+        performanceMonitorFrameTimes.length = 0;
+    };
+
+    // Pause sampling for a moment after anything that stalls rAF by itself:
+    // page load, tab switches, window resizes. The catch-up frames afterwards
+    // look exactly like jank but say nothing about how the page really runs.
+    const deferPerformanceSampling = (delay, timestamp = performance.now()) => {
+        consecutiveSlowWindows = 0;
+        performanceSamplingResumesAt = Math.max(performanceSamplingResumesAt, timestamp + delay);
+        resetPerformanceWindow(timestamp);
+    };
+
+    const medianFrameTime = samples => {
+        const sorted = [...samples].sort((a, b) => a - b);
+        return sorted[Math.floor(sorted.length / 2)] || 16.7;
     };
 
     const monitorPerformance = timestamp => {
@@ -181,7 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // An unfocused window still reports visibilityState 'visible', but the
         // browser suspends rAF for it. Sampling then measures the suspension,
         // not our rendering cost.
-        if (effectsMode !== 'high' || document.hidden || !document.hasFocus() || automaticDowngradeComplete) {
+        if (effectsMode !== 'high'
+            || document.hidden
+            || !document.hasFocus()
+            || automaticDowngradeComplete
+            // High FX the visitor picked themselves is theirs to reverse.
+            || effectsReason === 'manual'
+            || timestamp < performanceSamplingResumesAt) {
             resetPerformanceWindow(timestamp);
             return;
         }
@@ -189,26 +217,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!performanceMonitorStartedAt) resetPerformanceWindow(timestamp);
         const frameTime = timestamp - performanceMonitorLastFrame;
         performanceMonitorLastFrame = timestamp;
-        // A multi-second gap is the browser suspending rAF (backgrounded, power
-        // saving, another app hogging the GPU), not this page rendering slowly.
-        // Counting it as jank would retire High FX for the rest of the session.
-        if (frameTime > 500) { resetPerformanceWindow(timestamp); return; }
-        performanceMonitorFrames += 1;
-        if (frameTime > 45) performanceMonitorLongFrames += 1;
-        if (frameTime > 160) performanceMonitorSevereFrames += 1;
+        // A long gap is the browser suspending rAF (backgrounded, power saving,
+        // another app hogging the GPU), not this page rendering slowly. Let it
+        // settle instead of scoring the recovery frames.
+        if (frameTime > 400) {
+            deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
+            return;
+        }
+        performanceMonitorFrameTimes.push(frameTime);
 
         const windowLength = timestamp - performanceMonitorStartedAt;
-        if (windowLength < 3000) return;
+        if (windowLength < PERFORMANCE_WINDOW_MS) return;
 
-        const averageFps = performanceMonitorFrames / (windowLength / 1000);
-        const longFrameRatio = performanceMonitorLongFrames / Math.max(performanceMonitorFrames, 1);
-        const slowWindow = averageFps < 30
-            || longFrameRatio > .18
-            || performanceMonitorSevereFrames >= 2;
+        const frames = performanceMonitorFrameTimes.length;
+        // The median frame time is this display's real cadence: 16.7ms at 60Hz,
+        // 6.9ms at 144Hz, 33ms on a battery-saver panel capped at 30fps that is
+        // still perfectly smooth. Measuring hitches against that instead of an
+        // assumed 60Hz is what stops healthy-but-throttled machines from being
+        // called slow -- the old fixed 45ms/160ms limits flagged them
+        // constantly, which is why High FX kept switching itself off.
+        const displayFrameTime = medianFrameTime(performanceMonitorFrameTimes);
+        const longFrameLimit = Math.max(displayFrameTime * 3, 60);
+        const severeFrameLimit = Math.max(displayFrameTime * 10, 260);
+        let longFrames = 0;
+        let severeFrames = 0;
+        for (const sample of performanceMonitorFrameTimes) {
+            if (sample > longFrameLimit) longFrames += 1;
+            if (sample > severeFrameLimit) severeFrames += 1;
+        }
+        const averageFps = frames / (windowLength / 1000);
+        const longFrameRatio = longFrames / Math.max(frames, 1);
+        // Either the page is slow outright, or it stutters through a third of
+        // the window, or it locks up several times inside five seconds.
+        const slowWindow = averageFps < MIN_ACCEPTABLE_FPS
+            || longFrameRatio > .35
+            || severeFrames >= 5;
         consecutiveSlowWindows = slowWindow ? consecutiveSlowWindows + 1 : 0;
         resetPerformanceWindow(timestamp);
 
-        if (consecutiveSlowWindows >= 2) {
+        if (consecutiveSlowWindows >= SLOW_WINDOWS_BEFORE_DOWNGRADE) {
             automaticDowngradeComplete = true;
             applyEffectsMode('low', false, 'lag');
         }
@@ -243,14 +290,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     performanceToggle.addEventListener('click', () => {
-        consecutiveSlowWindows = 0;
         automaticDowngradeComplete = false;
-        resetPerformanceWindow(performance.now());
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true, 'manual');
     });
     document.addEventListener('visibilitychange', () => {
-        consecutiveSlowWindows = 0;
-        resetPerformanceWindow(performance.now());
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         if (document.hidden) {
             clearBackgroundIdleTimer();
             document.documentElement.classList.remove('effects-background-click-fading');
@@ -262,12 +307,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Returning to the window resumes rAF mid-stall; start a clean measurement
     // window so the catch-up frames are not mistaken for jank.
     window.addEventListener('focus', () => {
-        consecutiveSlowWindows = 0;
-        resetPerformanceWindow(performance.now());
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
     });
+    // Resizing re-lays out every canvas in the scene; that cost belongs to the
+    // resize, not to the machine running it.
+    window.addEventListener('resize', () => {
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
+    }, { passive: true });
     applyEffectsMode(effectsMode, false, effectsReason);
+    // Measure nothing until the page has had time to load, decode images and
+    // settle -- startup jank on its own used to be enough to drop a perfectly
+    // capable machine to Low FX.
     performanceMonitorFrame = requestAnimationFrame(timestamp => {
-        resetPerformanceWindow(timestamp);
+        deferPerformanceSampling(PERFORMANCE_WARMUP_MS, timestamp);
         performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
     });
 
