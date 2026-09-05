@@ -169,7 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const monitorPerformance = timestamp => {
         performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
-        if (effectsMode !== 'high' || document.hidden || automaticDowngradeComplete) {
+        // An unfocused window still reports visibilityState 'visible', but the
+        // browser suspends rAF for it. Sampling then measures the suspension,
+        // not our rendering cost.
+        if (effectsMode !== 'high' || document.hidden || !document.hasFocus() || automaticDowngradeComplete) {
             resetPerformanceWindow(timestamp);
             return;
         }
@@ -177,6 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!performanceMonitorStartedAt) resetPerformanceWindow(timestamp);
         const frameTime = timestamp - performanceMonitorLastFrame;
         performanceMonitorLastFrame = timestamp;
+        // A multi-second gap is the browser suspending rAF (backgrounded, power
+        // saving, another app hogging the GPU), not this page rendering slowly.
+        // Counting it as jank would retire High FX for the rest of the session.
+        if (frameTime > 500) { resetPerformanceWindow(timestamp); return; }
         performanceMonitorFrames += 1;
         if (frameTime > 45) performanceMonitorLongFrames += 1;
         if (frameTime > 160) performanceMonitorSevereFrames += 1;
@@ -186,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const averageFps = performanceMonitorFrames / (windowLength / 1000);
         const longFrameRatio = performanceMonitorLongFrames / Math.max(performanceMonitorFrames, 1);
-        const slowWindow = averageFps < 42
+        const slowWindow = averageFps < 30
             || longFrameRatio > .18
             || performanceMonitorSevereFrames >= 2;
         consecutiveSlowWindows = slowWindow ? consecutiveSlowWindows + 1 : 0;
@@ -242,6 +249,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             wakeEffectsBackground();
         }
+    });
+    // Returning to the window resumes rAF mid-stall; start a clean measurement
+    // window so the catch-up frames are not mistaken for jank.
+    window.addEventListener('focus', () => {
+        consecutiveSlowWindows = 0;
+        resetPerformanceWindow(performance.now());
     });
     applyEffectsMode(effectsMode, false, effectsReason);
     performanceMonitorFrame = requestAnimationFrame(timestamp => {
@@ -381,6 +394,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     let pageHeight = 0, scrollPosition = window.scrollY;
     let quality = 'low', frameInterval = 1000 / 18;
     let animationFrame = 0, layoutFrame = 0, layoutTimer = 0;
+    let sleeping = false, sleepTimer = 0;
     let lastFrame = 0, sceneTime = 0;
     let protectedRects = [], visibleRects = [], regions = [], orbitingBodies = [], blackHoles = [], pulsars = [], layoutSignature = '';
     const projectedHoles = [];
@@ -1358,10 +1372,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         drawBlackHoles(); // The dark horizon occludes captured bodies and trails.
         context.globalAlpha = 1;
         context.globalCompositeOperation = 'source-over';
-        if (animated) animationFrame = requestAnimationFrame(draw);
+        if (animated && !sleeping) animationFrame = requestAnimationFrame(draw);
     };
     const requestDraw = () => {
-        if (!animationFrame && !document.hidden && quality === 'high') animationFrame = requestAnimationFrame(draw);
+        if (!animationFrame && !sleeping && !document.hidden && quality === 'high') animationFrame = requestAnimationFrame(draw);
     };
 
     // DOM reads happen in a coalesced layout pass, never in draw(). Observe
@@ -1466,6 +1480,28 @@ function setupGalaxyField(canvas, reducedMotion) {
     observer.observe(document.body);
     document.querySelectorAll('main .section, .hero-section').forEach(section => observer.observe(section));
     document.fonts?.ready.then(refreshLayout);
+    // Once the idle fade has taken the canvas to opacity 0 there is nothing to
+    // look at, yet the scene was still compositing a full 30fps of sprites --
+    // which is the steady state on any page nobody is actively touching. Park
+    // the loop while it is invisible and restart it the instant it wakes.
+    const syncIdleSleep = () => {
+        clearTimeout(sleepTimer);
+        sleepTimer = 0;
+        if (!document.documentElement.classList.contains('effects-background-idle')) {
+            if (sleeping) { sleeping = false; lastFrame = 0; requestDraw(); }
+            return;
+        }
+        // Let the opacity transition finish first, so the frame left on the
+        // canvas is a fully faded one and not a frozen mid-fade image.
+        sleepTimer = window.setTimeout(() => {
+            sleepTimer = 0;
+            sleeping = true;
+            cancelAnimationFrame(animationFrame);
+            animationFrame = 0;
+        }, 900);
+    };
+    new MutationObserver(syncIdleSleep).observe(document.documentElement, { attributeFilter: ['class'] });
+    syncIdleSleep();
     refreshLayout();
     return { move, scroll, setQuality, refreshLayout };
 }
