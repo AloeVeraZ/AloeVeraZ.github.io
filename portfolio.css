@@ -1031,16 +1031,12 @@ html[data-effects="low"] .cursor-ripple {
     display: none !important;
 }
 
-/* High FX layers a quiet grid under the cursor-lit particles. */
+/* High FX paints the grid on the galaxy canvas instead, so it bends with the
+   rest of the sheet when a touch presses into it. A CSS background cannot be
+   warped locally, and a dead-straight lattice over a sagging field was the one
+   thing giving away that the backdrop was layers rather than a surface. */
 html[data-effects="high"] .background-grid {
-    display: block;
-    background-image:
-        linear-gradient(rgba(145,200,255,.042) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.042) 1px, transparent 1px),
-        linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
-    background-size: 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
-    opacity: .28;
+    display: none;
 }
 html[data-effects="high"] .ambient-glow {
     opacity: 0;

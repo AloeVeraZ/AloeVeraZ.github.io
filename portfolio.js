@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let automaticDowngradeComplete = false;
     let backgroundIdleTimer = 0;
     let backgroundFadeTimer = 0;
+    let activeTouchCount = 0;
 
     const clearBackgroundIdleTimer = () => {
         if (backgroundIdleTimer) window.clearTimeout(backgroundIdleTimer);
@@ -137,6 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
             root.classList.remove('effects-background-idle', 'effects-background-click-fading');
         }
         clearBackgroundIdleTimer();
+
+        // A finger resting on the glass is still an interaction. Without this,
+        // holding one still for a few seconds ran the idle fade and took the
+        // dent with it while the finger was still pressing it.
+        if (activeTouchCount > 0) return;
 
         if (activity === 'click') {
             backgroundFadeTimer = window.setTimeout(() => {
@@ -347,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchstart', event => {
         highEffectsTouchSwipeActive = false;
         touchSwipeReleased = false;
+        activeTouchCount = event.touches.length;
         wakeEffectsBackground();
         if (effectsMode !== 'high') return;
         Array.from(event.changedTouches).forEach(touch => {
@@ -364,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
     ['touchend', 'touchcancel'].forEach(eventName => {
         window.addEventListener(eventName, event => {
+            activeTouchCount = event.touches.length;
             Array.from(event.changedTouches).forEach(touch => galaxy.touchEnd(touch.identifier));
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
@@ -488,6 +496,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     // its motion, parallax, and interaction quality.
     const staticStarTileHeight = 680;
     let staticStarTiles = [];
+    // 3rem, matching the lattice the stylesheet used to paint. Measured in the
+    // layout pass so a root font-size change carries through.
+    let gridSpacing = 48;
     // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
     const hasGiantLandmark = Math.random() < .08;
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false };
@@ -1248,6 +1259,83 @@ function setupGalaxyField(canvas, reducedMotion) {
         state.alpha = smoothstep(clamp((time - state.returnedAt) / 2.5, 0, 1));
         return state;
     };
+    // The grid used to be a CSS background on its own element, which meant it
+    // was the one part of the backdrop that could not bend -- a dead-straight
+    // lattice sitting over a field that was visibly sagging. Drawing it here
+    // puts it on the same sheet as everything else. It scrolls with the
+    // document, so its horizontals are anchored in page space.
+    const traceGridLine = (path, ax, ay, bx, by, span) => {
+        // Straight through empty sheet; subdivided only where a dent actually
+        // reaches the line. Subdividing every line everywhere would be a few
+        // thousand points a frame for a lattice that is straight almost
+        // everywhere.
+        let start = 1, end = 0;
+        for (const well of touchWells) {
+            const along = span === 'y' ? well.y - ay : well.x - ax;
+            const across = span === 'y' ? well.x - ax : well.y - ay;
+            if (Math.abs(across) >= well.reach) continue;
+            const half = Math.sqrt(well.reach * well.reach - across * across);
+            const length = span === 'y' ? by - ay : bx - ax;
+            start = Math.min(start, clamp((along - half) / length, 0, 1));
+            end = Math.max(end, clamp((along + half) / length, 0, 1));
+        }
+        path.moveTo(ax, ay);
+        if (start > end) { path.lineTo(bx, by); return; }
+        const length = Math.hypot(bx - ax, by - ay);
+        const steps = Math.max(2, Math.ceil(length * (end - start) / 11));
+        path.lineTo(ax + (bx - ax) * start, ay + (by - ay) * start);
+        for (let step = 1; step <= steps; step++) {
+            const t = start + (end - start) * (step / steps);
+            warped.x = ax + (bx - ax) * t;
+            warped.y = ay + (by - ay) * t;
+            warpPoint(warped, 1);
+            path.lineTo(warped.x, warped.y);
+        }
+        path.lineTo(bx, by);
+    };
+    const drawBackgroundGrid = () => {
+        if (!gridSpacing) return;
+        context.save();
+        context.globalCompositeOperation = 'lighter';
+        context.globalAlpha = 1;
+        const wells = touchWells.filter(well => Math.abs(well.depth) > .012);
+        // Two densities, matching what the stylesheet drew before: a readable
+        // major lattice and a much fainter minor one.
+        for (const [spacing, color] of [
+            [gridSpacing / 4, 'rgba(255,255,255,.0042)'],
+            [gridSpacing, 'rgba(145,200,255,.0125)']
+        ]) {
+            const path = new Path2D();
+            for (let x = 0; x <= width; x += spacing) traceGridLine(path, x, 0, x, height, 'y');
+            for (let y = -(scrollPosition % spacing); y <= height; y += spacing) {
+                traceGridLine(path, 0, y, width, y, 'x');
+            }
+            context.lineWidth = 1;
+            context.strokeStyle = color;
+            context.stroke(path);
+            // At rest the lattice is barely there, by design -- which would
+            // also make the bend invisible, the one thing it is here to show.
+            // So the sheet glows where it is stretched: the same path restroked
+            // through the dent, lit by a gradient that dies at the rim, so the
+            // brightening has no edge of its own. Reusing the path guarantees
+            // the lit copy sits exactly on the faint one.
+            for (const well of wells) {
+                const strength = Math.min(1, Math.abs(well.depth));
+                const lit = context.createRadialGradient(well.x, well.y, 0, well.x, well.y, well.reach);
+                lit.addColorStop(0, `rgba(123, 168, 216, ${(strength * .3).toFixed(4)})`);
+                lit.addColorStop(.45, `rgba(123, 168, 216, ${(strength * .17).toFixed(4)})`);
+                lit.addColorStop(1, 'rgba(123, 168, 216, 0)');
+                context.save();
+                context.beginPath();
+                context.arc(well.x, well.y, well.reach, 0, TAU);
+                context.clip();
+                context.strokeStyle = lit;
+                context.stroke(path);
+                context.restore();
+            }
+        }
+        context.restore();
+    };
     // The displacement alone is legible on a busy patch of sky and invisible
     // on an empty one. A faint rim -- brightest where the slope is steepest --
     // gives the depression an edge to read against in both cases, and the
@@ -1259,17 +1347,29 @@ function setupGalaxyField(canvas, reducedMotion) {
         for (const well of touchWells) {
             const depth = Math.abs(well.depth);
             if (depth < .02) continue;
-            // A broad, soft band rather than a drawn outline. A crisp circle
-            // reads as an interface element sitting on top of the scene; this
-            // has to read as the sheet catching light along the slope, so it
-            // has no edge anywhere -- it fades in and out across most of the
-            // dent's width.
+            // --blue, the section-label colour, so the light a touch gives off
+            // belongs to the same palette as "OVERVIEW" rather than being a
+            // second, unrelated blue.
             const rim = well.reach * (.58 + well.depth * .1);
+            // The dent glows dimly from the bottom: brightest under the
+            // fingertip, gone well before the rim.
+            const core = context.createRadialGradient(well.x, well.y, 0, well.x, well.y, well.reach * .82);
+            core.addColorStop(0, `rgba(123, 168, 216, ${(depth * .1).toFixed(4)})`);
+            core.addColorStop(.42, `rgba(123, 168, 216, ${(depth * .042).toFixed(4)})`);
+            core.addColorStop(1, 'rgba(123, 168, 216, 0)');
+            context.fillStyle = core;
+            context.beginPath();
+            context.arc(well.x, well.y, well.reach * .82, 0, TAU);
+            context.fill();
+            // A broad, soft band along the slope rather than a drawn outline. A
+            // crisp circle reads as an interface element sitting on top of the
+            // scene; this has no edge anywhere, so it reads as the sheet
+            // catching light where it bends most steeply.
             const gradient = context.createRadialGradient(well.x, well.y, rim * .2, well.x, well.y, rim * 1.5);
-            gradient.addColorStop(0, 'rgba(150, 190, 240, 0)');
-            gradient.addColorStop(.5, `rgba(168, 205, 248, ${(depth * .05).toFixed(4)})`);
-            gradient.addColorStop(.74, `rgba(160, 198, 244, ${(depth * .028).toFixed(4)})`);
-            gradient.addColorStop(1, 'rgba(150, 190, 240, 0)');
+            gradient.addColorStop(0, 'rgba(123, 168, 216, 0)');
+            gradient.addColorStop(.5, `rgba(123, 168, 216, ${(depth * .05).toFixed(4)})`);
+            gradient.addColorStop(.74, `rgba(123, 168, 216, ${(depth * .028).toFixed(4)})`);
+            gradient.addColorStop(1, 'rgba(123, 168, 216, 0)');
             context.fillStyle = gradient;
             context.beginPath();
             context.arc(well.x, well.y, rim * 1.5, 0, TAU);
@@ -1497,7 +1597,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 const outer = well.reach * (rings - ring) / rings;
                 const inner = well.reach * (rings - ring - 1) / rings;
                 const mid = (outer + inner) / 2;
-                const pull = well.depth * wellProfile(mid / well.reach) * well.reach * .3;
+                const pull = well.depth * wellProfile(mid / well.reach) * well.reach * WELL_PULL;
                 const squeeze = clamp((mid - pull) / mid, .35, 1.6);
                 // Under the scale, this band shows source content from a wider
                 // radius than it occupies, so the cull has to cover where that
@@ -1541,6 +1641,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         if (animated) updateTouchWells(delta);
         context.clearRect(0, 0, width, height);
         context.globalCompositeOperation = 'lighter';
+        drawBackgroundGrid(); // Furthest back: the sheet everything else sits on.
         prepareBlackHoles(time, cameraX, cameraY);
 
         for (const tier of Object.values(tiers)) {
@@ -1582,25 +1683,12 @@ function setupGalaxyField(canvas, reducedMotion) {
                 // away from the viewer as it does -- smaller and dimmer at the
                 // bottom of the well is what turns an inward slide into depth.
                 let sink = 1;
-                if (touchWells.length && !reducedMotion.matches) for (const well of touchWells) {
-                    const dx = x - well.x, dy = y - well.y;
-                    const reach = well.reach;
-                    const distanceSquared = dx * dx + dy * dy;
-                    if (distanceSquared >= reach * reach) continue;
-                    const distance = Math.sqrt(distanceSquared) || .001;
-                    const u = distance / reach;
-                    const rim = (1 - u) * (1 - u);
-                    // Nearer layers move further for the same dent, so the
-                    // depression has depth of its own rather than sliding as
-                    // one flat picture.
-                    const pull = well.depth * wellProfile(u) * reach * .3 * (.55 + factor * .38);
-                    x -= dx / distance * pull;
-                    y -= dy / distance * pull;
-                    // The sheet shears in the direction the finger is going.
-                    x += well.vx * well.depth * rim * .05;
-                    y += well.vy * well.depth * rim * .05;
-                    sink *= 1 - well.depth * rim * .34;
-                    lensStretch *= 1 + Math.abs(well.depth) * wellProfile(u) * .4;
+                if (touchWells.length && !reducedMotion.matches) {
+                    warped.x = x; warped.y = y;
+                    warpPoint(warped, factor);
+                    x = warped.x; y = warped.y;
+                    sink = warped.sink;
+                    lensStretch *= warped.stretch;
                 }
                 const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
                 const radius = object.radius * scale * (physics ? physics.scale : 1) * clamp(sink, .3, 1.3);
@@ -1680,6 +1768,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             width = nextWidth; height = nextHeight; pageHeight = nextPageHeight;
             frameInterval = 1000 / (width < 700 ? 24 : 30);
             scrollPosition = window.scrollY;
+            gridSpacing = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) * 3;
             // Keep the animated canvas close to CSS-pixel resolution. The
             // background is intentionally soft, so 1.25x is visually enough
             // while avoiding a large fill-rate cost on laptop GPUs.
@@ -1753,6 +1842,42 @@ function setupGalaxyField(canvas, reducedMotion) {
     // a third of the way out -- displacing the centre point itself would just
     // translate the scene, which reads as a smear rather than a depression.
     const wellProfile = u => u * (1 - u) * (1 - u) * 6.75;
+    // Peak displacement as a fraction of the dent's radius. At .3 the profile
+    // pulls a point almost exactly onto the centre, so the grid collapsed into
+    // a singularity and lost the structure that shows the bend at all. This is
+    // a fingertip in a sheet, not a black hole -- deep enough to funnel, shy of
+    // closing up.
+    const WELL_PULL = .22;
+    // One displacement function for every layer. The grid, the scenery and the
+    // star tiles have to bend by the same amount at the same place or the
+    // background stops reading as a single surface and becomes a stack of
+    // things that happen to move together. `sink` and `stretch` come back on
+    // the same object so callers can dim and smear with the same falloff.
+    const warpPoint = (point, factor) => {
+        point.sink = 1;
+        point.stretch = 1;
+        for (const well of touchWells) {
+            const dx = point.x - well.x, dy = point.y - well.y;
+            const reach = well.reach;
+            const distanceSquared = dx * dx + dy * dy;
+            if (distanceSquared >= reach * reach) continue;
+            const distance = Math.sqrt(distanceSquared) || .001;
+            const u = distance / reach;
+            const rim = (1 - u) * (1 - u);
+            // Nearer layers move further for the same dent, so the depression
+            // has depth of its own rather than sliding as one flat picture.
+            const pull = well.depth * wellProfile(u) * reach * WELL_PULL * (.55 + factor * .38);
+            point.x -= dx / distance * pull;
+            point.y -= dy / distance * pull;
+            // The sheet shears in the direction the finger is going.
+            point.x += well.vx * well.depth * rim * .05;
+            point.y += well.vy * well.depth * rim * .05;
+            point.sink *= 1 - well.depth * rim * .34;
+            point.stretch *= 1 + Math.abs(well.depth) * wellProfile(u) * .4;
+        }
+        return point;
+    };
+    const warped = { x: 0, y: 0, sink: 1, stretch: 1 };
     const findWell = identifier => touchWells.find(well => well.id === identifier);
 
     const touchStart = (identifier, x, y) => {
@@ -1843,6 +1968,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     const syncIdleSleep = () => {
         clearTimeout(sleepTimer);
         sleepTimer = 0;
+        // Never park the loop while a finger is still holding a dent open.
+        if (touchWells.some(well => !well.releasedAt)) return;
         if (!document.documentElement.classList.contains('effects-background-idle')) {
             if (sleeping) { sleeping = false; lastFrame = 0; requestDraw(); }
             return;
