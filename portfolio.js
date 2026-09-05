@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const useHighEffects = mode === 'high';
         document.documentElement.dataset.effects = mode;
         document.documentElement.dataset.effectsReason = reason;
-        galaxy.setEnabled(useHighEffects);
+        galaxy.setQuality(mode);
         cursor.setEnabled(useHighEffects);
         swipeWake.setEnabled(useHighEffects);
         wakeEffectsBackground();
@@ -348,798 +348,1001 @@ function createSeededRandom(seed) {
 
 function setupGalaxyField(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    if (!context) return { move() {}, scroll() {}, setEnabled() {}, refreshLayout() {} };
+    if (!context) return { move() {}, scroll() {}, setQuality() {}, refreshLayout() {} };
 
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    let stars = [];
-    let dust = [];
-    let mediumStars = [];
-    let starClusterCenters = [];
-    let galaxies = [];
-    let tinyDistant = [];
-    let smallPlanets = [];
-    let mediumPlanets = [];
-    let largePlanets = [];
-    let massivePlanets = [];
-    let animationFrame = 0;
-    let enabled = true;
-    let previousTime = performance.now();
-    let lastDrawTime = 0;
-    let scrollPosition = window.scrollY;
-    let targetScrollPosition = window.scrollY;
-    let pageHeight = Math.max(document.documentElement.scrollHeight, height);
-    let scrollEnergy = 0;
-    const lowPowerDevice = (navigator.hardwareConcurrency || 4) <= 6
-        || ('deviceMemory' in navigator && navigator.deviceMemory <= 8);
-    let frameInterval = 1000 / (lowPowerDevice || width < 700 ? 24 : 30);
-    const pointer = {
-        x: width / 2,
-        y: height / 2,
-        targetX: width / 2,
-        targetY: height / 2,
-        velocityX: 0,
-        velocityY: 0,
-        active: false
+    // Keep the existing tiered, seeded canvas architecture. Regions now own
+    // their lights and haze, so a system has a shared composition at every scale.
+    const TAU = Math.PI * 2;
+    const colors = ['224,237,255', '174,206,237', '246,221,190', '207,199,227', '235,240,247', '205,168,156'];
+    const tiers = {
+        galaxies: { factor: .23, points: false },
+        dust: { factor: .34, points: true },
+        tinyDistant: { factor: .48, points: false },
+        clusterHaze: { factor: .7, points: false },
+        starClusters: { factor: .7, points: true },
+        stars: { factor: .68, points: true },
+        smallPlanets: { factor: .83, points: false },
+        mediumStars: { factor: .96, points: false },
+        mediumPlanets: { factor: 1.04, points: false },
+        largePlanets: { factor: 1.26, points: false },
+        massivePlanets: { factor: 1.58, points: false }
     };
-    const colors = ['222,240,255', '157,205,243', '245,184,124', '247,247,255', '133,167,208', '255,214,170', '196,178,255', '227,138,112'];
-
-    // Parallax helper: scales an object's distance from the vertical center
-    // of the viewport by its tier's factor. >1 travels further per scroll
-    // pixel (feels close/fast), <1 travels less (feels distant/slow) -- while
-    // every object still passes through the viewport once at its assigned
-    // document position, so nothing fails to appear or double-appears.
-    const applyParallax = (baseScreenY, factor) => (baseScreenY - height / 2) * factor + height / 2;
-
-    // --- Star clusters: instead of one diagonal "galaxy band", scatter a
-    // handful of seeded cluster centers down the page so star density reads
-    // as organic clumps-and-quiet-regions rather than a uniform scatter.
-    const buildStarClusterCenters = () => {
-        const rng = createSeededRandom(0xC0FFEE ^ Math.round(pageHeight));
-        const count = Math.max(4, Math.round(pageHeight / 850));
-        starClusterCenters = Array.from({ length: count }, () => ({
-            x: rng() * width,
-            y: rng() * pageHeight,
-            radius: 110 + rng() * 220
-        }));
+    let width = 0, height = 0, pixelRatio = 1;
+    let pageHeight = 0, scrollPosition = window.scrollY;
+    let quality = 'low', frameInterval = 1000 / 18;
+    let animationFrame = 0, layoutFrame = 0, layoutTimer = 0;
+    let lastFrame = 0, sceneTime = 0;
+    let protectedRects = [], visibleRects = [], regions = [], orbitingBodies = [], blackHoles = [], pulsars = [], layoutSignature = '';
+    const projectedHoles = [];
+    let navigationBottom = 80;
+    const spriteCache = new Map();
+    // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
+    const hasGiantLandmark = Math.random() < .08;
+    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false };
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const smoothstep = value => value * value * (3 - 2 * value);
+    const randomRange = (rng, min, max) => min + rng() * (max - min);
+    const chooseColor = rng => colors[rng() < .82 ? Math.floor(rng() * 5) : 5];
+    const createSprite = size => {
+        const sprite = document.createElement('canvas');
+        sprite.width = sprite.height = size;
+        return sprite;
     };
 
-    // Small-tier stars: size and brightness are rolled independently so the
-    // field mixes tiny-dim, tiny-bright, small-dim and small-bright points
-    // rather than always pairing "bigger" with "brighter".
-    const makeStar = () => {
-        const depth = .18 + Math.random() * .82;
-        const sizeSeed = Math.random();
-        const brightnessSeed = Math.random();
-        let x;
-        let documentY;
-        if (starClusterCenters.length && Math.random() < .4) {
-            const cluster = starClusterCenters[Math.floor(Math.random() * starClusterCenters.length)];
-            const angle = Math.random() * Math.PI * 2;
-            const dist = (Math.random() * .5 + Math.random() * .5) * cluster.radius;
-            x = cluster.x + Math.cos(angle) * dist;
-            documentY = cluster.y + Math.sin(angle) * dist;
-        } else {
-            x = Math.random() * width;
-            documentY = Math.random() * pageHeight;
+    // A small reusable atlas: all gradients are painted at rebuild, never in
+    // the animation loop. Three profiles separate stars, soft bodies and haze.
+    const lightSprite = (color, profile) => {
+        const key = `${color}:${profile}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const size = profile === 2 ? 256 : 128;
+        const sprite = createSprite(size);
+        const ctx = sprite.getContext('2d');
+        const radius = size / 2;
+        const glow = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+        const stops = profile === 2
+            ? [[0, .24], [.14, .20], [.32, .11], [.58, .036], [.82, .006], [1, 0]]
+            : profile === 1
+                ? [[0, 1], [.055, .99], [.12, .8], [.22, .38], [.4, .105], [.68, .018], [1, 0]]
+                : [[0, 1], [.025, .98], [.065, .67], [.16, .22], [.35, .055], [.64, .009], [1, 0]];
+        for (const [at, alpha] of stops) {
+            glow.addColorStop(at, `rgba(${profile !== 2 && at < .1 ? '255,253,248' : color},${alpha})`);
         }
-        return {
-            x: Math.min(width + 20, Math.max(-20, x)),
-            documentY: Math.min(pageHeight, Math.max(0, documentY)),
-            depth,
-            radius: .16 + sizeSeed * 1.1,
-            brightness: brightnessSeed,
-            driftX: (Math.random() - .5) * .06,
-            driftY: -.02 - Math.random() * .07,
-            phase: Math.random() * Math.PI * 2,
-            twinkleSpeed: .0009 + Math.random() * .0011,
-            flare: brightnessSeed > .8 && Math.random() < .3,
-            color: colors[Math.floor(Math.random() * colors.length)]
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, size, size);
+        spriteCache.set(key, sprite);
+        return sprite;
+    };
+
+    // Irregular elliptical concentrations of unresolved lights, with offset
+    // knots and dark lanes. These are procedural cached sprites, not textures.
+    const galaxySprite = (rng, color) => {
+        // Elliptical, elongated, irregular, edge-on, compact core, diffuse cloud.
+        const family = Math.floor(rng() * 6);
+        const flatten = [ .62, .3, .8, .09, .48, .95 ][family];
+        const sprite = createSprite(320);
+        const ctx = sprite.getContext('2d');
+        ctx.globalCompositeOperation = 'lighter';
+        const haze = lightSprite(color, 2);
+        ctx.drawImage(haze, 4, 160 - 150 * flatten, 312, 300 * flatten);
+        if (family === 4 || family === 0) {
+            ctx.globalAlpha = family === 4 ? .6 : .22;
+            ctx.drawImage(lightSprite(color, 1), 95, 160 - 65 * flatten, 130, 130 * flatten);
+        }
+        for (let knot = 0; knot < (family === 2 || family === 5 ? 8 : 3); knot++) {
+            const x = 55 + rng() * 200;
+            const y = 160 + (rng() - .5) * 100 * flatten + Math.sin(x * .027) * 15 * flatten;
+            ctx.globalAlpha = .22 + rng() * .35;
+            ctx.drawImage(haze, x - 58, y - 55 * flatten, 116, 110 * flatten);
+        }
+        for (let i = 0; i < 130; i++) {
+            const u = (rng() + rng() + rng() - 1.5) / 1.5;
+            const x = 160 + u * 145;
+            const y = 160 + (rng() + rng() - 1) * (1 - Math.abs(u)) * 100 * flatten + Math.sin(u * 5) * 12 * flatten;
+            const r = .18 + rng() ** 3 * 1.1;
+            ctx.globalAlpha = .06 + rng() ** 2 * .5;
+            ctx.fillStyle = `rgb(${color})`;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, TAU);
+            ctx.fill();
+        }
+        return sprite;
+    };
+
+    // Cached layered disk: asymmetric emission, a bent rear image, a photon
+    // ring, and a foreground disk crossing the horizon. No per-pixel filters.
+    const blackHoleSprite = (color, variant = 0) => {
+        const key = `black-hole:${color}:${variant}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const sprite = createSprite(512), ctx = sprite.getContext('2d');
+        ctx.translate(256, 256);
+        ctx.drawImage(lightSprite(color, 2), -240, -140, 480, 280);
+        const disk = front => {
+            for (let band = 0; band < 36; band++) {
+                const r = 65 + band * 4.5;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r, r * (.25 + variant * .035), 0,
+                    front ? 0 : Math.PI, front ? Math.PI : TAU);
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = `rgba(${band < 7 ? '255,242,218' : color},${(.38 * Math.exp(-band / 12)) * (front ? 1 : .65)})`;
+                ctx.stroke();
+            }
         };
+        disk(false);
+        // Light from the back of the disk appears bent above/below the shadow.
+        for (let band = 0; band < 12; band++) {
+            ctx.beginPath();
+            ctx.ellipse(0, -3, 62 + band * 1.4, 65 + band * .7, 0, Math.PI * 1.06, Math.PI * 1.94);
+            ctx.strokeStyle = `rgba(${color},${.22 * (1 - band / 12)})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+        const rim = ctx.createRadialGradient(0, 0, 47, 0, 0, 73);
+        rim.addColorStop(0, 'rgba(0,0,0,1)');
+        rim.addColorStop(.4, 'rgba(0,0,0,1)');
+        rim.addColorStop(.64, `rgba(${color},.34)`);
+        rim.addColorStop(.75, `rgba(${color},.12)`);
+        rim.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rim;
+        ctx.beginPath(); ctx.arc(0, 0, 73, 0, TAU); ctx.fill();
+        disk(true);
+        // Asymmetric hot crescent, never a saturated rainbow.
+        ctx.save();
+        ctx.globalAlpha = .16;
+        ctx.drawImage(lightSprite('255,239,217', 1), -97, -28, 100, 56);
+        ctx.restore();
+        spriteCache.set(key, sprite);
+        return sprite;
     };
 
-    const makeDust = () => ({
-        x: Math.random() * width,
-        documentY: Math.random() * pageHeight,
-        depth: .2 + Math.random() * .8,
-        radius: .12 + Math.random() * .52,
-        phase: Math.random() * Math.PI * 2,
-        twinkleSpeed: .001 + Math.random() * .0022,
-        color: colors[Math.floor(Math.random() * colors.length)]
-    });
-
-    // Medium tier (stars, not planets): sparse, prominent bright points with
-    // a large soft-edged white core, a faint color rim, and a wide soft halo
-    // -- always visible, unlike the small stars. They drift magnetically
-    // toward a nearby cursor, which is intentionally kept only on this tier.
-    const makeMediumStar = () => ({
-        x: Math.random() * width,
-        documentY: Math.random() * pageHeight,
-        depth: .3 + Math.random() * .7,
-        radius: 1.7 + Math.random() * 2.9,
-        brightness: .62 + Math.random() * .38,
-        driftY: -.01 - Math.random() * .03,
-        phase: Math.random() * Math.PI * 2,
-        twinkleSpeed: .00035 + Math.random() * .0006,
-        offsetX: 0,
-        offsetY: 0,
-        velocityX: 0,
-        velocityY: 0,
-        color: colors[Math.floor(Math.random() * colors.length)]
-    });
-
-    // --- Distant galaxies: abstract elongated smudges of light, never a
-    // literal spiral graphic. A handful of fixed tiny star-points are baked
-    // in at build time so each reads as an unresolved cluster, not a blob.
-    const galaxyColors = ['150,170,230', '190,160,220', '210,150,150', '160,200,220', '230,210,180'];
-    const makeGalaxy = (rng, x, documentY) => {
-        const galaxyWidth = 110 + rng() * 170;
-        const spotCount = 7 + Math.floor(rng() * 8);
-        const spots = Array.from({ length: spotCount }, () => ({
-            ox: (rng() - .5) * galaxyWidth * .85,
-            oy: (rng() - .5) * galaxyWidth * .32,
-            r: .5 + rng() * 1.1,
-            a: .1 + rng() * .22
-        }));
-        return {
-            x,
-            documentY,
-            angle: rng() * Math.PI,
-            width: galaxyWidth,
-            height: galaxyWidth * (.24 + rng() * .16),
-            color: galaxyColors[Math.floor(rng() * galaxyColors.length)],
-            alpha: .05 + rng() * .05,
-            phase: rng() * Math.PI * 2,
-            parallaxFactor: .18 + rng() * .14,
-            spots
-        };
-    };
-
-    const buildGalaxies = () => {
-        const rng = createSeededRandom(0x6A1A5E ^ Math.round(pageHeight));
-        const maximum = width < 700 ? 5 : lowPowerDevice ? 7 : 9;
-        const minimum = width < 700 ? 3 : lowPowerDevice ? 5 : 6;
-        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 700)));
-        galaxies = Array.from({ length: count }, () => makeGalaxy(rng, rng() * width, rng() * pageHeight));
-    };
-
-    // --- Extremely distant celestial objects: cheap soft glow points that
-    // exist purely to sell scale. No sphere shading, no texture.
-    const distantColors = ['196,214,255', '255,214,170', '196,178,255', '210,225,255', '255,196,170'];
-    const buildTinyDistant = () => {
-        const rng = createSeededRandom(0x517A5E ^ Math.round(pageHeight));
-        const maximum = width < 700 ? 26 : lowPowerDevice ? 45 : 70;
-        const minimum = width < 700 ? 16 : lowPowerDevice ? 28 : 40;
-        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 90)));
-        tinyDistant = Array.from({ length: count }, () => ({
-            x: rng() * width,
-            documentY: rng() * pageHeight,
-            radius: 1.4 + rng() * 2.6,
-            brightness: .35 + rng() * .5,
-            phase: rng() * Math.PI * 2,
-            twinkleSpeed: .0002 + rng() * .0004,
-            parallaxFactor: .5 + rng() * .2,
-            color: distantColors[Math.floor(rng() * distantColors.length)]
-        }));
-    };
-
-    // --- Planet instance factory shared by the small/medium/large/massive
-    // tiers. Same visual language as the reference field: a bright white
-    // center with a colored halo/rim around it, just at bigger sizes -- not
-    // a shaded sphere.
-    const makePlanetInstance = (rng, x, documentY, radius, parallaxFactor, color) => ({
-        x,
-        documentY,
-        radius,
-        parallaxFactor,
-        color: color || colors[Math.floor(rng() * colors.length)],
-        phase: rng() * Math.PI * 2,
-        pulseSpeed: .00005 + rng() * .00007,
-        alpha: .58 + rng() * .38,
-        driftY: -(.0015 + rng() * .004),
-        dim: false
-    });
-
-    // Every element that carries visible text (or is a clickable control),
-    // so planets can never land on top of something readable. The project
-    // modal is deliberately excluded -- it's a fixed-position overlay, so its
-    // rect is viewport-relative even when "closed" (opacity:0, not
-    // display:none); treating it as document-relative would produce a bogus
-    // protected zone that follows the current scroll position.
-    const largePlanetProtectedSelector = '.hero-badge, .hero-name, .hero-tagline, '
-        + '.social-links a, .resume-icon-unavailable, .hero-buttons .btn, '
-        + '.section-header, .section-label, .section-title, .section-subtitle, '
-        + '.bio-text, .about-highlight, .skill-group, .tag, '
-        + '.project-card, .project-title, .project-summary, .project-period, .project-category-badge, '
-        + '.project-library, .library-heading, .collection-toggle, .collection-copy, '
+    // Granular content protection leaves gutters and the spaces between
+    // collection rows available. The fixed navigation is handled separately.
+    const protectedSelector = '.hero-badge, .hero-name, .hero-tagline, .social-links a, '
+        + '.resume-icon-unavailable, .hero-buttons .btn, .section-label, .section-title, '
+        + '.section-subtitle, .bio-text, .about-highlight, .skill-group, .project-card, '
+        + '.library-heading, .collection-index, .collection-copy strong, .collection-copy small, '
+        + '.collection-toggle > i, .carousel-controls, .carousel-indicators, '
         + '.contact-desc, .contact-links .btn, footer';
-
-    const collectProtectedRects = () => {
-        const rects = [];
-        document.querySelectorAll(largePlanetProtectedSelector).forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
-            rects.push({
-                left: rect.left,
-                right: rect.right,
-                top: rect.top + window.scrollY,
-                bottom: rect.bottom + window.scrollY
-            });
-        });
-        return rects;
+    const textProtectionSelector = '.hero-name, .hero-tagline, .section-title, .section-subtitle, '
+        + '.bio-text, .library-heading, .collection-copy strong, .collection-copy small, .contact-desc';
+    const updateVisibleRects = () => {
+        visibleRects = protectedRects.filter(rect => rect.bottom > scrollPosition - 180 && rect.top < scrollPosition + height + 180);
+    };
+    const clearanceAt = (x, y, radius, rects) => {
+        let visibility = 1;
+        for (const rect of rects) {
+            const dx = Math.max(rect.left - x, 0, x - rect.right);
+            const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+            if (dx >= radius || dy >= radius) continue;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < radius) visibility = Math.min(visibility, smoothstep(distance / radius));
+        }
+        return visibility;
     };
 
-    // Shared placement loop: pick seeded candidates (optionally biased toward
-    // a cluster center for a natural-looking clump), reject any that would
-    // land on top of real content (buffer scaled to the visible glow, not
-    // just the solid core), and build planet instances from what remains.
-    // On layouts with no side gutter (e.g. a narrow single-column viewport),
-    // a full-strength clearance can be impossible to satisfy everywhere for
-    // every requested slot -- clearance relaxes once as a second pass, but
-    // never drops to zero: it is never acceptable for a planet to sit on top
-    // of text, so a tier is allowed to come up short of its target count
-    // rather than risk covering content.
-    const placePlanets = (rng, options) => {
-        const {
-            count, minRadius, maxRadius, parallaxFactor,
-            clearanceScale, topExclusion = 0, clusterChance = 0, protectedRects = null,
-            minSeparation = 0
-        } = options;
-        const clusterCenters = clusterChance > 0
-            ? Array.from({ length: Math.max(2, Math.round(count / 4)) }, () => ({
-                x: rng() * width,
-                y: topExclusion + rng() * Math.max(1, pageHeight - topExclusion)
-            }))
-            : [];
-        const rollCandidate = () => {
-            const radius = minRadius + rng() * (maxRadius - minRadius);
-            let x;
-            let documentY;
-            if (clusterCenters.length && rng() < clusterChance) {
-                const center = clusterCenters[Math.floor(rng() * clusterCenters.length)];
-                const angle = rng() * Math.PI * 2;
-                const dist = rng() * 220;
-                x = center.x + Math.cos(angle) * dist;
-                documentY = center.y + Math.sin(angle) * dist * .6;
-            } else {
-                x = rng() * width;
-                documentY = topExclusion + rng() * Math.max(1, pageHeight - topExclusion);
-            }
-            x = Math.min(width - radius * .2, Math.max(radius * .2, x));
-            documentY = Math.min(pageHeight - radius * .1, Math.max(topExclusion + radius * .1, documentY));
-            return { radius, x, documentY };
+    const makeObject = (rng, x, documentY, radius, color, options = {}) => ({
+        x, documentY, radius, color,
+        phase: rng() * TAU,
+        speed: .035 + rng() * .065,
+        drift: 1 + rng() * 5,
+        pulse: .035 + rng() * .12,
+        alpha: .2 + rng() ** 2 * .75,
+        stretch: .88 + rng() * .24,
+        angle: rng() * TAU,
+        orbit: rng() < .28 ? 2 + rng() * 5 : 0,
+        ...options
+    });
+    const add = (name, object) => tiers[name].objects.push(object);
+    const around = (rng, region, spread = 1) => {
+        const angle = rng() * TAU;
+        const distance = Math.pow(rng(), .68) * region.radius * spread;
+        return {
+            x: clamp(region.x + Math.cos(angle) * distance, -24, width + 24),
+            y: region.y + Math.sin(angle) * distance * region.flatten
         };
-        const results = [];
-        const clearancePasses = protectedRects ? [clearanceScale, Math.max(.6, clearanceScale * .65)] : [0];
-        for (const passScale of clearancePasses) {
-            if (results.length >= count) break;
-            let attempts = 0;
-            const maxAttempts = (count - results.length) * 80;
-            while (results.length < count && attempts < maxAttempts) {
-                attempts += 1;
-                const candidate = rollCandidate();
-                if (passScale > 0) {
-                    const clearance = candidate.radius * passScale;
-                    const overlaps = protectedRects.some(rect => (
-                        candidate.x + clearance > rect.left
-                        && candidate.x - clearance < rect.right
-                        && candidate.documentY + clearance > rect.top
-                        && candidate.documentY - clearance < rect.bottom
-                    ));
-                    if (overlaps) continue;
+    };
+    const placeBody = (rng, name, region, minRadius, maxRadius, anchor = false) => {
+        const radius = randomRange(rng, minRadius, maxRadius) * (width < 700 ? .75 : 1);
+        let position, score = -1;
+        // Prefer real negative space, but retain dim bodies when the layout is
+        // crowded; their alpha is checked again against the projected position.
+        for (let attempt = 0; attempt < 14; attempt++) {
+            const candidate = around(rng, region, anchor ? .45 : 1.25);
+            const candidateScore = clearanceAt(candidate.x, candidate.y, Math.max(8, radius * .48), protectedRects);
+            if (candidateScore > score) { position = candidate; score = candidateScore; }
+            if (score > .94) break;
+        }
+        const color = rng() < .7 ? region.color : chooseColor(rng);
+        add(name, makeObject(rng, position.x, position.y, radius, color, {
+            interactive: name.endsWith('Planets'),
+            alpha: anchor ? .78 + rng() * .22 : .16 + rng() ** 1.6 * .72,
+            sprite: lightSprite(color, rng() < .55 ? 1 : 0)
+        }));
+    };
+
+    const pickOpenPosition = (rng, targetX, targetY, radius, yJitter = 130) => {
+        let best = { x: targetX, y: targetY };
+        let bestScore = -1;
+        for (let attempt = 0; attempt < 22; attempt++) {
+            const x = clamp(targetX + randomRange(rng, -width * .16, width * .16), radius * .55, width - radius * .55);
+            const y = clamp(targetY + randomRange(rng, -yJitter, yJitter), radius * .35, pageHeight - radius * .35);
+            const score = clearanceAt(x, y, radius * .58, protectedRects);
+            if (score > bestScore) {
+                best = { x, y };
+                bestScore = score;
+            }
+            if (score > .97) break;
+        }
+        return best;
+    };
+
+    const buildMotionSystems = () => {
+        blackHoles = []; orbitingBodies = []; pulsars = [];
+        const rng = createSeededRandom(0xB1AC4A);
+        const mobile = width < 700;
+        // Spread the extra wells across the document, alternating open gutters.
+        const slots = [
+            { x: width * .91, y: height * .62, radius: mobile ? 62 : 110, factor: .88 },
+            { x: width * .09, y: pageHeight * .72, radius: mobile ? 24 : 38, factor: .48 }
+        ];
+        for (let i = 0; i < (mobile ? 2 : 3); i++) slots.push({
+            x: width * (i % 2 ? .88 : .12), y: pageHeight * [.31, .54, .9][i],
+            radius: mobile ? 45 + i * 5 : [72, 88, 60][i], factor: .82 + i * .07
+        });
+        if (!mobile && hasGiantLandmark) slots.push({
+            x: width + 95, y: pageHeight * .9, radius: 270, factor: 1.12
+        });
+        for (const [index, slot] of slots.entries()) {
+            const position = slot.radius > 200 ? slot : pickOpenPosition(rng, slot.x, slot.y, slot.radius, 120);
+            const hole = {
+                x: position.x, documentY: position.y, radius: slot.radius,
+                parallaxFactor: slot.factor, angle: randomRange(rng, -.45, .45),
+                phase: rng() * TAU, color: index ? '190,215,239' : '239,218,187',
+                sprite: blackHoleSprite(index ? '190,215,239' : '239,218,187', index % 2)
+            };
+            blackHoles.push(hole);
+            // A couple of nearby bodies give the cursor something reachable to
+            // nudge into the well. They use the same physics as existing planets.
+            if (slot.radius < 200) for (let i = 0; i < 2; i++) {
+                const direction = hole.x > width / 2 ? Math.PI : 0;
+                const angle = direction + (i ? .46 : -.46);
+                add('mediumPlanets', makeObject(rng,
+                    hole.x + Math.cos(angle) * hole.radius * 1.95,
+                    hole.documentY + Math.sin(angle) * hole.radius * 1.6,
+                    randomRange(rng, 18, 31), hole.color,
+                    { interactive: true, alpha: .72, sprite: lightSprite(hole.color, 1), drift: 2 }
+                ));
+            }
+            // Just two tiny grains, faded at the shadow; no repeating explosion.
+            for (let i = 0; i < (mobile ? 1 : 2); i++) orbitingBodies.push({
+                hole, radius: randomRange(rng, 2, 4), angle: rng() * TAU,
+                orbitRadius: hole.radius * randomRange(rng, .65, .94),
+                speed: randomRange(rng, .035, .06), phase: rng() * TAU,
+                sprite: lightSprite(hole.color, 0)
+            });
+        }
+        for (let index = 0; index < regions.length; index += mobile ? 6 : 4) {
+            const region = regions[index];
+            orbitingBodies.push({
+                region, radius: randomRange(rng, 8, 20), angle: rng() * TAU,
+                orbitRadius: randomRange(rng, 28, 80), speed: randomRange(rng, .022, .048),
+                phase: rng() * TAU, sprite: lightSprite(region.color, 1)
+            });
+        }
+        for (let i = 0; i < (mobile ? 1 : 2); i++) {
+            const pos = pickOpenPosition(rng, width * (i ? .88 : .14), pageHeight * (i ? .86 : .38), 35);
+            pulsars.push({ x: pos.x, documentY: pos.y, phase: rng() * TAU,
+                factor: .55, sprite: lightSprite('206,225,248', 0) });
+        }
+    };
+
+    // One scheduler, driven by active scene time. Tab hiding, Low FX and
+    // reduced motion pause time; no timers, catch-up storms, or page-length rate.
+    const eventDefinitions = {
+        shootingStar: { minCooldown: 5, maxCooldown: 12, probability: .96, maxSimultaneous: 1, cost: 1, high: true, low: false },
+        meteor: { minCooldown: 70, maxCooldown: 145, probability: .68, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        comet: { minCooldown: 180, maxCooldown: 340, probability: .55, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        supernova: { minCooldown: 130, maxCooldown: 260, probability: .6, maxSimultaneous: 1, cost: 2, high: true, low: false },
+        distantExplosion: { minCooldown: 105, maxCooldown: 220, probability: .58, maxSimultaneous: 1, cost: 1, high: true, low: false }
+    };
+    const eventPool = Array.from({ length: 3 }, () => ({ active: false }));
+    const eventDue = {};
+    let nextEventWindow = 0;
+    const eventRandom = Math.random;
+    const cooldown = definition => randomRange(eventRandom, definition.minCooldown, definition.maxCooldown) * (width > 0 && width < 700 ? 1.6 : 1);
+    const resetEvents = () => {
+        for (const event of eventPool) event.active = false;
+        for (const [type, definition] of Object.entries(eventDefinitions)) eventDue[type] = sceneTime + cooldown(definition);
+        nextEventWindow = sceneTime + 4;
+    };
+    // Select an entire trajectory against cached protected rectangles. Coordinates
+    // are inverted through the depth projection so events begin in this viewport.
+    const chooseEventPath = (type, factor) => {
+        const stationary = type === 'supernova' || type === 'distantExplosion';
+        let best = null, bestScore = -1;
+        for (let attempt = 0; attempt < 24; attempt++) {
+            const fromLeft = eventRandom() < .5;
+            const x = randomRange(eventRandom, .06, .94) * width;
+            const y = randomRange(eventRandom, navigationBottom + 45, height - 40);
+            const dx = stationary ? 0 : (fromLeft ? 1 : -1) * Math.min(width * .72, randomRange(eventRandom, 200, 650)) * factor;
+            const dy = stationary ? 0 : dx * randomRange(eventRandom, -.65, .65);
+            const protection = type === 'meteor' ? 60 : type === 'comet' ? 95 : stationary ? 80 : 16;
+            let score = 1;
+            for (let sample = 0; sample <= 8; sample++) {
+                const progress = type === 'comet' ? -.65 + sample / 8 * 1.65 : sample / 8;
+                const sx = x + dx * progress, sy = y + dy * progress;
+                if (sy < navigationBottom + 20 || sy > height + 20 || sx < -40 || sx > width + 40) score *= .8;
+                score = Math.min(score, clearanceAt(sx, sy + scrollPosition, protection, visibleRects));
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = { x, documentY: scrollPosition + height / 2 + (y - height / 2) / factor, dx, dy: dy / factor };
+            }
+            if (score > .92) break;
+        }
+        // Bright effects wait for another opportunity if the viewport is crowded.
+        return bestScore < .55 && type !== 'shootingStar' ? null : best;
+    };
+    const cometTailSprite = color => {
+        const key = `comet-tail:${color}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const sprite = createSprite(384), ctx = sprite.getContext('2d');
+        const length = ctx.createLinearGradient(0, 0, 384, 0);
+        length.addColorStop(0, `rgba(${color},0)`);
+        length.addColorStop(.35, `rgba(${color},.16)`);
+        length.addColorStop(.9, `rgba(${color},.65)`);
+        length.addColorStop(1, `rgba(${color},.15)`);
+        ctx.fillStyle = length;
+        ctx.fillRect(0, 0, 384, 384);
+        ctx.globalCompositeOperation = 'destination-in';
+        const cross = ctx.createLinearGradient(0, 0, 0, 384);
+        cross.addColorStop(0, 'transparent');
+        cross.addColorStop(.3, 'rgba(0,0,0,.03)');
+        cross.addColorStop(.47, 'rgba(0,0,0,.4)');
+        cross.addColorStop(.5, 'rgba(0,0,0,1)');
+        cross.addColorStop(.53, 'rgba(0,0,0,.4)');
+        cross.addColorStop(.7, 'rgba(0,0,0,.03)');
+        cross.addColorStop(1, 'transparent');
+        ctx.fillStyle = cross; ctx.fillRect(0, 0, 384, 384);
+        spriteCache.set(key, sprite);
+        return sprite;
+    };
+    const spawnEvent = type => {
+        const event = eventPool.find(item => !item.active);
+        if (!event) return false;
+        const depth = eventRandom();
+        const factor = .45 + depth * .6;
+        const path = chooseEventPath(type, factor);
+        if (!path) return false;
+        const color = ['220,235,255', '246,231,208', '194,218,241'][Math.floor(eventRandom() * 3)];
+        const duration = type === 'shootingStar' ? randomRange(eventRandom, .65, 1.5) - depth * .22
+            : type === 'meteor' ? randomRange(eventRandom, 1.6, 2.6)
+            : type === 'comet' ? randomRange(eventRandom, 18, 28)
+            : type === 'supernova' ? randomRange(eventRandom, 6, 9) : randomRange(eventRandom, 5, 8);
+        Object.assign(event, path, {
+            active: true, type, factor, color, duration, started: sceneTime,
+            capture: null,
+            depth, bend: randomRange(eventRandom, -12, 12),
+            radius: type === 'meteor' ? 9 + depth * 6 : 4 + depth * 5,
+            alpha: type === 'meteor' ? .38 : type === 'comet' ? .34 : type === 'supernova' ? .8 : type === 'distantExplosion' ? .6 : .3 + depth * .18,
+            tail: type === 'comet' ? .65 : randomRange(eventRandom, .1, .22),
+            sprite: lightSprite(color, 0), bloom: lightSprite(color, 2),
+            tailSprite: type === 'comet' ? cometTailSprite(color) : null
+        });
+        return true;
+    };
+    const updateEvents = time => {
+        for (const event of eventPool) if (event.active && (event.capture
+            ? time - event.capture.started >= event.capture.duration
+            : time - event.started >= event.duration)) event.active = false;
+        for (const [type, definition] of Object.entries(eventDefinitions)) {
+            if (eventDue[type] === undefined) eventDue[type] = time + cooldown(definition);
+            if (time < eventDue[type] || time < nextEventWindow || !definition[quality]) continue;
+            const active = eventPool.filter(event => event.active);
+            const cost = active.reduce((total, event) => total + eventDefinitions[event.type].cost, 0);
+            if (active.length >= (width < 700 ? 1 : 2) || cost + definition.cost > (width < 700 ? 2 : 3)
+                || active.filter(event => event.type === type).length >= definition.maxSimultaneous) continue;
+            eventDue[type] = time + cooldown(definition);
+            if (eventRandom() > definition.probability || !spawnEvent(type)) continue;
+            nextEventWindow = time + randomRange(eventRandom, 2.5, 5);
+        }
+    };
+
+    const buildScene = () => {
+        for (const tier of Object.values(tiers)) tier.objects = [];
+        regions = [];
+        const mobile = width < 700;
+        const density = mobile ? .68 : 1;
+        const segmentHeight = 680;
+        const segments = Math.ceil(pageHeight / segmentHeight);
+        // Each segment has its own seed: expanding a collection adds scenery
+        // below without rerolling the entire universe above it.
+        for (let segment = 0; segment < segments; segment++) {
+            const rng = createSeededRandom(0xC0FFEE ^ Math.imul(segment + 1, 2654435761));
+            const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
+            const side = rng() < .5;
+            const region = {
+                x: width * (side ? randomRange(rng, .015, .23) : randomRange(rng, .73, .985)),
+                y: segment * segmentHeight + randomRange(rng, 170, 480),
+                radius: Math.min(width * .45, randomRange(rng, 220, 380)),
+                flatten: randomRange(rng, .45, .95),
+                color: chooseColor(rng), type
+            };
+            regions.push(region);
+            const companion = { ...region, x: width - region.x, y: region.y + randomRange(rng, -220, 240), radius: region.radius * .65 };
+            regions.push(companion);
+
+            // Give the hero's open right side its own system, above the title's
+            // baseline, instead of pushing every light below the large heading.
+            if (segment === 0 && !mobile) {
+                region.x = width * .90;
+                region.y = height * .35;
+                region.radius = width * .15;
+            }
+
+            // An even baseline under uneven systems, with many nearly invisible
+            // points. No page-height cap that thins out expanded collections.
+            const count = Math.round((width * segmentHeight / 1550) * density);
+            for (let i = 0; i < count; i++) {
+                const clustered = rng() < .58;
+                const group = rng() < .73 ? region : companion;
+                const position = clustered ? around(rng, group) : { x: rng() * width, y: (segment + rng()) * segmentHeight };
+                const depth = rng();
+                add('stars', makeObject(rng, position.x, position.y, .34 + rng() ** 1.8 * 1.1, chooseColor(rng), {
+                    alpha: .13 + rng() ** 1.8 * .72, drift: .5 + depth * 2.5, pulse: .08 + rng() * .2
+                }));
+            }
+            for (let i = 0; i < Math.round(90 * density); i++) {
+                const position = around(rng, rng() < .6 ? region : companion, 1.4);
+                add('dust', makeObject(rng, position.x, position.y, .2 + rng() * .42, region.color, { alpha: .06 + rng() * .16, drift: .3, pulse: .04 }));
+            }
+            for (const group of [region, companion]) {
+                add('galaxies', makeObject(rng, group.x, group.y, group.radius * (type === 2 ? 1.1 : .75), group.color, {
+                    sprite: galaxySprite(rng, group.color), alpha: type === 2 ? .8 : .5, drift: 2, stretch: .65 + rng() * .3, haze: true
+                }));
+                // Cluster-linked atmospheric light shares the midground's
+                // projection, while the unresolved galaxy sits much farther back.
+                add('smallPlanets', makeObject(rng, group.x, group.y, group.radius * 1.6, group.color, {
+                    sprite: lightSprite(group.color, 2), alpha: .13, stretch: .66, haze: true, drift: 3
+                }));
+                for (let i = 0; i < Math.round(10 * density); i++) {
+                    const p = around(rng, group, 1.3);
+                    const color = rng() < .7 ? group.color : chooseColor(rng);
+                    add('tinyDistant', makeObject(rng, p.x, p.y, 3 + rng() * 8, color, {
+                        sprite: lightSprite(color, 0), alpha: .17 + rng() * .5, drift: .7
+                    }));
                 }
-                // Keeps prominent tiers from piling into one overlapping
-                // "disc" -- small/medium tiers can still cluster (that reads
-                // as a star cluster), but large/massive need real gaps.
-                if (minSeparation > 0) {
-                    const tooClose = results.some(other => {
-                        const dx = candidate.x - other.x;
-                        const dy = candidate.documentY - other.documentY;
-                        const minDist = (candidate.radius + other.radius) * minSeparation;
-                        return dx * dx + dy * dy < minDist * minDist;
-                    });
-                    if (tooClose) continue;
-                }
-                const instance = makePlanetInstance(rng, candidate.x, candidate.documentY, candidate.radius, parallaxFactor);
-                if (rng() < .16) instance.dim = true;
-                results.push(instance);
+                for (let i = 0; i < Math.round((type === 2 ? 11 : 16) * density); i++) placeBody(rng, 'smallPlanets', group, 7, 18);
+                for (let i = 0; i < Math.round(7 * density); i++) placeBody(rng, 'mediumStars', group, 12, 27);
+                for (let i = 0; i < Math.round((type === 1 ? 5 : 4) * density); i++) placeBody(rng, 'mediumPlanets', group, 25, 52);
+                placeBody(rng, 'largePlanets', group, 64, 115, type !== 2);
+            }
+            if (type === 0) placeBody(rng, 'largePlanets', region, 85, 140, true);
+        }
+        // A few much bigger crops sell scale. Their hot center stays close to
+        // the edge and their atmospheric envelope extends far beyond it.
+        const rng = createSeededRandom(0x4A551);
+        const anchorCount = 1;
+        for (let i = 0; i < anchorCount; i++) {
+            const radius = randomRange(rng, 270, 430) * (mobile ? .56 : 1);
+            const left = i % 2 !== 0;
+            const offset = radius * randomRange(rng, .015, .075);
+            const color = colors[[2, 1, 4, 3, 2][i]];
+            add('massivePlanets', makeObject(rng, left ? -offset : width + offset,
+                i === 0 ? height * .39 : pageHeight * ([.065, .27, .49, .73, .94][i]), radius, color, {
+                    alpha: .22, sprite: lightSprite(color, 2), drift: 2, pulse: .025, orbit: 0
+                }));
+        }
+        buildMotionSystems();
+        // Compact, multi-core star clusters share one depth, so their haze and
+        // individual lights stay together as the page moves.
+        for (let i = 0; i < Math.min(7, Math.ceil(pageHeight / 1100)); i++) {
+            const clusterRng = createSeededRandom(0x57A2C ^ Math.imul(i + 1, 2654435761));
+            const radius = randomRange(clusterRng, 60, 105) * (mobile ? .65 : 1);
+            const p = pickOpenPosition(clusterRng, width * (i % 2 ? .82 : .18),
+                500 + i * 1050, radius, 180);
+            const color = chooseColor(clusterRng);
+            add('clusterHaze', makeObject(clusterRng, p.x, p.y, radius * 1.8, color,
+                { sprite: lightSprite(color, 2), alpha: .32, haze: true, drift: .5, orbit: 0 }));
+            for (let j = 0; j < (mobile ? 42 : 78); j++) {
+                const angle = clusterRng() * TAU;
+                const distance = clusterRng() ** 1.5 * radius;
+                const knot = j % 3 - 1;
+                add('starClusters', makeObject(clusterRng,
+                    p.x + Math.cos(angle) * distance + knot * radius * .22,
+                    p.y + Math.sin(angle) * distance * .7 + knot * radius * .1,
+                    .28 + clusterRng() ** 2 * 1.05, color,
+                    { alpha: .18 + clusterRng() * .56, drift: .5, orbit: 0, pulse: .08 }));
             }
         }
-        return results;
+        for (const tier of Object.values(tiers)) {
+            tier.objects.sort((a, b) => a.documentY - b.documentY);
+            tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
+            if (tier.objects.some(item => item.interactive)) tier.margin += 360;
+        }
     };
 
-    // Large planets: prominent but not massive, kept clear of real content.
-    const buildLargePlanets = () => {
-        const rng = createSeededRandom(0x1A46E ^ Math.round(pageHeight));
-        const maximum = width < 700 ? 6 : lowPowerDevice ? 9 : 12;
-        const minimum = width < 700 ? 4 : lowPowerDevice ? 6 : 7;
-        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 340)));
-        largePlanets = placePlanets(rng, {
-            count, minRadius: 34, maxRadius: 62, parallaxFactor: 1.22,
-            clearanceScale: 1.5, topExclusion: 150, clusterChance: 0, minSeparation: 2.1,
-            protectedRects: collectProtectedRects()
+    const lowerBound = (objects, y) => {
+        let lo = 0, hi = objects.length;
+        while (lo < hi) {
+            const middle = (lo + hi) >>> 1;
+            if (objects[middle].documentY < y) lo = middle + 1;
+            else hi = middle;
+        }
+        return lo;
+    };
+    const projectPosition = (x, documentY, factor, cameraX, cameraY) => ({
+        x: x - cameraX * factor * factor * 10,
+        y: (documentY - scrollPosition - height / 2) * factor + height / 2 - cameraY * factor * factor * 7
+    });
+    const prepareBlackHoles = (time, cameraX, cameraY) => {
+        projectedHoles.length = 0;
+        for (const hole of blackHoles) {
+            const position = projectPosition(hole.x + Math.sin(time * .018 + hole.phase) * 3,
+                hole.documentY, hole.parallaxFactor, cameraX, cameraY);
+            if (position.y < -hole.radius * 2 || position.y > height + hole.radius * 2) continue;
+            hole.screenX = position.x; hole.screenY = position.y;
+            hole.clearance = clearanceAt(position.x, position.y + scrollPosition, hole.radius * .8, visibleRects);
+            projectedHoles.push(hole);
+        }
+    };
+    const capturePoint = (capture, progress, cameraX, cameraY) => {
+        const hole = capture.hole;
+        const center = projectPosition(hole.x + Math.sin(sceneTime * .018 + hole.phase) * 3,
+            hole.documentY, hole.parallaxFactor, cameraX, cameraY);
+        const angle = capture.angle + progress * capture.turn;
+        const radius = capture.radius * (1 - progress) ** 1.25;
+        return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
+    };
+    const beginCapture = (hole, x, y, time, duration) => ({
+        hole, started: time, duration, angle: Math.atan2(y - hole.screenY, x - hole.screenX),
+        radius: Math.hypot(x - hole.screenX, y - hole.screenY),
+        turn: hole.angle < 0 ? -2.4 : 2.4
+    });
+    const interactBody = (body, baseX, baseY, delta, time, cameraX, cameraY) => {
+        // Offsets keep the seeded anchors and sorted culling intact. Only the
+        // visible body moves; far-away scenery never enters the physics loop.
+        const state = body.physics || (body.physics = {
+            ox: 0, oy: 0, vx: 0, vy: 0, capture: null, respawnAt: 0, returnedAt: -10
         });
+        state.x = baseX + state.ox; state.y = baseY + state.oy;
+        state.scale = 1; state.alpha = 1;
+        if (time < state.respawnAt) { state.alpha = 0; return state; }
+        if (state.respawnAt) {
+            state.ox = state.oy = state.vx = state.vy = 0;
+            state.respawnAt = 0; state.returnedAt = time;
+        }
+        if (state.capture) {
+            const progress = clamp((time - state.capture.started) / state.capture.duration, 0, 1);
+            const p = capturePoint(state.capture, progress, cameraX, cameraY);
+            state.x = p.x; state.y = p.y;
+            state.scale = 1 - progress * .94;
+            state.alpha = 1 - smoothstep(clamp((progress - .42) / .58, 0, 1));
+            if (progress >= 1) {
+                state.capture = null; state.respawnAt = time + 14 + (Math.sin(body.phase) + 1) * 5;
+            }
+            return state;
+        }
+        const seconds = delta / 1000;
+        let ax = -state.ox * .65, ay = -state.oy * .65;
+        if (pointer.active) {
+            let dx = state.x - (pointer.targetX + 1) * width / 2;
+            let dy = state.y - (pointer.targetY + 1) * height / 2;
+            let distance = Math.hypot(dx, dy);
+            if (distance < .5) { dx = Math.cos(body.phase); dy = Math.sin(body.phase); distance = 1; }
+            const reach = 135 + Math.min(40, body.radius * .4);
+            if (distance < reach) {
+                const force = (1 - distance / reach) ** 2 * 1150 / (1 + body.radius / 100);
+                ax += (dx / distance - dy / distance * .16) * force;
+                ay += (dy / distance + dx / distance * .16) * force;
+            }
+        }
+        let nearest = null, nearestRatio = Infinity;
+        for (const hole of projectedHoles) {
+            const dx = hole.screenX - state.x, dy = hole.screenY - state.y;
+            const distance = Math.hypot(dx, dy);
+            const ratio = distance / hole.radius;
+            if (ratio < 1.8 && ratio < nearestRatio) { nearest = hole; nearestRatio = ratio; }
+        }
+        if (nearest && time - state.returnedAt > 3) {
+            const dx = nearest.screenX - state.x, dy = nearest.screenY - state.y;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            const strength = (1 - nearestRatio / 1.8) ** 2 * 520;
+            ax += dx / distance * strength - dy / distance * strength * .14;
+            ay += dy / distance * strength + dx / distance * strength * .14;
+            if (nearestRatio < .82) {
+                state.capture = beginCapture(nearest, state.x, state.y, time, 1.9 + body.radius / 100);
+                return state;
+            }
+        }
+        const damping = Math.exp(-2.2 * seconds);
+        state.vx = (state.vx + ax * seconds) * damping;
+        state.vy = (state.vy + ay * seconds) * damping;
+        const speed = Math.hypot(state.vx, state.vy);
+        if (speed > 250) { state.vx *= 250 / speed; state.vy *= 250 / speed; }
+        state.ox = clamp(state.ox + state.vx * seconds, -360, 360);
+        state.oy = clamp(state.oy + state.vy * seconds, -360, 360);
+        state.x = baseX + state.ox; state.y = baseY + state.oy;
+        state.alpha = smoothstep(clamp((time - state.returnedAt) / 2.5, 0, 1));
+        return state;
     };
-
-    // Medium planets: a distinct tier from the bright "medium star" points
-    // above -- these are the main mid-ground depth layer.
-    const buildMediumPlanets = () => {
-        const rng = createSeededRandom(0x2CE55 ^ Math.round(pageHeight));
-        const maximum = width < 700 ? 9 : lowPowerDevice ? 14 : 20;
-        const minimum = width < 700 ? 6 : lowPowerDevice ? 9 : 12;
-        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 220)));
-        mediumPlanets = placePlanets(rng, {
-            count, minRadius: 12, maxRadius: 24, parallaxFactor: 1,
-            clearanceScale: 1.3, topExclusion: 90, clusterChance: .3, minSeparation: 1.5,
-            protectedRects: collectProtectedRects()
-        });
+    const drawBlackHoles = () => {
+        for (const hole of projectedHoles) {
+            context.save();
+            context.translate(hole.screenX, hole.screenY);
+            context.rotate(hole.angle);
+            // Source-over is essential: additive black cannot obscure a star.
+            context.globalCompositeOperation = 'source-over';
+            context.globalAlpha = 1;
+            context.fillStyle = '#000';
+            context.beginPath(); context.arc(0, 0, hole.radius * .28, 0, TAU); context.fill();
+            context.globalAlpha = .25 + hole.clearance * .65;
+            const size = hole.radius * 2.6;
+            context.drawImage(hole.sprite, -size / 2, -size / 2, size, size);
+            context.restore();
+        }
     };
-
-    // Small planets: numerous, mostly free to scatter (too small to threaten
-    // legibility), some deliberately dim so they half-blend into the starfield.
-    const buildSmallPlanets = () => {
-        const rng = createSeededRandom(0x3D166 ^ Math.round(pageHeight));
-        const maximum = width < 700 ? 16 : lowPowerDevice ? 26 : 40;
-        const minimum = width < 700 ? 10 : lowPowerDevice ? 16 : 22;
-        const count = Math.round(Math.min(maximum, Math.max(minimum, pageHeight / 120)));
-        smallPlanets = placePlanets(rng, {
-            count, minRadius: 4, maxRadius: 11, parallaxFactor: .85,
-            clearanceScale: 1.2, topExclusion: 0, clusterChance: .3, minSeparation: 1.1,
-            protectedRects: collectProtectedRects()
-        });
+    const drawOrbitingBodies = (delta, time, animated, cameraX, cameraY) => {
+        for (const body of orbitingBodies) {
+            const anchor = body.hole || body.region;
+            if (animated) {
+                body.angle += body.speed * delta / 1000;
+                if (body.hole) {
+                    body.orbitRadius -= delta * .00055;
+                    if (body.orbitRadius < body.hole.radius * .25) body.orbitRadius = body.hole.radius * .94;
+                }
+            }
+            const worldX = anchor.x + Math.cos(body.angle) * body.orbitRadius;
+            const worldY = (anchor.documentY ?? anchor.y) + Math.sin(body.angle) * body.orbitRadius * .36;
+            let p = projectPosition(worldX, worldY, body.hole ? anchor.parallaxFactor : .96, cameraX, cameraY);
+            if (!body.hole && animated) p = interactBody(body, p.x, p.y, delta, time, cameraX, cameraY);
+            if (p.y < -40 || p.y > height + 40) continue;
+            const fade = body.hole ? smoothstep(clamp((body.orbitRadius / anchor.radius - .28) / .3, 0, 1))
+                * smoothstep(clamp((.94 - body.orbitRadius / anchor.radius) / .1, 0, 1)) : 1;
+            context.globalAlpha = (.035 + clearanceAt(p.x, p.y + scrollPosition, body.radius, visibleRects) * .38) * fade * (p.alpha ?? 1);
+            const radius = body.radius * (p.scale ?? 1);
+            context.drawImage(body.sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+        }
     };
-
-    // Massive foreground planets: curated anchors (not fully random) spread
-    // across the whole page length, each pushed off a screen edge so only a
-    // crop of the sphere shows -- this is what sells "enormous".
-    const massiveAnchors = [
-        { side: 'left', frac: .02, color: '245,184,124' },
-        { side: 'right', frac: .24, color: '133,167,208' },
-        { side: 'left', frac: .5, color: '157,205,243' },
-        { side: 'right', frac: .74, color: '196,178,255' },
-        { side: 'left', frac: .95, color: '255,214,170' }
-    ];
-    const buildMassivePlanets = () => {
-        const rng = createSeededRandom(0x4A551);
-        const sizeScale = width < 700 ? .55 : lowPowerDevice ? .75 : 1;
-        massivePlanets = massiveAnchors.map(anchor => {
-            const radius = (72 + rng() * 46) * sizeScale;
-            const occlusion = radius * (rng() * .55 - .05);
-            const x = anchor.side === 'left' ? occlusion : width - occlusion;
-            const documentY = Math.max(radius * .3, Math.min(pageHeight - radius * .3, pageHeight * anchor.frac));
-            return makePlanetInstance(rng, x, documentY, radius, 1.55, anchor.color);
-        });
+    const drawPulsars = (time, cameraX, cameraY) => {
+        for (const star of pulsars) {
+            const p = projectPosition(star.x, star.documentY, star.factor, cameraX, cameraY);
+            if (p.y < -40 || p.y > height + 40) continue;
+            const alpha = (.3 + Math.sin(time * .42 + star.phase) * .12)
+                * clearanceAt(p.x, p.y + scrollPosition, 35, visibleRects);
+            context.save();
+            context.translate(p.x, p.y);
+            context.rotate(time * .025 + star.phase);
+            context.globalAlpha = alpha * .13;
+            context.drawImage(star.sprite, -2, -32, 4, 64);
+            context.globalAlpha = alpha;
+            context.drawImage(star.sprite, -14, -14, 28, 28);
+            context.restore();
+        }
     };
-
-    // --- Rendering ---------------------------------------------------------
-
-    // Matches how the reference field renders its points of light: one
-    // continuous bloom -- a solid white core that decays smoothly through the
-    // tint to nothing -- drawn additively so overlapping glows brighten each
-    // other like real light instead of stacking up as translucent discs.
-    // No ring, no outline, no second pass: any hard edge anywhere in here is
-    // what made the big ones read as flat discs with rings around them.
-    const drawPlanet = (planet, screenX, screenY, time) => {
-        const { radius, color } = planet;
-        const alpha = planet.dim ? planet.alpha * .45 : planet.alpha;
-        const pulse = .88 + Math.sin(time * planet.pulseSpeed + planet.phase) * .12;
-        const intensity = Math.min(1, alpha * pulse);
-
+    const eventPoint = (event, progress, cameraX, cameraY) => projectPosition(
+        event.x + event.dx * progress,
+        event.documentY + event.dy * progress + Math.sin(progress * Math.PI) * event.bend,
+        event.factor, cameraX, cameraY
+    );
+    const tryCaptureEvent = (event, time, cameraX, cameraY, delta) => {
+        if (event.capture || !['shootingStar', 'meteor', 'comet'].includes(event.type)) return;
+        const progress = clamp((time - event.started) / event.duration, 0, 1);
+        // Sweep the actual head segment, including between frames, so a fast
+        // star cannot jump through a well. Both endpoints use today's camera.
+        const p = eventPoint(event, Math.max(0, progress - delta / 1000 / event.duration), cameraX, cameraY);
+        const q = eventPoint(event, progress, cameraX, cameraY);
+        const vx = q.x - p.x, vy = q.y - p.y;
+        const lengthSquared = vx * vx + vy * vy;
+        let first = null, firstT = Infinity;
+        for (const hole of projectedHoles) {
+            const dx = p.x - hole.screenX, dy = p.y - hole.screenY;
+            const reach = hole.radius * 1.12;
+            let t = 0;
+            if (dx * dx + dy * dy > reach * reach) {
+                if (lengthSquared < .001) continue;
+                const b = 2 * (dx * vx + dy * vy);
+                const c = dx * dx + dy * dy - reach * reach;
+                const discriminant = b * b - 4 * lengthSquared * c;
+                if (discriminant < 0) continue;
+                t = (-b - Math.sqrt(discriminant)) / (2 * lengthSquared);
+                if (t < 0 || t > 1) continue;
+            }
+            if (t < firstT) { first = hole; firstT = t; }
+        }
+        if (first) event.capture = beginCapture(first, p.x + vx * firstT, p.y + vy * firstT,
+            time, event.type === 'comet' ? 2.5 : 1.25);
+    };
+    const drawCapturedEvent = (event, time, cameraX, cameraY) => {
+        const progress = clamp((time - event.capture.started) / event.capture.duration, 0, 1);
+        const p = capturePoint(event.capture, progress, cameraX, cameraY);
+        const alpha = event.alpha * smoothstep(clamp(progress / .08, 0, 1))
+            * (1 - smoothstep(clamp((progress - .55) / .45, 0, 1)))
+            * (.04 + .96 * clearanceAt(p.x, p.y + scrollPosition, 20, visibleRects));
         context.save();
-        context.translate(screenX, screenY);
         context.globalCompositeOperation = 'lighter';
-
-        const bloom = context.createRadialGradient(0, 0, 0, 0, 0, radius);
-        bloom.addColorStop(0, `rgba(255,255,255,${intensity.toFixed(3)})`);
-        bloom.addColorStop(.05, `rgba(255,255,255,${(intensity * .97).toFixed(3)})`);
-        bloom.addColorStop(.1, `rgba(255,255,255,${(intensity * .86).toFixed(3)})`);
-        bloom.addColorStop(.16, `rgba(${color},${(intensity * .66).toFixed(3)})`);
-        bloom.addColorStop(.25, `rgba(${color},${(intensity * .4).toFixed(3)})`);
-        bloom.addColorStop(.38, `rgba(${color},${(intensity * .19).toFixed(3)})`);
-        bloom.addColorStop(.56, `rgba(${color},${(intensity * .075).toFixed(3)})`);
-        bloom.addColorStop(.78, `rgba(${color},${(intensity * .022).toFixed(3)})`);
-        bloom.addColorStop(1, `rgba(${color},0)`);
-        context.fillStyle = bloom;
-        context.beginPath();
-        context.arc(0, 0, radius, 0, Math.PI * 2);
-        context.fill();
-
+        context.strokeStyle = `rgb(${event.color})`;
+        context.lineWidth = event.type === 'meteor' ? 1.5 : .8;
+        for (let i = 10; i > 0; i--) {
+            const a = capturePoint(event.capture, Math.max(0, progress - i * .012), cameraX, cameraY);
+            const b = capturePoint(event.capture, Math.max(0, progress - (i - 1) * .012), cameraX, cameraY);
+            context.globalAlpha = alpha * (1 - i / 11);
+            context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
+        }
+        context.globalAlpha = alpha;
+        const radius = event.radius * (1 - progress * .95);
+        context.drawImage(event.sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
         context.restore();
     };
-
-    const syncPageHeight = () => {
-        const nextPageHeight = Math.max(document.documentElement.scrollHeight, height);
-        if (nextPageHeight === pageHeight) return;
-        const scale = nextPageHeight / Math.max(pageHeight, 1);
-        stars.forEach(star => { star.documentY *= scale; });
-        dust.forEach(mote => { mote.documentY *= scale; });
-        mediumStars.forEach(star => { star.documentY *= scale; });
-        galaxies.forEach(obj => { obj.documentY *= scale; });
-        tinyDistant.forEach(obj => { obj.documentY *= scale; });
-        smallPlanets.forEach(obj => { obj.documentY *= scale; });
-        mediumPlanets.forEach(obj => { obj.documentY *= scale; });
-        largePlanets.forEach(obj => { obj.documentY *= scale; });
-        massivePlanets.forEach(obj => { obj.documentY *= scale; });
-        pageHeight = nextPageHeight;
+    const drawEvents = (time, cameraX, cameraY, delta) => {
+        for (const event of eventPool) {
+            if (!event.active) continue;
+            tryCaptureEvent(event, time, cameraX, cameraY, delta);
+            if (event.capture) { drawCapturedEvent(event, time, cameraX, cameraY); continue; }
+            const progress = clamp((time - event.started) / event.duration, 0, 1);
+            const stationary = event.type === 'supernova' || event.type === 'distantExplosion';
+            const p = eventPoint(event, stationary ? 0 : progress, cameraX, cameraY);
+            if (p.y < -150 || p.y > height + 150) continue;
+            const protection = stationary ? 85 : event.type === 'meteor' ? 50 : 20;
+            const clearance = clearanceAt(p.x, p.y + scrollPosition, protection, visibleRects);
+            const envelope = smoothstep(clamp(progress / (stationary ? .16 : .12), 0, 1))
+                * (1 - smoothstep(clamp((progress - (stationary ? .2 : .72)) / (stationary ? .8 : .28), 0, 1)));
+            const alpha = event.alpha * envelope * (.035 + clearance * .965);
+            context.save();
+            context.globalCompositeOperation = 'lighter';
+            if (stationary) {
+                const radius = (event.type === 'supernova' ? 115 : 65) * (.55 + event.depth * .45);
+                context.globalAlpha = alpha;
+                context.drawImage(event.bloom, p.x - radius, p.y - radius, radius * 2, radius * 2);
+                context.drawImage(event.sprite, p.x - 19, p.y - 19, 38, 38);
+                if (event.type === 'distantExplosion') {
+                    const ring = 4 + progress * radius * .55;
+                    context.globalAlpha = alpha * .19;
+                    context.strokeStyle = `rgb(${event.color})`;
+                    context.lineWidth = .65;
+                    context.beginPath(); context.arc(p.x, p.y, ring, 0, TAU); context.stroke();
+                }
+            } else {
+                const comet = event.type === 'comet';
+                const meteor = event.type === 'meteor';
+                const segments = width < 700 ? 10 : 18;
+                if (comet) {
+                    const tailLength = Math.hypot(event.dx, event.dy * event.factor) * event.tail;
+                    context.save();
+                    context.translate(p.x, p.y);
+                    context.rotate(Math.atan2(event.dy * event.factor, event.dx));
+                    context.globalAlpha = alpha;
+                    context.drawImage(event.tailSprite, -tailLength, -28, tailLength, 56);
+                    context.restore();
+                } else for (let i = segments; i > 0; i--) {
+                    const behind = i / segments;
+                    const q = eventPoint(event, progress - event.tail * behind, cameraX, cameraY);
+                    const r = eventPoint(event, progress - event.tail * (i - 1) / segments, cameraX, cameraY);
+                    const pathClearance = clearanceAt(q.x, q.y + scrollPosition, protection, visibleRects);
+                    context.globalAlpha = alpha * (1 - behind) ** 1.7 * (.04 + pathClearance * .96);
+                    context.strokeStyle = `rgb(${event.color})`;
+                    context.lineWidth = (meteor ? 1.4 : .55) + event.depth * .8;
+                    context.lineCap = 'butt';
+                    context.beginPath(); context.moveTo(q.x, q.y); context.lineTo(r.x, r.y); context.stroke();
+                }
+                context.globalAlpha = alpha * 1.45;
+                context.drawImage(event.sprite, p.x - event.radius, p.y - event.radius, event.radius * 2, event.radius * 2);
+                if (meteor || comet) {
+                    context.globalAlpha = alpha * .65;
+                    const glow = comet ? 48 : 23;
+                    context.drawImage(event.bloom, p.x - glow, p.y - glow, glow * 2, glow * 2);
+                }
+                if (meteor) for (let fragment = 0; fragment < (width < 700 ? 2 : 3); fragment++) {
+                    const q = eventPoint(event, progress - .035 * (fragment + 1), cameraX, cameraY);
+                    context.globalAlpha = alpha * .2;
+                    const offset = Math.sin(progress * 4 + fragment * 2) * (4 + progress * 9);
+                    context.drawImage(event.sprite, q.x - 3, q.y + offset - 3, 6, 6);
+                }
+            }
+            context.restore();
+        }
     };
-
-    const draw = (time, force = false) => {
-        if (!enabled) return;
-        if (!force && time - lastDrawTime < frameInterval) {
+    const draw = timestamp => {
+        animationFrame = 0;
+        if (document.hidden || quality !== 'high') return;
+        const animated = !reducedMotion.matches;
+        if (animated && timestamp - lastFrame < frameInterval - 1) {
             animationFrame = requestAnimationFrame(draw);
             return;
         }
-
-        const delta = Math.min((time - previousTime) / 16.67, 2);
-        previousTime = time;
-        lastDrawTime = time;
+        const delta = lastFrame ? Math.min(timestamp - lastFrame, 80) : 16;
+        lastFrame = timestamp;
+        if (animated) sceneTime += delta * .001;
+        const time = reducedMotion.matches ? 0 : sceneTime;
+        const ease = 1 - Math.exp(-delta / 280);
+        pointer.x += ((animated && pointer.active ? pointer.targetX : 0) - pointer.x) * ease;
+        pointer.y += ((animated && pointer.active ? pointer.targetY : 0) - pointer.y) * ease;
+        const cameraX = animated ? pointer.x : 0;
+        const cameraY = animated ? pointer.y : 0;
         context.clearRect(0, 0, width, height);
-        pointer.x += (pointer.targetX - pointer.x) * .16;
-        pointer.y += (pointer.targetY - pointer.y) * .16;
-        pointer.velocityX *= .8;
-        pointer.velocityY *= .8;
-        scrollPosition = targetScrollPosition;
-        scrollEnergy *= .84;
-        syncPageHeight();
+        context.globalCompositeOperation = 'lighter';
+        prepareBlackHoles(time, cameraX, cameraY);
 
-        // LAYER: distant galaxies -- almost stationary, barely noticed.
-        for (const galaxy of galaxies) {
-            const baseY = galaxy.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, galaxy.parallaxFactor);
-            if (drawY < -galaxy.width || drawY > height + galaxy.width) continue;
-            const pulse = .85 + Math.sin(time * .00004 + galaxy.phase) * .15;
-            context.save();
-            context.translate(galaxy.x, drawY);
-            context.rotate(galaxy.angle);
-            context.save();
-            context.scale(1, galaxy.height / galaxy.width);
-            const smudge = context.createRadialGradient(0, 0, 0, 0, 0, galaxy.width / 2);
-            smudge.addColorStop(0, `rgba(${galaxy.color},${(galaxy.alpha * pulse).toFixed(3)})`);
-            smudge.addColorStop(.55, `rgba(${galaxy.color},${(galaxy.alpha * .45 * pulse).toFixed(3)})`);
-            smudge.addColorStop(1, 'rgba(0,0,0,0)');
-            context.fillStyle = smudge;
-            context.beginPath();
-            context.arc(0, 0, galaxy.width / 2, 0, Math.PI * 2);
-            context.fill();
-            context.restore();
-            for (const spot of galaxy.spots) {
-                context.beginPath();
-                context.fillStyle = `rgba(${galaxy.color},${spot.a})`;
-                context.arc(spot.ox, spot.oy, spot.r, 0, Math.PI * 2);
-                context.fill();
-            }
-            context.restore();
-        }
-
-        // LAYER: tiny distant objects -- pure scale cues, cheapest to draw.
-        for (const obj of tinyDistant) {
-            const baseY = obj.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, obj.parallaxFactor);
-            if (drawY < -20 || drawY > height + 20) continue;
-            const twinkle = .75 + Math.sin(time * obj.twinkleSpeed + obj.phase) * .25;
-            const alpha = obj.brightness * twinkle;
-            const glow = context.createRadialGradient(obj.x, drawY, 0, obj.x, drawY, obj.radius * 4.5);
-            glow.addColorStop(0, `rgba(${obj.color},${(alpha * .5).toFixed(3)})`);
-            glow.addColorStop(1, 'rgba(0,0,0,0)');
-            context.fillStyle = glow;
-            context.beginPath();
-            context.arc(obj.x, drawY, obj.radius * 4.5, 0, Math.PI * 2);
-            context.fill();
-            context.beginPath();
-            context.fillStyle = `rgba(${obj.color},${alpha.toFixed(3)})`;
-            context.arc(obj.x, drawY, obj.radius, 0, Math.PI * 2);
-            context.fill();
-        }
-
-        // LAYER: small planets.
-        for (const planet of smallPlanets) {
-            const baseY = planet.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, planet.parallaxFactor);
-            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
-            planet.documentY += planet.driftY * delta;
-            drawPlanet(planet, planet.x, drawY, time);
-        }
-
-        for (const star of stars) {
-            const oldY = star.documentY - scrollPosition;
-            const speed = .55 + star.depth * 1.2;
-            star.x += star.driftX * speed * delta;
-            star.documentY += (star.driftY * speed - scrollEnergy * star.depth * .006) * delta;
-
-            let illumination = 0;
-            if (pointer.active) {
-                const dx = star.x - pointer.x;
-                const dy = (star.documentY - scrollPosition) - pointer.y;
-                const distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared < 44100) {
-                    illumination = Math.max(0, 1 - Math.sqrt(distanceSquared) / 250);
-                }
-                if (distanceSquared > 1 && distanceSquared < 57600) {
-                    const distance = Math.sqrt(distanceSquared);
-                    const response = (1 - distance / 240) ** 2;
-                    const force = response * star.depth * .72 * delta;
-                    const swirl = response * .24 * delta;
-                    star.x += dx / distance * force - dy / distance * swirl + pointer.velocityX * force * .018;
-                    star.documentY += dy / distance * force + dx / distance * swirl + pointer.velocityY * force * .018;
-                }
-            }
-
-            if (star.documentY < -8) star.documentY = pageHeight + 8;
-            else if (star.documentY > pageHeight + 8) star.documentY = -8;
-            if (star.x < -8) star.x = width + 8;
-            else if (star.x > width + 8) star.x = -8;
-
-            const alpha = Math.min(.94, (.035 + star.brightness * .62) * (.72 + Math.sin(time * star.twinkleSpeed + star.phase) * .16) + illumination * .72);
-            const drawX = star.x;
-            const drawY = star.documentY - scrollPosition;
-
-            if (star.brightness > .4 && (illumination > .04 || star.flare)) {
-                const glowRadius = star.radius * (4.5 + illumination * 14);
-                const glow = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, glowRadius);
-                glow.addColorStop(0, `rgba(${star.color},${Math.min(.2, .035 + illumination * .16)})`);
-                glow.addColorStop(.34, `rgba(${star.color},${Math.min(.08, illumination * .06)})`);
-                glow.addColorStop(1, 'rgba(0,0,0,0)');
-                context.fillStyle = glow;
-                context.beginPath();
-                context.arc(drawX, drawY, glowRadius, 0, Math.PI * 2);
-                context.fill();
-            }
-
-            context.beginPath();
-            context.fillStyle = `rgba(${star.color},${alpha})`;
-            context.arc(drawX, drawY, star.radius * (.65 + star.depth) * (1 + illumination * .65), 0, Math.PI * 2);
-            context.fill();
-
-            if (illumination > .28 && star.depth > .48) {
-                context.beginPath();
-                context.strokeStyle = `rgba(${star.color},${illumination * .2})`;
-                context.lineWidth = .45;
-                context.arc(drawX, drawY, 3 + illumination * 5, 0, Math.PI * 2);
-                context.stroke();
-            }
-
-            if (star.flare && alpha > .32) {
-                const flareSize = 2.5 + star.depth * 2.5;
-                context.beginPath();
-                context.strokeStyle = `rgba(${star.color},${alpha * .28})`;
-                context.lineWidth = .45;
-                context.moveTo(drawX - flareSize, drawY);
-                context.lineTo(drawX + flareSize, drawY);
-                context.moveTo(drawX, drawY - flareSize);
-                context.lineTo(drawX, drawY + flareSize);
-                context.stroke();
-            }
-
-            if (Math.abs(scrollEnergy) > 3 && star.depth > .68) {
-                context.beginPath();
-                context.strokeStyle = `rgba(${star.color},${Math.min(alpha * .28, .14)})`;
-                context.lineWidth = .5;
-                context.moveTo(drawX, drawY);
-                context.lineTo(drawX, oldY + scrollEnergy * star.depth * .55);
-                context.stroke();
-            }
-        }
-
-        for (const mote of dust) {
-            const baseY = mote.documentY - scrollPosition;
-            if (baseY < -3 || baseY > height + 3) continue;
-            let drawX = mote.x;
-            let drawY = baseY;
-            let illumination = 0;
-            if (pointer.active) {
-                const dx = drawX - pointer.x;
-                const dy = drawY - pointer.y;
-                const distance = Math.hypot(dx, dy);
-                if (distance < 190) {
-                    const response = (1 - distance / 190) ** 2;
-                    illumination = response;
-                    if (distance > 1) {
-                        drawX += dx / distance * response * 8;
-                        drawY += dy / distance * response * 8;
+        for (const tier of Object.values(tiers)) {
+            const factor = reducedMotion.matches ? 1 : tier.factor;
+            const minY = scrollPosition + height / 2 - (height / 2 + tier.margin) / factor;
+            const maxY = scrollPosition + height / 2 + (height / 2 + tier.margin) / factor;
+            const objects = tier.objects;
+            for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
+                const object = objects[i];
+                // The seeded anchor stays fixed; a bounded spring offset carries
+                // cursor impulses and gravity independently of camera parallax.
+                const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
+                const orbit = animated ? Math.sin(time * .018 + object.phase) * object.orbit : 0;
+                let x = object.x + motion + orbit - cameraX * factor * factor * 10;
+                let y = (object.documentY - scrollPosition - height / 2) * factor + height / 2
+                    + motion * .6 - cameraY * factor * factor * 7;
+                const physics = animated && object.interactive
+                    ? interactBody(object, x, y, delta, time, cameraX, cameraY) : null;
+                if (physics) { x = physics.x; y = physics.y; }
+                // Only background light bends. A few cheap local mass checks,
+                // without touching page pixels or allocating per-star objects.
+                let lensStretch = 1;
+                if (width >= 700 && !reducedMotion.matches && factor < .9) for (const hole of projectedHoles) {
+                    if (factor >= hole.parallaxFactor) continue;
+                    const dx = x - hole.screenX, dy = y - hole.screenY;
+                    const reach = hole.radius * 1.35;
+                    const distanceSquared = dx * dx + dy * dy;
+                    if (distanceSquared < reach * reach && distanceSquared > 1) {
+                        const distance = Math.sqrt(distanceSquared);
+                        const influence = (1 - distance / reach) ** 2;
+                        const shift = Math.min(5, hole.radius * .035) * influence;
+                        x += dx / distance * shift; y += dy / distance * shift;
+                        lensStretch = 1 + influence * .45;
                     }
                 }
-            }
-            const alpha = Math.min(.76, (.018 + mote.depth * .11) * (.72 + Math.sin(time * mote.twinkleSpeed + mote.phase) * .22) + illumination * .42);
-            if (illumination > .08 && mote.depth > .4) {
-                const glowRadius = mote.radius * (4 + illumination * 9);
-                const glow = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, glowRadius);
-                glow.addColorStop(0, `rgba(${mote.color},${Math.min(.16, .02 + illumination * .1)})`);
-                glow.addColorStop(1, 'rgba(0,0,0,0)');
-                context.fillStyle = glow;
-                context.beginPath();
-                context.arc(drawX, drawY, glowRadius, 0, Math.PI * 2);
-                context.fill();
-            }
-            context.beginPath();
-            context.fillStyle = `rgba(${mote.color},${alpha})`;
-            context.arc(drawX, drawY, mote.radius * (1 + illumination * .6), 0, Math.PI * 2);
-            context.fill();
-        }
-
-        // LAYER: medium planets.
-        for (const planet of mediumPlanets) {
-            const baseY = planet.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, planet.parallaxFactor);
-            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
-            planet.documentY += planet.driftY * delta;
-            drawPlanet(planet, planet.x, drawY, time);
-        }
-
-        for (const bright of mediumStars) {
-            const baseY = bright.documentY - scrollPosition;
-            if (baseY < -80 || baseY > height + 80) continue;
-            bright.documentY += bright.driftY * (.55 + bright.depth) * delta;
-
-            let illumination = 0;
-            if (pointer.active) {
-                const dx = (bright.x + bright.offsetX) - pointer.x;
-                const dy = (baseY + bright.offsetY) - pointer.y;
-                const distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared > 1 && distanceSquared < 152100) {
-                    const distance = Math.sqrt(distanceSquared);
-                    illumination = Math.max(0, 1 - distance / 390);
-                    const response = illumination ** 2;
-                    const pull = response * .85 * delta;
-                    bright.velocityX += -dx / distance * pull;
-                    bright.velocityY += -dy / distance * pull;
+                const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
+                const radius = object.radius * scale * (physics ? physics.scale : 1);
+                if (x + radius < 0 || x - radius > width || y + radius < 0 || y - radius > height) continue;
+                let alpha = object.alpha * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
+                if (physics) alpha *= physics.alpha;
+                if (!tier.points) {
+                    const clearance = clearanceAt(x, y + scrollPosition, Math.max(10, radius * .46), visibleRects);
+                    // A dim remnant remains behind text; hotter objects emerge
+                    // continuously as parallax carries them into negative space.
+                    alpha *= object.haze ? .5 + clearance * .5 : .07 + clearance * .93;
+                    alpha *= .1 + .9 * smoothstep(clamp((y - navigationBottom + radius * .1) / Math.max(24, radius * .5), 0, 1));
+                    if (animated && pointer.active && !object.haze && factor > .7) {
+                        const dx = x - (pointer.x + 1) * width / 2;
+                        const dy = y - (pointer.y + 1) * height / 2;
+                        alpha *= 1 + Math.max(0, 1 - (dx * dx + dy * dy) / 50000) * .075;
+                    }
+                }
+                context.globalAlpha = clamp(alpha, 0, 1);
+                if (tier.points) {
+                    context.fillStyle = `rgb(${object.color})`;
+                    context.beginPath();
+                    context.ellipse(x, y, radius * lensStretch, radius, 0, 0, TAU);
+                    context.fill();
+                } else {
+                    context.save();
+                    context.translate(x, y);
+                    context.rotate(object.angle);
+                    context.drawImage(object.sprite, -radius, -radius * object.stretch, radius * 2, radius * 2 * object.stretch);
+                    context.restore();
                 }
             }
-            const damping = Math.pow(.9, delta);
-            bright.velocityX *= damping;
-            bright.velocityY *= damping;
-            bright.offsetX += bright.velocityX * delta;
-            bright.offsetY += bright.velocityY * delta;
-            const offsetDistance = Math.hypot(bright.offsetX, bright.offsetY);
-            if (offsetDistance > 30) {
-                const offsetScale = 30 / offsetDistance;
-                bright.offsetX *= offsetScale;
-                bright.offsetY *= offsetScale;
+        }
+        drawOrbitingBodies(delta, time, animated, cameraX, cameraY);
+        drawPulsars(time, cameraX, cameraY);
+        if (animated) {
+            updateEvents(time);
+            drawEvents(time, cameraX, cameraY, delta);
+        }
+        drawBlackHoles(); // The dark horizon occludes captured bodies and trails.
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = 'source-over';
+        if (animated) animationFrame = requestAnimationFrame(draw);
+    };
+    const requestDraw = () => {
+        if (!animationFrame && !document.hidden && quality === 'high') animationFrame = requestAnimationFrame(draw);
+    };
+
+    // DOM reads happen in a coalesced layout pass, never in draw(). Observe
+    // content visibility and collection growth as well as window resizing.
+    const refreshLayout = () => {
+        if (layoutFrame) return;
+        layoutFrame = requestAnimationFrame(() => {
+            layoutFrame = 0;
+            if (quality !== 'high') return;
+            const nextWidth = window.innerWidth, nextHeight = window.innerHeight;
+            const nextPageHeight = Math.max(document.documentElement.scrollHeight, nextHeight);
+            const resize = nextWidth !== width || nextHeight !== height;
+            width = nextWidth; height = nextHeight; pageHeight = nextPageHeight;
+            frameInterval = 1000 / (width < 700 ? 24 : 30);
+            scrollPosition = window.scrollY;
+            const ratio = Math.min(window.devicePixelRatio || 1, quality === 'high' && width >= 700 ? 1.5 : 1);
+            if (resize || ratio !== pixelRatio) {
+                pixelRatio = ratio;
+                canvas.width = Math.round(width * pixelRatio);
+                canvas.height = Math.round(height * pixelRatio);
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+                context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
             }
-
-            const drawX = bright.x + bright.offsetX;
-            const drawY = baseY + bright.offsetY;
-            const twinkle = .8 + Math.sin(time * bright.twinkleSpeed + bright.phase) * .2;
-            const alpha = Math.min(1, bright.brightness * twinkle + illumination * .45);
-            const radius = bright.radius * (1 + illumination * .4);
-
-            context.save();
-            context.translate(drawX, drawY);
-
-            const haloRadius = radius * (7.5 + illumination * 3);
-            const halo = context.createRadialGradient(0, 0, 0, 0, 0, haloRadius);
-            halo.addColorStop(0, `rgba(${bright.color},${alpha * .34})`);
-            halo.addColorStop(.4, `rgba(${bright.color},${alpha * .12})`);
-            halo.addColorStop(1, 'rgba(0,0,0,0)');
-            context.fillStyle = halo;
-            context.beginPath();
-            context.arc(0, 0, haloRadius, 0, Math.PI * 2);
-            context.fill();
-
-            const coreRadius = radius * 1.15;
-            const core = context.createRadialGradient(0, 0, 0, 0, 0, coreRadius);
-            core.addColorStop(0, `rgba(255,255,255,${Math.min(1, alpha * 1.05)})`);
-            core.addColorStop(.62, `rgba(255,255,255,${alpha * .88})`);
-            core.addColorStop(.88, `rgba(${bright.color},${alpha * .55})`);
-            core.addColorStop(1, `rgba(${bright.color},0)`);
-            context.fillStyle = core;
-            context.beginPath();
-            context.arc(0, 0, coreRadius, 0, Math.PI * 2);
-            context.fill();
-
-            context.beginPath();
-            context.strokeStyle = `rgba(${bright.color},${alpha * .5})`;
-            context.lineWidth = Math.max(.5, radius * .1);
-            context.arc(0, 0, coreRadius * .92, 0, Math.PI * 2);
-            context.stroke();
-
-            context.restore();
-        }
-
-        // LAYER: large planets.
-        for (const planet of largePlanets) {
-            const baseY = planet.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, planet.parallaxFactor);
-            if (drawY < -planet.radius * 4 || drawY > height + planet.radius * 4) continue;
-            planet.documentY += planet.driftY * delta;
-            drawPlanet(planet, planet.x, drawY, time);
-        }
-
-        // LAYER: massive foreground planets -- drawn last so they read as
-        // closest to the camera.
-        for (const planet of massivePlanets) {
-            const baseY = planet.documentY - scrollPosition;
-            const drawY = applyParallax(baseY, planet.parallaxFactor);
-            if (drawY < -planet.radius * 2.2 || drawY > height + planet.radius * 2.2) continue;
-            planet.documentY += planet.driftY * delta * .4;
-            drawPlanet(planet, planet.x, drawY, time);
-        }
-
-        if (enabled && !reducedMotion.matches && !document.hidden) animationFrame = requestAnimationFrame(draw);
+            protectedRects = [];
+            for (const element of document.querySelectorAll(protectedSelector)) {
+                const rect = element.getBoundingClientRect();
+                if (!rect.width || !rect.height || element.closest('[hidden]')) continue;
+                const bounds = [];
+                if (element.matches(textProtectionSelector)) {
+                    // Protect the actual lines, not the empty remainder of a
+                    // full-width heading or collection button. Only layout work.
+                    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+                    const range = document.createRange();
+                    while (walker.nextNode()) {
+                        if (!walker.currentNode.textContent.trim()) continue;
+                        range.selectNodeContents(walker.currentNode);
+                        bounds.push(...range.getClientRects());
+                    }
+                } else bounds.push(rect);
+                for (const bound of bounds) {
+                    protectedRects.push({ left: bound.left - 8, right: bound.right + 8, top: bound.top + scrollPosition - 9, bottom: bound.bottom + scrollPosition + 9 });
+                }
+            }
+            navigationBottom = document.querySelector('.navbar')?.getBoundingClientRect().bottom || 80;
+            updateVisibleRects();
+            const signature = `${width}:${Math.round(pageHeight / 80)}:${quality}`;
+            if (signature !== layoutSignature) {
+                layoutSignature = signature;
+                buildScene();
+            }
+            requestDraw();
+        });
     };
-
-    const resize = () => {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        frameInterval = 1000 / (lowPowerDevice || width < 700 ? 24 : 30);
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
-        pageHeight = Math.max(document.documentElement.scrollHeight, height);
-        const pageRatio = Math.min(Math.max(pageHeight / Math.max(height, 1), 1), 4);
-        const maximumStars = width < 700 ? 680 : lowPowerDevice ? 1300 : 2200;
-        const minimumStars = width < 700 ? 300 : lowPowerDevice ? 520 : 680;
-        const starCount = Math.round(Math.min(maximumStars, Math.max(minimumStars, (width * height / 2700) * pageRatio)));
-        const maximumDust = width < 700 ? 230 : lowPowerDevice ? 360 : 500;
-        const minimumDust = width < 700 ? 130 : lowPowerDevice ? 200 : 260;
-        const dustCount = Math.round(Math.min(maximumDust, Math.max(minimumDust, pageHeight / 22)));
-        const maximumMediumStars = width < 700 ? 16 : lowPowerDevice ? 26 : 38;
-        const minimumMediumStars = width < 700 ? 7 : lowPowerDevice ? 11 : 15;
-        const mediumStarCount = Math.round(Math.min(maximumMediumStars, Math.max(minimumMediumStars, pageHeight / 150)));
-        buildStarClusterCenters();
-        stars = Array.from({ length: starCount }, makeStar);
-        dust = Array.from({ length: dustCount }, makeDust);
-        mediumStars = Array.from({ length: mediumStarCount }, makeMediumStar);
-        buildGalaxies();
-        buildTinyDistant();
-        buildSmallPlanets();
-        buildMediumPlanets();
-        buildLargePlanets();
-        buildMassivePlanets();
-        if (reducedMotion.matches) draw(performance.now(), true);
+    const deferLayout = () => {
+        if (quality !== 'high') return;
+        clearTimeout(layoutTimer);
+        layoutTimer = window.setTimeout(refreshLayout, 120);
     };
-
-    const start = () => {
+    const setQuality = mode => {
+        const changed = quality !== mode;
+        quality = mode;
+        if (changed) resetEvents();
+        canvas.hidden = mode !== 'high';
         cancelAnimationFrame(animationFrame);
-        if (!enabled) return;
-        previousTime = performance.now();
-        lastDrawTime = 0;
-        if (reducedMotion.matches) draw(previousTime, true);
-        else if (!document.hidden) animationFrame = requestAnimationFrame(draw);
+        animationFrame = 0;
+        lastFrame = 0;
+        if (mode === 'high') refreshLayout();
     };
-
     const move = event => {
-        if (!enabled) return;
-        pointer.velocityX = Math.max(-28, Math.min(28, event.clientX - pointer.targetX));
-        pointer.velocityY = Math.max(-28, Math.min(28, event.clientY - pointer.targetY));
-        pointer.targetX = event.clientX;
-        pointer.targetY = event.clientY;
+        if (quality !== 'high' || reducedMotion.matches || event.pointerType === 'touch') return;
+        pointer.targetX = clamp(event.clientX / width * 2 - 1, -1, 1);
+        pointer.targetY = clamp(event.clientY / height * 2 - 1, -1, 1);
         pointer.active = true;
     };
-
-    const scroll = scrollY => {
-        if (!enabled) return;
-        targetScrollPosition = scrollY;
-        scrollPosition = scrollY;
-        scrollEnergy = 0;
+    const scroll = y => {
+        if (quality !== 'high') return;
+        scrollPosition = y;
+        updateVisibleRects();
+        requestDraw(); // Reduced motion redraws only on user/layout changes.
+        deferLayout();
     };
-
-    document.documentElement.addEventListener('pointerleave', () => {
-        pointer.active = false;
-    });
-    window.addEventListener('resize', resize, { passive: true });
-    document.addEventListener('visibilitychange', start);
-    reducedMotion.addEventListener('change', start);
-    resize();
-    start();
-    const setEnabled = nextEnabled => {
-        enabled = nextEnabled;
-        canvas.hidden = !enabled;
+    document.documentElement.addEventListener('pointerleave', () => { pointer.active = false; });
+    window.addEventListener('resize', deferLayout, { passive: true });
+    document.addEventListener('visibilitychange', () => {
         cancelAnimationFrame(animationFrame);
-        if (enabled) {
-            resize();
-            start();
-        }
-    };
-    // Rebuild only the placement that depends on real DOM layout (large and
-    // medium planets check against rendered content); everything else is
-    // already positioned from page-length alone.
-    const refreshLayout = () => {
-        buildLargePlanets();
-        buildMediumPlanets();
-    };
-    return { move, scroll, setEnabled, refreshLayout };
+        animationFrame = 0;
+        lastFrame = 0;
+        if (!document.hidden) refreshLayout();
+    });
+    reducedMotion.addEventListener('change', () => { lastFrame = 0; resetEvents(); requestDraw(); });
+    document.addEventListener('contentvisibilityautostatechange', deferLayout, true);
+    document.addEventListener('transitionend', event => {
+        if (event.target.matches('.section, .collection-panel')) deferLayout();
+    });
+    const observer = new ResizeObserver(deferLayout);
+    observer.observe(document.body);
+    document.querySelectorAll('main .section, .hero-section').forEach(section => observer.observe(section));
+    document.fonts?.ready.then(refreshLayout);
+    refreshLayout();
+    return { move, scroll, setQuality, refreshLayout };
 }
+
 
 function setupSwipeWake(canvas, reducedMotion) {
     const context = canvas.getContext('2d', { alpha: true, desynchronized: true });
