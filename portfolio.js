@@ -771,8 +771,10 @@ function setupGalaxyField(canvas, reducedMotion) {
             const rng = createSeededRandom(0xC0FFEE ^ Math.imul(segment + 1, 2654435761));
             const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
             const side = rng() < .5;
+            const centerMass = rng() < .24;
             const region = {
-                x: width * (side ? randomRange(rng, .015, .23) : randomRange(rng, .73, .985)),
+                x: width * (centerMass ? randomRange(rng, .36, .64)
+                    : (side ? randomRange(rng, .015, .23) : randomRange(rng, .73, .985))),
                 y: segment * segmentHeight + randomRange(rng, 170, 480),
                 radius: Math.min(width * .45, randomRange(rng, 220, 380)),
                 flatten: randomRange(rng, .45, .95),
@@ -869,7 +871,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         for (let i = 0; i < Math.min(7, Math.ceil(pageHeight / 1100)); i++) {
             const clusterRng = createSeededRandom(0x57A2C ^ Math.imul(i + 1, 2654435761));
             const radius = randomRange(clusterRng, 60, 105) * (mobile ? .65 : 1);
-            const p = pickOpenPosition(clusterRng, width * (i % 2 ? .82 : .18),
+            const clusterColumn = [ .18, .5, .82 ][i % 3];
+            const p = pickOpenPosition(clusterRng, width * clusterColumn,
                 500 + i * 1050, radius, 180);
             const color = chooseColor(clusterRng);
             add('clusterHaze', makeObject(clusterRng, p.x, p.y, radius * 1.8, color,
@@ -1299,7 +1302,10 @@ function setupGalaxyField(canvas, reducedMotion) {
             width = nextWidth; height = nextHeight; pageHeight = nextPageHeight;
             frameInterval = 1000 / (width < 700 ? 24 : 30);
             scrollPosition = window.scrollY;
-            const ratio = Math.min(window.devicePixelRatio || 1, quality === 'high' && width >= 700 ? 1.5 : 1);
+            // Keep the animated canvas close to CSS-pixel resolution. The
+            // background is intentionally soft, so 1.25x is visually enough
+            // while avoiding a large fill-rate cost on laptop GPUs.
+            const ratio = Math.min(window.devicePixelRatio || 1, quality === 'high' && width >= 700 ? 1.25 : 1);
             if (resize || ratio !== pixelRatio) {
                 pixelRatio = ratio;
                 canvas.width = Math.round(width * pixelRatio);
@@ -1358,6 +1364,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         pointer.targetX = clamp(event.clientX / width * 2 - 1, -1, 1);
         pointer.targetY = clamp(event.clientY / height * 2 - 1, -1, 1);
         pointer.active = true;
+        requestDraw();
     };
     const scroll = y => {
         if (quality !== 'high') return;
