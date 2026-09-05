@@ -853,8 +853,11 @@ function setupGalaxyField(canvas, reducedMotion) {
                 }
                 for (let i = 0; i < Math.round((type === 2 ? 11 : 16) * density); i++) placeBody(rng, 'smallPlanets', group, 7, 18);
                 for (let i = 0; i < Math.round(7 * density); i++) placeBody(rng, 'mediumStars', group, 12, 27);
-                for (let i = 0; i < Math.round((type === 1 ? 5 : 4) * density); i++) placeBody(rng, 'mediumPlanets', group, 25, 52);
-                placeBody(rng, 'largePlanets', group, 64, 115, type !== 2);
+                for (let i = 0; i < Math.round((type === 1 ? 6 : 5) * density); i++) placeBody(rng, 'mediumPlanets', group, 25, 52);
+                const largePlanetCount = type === 2 ? 1 : 2;
+                for (let i = 0; i < largePlanetCount; i++) {
+                    placeBody(rng, 'largePlanets', group, 64, 115, type !== 2 && i === 0);
+                }
             }
             if (type === 0) placeBody(rng, 'largePlanets', region, 85, 140, true);
         }
@@ -869,7 +872,8 @@ function setupGalaxyField(canvas, reducedMotion) {
             const color = colors[[2, 1, 4, 3, 2][i]];
             add('massivePlanets', makeObject(rng, left ? -offset : width + offset,
                 i === 0 ? height * .39 : pageHeight * ([.065, .27, .49, .73, .94][i]), radius, color, {
-                    alpha: .22, sprite: lightSprite(color, 2), drift: 2, pulse: .025, orbit: 0
+                    alpha: .22, sprite: lightSprite(color, 2), drift: 2, pulse: .025, orbit: 0,
+                    interactive: true
                 }));
         }
         buildMotionSystems();
@@ -1004,13 +1008,16 @@ function setupGalaxyField(canvas, reducedMotion) {
         const seconds = delta / 1000;
         let ax = -state.ox * .65, ay = -state.oy * .65;
         if (pointer.active) {
-            let dx = state.x - (pointer.targetX + 1) * width / 2;
-            let dy = state.y - (pointer.targetY + 1) * height / 2;
+            // Use the eased cursor position here too. Physics driven by the
+            // raw pointer target can alternate force direction between frames
+            // when the mouse moves quickly, which reads as flashing bodies.
+            let dx = state.x - (pointer.x + 1) * width / 2;
+            let dy = state.y - (pointer.y + 1) * height / 2;
             let distance = Math.hypot(dx, dy);
             if (distance < .5) { dx = Math.cos(body.phase); dy = Math.sin(body.phase); distance = 1; }
-            const reach = 135 + Math.min(40, body.radius * .4);
+            const reach = 155 + Math.min(105, body.radius * .62);
             if (distance < reach) {
-                const force = (1 - distance / reach) ** 2 * 1150 / (1 + body.radius / 100);
+                const force = (1 - distance / reach) ** 2 * 1280 / (1 + body.radius / 150);
                 ax += (dx / distance - dy / distance * .16) * force;
                 ay += (dy / distance + dx / distance * .16) * force;
             }
