@@ -3312,17 +3312,21 @@ function renderProfile(profile) {
         ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></a>`
         : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
     document.getElementById('hero-social').innerHTML += resumeIcon;
-    document.getElementById('contact-links-container').innerHTML = resumeButton + links.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
 
-    // One unmistakable action to close the page on. The link row below it stays
-    // available, but it is deliberately quieter than this.
+    // One unmistakable action to close the page on. Email is promoted to that
+    // button, so it is dropped from the quieter row below -- otherwise the same
+    // "Email Me" appears twice, a few pixels apart, in two different weights.
     const cta = document.getElementById('contact-cta');
-    if (cta && emailUrl) {
+    const emailIsPrimary = Boolean(cta && emailUrl);
+    if (emailIsPrimary) {
         const externalAttributes = emailUrl.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
         cta.innerHTML = `<a href="${emailUrl}"${externalAttributes} class="btn primary-btn">`
             + '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Email Me</a>'
             + `<span class="contact-cta-note">${escapeAttribute(emailAddress)}</span>`;
     }
+    const secondaryLinks = emailIsPrimary ? links.filter(([url]) => url !== emailUrl) : links;
+    document.getElementById('contact-links-container').innerHTML =
+        resumeButton + secondaryLinks.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
 }
 
 function renderSkills(categories) {

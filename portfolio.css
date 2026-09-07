@@ -269,7 +269,7 @@ html.effects-background-click-fading .ambient-glow {
 }
 
 .navbar { position: fixed; inset: 0 0 auto; z-index: 1000; border-bottom: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
-.has-scrolled .navbar { background: rgba(8,8,8,.96); border-color: var(--line); }
+.has-scrolled .navbar { background: #080808; border-color: var(--line); }
 .nav-content { width: min(var(--nav-max-width), calc(100% - var(--space-7))); min-height: 4.5rem; display: flex; align-items: center; justify-content: space-between; margin: auto; }
 .logo {
     display: inline-block;
@@ -516,7 +516,7 @@ footer { padding: var(--space-7) var(--space-5); border-top: 1px solid var(--lin
 }
 
 body { background-color: var(--bg); background-image: none; }
-.navbar { border-bottom-color: rgba(247,244,237,.09); background: rgba(8,8,8,.96); }
+.navbar { border-bottom-color: rgba(247,244,237,.09); background: #080808; }
 .nav-content, main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, var(--space-9)))); }
 
 .nav-content { min-height: 4.875rem; }
@@ -1243,7 +1243,16 @@ button:focus-visible,
 
 @media (max-width: 800px) {
     .nav-toggle { display: block; }
-    .nav-content { flex-wrap: wrap; }
+    .nav-content {
+        flex-wrap: wrap;
+        /* The collapsed menu is still a flex item, so it forms a second line of
+           zero height. Without this the bar's 78px min-height is split between
+           the two lines and the logo and toggle ride ~10px high, leaving dead
+           space under them. Centring the lines as a group puts the row back on
+           the bar's axis, and does nothing once the menu opens and the content
+           is taller than the minimum. */
+        align-content: center;
+    }
 
     /* Supersedes the earlier rules that hid every link on small screens.
 
