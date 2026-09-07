@@ -3,18 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angelo Demetroulakos | Mechanical Engineering Portfolio</title>
-    <meta name="description" content="Angelo Demetroulakos's mechanical engineering portfolio with robots, CAD, 3D printers, and other projects.">
-    <link rel="stylesheet" href="portfolio.css?v=20260907-grid-unify">
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+
+    <title>Angelo Demetroulakos | Mechanical Engineering & Robotics Portfolio</title>
+    <meta name="description" content="Mechanical engineering portfolio of Angelo Demetroulakos: swerve drives, FTC competition robots, scratch-built 3D printers, CAD design, and controls work, with source files for every build.">
+    <meta name="author" content="Angelo Demetroulakos">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="theme-color" content="#080808">
+    <meta name="color-scheme" content="dark">
+    <link rel="canonical" href="https://aloeveraz.github.io/">
+
+    <!-- Social preview -->
+    <meta property="og:type" content="profile">
+    <meta property="og:site_name" content="Angelo Demetroulakos">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="https://aloeveraz.github.io/">
+    <meta property="og:title" content="Angelo Demetroulakos | Mechanical Engineering & Robotics Portfolio">
+    <meta property="og:description" content="Swerve drives, FTC competition robots, scratch-built 3D printers, CAD design, and controls work, with source files for every build.">
+    <meta property="og:image" content="https://aloeveraz.github.io/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Angelo Demetroulakos — mechanical engineering and robotics portfolio.">
+    <meta property="profile:first_name" content="Angelo">
+    <meta property="profile:last_name" content="Demetroulakos">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Angelo Demetroulakos | Mechanical Engineering & Robotics Portfolio">
+    <meta name="twitter:description" content="Swerve drives, FTC competition robots, scratch-built 3D printers, CAD design, and controls work, with source files for every build.">
+    <meta name="twitter:image" content="https://aloeveraz.github.io/og-image.png">
+    <meta name="twitter:image:alt" content="Angelo Demetroulakos — mechanical engineering and robotics portfolio.">
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <!-- Fonts and icons are served from this origin, so the page makes no
+         third-party request before a visitor asks for one. -->
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="fonts.css?v=20260907e">
+    <link rel="stylesheet" href="icons.css?v=20260907e">
+    <link rel="stylesheet" href="portfolio.css?v=20260907e">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Angelo Demetroulakos",
+      "url": "https://aloeveraz.github.io/",
+      "image": "https://aloeveraz.github.io/og-image.png",
+      "jobTitle": "Mechanical Engineering Technology Student",
+      "description": "Mechanical engineering student building robots, swerve drivetrains, and 3D printers from scratch.",
+      "email": "mailto:angelojames2006@gmail.com",
+      "sameAs": ["https://github.com/AloeVeraZ"],
+      "alumniOf": {
+        "@type": "CollegeOrUniversity",
+        "name": "New York City College of Technology (City Tech), CUNY"
+      },
+      "knowsAbout": ["Robotics", "CAD Design", "3D Printing", "Mechanical Design", "Autonomous Systems", "CNC Machining"]
+    }
+    </script>
 </head>
 <body>
+
+    <a class="skip-link" href="#main-content">Skip to main content</a>
 
     <nav class="navbar">
         <div class="nav-content">
             <a href="#" class="logo" id="nav-name">Angelo Demetroulakos</a>
-            <ul class="nav-links">
+            <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu">
+                <span aria-hidden="true"></span>
+            </button>
+            <ul class="nav-links" id="nav-links">
                 <li class="performance-control">
                     <button class="performance-toggle" id="performance-toggle" type="button" role="switch" aria-checked="true" aria-label="Use low performance visual effects">
                         <span class="performance-toggle-track" aria-hidden="true"><i></i></span>
@@ -31,19 +93,19 @@
 
     <header id="hero" class="hero-section">
         <div class="hero-content">
-            <span class="badge hero-badge"><i class="fa-solid fa-gear"></i> Mechanical Engineering & Robotics</span>
+            <span class="badge hero-badge"><i class="fa-solid fa-gear" aria-hidden="true"></i> Mechanical Engineering &amp; Robotics</span>
             <h1 id="hero-name" class="hero-name">Angelo Demetroulakos</h1>
             <p id="hero-tagline" class="hero-tagline">Robotics • CAD Design • Prototyping • Autonomous Systems</p>
             <div class="social-links" id="hero-social">
             </div>
             <div class="hero-buttons">
-                <a href="#projects" class="btn hero-action"><i class="fa-solid fa-cubes"></i> Explore Projects</a>
-                <a href="#contact" class="btn hero-action"><i class="fa-solid fa-paper-plane"></i> Get in Touch</a>
+                <a href="#projects" class="btn hero-action primary-btn"><i class="fa-solid fa-cubes" aria-hidden="true"></i> Explore Projects</a>
+                <a href="#contact" class="btn hero-action"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Get in Touch</a>
             </div>
         </div>
     </header>
 
-    <main>
+    <main id="main-content">
         <section id="about" class="section glass-panel">
             <div class="section-header">
                 <span class="section-label">Overview</span>
@@ -58,7 +120,7 @@
         <section id="skills" class="section">
             <div class="section-header">
                 <span class="section-label">Toolkit</span>
-                <h2 class="section-title">Skills & Expertise</h2>
+                <h2 class="section-title">Skills &amp; Expertise</h2>
             </div>
             <div class="skills-categories" id="skills-container">
             </div>
@@ -86,26 +148,27 @@
         <section id="contact" class="section glass-panel contact-section">
             <div class="section-header">
                 <span class="section-label">Connect</span>
-                <h2 class="section-title">Contact & Links</h2>
+                <h2 class="section-title">Contact &amp; Links</h2>
             </div>
             <p class="contact-desc">If you want to talk about robotics, 3D printing, or another project, feel free to reach out or look through my code and CAD files.</p>
+            <div class="contact-cta" id="contact-cta"></div>
             <div class="contact-links" id="contact-links-container">
             </div>
         </section>
     </main>
 
     <div id="project-modal" class="modal-overlay" aria-hidden="true">
-        <div class="modal-card glass-panel">
-            <button class="modal-close" id="modal-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button class="modal-close" id="modal-close" aria-label="Close project details"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             <div class="modal-header">
                 <h3 id="modal-title" class="modal-title">Project Title</h3>
             </div>
-            <div id="modal-image" class="modal-image" aria-label="Project media"></div>
+            <div id="modal-image" class="modal-image"></div>
             <div class="modal-header-actions">
                 <span id="modal-category" class="tag">Category</span>
-                <a id="modal-quick-link" class="modal-quick-link" target="_blank" rel="noopener" hidden><i class="fa-brands fa-github"></i> Full Project Breakdown</a>
+                <a id="modal-quick-link" class="modal-quick-link" target="_blank" rel="noopener" hidden><i class="fa-brands fa-github" aria-hidden="true"></i> Full Project Breakdown</a>
             </div>
-            <p id="modal-period" class="modal-period" hidden><i class="fa-regular fa-calendar"></i><span></span></p>
+            <p id="modal-period" class="modal-period" hidden><i class="fa-regular fa-calendar" aria-hidden="true"></i><span></span></p>
             <p id="modal-program-summary" class="modal-program-summary" hidden></p>
             <p id="modal-summary" class="modal-summary"></p>
             <section class="modal-overview" id="modal-overview" aria-labelledby="modal-overview-title" hidden>
@@ -136,9 +199,15 @@
     <footer>
         <div class="footer-content">
             <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo Demetroulakos</span>. Mechanical Engineering Portfolio.</p>
+            <nav class="footer-links" aria-label="Site policies">
+                <a href="/privacy.html">Privacy</a>
+                <a href="/terms.html">Terms</a>
+                <a href="https://github.com/AloeVeraZ/AloeVeraZ.github.io" target="_blank" rel="noopener">Source</a>
+            </nav>
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20260907-grid-unify"></script>
+    <script src="consent.js?v=20260907e"></script>
+    <script src="portfolio.js?v=20260907e"></script>
 </body>
 </html>

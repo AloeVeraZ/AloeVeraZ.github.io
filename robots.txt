@@ -1,0 +1,11 @@
+# https://aloeveraz.github.io/
+# Personal engineering portfolio. Everything here is meant to be found.
+
+User-agent: *
+Allow: /
+
+# Nothing useful lives in these; keep them out of the index.
+Disallow: /assets/fonts/
+Disallow: /project-example.json
+
+Sitemap: https://aloeveraz.github.io/sitemap.xml

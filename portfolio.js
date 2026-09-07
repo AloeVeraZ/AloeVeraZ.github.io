@@ -10,14 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Math.min(Math.max(measuredScale, 1), 4)
             : 1;
         document.documentElement.style.fontSize = `${(16 * layoutScale).toFixed(2)}px`;
-        document.documentElement.style.setProperty('--viewport-layout-scale', layoutScale.toFixed(3));
         const scalableDimensions = {
             '--site-max-width': 1440,
             '--nav-max-width': 1440,
             '--hero-content-max-width': 1080,
-            '--project-stage-max-width': 2400,
-            '--carousel-card-min-width': 300,
-            '--carousel-card-max-width': 440,
             '--project-card-height': 680,
             '--project-card-height-mobile': 650,
             '--project-image-height': 240,
@@ -423,7 +419,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: .12 });
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
-    fetch('portfolio-data.json?v=20260901-kiwi-clarity')
+    setupMobileNav();
+    // Bumped whenever portfolio-data.json changes shape or media paths, so a
+    // returning visitor never gets a cached file pointing at images that moved.
+    fetch('portfolio-data.json?v=20260907-srcset')
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -434,8 +433,59 @@ document.addEventListener('DOMContentLoaded', () => {
             updateScrollMotion();
             window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
         })
-        .catch(error => console.error('Error loading portfolio data:', error));
+        .catch(error => {
+            console.error('Error loading portfolio data:', error);
+            showDataLoadFailure();
+        });
 });
+
+// If the project data cannot be fetched the page would otherwise sit there with
+// four empty sections and no explanation. Say what happened and give a way out.
+function showDataLoadFailure() {
+    const container = document.getElementById('featured-projects-container');
+    if (!container || container.children.length) return;
+    container.innerHTML = '<div class="media-placeholder data-error" role="alert">'
+        + '<i class="fa-solid fa-gear" aria-hidden="true"></i>'
+        + '<span>The project list did not load</span>'
+        + '<small>Reload the page, or see every build on '
+        + '<a href="https://github.com/AloeVeraZ" target="_blank" rel="noopener">GitHub</a>.</small>'
+        + '</div>';
+}
+
+// Below 800px the nav links collapse behind a toggle. Without this they were
+// simply hidden, leaving a phone with no way to reach a section.
+function setupMobileNav() {
+    const navbar = document.querySelector('.navbar');
+    const toggle = document.getElementById('nav-toggle');
+    const links = document.getElementById('nav-links');
+    if (!navbar || !toggle || !links) return;
+
+    const setOpen = open => {
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+        if (open) navbar.setAttribute('data-nav-open', '');
+        else navbar.removeAttribute('data-nav-open');
+    };
+
+    toggle.addEventListener('click', () => {
+        setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+    // Jumping to a section should close the panel behind you.
+    links.addEventListener('click', event => {
+        if (event.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+    // Widening past the breakpoint leaves the desktop row visible anyway, so
+    // drop the open state rather than keep a stale aria-expanded="true".
+    window.matchMedia('(max-width: 800px)').addEventListener('change', event => {
+        if (!event.matches) setOpen(false);
+    });
+}
 
 // Deterministic PRNG (mulberry32) so procedurally-placed objects keep the
 // same composition across reloads instead of reshuffling every visit.
@@ -3125,39 +3175,30 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     return { move, setEnabled };
 }
 
-function setupInteractiveTilt(reducedMotion) {
-    if (reducedMotion.matches || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+// How wide a project card image actually renders: full bleed on a phone, and a
+// single grid column on anything larger. Kept next to the card markup because
+// it has to match the --carousel-card-max-width the grid resolves to.
+const CARD_IMAGE_SIZES = '(max-width: 800px) calc(100vw - 2rem), 440px';
 
-    document.querySelectorAll('.about-highlight, .skill-group').forEach(card => {
-        let bounds;
-        let tiltFrame = 0;
-        let pointerX = 0;
-        let pointerY = 0;
-        card.classList.add('tilt-card');
-        card.addEventListener('pointerenter', () => {
-            bounds = card.getBoundingClientRect();
-            card.style.willChange = 'transform';
-        });
-        card.addEventListener('pointermove', event => {
-            pointerX = event.clientX;
-            pointerY = event.clientY;
-            if (tiltFrame) return;
-            tiltFrame = requestAnimationFrame(() => {
-                const horizontal = (pointerX - bounds.left) / bounds.width - .5;
-                const vertical = (pointerY - bounds.top) / bounds.height - .5;
-                card.style.setProperty('--tilt-x', `${(-vertical * 6).toFixed(2)}deg`);
-                card.style.setProperty('--tilt-y', `${(horizontal * 6).toFixed(2)}deg`);
-                tiltFrame = 0;
-            });
-        }, { passive: true });
-        card.addEventListener('pointerleave', () => {
-            cancelAnimationFrame(tiltFrame);
-            tiltFrame = 0;
-            card.style.setProperty('--tilt-x', '0deg');
-            card.style.setProperty('--tilt-y', '0deg');
-            card.style.willChange = '';
-        });
-    });
+// Project prose goes into HTML attributes in a few places. Anything with a
+// quote or an angle bracket in it would otherwise break out of the attribute.
+function escapeAttribute(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// Alt text for a project's lead image. `imageAlt` and `motionImageAlt` in the
+// data describe what is actually in the frame; the title is only a fallback for
+// a project whose description has not been written yet, and it is a poor one --
+// it repeats the heading sitting right next to the image.
+function describeImage(project, variant = 'still') {
+    const described = variant === 'motion'
+        ? project.motionImageAlt || project.imageAlt
+        : project.imageAlt;
+    return described || project.title;
 }
 
 function renderProfile(profile) {
@@ -3168,7 +3209,7 @@ function renderProfile(profile) {
     if (highlights) {
         highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => {
             const roles = (highlight.roles || []).map(role => `<div class="about-highlight-role"><h4>${role.title}</h4><p>${[role.position, role.period].filter(Boolean).join(' • ')}</p></div>`).join('');
-            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${roles}${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down"></i></span>` : ''}`;
+            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${roles}${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></span>` : ''}`;
             return highlight.targetCollection
                 ? `<a class="about-highlight about-highlight-link" href="#${highlight.targetCollection}" data-collection-target="${highlight.targetCollection}" aria-label="${highlight.cta || `View ${highlight.label}`}">${content}</a>`
                 : `<article class="about-highlight">${content}</article>`;
@@ -3201,17 +3242,27 @@ function renderProfile(profile) {
     const renderProfileLink = ([url, icon, label, buttonLabel], className = '') => {
         const externalAttributes = url.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
         const classAttribute = className ? ` class="${className}"` : '';
-        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}"></i>${className ? ` ${buttonLabel || label}` : ''}</a>`;
+        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}" aria-hidden="true"></i>${className ? ` ${buttonLabel || label}` : ''}</a>`;
     };
     document.getElementById('hero-social').innerHTML = links.map(link => renderProfileLink(link)).join('');
     const resumeButton = profile.resume
-        ? `<a href="${profile.resume}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="fa-solid fa-file-arrow-down"></i> Resume</a>`
-        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down"></i> Resume</span>`;
+        ? `<a href="${profile.resume}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Resume</a>`
+        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Resume</span>`;
     const resumeIcon = profile.resume
-        ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down"></i></a>`
-        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down"></i></span>`;
+        ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></a>`
+        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
     document.getElementById('hero-social').innerHTML += resumeIcon;
     document.getElementById('contact-links-container').innerHTML = resumeButton + links.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
+
+    // One unmistakable action to close the page on. The link row below it stays
+    // available, but it is deliberately quieter than this.
+    const cta = document.getElementById('contact-cta');
+    if (cta && emailUrl) {
+        const externalAttributes = emailUrl.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
+        cta.innerHTML = `<a href="${emailUrl}"${externalAttributes} class="btn primary-btn">`
+            + '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Email Me</a>'
+            + `<span class="contact-cta-note">${escapeAttribute(emailAddress)}</span>`;
+    }
 }
 
 function renderSkills(categories) {
@@ -3235,7 +3286,7 @@ function setupFeaturedCarousel(container) {
     container.classList.add('featured-project-carousel');
     const controls = document.createElement('div');
     controls.className = 'carousel-controls featured-carousel-controls';
-    controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
+    controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
     container.before(controls);
     const initialize = setupCarousel(container, controls, {
         autoplay: false,
@@ -3282,22 +3333,37 @@ function createProjectCard(project) {
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `View ${project.title} details`);
     const isCertificate = project.imagePresentation === 'certificate';
+    // A card draws into roughly 440 CSS px, so most screens want the 900px
+    // variant rather than the full-size file the modal uses.
+    const cardSrcset = project.imageSrcset
+        ? ` srcset="${project.imageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
+        : '';
     const cardMedia = project.image
-        ? `<img src="${project.image}" alt="${project.title}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}"` : ''}>`
-        : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film"></i><span>Preview coming soon</span></div>`;
+        ? `<img src="${project.image}"${cardSrcset} alt="${escapeAttribute(describeImage(project))}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}" data-motion-alt="${escapeAttribute(describeImage(project, 'motion'))}" data-still-alt="${escapeAttribute(describeImage(project))}" data-still-srcset="${project.imageSrcset || ''}"` : ''}>`
+        : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Preview coming soon</span></div>`;
     const projectPeriod = project.period
-        ? `<div class="project-period"><i class="fa-regular fa-calendar"></i>${project.period}</div>`
+        ? `<div class="project-period"><i class="fa-regular fa-calendar" aria-hidden="true"></i>${project.period}</div>`
         : '';
     const cardDescription = buildProjectCardSummary(project);
     card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><div class="project-heading"><h3 class="project-title">${project.title}</h3>${projectPeriod}</div><div class="project-copy"><p class="project-summary">${cardDescription}</p></div><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
     if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         card.addEventListener('pointerenter', () => {
+            // srcset outranks src, so it has to go before the animation can show.
+            motionImage.removeAttribute('srcset');
+            motionImage.removeAttribute('sizes');
             motionImage.src = motionImage.dataset.motionSrc;
+            // The picture changes, so the description has to change with it.
+            motionImage.alt = motionImage.dataset.motionAlt || motionImage.alt;
             motionImage.classList.add('is-motion-active');
         }, { passive: true });
         card.addEventListener('pointerleave', () => {
             motionImage.src = project.image;
+            if (motionImage.dataset.stillSrcset) {
+                motionImage.setAttribute('srcset', motionImage.dataset.stillSrcset);
+                motionImage.setAttribute('sizes', CARD_IMAGE_SIZES);
+            }
+            motionImage.alt = motionImage.dataset.stillAlt || motionImage.alt;
             motionImage.classList.remove('is-motion-active');
         }, { passive: true });
     }
@@ -3319,7 +3385,7 @@ function renderProjectCollections(collections, projects) {
         const group = document.createElement('section');
         group.className = 'project-collection';
         group.id = collection.id || collection.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down"></i></button><div class="collection-content" hidden></div>`;
+        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small></span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
         const collectionProjects = projects
@@ -3334,7 +3400,7 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            controls.innerHTML = `<div><button class="carousel-arrow carousel-prev" aria-label="Previous project"><i class="fa-solid fa-arrow-left"></i></button><button class="carousel-arrow carousel-next" aria-label="Next project"><i class="fa-solid fa-arrow-right"></i></button></div>`;
+            controls.innerHTML = `<div><button class="carousel-arrow carousel-prev" aria-label="Previous project"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" aria-label="Next project"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
             content.prepend(controls);
             initializeCarousel = setupCarousel(gallery, controls, { autoplay: true, ring: true });
         }
@@ -3893,7 +3959,7 @@ function buildLinkButtons(links = {}) {
             const url = typeof entry === 'string' ? entry : entry.url;
             const linkLabel = typeof entry === 'string' ? label : entry.label || label;
             if (!url) return '';
-            return `<a href="${url}" target="_blank" rel="noopener" class="link-btn ${cls}"><i class="${icon}"></i> ${linkLabel}</a>`;
+            return `<a href="${url}" target="_blank" rel="noopener" class="link-btn ${cls}"><i class="${icon}" aria-hidden="true"></i> ${linkLabel}</a>`;
         });
     }).join('');
 }
@@ -3957,7 +4023,7 @@ function openModal(project) {
     if (featureVideo && featureVideoPlayer) {
         featureVideo.hidden = !project.featureVideo?.src;
         featureVideoPlayer.innerHTML = project.featureVideo?.src
-            ? `<iframe src="${project.featureVideo.src}" title="${project.featureVideo.label || `${project.title} video`}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+            ? PortfolioConsent.embed(project.featureVideo.src, project.featureVideo.label || `${project.title} video`)
             : '';
     }
     deepDiveHeading.hidden = isCoursework || !project.sections?.length || overviewItems.length === 0;
@@ -3974,14 +4040,14 @@ function openModal(project) {
     image.classList.toggle('has-motion-media', Boolean(project.motionImage));
     image.classList.toggle('is-certificate', project.imagePresentation === 'certificate');
     image.innerHTML = leadMedia
-        ? `<img src="${leadMedia}" alt="${project.title}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
-        : `<div class="media-placeholder"><i class="fa-solid fa-film"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;
+        ? `<img src="${leadMedia}" alt="${escapeAttribute(describeImage(project, project.motionImage ? 'motion' : 'still'))}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
+        : `<div class="media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;
     const media = document.getElementById('modal-media');
     media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
-        ? `<figure class="modal-media-item modal-video"><iframe src="${item.src}" title="${item.label}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><figcaption>${item.label}</figcaption></figure>`
+        ? `<figure class="modal-media-item modal-video">${PortfolioConsent.embed(item.src, item.label, { lazy: true })}<figcaption>${item.label}</figcaption></figure>`
         : item.src
-        ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${item.alt || item.label}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
-        : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
+        ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${escapeAttribute(item.alt || item.label)}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
+        : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}" aria-hidden="true"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
     document.dispatchEvent(new CustomEvent('portfolio:modal-open'));

@@ -1,0 +1,266 @@
+/* Shared styling for the standalone pages -- privacy, terms and 404.
+   Deliberately small and self-contained: these pages carry no carousels, no
+   canvas backdrop and no portfolio.js, so pulling in the whole site stylesheet
+   would ship several thousand rules to render a column of text. The tokens are
+   copied from portfolio.css so the two stay visually identical. */
+:root {
+    --bg: #080808;
+    --surface: #111111;
+    --surface-raised: #1a1a1a;
+    --ink: #f7f4ed;
+    --muted: #b4b1a9;
+    --line: rgba(247, 244, 237, .16);
+    --blue: #9dc4ea;
+    --ease: cubic-bezier(.2, .75, .2, 1);
+
+    --space-2: .5rem;
+    --space-3: .75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+    --space-9: 6rem;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.65;
+    /* the same 48px lattice the portfolio draws behind its canvas */
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .022) 1px, transparent 1px);
+    background-size: 3rem 3rem;
+    background-attachment: fixed;
+}
+
+a { color: inherit; }
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 1100;
+    padding: var(--space-3) var(--space-4);
+    background: var(--blue);
+    color: #080808;
+    font-weight: 700;
+}
+.skip-link:focus { left: var(--space-4); top: var(--space-4); }
+
+:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ header */
+.page-nav {
+    border-bottom: 1px solid var(--line);
+    background: rgba(8, 8, 8, .96);
+}
+.page-nav-inner {
+    width: min(100% - 2rem, 60rem);
+    margin: 0 auto;
+    padding: var(--space-4) 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+.page-logo {
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+.page-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--muted);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color .2s var(--ease);
+}
+.page-back:hover, .page-back:focus-visible { color: var(--ink); }
+
+/* ------------------------------------------------------------------- body */
+.page-main {
+    flex: 1;
+    width: min(100% - 2rem, 46rem);
+    margin: 0 auto;
+    padding: clamp(var(--space-7), 8vw, var(--space-9)) 0 var(--space-9);
+}
+
+.page-eyebrow {
+    display: block;
+    margin-bottom: var(--space-3);
+    color: var(--blue);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.page-main h1 {
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: clamp(2.3rem, 7vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    text-transform: uppercase;
+}
+
+.page-updated {
+    margin-top: var(--space-3);
+    color: var(--muted);
+    font-size: .82rem;
+}
+
+.page-lede {
+    margin-top: var(--space-5);
+    font-size: 1.06rem;
+    color: var(--ink);
+}
+
+.page-main h2 {
+    margin: var(--space-7) 0 var(--space-3);
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    text-transform: uppercase;
+}
+
+.page-main h2::before {
+    content: "";
+    display: block;
+    width: 2rem;
+    height: 2px;
+    margin-bottom: var(--space-3);
+    background: var(--blue);
+}
+
+.page-main p, .page-main li {
+    color: var(--muted);
+    font-size: .95rem;
+}
+.page-main p + p { margin-top: var(--space-4); }
+
+.page-main ul {
+    margin: var(--space-4) 0 0;
+    padding-left: 1.1rem;
+}
+.page-main li + li { margin-top: var(--space-2); }
+
+.page-main strong { color: var(--ink); font-weight: 600; }
+
+.page-main a:not(.btn) {
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.page-main a:not(.btn):hover { color: var(--ink); }
+
+.page-note {
+    margin-top: var(--space-7);
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    background: var(--surface);
+}
+.page-note p { font-size: .9rem; }
+
+/* --------------------------------------------------------------- controls */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border: 1px solid var(--line);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s;
+}
+.btn:hover, .btn:focus-visible { transform: translateY(-3px); }
+.btn-primary { background: var(--blue); border-color: var(--blue); color: #080808; }
+.btn-primary:hover, .btn-primary:focus-visible { background: #c6e0f7; border-color: #c6e0f7; }
+.btn-ghost { background: transparent; color: var(--ink); }
+.btn-ghost:hover, .btn-ghost:focus-visible { background: var(--surface-raised); }
+
+/* ------------------------------------------------------------------- 404 */
+.error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+}
+
+/* Decorative, so it sits well below body-text contrast on purpose -- but not so
+   far below that it reads as a rendering fault. */
+.error-code {
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: clamp(5rem, 22vw, 11rem);
+    font-weight: 800;
+    line-height: .85;
+    letter-spacing: -.03em;
+    color: #24252a;
+    -webkit-text-stroke: 1px rgba(157, 196, 234, .35);
+}
+
+.error-links {
+    margin-top: var(--space-7);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+}
+.error-links h2 { margin-top: 0; }
+.error-links ul { list-style: none; padding: 0; }
+
+/* ---------------------------------------------------------------- footer */
+.page-footer {
+    border-top: 1px solid var(--line);
+    padding: var(--space-6) 0;
+    color: var(--muted);
+    font-size: .8rem;
+}
+.page-footer-inner {
+    width: min(100% - 2rem, 60rem);
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+.page-footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+}
+.page-footer a { text-decoration: none; transition: color .2s var(--ease); }
+.page-footer a:hover, .page-footer a:focus-visible { color: var(--ink); }
+
+@media (max-width: 560px) {
+    .page-nav-inner { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+    .page-footer-inner { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}
