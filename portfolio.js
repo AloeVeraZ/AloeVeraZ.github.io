@@ -420,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('main .section').forEach(section => revealObserver.observe(section));
     document.getElementById('current-year').textContent = new Date().getFullYear();
     setupMobileNav();
+    setupImageRecovery();
     // Bumped whenever portfolio-data.json changes shape or media paths, so a
     // returning visitor never gets a cached file pointing at images that moved.
     fetch('portfolio-data.json?v=20260907-srcset')
@@ -450,6 +451,48 @@ function showDataLoadFailure() {
         + '<small>Reload the page, or see every build on '
         + '<a href="https://github.com/AloeVeraZ" target="_blank" rel="noopener">GitHub</a>.</small>'
         + '</div>';
+}
+
+// A visitor who loaded the page before the images were converted to WebP can be
+// holding a cached portfolio-data.json that still names the old .jpg/.png/.gif
+// files, which no longer exist. Rather than leave broken-image icons across the
+// grid until their cache expires, retry the WebP sibling, and fall back to the
+// same placeholder an imageless project uses if that fails too.
+//
+// `error` does not bubble, so this listens in the capture phase -- one listener
+// covers the cards, the modal and anything rendered later.
+function setupImageRecovery() {
+    const LEGACY_EXTENSION = /\.(jpe?g|png|gif)$/i;
+
+    const showPlaceholder = image => {
+        const inCard = image.classList.contains('project-image');
+        const placeholder = document.createElement('div');
+        placeholder.className = inCard
+            ? 'media-placeholder card-media-placeholder'
+            : 'media-placeholder';
+        placeholder.innerHTML = '<i class="fa-solid fa-image" aria-hidden="true"></i>'
+            + `<span>${escapeAttribute(image.alt || 'Image unavailable')}</span>`;
+        image.replaceWith(placeholder);
+    };
+
+    document.addEventListener('error', event => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement)) return;
+        if (image.dataset.recovered === 'placeholder') return;
+
+        const source = image.getAttribute('src') || '';
+        // Try the WebP sibling once; if that fails too, give up and show the
+        // placeholder rather than retrying a file that is not there.
+        if (image.dataset.recovered !== 'webp' && LEGACY_EXTENSION.test(source)) {
+            image.dataset.recovered = 'webp';
+            image.removeAttribute('srcset');
+            image.removeAttribute('sizes');
+            image.src = source.replace(LEGACY_EXTENSION, '.webp');
+            return;
+        }
+        image.dataset.recovered = 'placeholder';
+        showPlaceholder(image);
+    }, true);
 }
 
 // Below 800px the nav links collapse behind a toggle. Without this they were
