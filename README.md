@@ -71,7 +71,9 @@ get a stale copy.
 
 ## Hosting notes
 
-GitHub Pages serves this from the repository root. Turn on **Settings → Pages →
-Enforce HTTPS** so `http://` requests are redirected rather than served; the
-`upgrade-insecure-requests` meta tag in each page covers subresources but cannot
-redirect the top-level request on its own.
+GitHub Pages serves this from the repository root. HTTPS needs no action: a
+`*.github.io` host is on the HSTS preload list and GitHub redirects `http://`
+to `https://` on its own — verified against the live site. The
+`upgrade-insecure-requests` meta tag in each page covers subresources. If this
+ever moves to a custom domain, that stops being automatic and **Settings → Pages
+→ Enforce HTTPS** has to be switched on for the new domain.
