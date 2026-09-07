@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const galaxy = setupGalaxyField(galaxyField, reducedMotion);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
+    setupPointerReactiveSurfaces(reducedMotion);
     const performanceToggle = document.getElementById('performance-toggle');
     const performanceToggleLabel = document.getElementById('performance-toggle-label');
     // v3 intentionally resets the old Low FX override once. The previous
@@ -3138,6 +3139,155 @@ function setupGalaxyField(canvas, reducedMotion) {
 }
 
 
+// Which surfaces answer a pointer, and how far each one is allowed to move.
+// The spotlight and the tilt are lifted from motion-primitives' Spotlight and
+// Tilt; their rotation default is 15deg, which is far too much for a card the
+// size of a project card, so this runs at 4deg at the very corner.
+const REACTIVE_CARD_SELECTOR = '.project-card, .about-highlight, .skill-group';
+const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-btn, .carousel-arrow, .social-links a';
+const CARD_TILT_DEGREES = 4;
+const PRESS_RIPPLE_MAX_SIZE = 460;
+
+// Pointer-reactive cards. One listener for the whole page rather than a pair
+// per card: the archive can hold a hundred of them, and only one can be under
+// the cursor at a time.
+function setupPointerReactiveSurfaces(reducedMotion) {
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const highEffects = () => document.documentElement.dataset.effects !== 'low';
+
+    let activeCard = null;
+    let activeRect = null;
+    let lastHitTarget = null;
+    let pointerX = 0;
+    let pointerY = 0;
+    let frame = 0;
+
+    const clearActiveCard = () => {
+        if (!activeCard) return;
+        // Dropping the class and zeroing the angles in the same frame lets the
+        // card's own transform transition carry it back to flat.
+        activeCard.classList.remove('is-tilting');
+        ['--card-glow', '--card-glow-x', '--card-glow-y', '--card-tilt-x', '--card-tilt-y']
+            .forEach(property => activeCard.style.removeProperty(property));
+        activeCard = null;
+        activeRect = null;
+    };
+
+    // A card inside a carousel is already placed by the carousel -- the High FX
+    // ring hands each card its own 3D transform -- so it never takes a tilt.
+    const canTilt = card => card.classList.contains('project-card')
+        && !card.closest('.project-carousel')
+        && !reducedMotion.matches
+        && highEffects();
+
+    const paint = () => {
+        frame = 0;
+        if (!activeCard) return;
+        if (!activeRect) activeRect = activeCard.getBoundingClientRect();
+        const { left, top, width, height } = activeRect;
+        if (!width || !height) return;
+        const offsetX = pointerX - left;
+        const offsetY = pointerY - top;
+        activeCard.style.setProperty('--card-glow-x', `${offsetX.toFixed(1)}px`);
+        activeCard.style.setProperty('--card-glow-y', `${offsetY.toFixed(1)}px`);
+        activeCard.style.setProperty('--card-glow', '1');
+        if (!canTilt(activeCard)) return;
+        // Same mapping motion-primitives uses: the pointer's position across the
+        // box as -0.5..0.5, read straight into rotateX and -rotateY, so the card
+        // leans toward the cursor.
+        const acrossX = offsetX / width - .5;
+        const acrossY = offsetY / height - .5;
+        activeCard.style.setProperty('--card-tilt-x', `${(acrossY * 2 * CARD_TILT_DEGREES).toFixed(2)}deg`);
+        activeCard.style.setProperty('--card-tilt-y', `${(-acrossX * 2 * CARD_TILT_DEGREES).toFixed(2)}deg`);
+        activeCard.classList.add('is-tilting');
+    };
+
+    const schedulePaint = () => {
+        if (!frame) frame = window.requestAnimationFrame(paint);
+    };
+
+    document.addEventListener('pointermove', event => {
+        if (event.pointerType !== 'mouse' || !finePointer.matches) {
+            lastHitTarget = null;
+            clearActiveCard();
+            return;
+        }
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        // closest() only when the pointer actually crosses into a new element,
+        // which is the same trick the cursor dot uses to stay cheap.
+        if (event.target !== lastHitTarget) {
+            lastHitTarget = event.target;
+            const card = event.target instanceof Element
+                ? event.target.closest(REACTIVE_CARD_SELECTOR)
+                : null;
+            if (card !== activeCard) {
+                clearActiveCard();
+                activeCard = card;
+                if (card) activeRect = card.getBoundingClientRect();
+            }
+        }
+        if (activeCard) schedulePaint();
+    }, { passive: true });
+
+    // Scrolling moves the card out from under the cached rectangle. Re-reading
+    // it here would force a layout on every scrolled frame, so it is only
+    // marked stale and re-read on the next pointer move.
+    window.addEventListener('scroll', () => { activeRect = null; }, { passive: true });
+    window.addEventListener('resize', () => { activeRect = null; }, { passive: true });
+    const leaveCard = () => {
+        lastHitTarget = null;
+        clearActiveCard();
+    };
+    document.documentElement.addEventListener('pointerleave', leaveCard);
+    window.addEventListener('blur', leaveCard);
+
+    // ---------------------------------------------------------------- press
+    const pressed = new Set();
+    const releasePress = () => {
+        pressed.forEach(surface => surface.classList.remove('is-pressed'));
+        pressed.clear();
+    };
+
+    document.addEventListener('pointerdown', event => {
+        if (event.button > 0) return;
+        const surface = event.target instanceof Element
+            ? event.target.closest(PRESSABLE_SELECTOR)
+            : null;
+        if (!surface || surface.matches('[aria-disabled="true"], :disabled')) return;
+        surface.classList.add('is-pressed');
+        pressed.add(surface);
+        if (reducedMotion.matches || !highEffects()) return;
+
+        const rect = surface.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const offsetX = event.clientX - rect.left;
+        const offsetY = event.clientY - rect.top;
+        // Reach the furthest corner, so the light always clears the surface it
+        // was struck on -- capped, or a tall project card gets washed rather
+        // than lit from the point of contact.
+        const reachX = Math.max(offsetX, rect.width - offsetX);
+        const reachY = Math.max(offsetY, rect.height - offsetY);
+        const size = Math.min(Math.hypot(reachX, reachY) * 2, PRESS_RIPPLE_MAX_SIZE);
+        surface.querySelectorAll(':scope > .press-ripple').forEach(stale => stale.remove());
+        const ripple = document.createElement('span');
+        ripple.className = 'press-ripple';
+        ripple.style.left = `${offsetX}px`;
+        ripple.style.top = `${offsetY}px`;
+        ripple.style.setProperty('--ripple-size', `${size.toFixed(0)}px`);
+        ripple.setAttribute('aria-hidden', 'true');
+        surface.appendChild(ripple);
+        ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    }, { passive: true });
+
+    // pointercancel covers the case that matters on a phone: the browser takes
+    // the gesture over to scroll the page, and the card should let go with it.
+    window.addEventListener('pointerup', releasePress, { passive: true });
+    window.addEventListener('pointercancel', releasePress, { passive: true });
+    window.addEventListener('blur', releasePress);
+    window.addEventListener('scroll', releasePress, { passive: true });
+}
+
 function setupCursorEffects(cursorDot, reducedMotion) {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     let enabled = true;
@@ -3489,6 +3639,14 @@ function setupCarousel(carousel, controls, options = {}) {
     const prepareClone = card => {
         const clone = card.cloneNode(true);
         clone.classList.add('carousel-clone');
+        // A clone taken while the original is under the cursor would carry that
+        // moment with it for good: the clone never receives the pointerup that
+        // ends a press, and it is pointer-events: none, so nothing would ever
+        // clear it.
+        clone.classList.remove('is-pressed', 'is-tilting');
+        ['--card-glow', '--card-glow-x', '--card-glow-y', '--card-tilt-x', '--card-tilt-y']
+            .forEach(property => clone.style.removeProperty(property));
+        clone.querySelectorAll('.press-ripple').forEach(ripple => ripple.remove());
         clone.setAttribute('aria-hidden', 'true');
         clone.setAttribute('tabindex', '-1');
         clone.querySelectorAll('img').forEach(image => {

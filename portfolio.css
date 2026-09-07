@@ -337,11 +337,11 @@ html.effects-background-click-fading .ambient-glow {
 .hero-tagline { max-width: 40.625rem; margin: var(--space-6) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
 .social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--space-6) 0; }
 .social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
-.social-links a:hover { background: var(--surface-raised); color: var(--ink); transform: translateY(var(--lift-control)); }
+.social-links a:hover { background: var(--surface-raised); color: var(--ink); --control-lift: var(--lift-control); }
 .resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; opacity: .65; }
 .hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: .86rem; font-weight: 700; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
-.btn:hover { transform: translateY(var(--lift-control)); }
+.btn:hover { --control-lift: var(--lift-control); }
 .resume-unavailable { cursor: not-allowed; opacity: .65; }
 .resume-unavailable:hover { background: #e4e5e7; transform: none; }
 .secondary-btn { background: var(--surface); }
@@ -374,7 +374,7 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { display: flex; flex-direction: column; justify-content: center; min-height: 13.75rem; padding: var(--pad-card); background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); transform: translateY(var(--lift-card)); }
+.skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
 .skill-group-title { margin-bottom: var(--space-4); font-size: 1.05rem; letter-spacing: -.03em; }
 .skill-tags, .project-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(85,168,255,.35); color: #9dccff; font-size: .7rem; font-weight: 700; }
@@ -382,7 +382,7 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .projects-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .featured-grid { margin-bottom: var(--rhythm-section); }
 .project-card { display: flex; height: var(--project-card-height); flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s; }
-.project-card:hover { transform: translateY(var(--lift-card)); border-color: rgba(123,168,216,.42); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
+.project-card:hover { --card-lift: var(--lift-card); border-color: rgba(123,168,216,.42); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
 .project-card[role="button"]:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
 .project-image-wrapper { position: relative; height: var(--project-image-height); overflow: hidden; background: #34363d; }
 .project-image { width: 100%; height: 100%; object-fit: contain; object-position: center; background: #0c0c0c; transition: transform .25s var(--ease); }
@@ -419,7 +419,7 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-4); color: var(--muted); font-size: .76rem; }
 .carousel-controls > div { display: flex; gap: var(--space-2); }
 .carousel-arrow { width: 2.25rem; height: 2.25rem; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s, border-color .2s, color .2s; }
-.carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); transform: translateY(var(--lift-control)); }
+.carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
 @keyframes nudge { 50% { transform: scale(.85); } }
 .project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--space-5); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
@@ -590,16 +590,16 @@ main { padding-top: 0; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
 .bio-text { font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: 1.45; }
 .about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); transform: translateY(var(--lift-card)); }
+.about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
 .skills-categories { border-color: var(--line); }
 .skill-group { min-height: 15rem; background: rgba(17,17,17,.9); }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); transform: translateY(var(--lift-card)); }
+.skill-group:hover { background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
 .tag { border-color: rgba(123,168,216,.5); color: #b9d6f5; }
 .projects-grid { gap: var(--gutter); border: 0; }
 .project-card { background: #101010; border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
-.project-card:hover { border-color: var(--blue); background: #151515; box-shadow: none; transform: translateY(var(--lift-card)); }
+.project-card:hover { border-color: var(--blue); background: #151515; box-shadow: none; --card-lift: var(--lift-card); }
 .project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.035); }
 .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
@@ -633,7 +633,7 @@ footer { background: transparent; }
     color: var(--ink);
     opacity: 1;
 }
-#contact .btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; transform: translateY(var(--lift-control)); }
+#contact .btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -676,7 +676,7 @@ footer { background: transparent; }
     background: var(--blue);
     border-color: var(--blue);
     color: #080808;
-    transform: translateY(var(--lift-control));
+    --control-lift: var(--lift-control);
 }
 
 /* About and skills cards share the same grid so both sections line up. */
@@ -715,7 +715,7 @@ footer { background: transparent; }
     background: #151d26;
     border-color: var(--blue);
     box-shadow: 0 6px 0 rgba(123,168,216,.22);
-    transform: translateY(var(--lift-card));
+    --card-lift: var(--lift-card);
 }
 @media (max-width: 800px) {
     .about-highlight,
@@ -1283,3 +1283,143 @@ button:focus-visible,
 .data-error { grid-column: 1 / -1; padding: var(--space-7) var(--space-5); }
 .data-error a { color: var(--blue); text-decoration: underline; text-underline-offset: 3px; }
 .data-error a:hover { color: var(--ink); }
+
+/* ==========================================================================
+   Pointer-reactive surfaces
+
+   Three ideas taken from motion-primitives and rebuilt in plain CSS driven by
+   one pointer listener, because this site has no React to hang their
+   components off:
+
+   - Spotlight -- a soft light that follows the cursor across a card.
+   - Tilt -- the card leans toward the cursor. Their default rotation is 15deg,
+     which is a party trick on a 680px-tall project card; 4deg reads as weight
+     instead of as a toy.
+   - Press -- contact scales the surface down and strikes a ripple from the
+     exact point that was touched, so a click has a visible cause. Nothing on
+     the page acknowledged a press before this.
+
+   Every one of them is a custom property that the existing transforms compose
+   with, never a `transform` of its own. That is what keeps the ring carousel
+   working: it already owns .project-card's transform in High FX at a higher
+   specificity, so ring cards keep their 3D placement and simply never take a
+   tilt (portfolio.js does not mark them either).
+   ========================================================================== */
+
+/* The hover lifts above set --card-lift / --control-lift. These are the only
+   rules that turn them into an actual transform, and they sit at the end of
+   the file so nothing re-declares transform behind their back. */
+.project-card,
+.about-highlight,
+.skill-group {
+    transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
+}
+.btn,
+.link-btn,
+.carousel-arrow,
+.social-links a {
+    transform: translateY(var(--control-lift, 0px)) scale(var(--control-press, 1));
+}
+
+/* Deliberately weaker than `html[data-effects="high"] .circular-project-carousel
+   .project-card` (0,3,1), so a ring card that somehow picked up the class still
+   keeps its ring transform. */
+.project-card.is-tilting {
+    transform:
+        perspective(62.5rem)
+        rotateX(var(--card-tilt-x, 0deg))
+        rotateY(var(--card-tilt-y, 0deg))
+        translateY(var(--card-lift, 0px))
+        scale(var(--card-press, 1));
+}
+
+/* Contact: down and slightly smaller, and the hover lift gives way to it, so a
+   pressed control reads as being pushed into the page rather than hovering
+   over it. */
+.project-card.is-pressed,
+.about-highlight.is-pressed,
+.skill-group.is-pressed {
+    --card-press: .985;
+    --card-lift: -2px;
+}
+.btn.is-pressed,
+.link-btn.is-pressed,
+.carousel-arrow.is-pressed,
+.social-links a.is-pressed {
+    --control-press: .965;
+    --control-lift: -1px;
+}
+/* Faster in than out: the press should feel instant and the release should
+   settle. Named surface by surface rather than as a bare `.is-pressed`, which
+   would also retime the cursor dot -- it uses the same class name. */
+.project-card.is-pressed,
+.about-highlight.is-pressed,
+.skill-group.is-pressed,
+.btn.is-pressed,
+.link-btn.is-pressed,
+.carousel-arrow.is-pressed,
+.social-links a.is-pressed { transition-duration: .09s; }
+
+/* The ripple and the spotlight both need a clip and a containing block. */
+.project-card,
+.about-highlight,
+.skill-group,
+.btn,
+.link-btn,
+.carousel-arrow,
+.social-links a {
+    position: relative;
+    overflow: hidden;
+}
+
+.press-ripple {
+    position: absolute;
+    z-index: 4;
+    width: var(--ripple-size, 8rem);
+    aspect-ratio: 1;
+    pointer-events: none;
+    border-radius: 50%;
+    /* currentColor, so one rule covers both directions: a cream bloom on a dark
+       card, and a dark one on a control that has turned blue under the cursor. */
+    background: radial-gradient(circle, currentColor 0%, transparent 68%);
+    transform: translate(-50%, -50%) scale(.2);
+    animation: press-ripple-out .52s var(--ease) forwards;
+}
+@keyframes press-ripple-out {
+    from { opacity: .34; transform: translate(-50%, -50%) scale(.2); }
+    to { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Spotlight. High FX only: mix-blend-mode puts every card that carries this
+   layer on its own compositing layer, and the archive can hold a lot of cards. */
+html[data-effects="high"] .project-card::after,
+html[data-effects="high"] .about-highlight::after,
+html[data-effects="high"] .skill-group::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: var(--card-glow, 0);
+    background: radial-gradient(
+        var(--card-glow-size, 15rem) var(--card-glow-size, 15rem)
+        at var(--card-glow-x, 50%) var(--card-glow-y, 50%),
+        rgba(123, 168, 216, .20),
+        rgba(123, 168, 216, .06) 45%,
+        transparent 72%);
+    mix-blend-mode: screen;
+    transition: opacity .2s ease;
+}
+/* A card is only as wide as its column, so the light is sized to the smaller
+   surfaces rather than washing the whole card at once. */
+.about-highlight,
+.skill-group {
+    --card-glow-size: 12rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .press-ripple { display: none; }
+    .project-card.is-tilting {
+        transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
+    }
+}
