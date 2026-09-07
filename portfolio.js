@@ -27,12 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
             '--ring-height-min': 520,
             '--ring-height-max': 560,
             '--modal-max-width': 820,
-            '--modal-max-height': 860,
-            '--project-grid-gap': 20,
-            '--collection-grid-gap': 16,
-            '--carousel-gap-min': 16,
-            '--carousel-gap-max': 24
+            '--modal-max-height': 860
         };
+        // Gutters and rhythm are rem, and the root font-size is already scaled
+        // above, so they carry the same factor without a second px override.
+
         Object.entries(scalableDimensions).forEach(([property, pixels]) => {
             document.documentElement.style.setProperty(property, `${(pixels * layoutScale).toFixed(2)}px`);
         });
@@ -341,8 +340,10 @@ document.addEventListener('DOMContentLoaded', () => {
             galaxy.move(latestPointerEvent);
             ambientGlow.classList.add('is-active');
             ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - glowRadius}px, ${latestPointerEvent.clientY - glowRadius}px, 0)`;
+            // Cancels the element's own translate, so the lattice inside the
+            // lens is pinned to the viewport: the light moves, the grid does not.
             ambientGlow.style.setProperty('--grid-offset-x', `${glowRadius - latestPointerEvent.clientX}px`);
-            ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY - window.scrollY}px`);
+            ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY}px`);
             pointerFrame = 0;
         });
     };
@@ -408,10 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
         pageScrollFill.style.transform = `scaleY(${progress})`;
         galaxy.scroll(window.scrollY);
-        if (effectsMode === 'high' && latestPointerEvent) {
-            const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
-            ambientGlow.style.setProperty('--grid-offset-y', `${(140 * interfaceScale) - latestPointerEvent.clientY - window.scrollY}px`);
-        }
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
     };
@@ -501,12 +498,13 @@ function setupGalaxyField(canvas, reducedMotion) {
     // layout pass so a root font-size change carries through.
     let gridSpacing = 48;
     let gridPaths = [], gridPathSignature = '';
-    // The lattice is the one layer anchored in page space, so it is the layer
-    // that can show the page being pulled. A scroll feeds `scrollVelocity`;
-    // `scrollDrag` is the lattice lagging behind it and springing back, and
-    // `dragGlow` lights the lattice while it does -- at rest the grid is almost
-    // invisible by design, and an invisible lattice cannot show it is moving.
-    let scrollVelocity = 0, scrollDrag = 0, dragGlow = 0, lastScrollAt = 0;
+    // The lattice is anchored to the viewport, not to the page. It used to be
+    // drawn in document space and dragged by a scroll-velocity spring, which
+    // meant every flick slid, stretched and lit the whole sheet -- at a 12px
+    // minor pitch that reads as the backdrop shaking rather than as elastic.
+    // A ruled surface has to hold still to be a ruler. The only thing that
+    // moves it now is a finger pressed into it.
+    let lastScrollAt = 0;
     // Fixed for this visit, so scrolling/resizing never rerolls the rare anchor.
     const hasGiantLandmark = Math.random() < .08;
     // One roll decides the whole sky. Every seeded generator below mixes this
@@ -1778,40 +1776,31 @@ function setupGalaxyField(canvas, reducedMotion) {
         context.globalCompositeOperation = 'lighter';
         context.globalAlpha = 1;
         const wells = touchWells.filter(well => Math.abs(well.depth) > .012);
-        // A drag both slides the horizontals and stretches the gaps between
-        // them, so the sheet reads as elastic rather than merely offset.
-        const stretch = 1 + Math.abs(scrollDrag) * .0055;
-        // With no dents the path only changes on scroll or resize. Reuse its
-        // exact geometry; touch and drag frames retrace the whole lattice.
-        const signature = `${width}:${height}:${gridSpacing}:${scrollPosition}:${scrollDrag.toFixed(2)}`;
+        // With no dents the lattice is fixed geometry: it only changes on a
+        // resize. Reuse the path; touch frames retrace it through the wells.
+        const signature = `${width}:${height}:${gridSpacing}`;
         if (touchWells.length || signature !== gridPathSignature) gridPaths = [];
         gridPathSignature = touchWells.length ? '' : signature;
         // Two densities, matching what the stylesheet drew before: a readable
         // major lattice and a much fainter minor one.
-        for (const [baseSpacing, color, lit] of [
-            [gridSpacing / 4, 'rgba(255,255,255,.0042)', .012],
-            [gridSpacing, 'rgba(145,200,255,.0125)', .05]
+        for (const [spacing, color] of [
+            [gridSpacing / 4, 'rgba(255,255,255,.0042)'],
+            [gridSpacing, 'rgba(145,200,255,.0125)']
         ]) {
-            const spacing = baseSpacing * stretch;
-            const pathIndex = baseSpacing === gridSpacing ? 1 : 0;
+            const pathIndex = spacing === gridSpacing ? 1 : 0;
             let path = gridPaths[pathIndex];
             if (!path) {
                 path = new Path2D();
+                // Both axes start at the viewport origin and step by a whole
+                // module, so the lattice lands on the same pixels every frame
+                // and cannot shimmer against its own 1px lines.
                 for (let x = 0; x <= width; x += spacing) traceGridLine(path, x, 0, x, height, 'y');
-                for (let y = -((scrollPosition - scrollDrag) % spacing); y <= height; y += spacing) {
-                    traceGridLine(path, 0, y, width, y, 'x');
-                }
+                for (let y = 0; y <= height; y += spacing) traceGridLine(path, 0, y, width, y, 'x');
                 gridPaths[pathIndex] = path;
             }
             context.lineWidth = 1;
             context.strokeStyle = color;
             context.stroke(path);
-            // Lit while it is actually being pulled, and only then -- this is
-            // what makes the drag visible at all against a near-black field.
-            if (dragGlow > .01) {
-                context.strokeStyle = `rgba(150, 196, 244, ${(dragGlow * lit).toFixed(4)})`;
-                context.stroke(path);
-            }
             // At rest the lattice is barely there, by design -- which would
             // also make the bend invisible, the one thing it is here to show.
             // So the sheet glows where it is stretched: the same path restroked
@@ -2601,7 +2590,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         // The ambient scene is paced down to 24-30fps because nothing on it is
         // being aimed at. A finger on the glass is, and the dent has to track
         // it: hold the higher rate for as long as one is down.
-        const interval = touchWells.length || scrollDrag || pointer.speed > 120
+        const interval = touchWells.length || pointer.speed > 120
+            || performance.now() - lastScrollAt < 160
             ? Math.min(frameInterval, 1000 / 60) : frameInterval;
         if (animated && timestamp - lastFrame < interval - 1) {
             animationFrame = requestAnimationFrame(draw);
@@ -2621,18 +2611,6 @@ function setupGalaxyField(canvas, reducedMotion) {
             pointer.vx *= Math.exp(-delta / 85); pointer.vy *= Math.exp(-delta / 85);
             pointer.speed = Math.hypot(pointer.vx, pointer.vy);
         }
-        if (animated) {
-            // The sheet does not keep up with the page. It is pulled toward
-            // wherever the scroll is heading, then springs back once the flick
-            // stops -- which is the whole difference between a lattice that
-            // scrolls and a lattice that is being dragged.
-            const target = clamp(scrollVelocity * .02, -32, 32);
-            scrollDrag += (target - scrollDrag) * (1 - Math.exp(-delta / 75));
-            scrollVelocity *= Math.exp(-delta / 105);
-            if (performance.now() - lastScrollAt > 140) scrollVelocity = 0;
-            dragGlow = Math.min(1, Math.abs(scrollDrag) / 22);
-            if (Math.abs(scrollDrag) < .05) scrollDrag = 0;
-        } else { scrollDrag = 0; dragGlow = 0; scrollVelocity = 0; }
         context.clearRect(0, 0, width, height);
         context.globalCompositeOperation = 'lighter';
         drawBackgroundGrid(); // Furthest back: the sheet everything else sits on.
@@ -2840,7 +2818,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         pressedSpace = null; pointer.active = false;
         sleeping = false; clearTimeout(sleepTimer); sleepTimer = 0;
         touchWells.length = 0;
-        scrollVelocity = scrollDrag = dragGlow = 0; lastScrollAt = 0;
+        lastScrollAt = 0;
         for (const particle of particles) particle.active = false;
         for (const ripple of ripples) ripple.active = false;
         if (changed) resetEvents();
@@ -2999,14 +2977,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     window.addEventListener('blur', () => { pointer.active = false; pressedSpace = null; });
     const scroll = y => {
         if (quality !== 'high') return;
-        // Sampled once per frame by the caller, so this is a real velocity and
-        // not a burst of coalesced scroll events.
-        const now = performance.now(), elapsed = now - lastScrollAt;
-        if (lastScrollAt && elapsed > 0 && elapsed < 220 && !reducedMotion.matches) {
-            const sample = clamp((y - scrollPosition) * 1000 / elapsed, -7000, 7000);
-            scrollVelocity += (sample - scrollVelocity) * .4;
-        } else scrollVelocity = 0;
-        lastScrollAt = now;
+        // Only used to hold the higher frame rate while the parallax tiers are
+        // actually moving. The lattice itself is viewport-locked and ignores it.
+        lastScrollAt = performance.now();
         scrollPosition = y;
         updateVisibleRects();
         requestDraw(); // Reduced motion redraws only on user/layout changes.
@@ -3016,7 +2989,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     window.addEventListener('resize', deferLayout, { passive: true });
     document.addEventListener('visibilitychange', () => {
         pointer.active = false; touchWells.length = 0;
-        scrollVelocity = scrollDrag = dragGlow = 0; lastScrollAt = 0;
+        lastScrollAt = 0;
         cancelAnimationFrame(animationFrame);
         animationFrame = 0;
         lastFrame = 0;
@@ -3059,7 +3032,7 @@ function setupGalaxyField(canvas, reducedMotion) {
             sleepTimer = 0;
             if (touchWells.length) return;
             sleeping = true;
-            scrollVelocity = scrollDrag = dragGlow = 0;
+            lastScrollAt = 0;
             cancelAnimationFrame(animationFrame);
             animationFrame = 0;
         }, 1600);
@@ -3270,17 +3243,26 @@ function setupFeaturedCarousel(container) {
         indicators: true,
         enabled: () => container.classList.contains('is-compact-carousel')
     });
-    const featuredGridMinimumWidth = 940;
+    // Featured projects step with the rest of the page rather than on a width
+    // of their own: three-up, two-up, then the one-up carousel at exactly the
+    // breakpoint where every other grid on the page has also collapsed to one
+    // column. Measuring this container instead used to put the page in a band
+    // where About was still three-up and Projects was already a carousel.
+    const singleColumn = window.matchMedia('(max-width: 800px)');
     const updateLayout = () => {
-        const useCarousel = container.clientWidth < featuredGridMinimumWidth;
+        const useCarousel = singleColumn.matches;
         container.classList.toggle('project-carousel', useCarousel);
         container.classList.toggle('is-compact-carousel', useCarousel);
         controls.classList.toggle('is-active', useCarousel);
         initialize();
     };
+    singleColumn.addEventListener('change', updateLayout);
     const layoutObserver = new ResizeObserver(() => window.requestAnimationFrame(updateLayout));
     layoutObserver.observe(container);
-    window.requestAnimationFrame(updateLayout);
+    // Settle the first layout synchronously. Deferring it to rAF meant a page
+    // opened in a background tab -- where rAF never fires until it is focused --
+    // sat on the wrong tier until the visitor looked at it.
+    updateLayout();
 }
 
 function buildProjectCardSummary(project) {
