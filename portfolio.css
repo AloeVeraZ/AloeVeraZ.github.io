@@ -1202,105 +1202,6 @@ button:focus-visible,
 .footer-links a:hover,
 .footer-links a:focus-visible { color: var(--ink); }
 
-/* --------------------------------------------------------- consent banner */
-.consent-banner {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1100;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-4) var(--space-6);
-    padding: var(--space-4) var(--space-5);
-    border-top: 1px solid var(--line);
-    background: rgba(10, 10, 10, .97);
-    backdrop-filter: blur(10px);
-    animation: consent-rise .45s var(--ease) both;
-}
-@keyframes consent-rise {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-.consent-copy {
-    max-width: 60ch;
-    margin: 0;
-    color: var(--muted);
-    font-size: .82rem;
-    line-height: 1.6;
-}
-.consent-copy a {
-    color: var(--blue);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-.consent-copy a:hover { color: var(--ink); }
-.consent-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-.consent-banner .btn {
-    padding: var(--space-3) var(--space-5);
-    cursor: pointer;
-    white-space: nowrap;
-}
-.consent-accept { background: var(--blue); border-color: var(--blue); color: #080808; }
-.consent-accept:hover,
-.consent-accept:focus-visible { background: #c6e0f7; border-color: #c6e0f7; }
-.consent-decline { background: transparent; color: var(--ink); }
-.consent-decline:hover,
-.consent-decline:focus-visible { background: var(--surface-raised); }
-
-/* ------------------------------------------------------ video placeholder */
-/* Stands in for a YouTube iframe until someone asks for it, at exactly the same
-   size so nothing shifts when the real player replaces it. */
-.embed-facade {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    padding: var(--space-5);
-    border: 1px solid var(--line);
-    background:
-        radial-gradient(ellipse at 50% 42%, rgba(123, 168, 216, .13), transparent 62%),
-        #14151a;
-    color: var(--ink);
-    text-align: center;
-    cursor: pointer;
-    transition: background .25s var(--ease), border-color .25s var(--ease);
-}
-.embed-facade:hover,
-.embed-facade:focus-visible { border-color: var(--blue); background: #191b21; }
-.embed-facade-play {
-    display: grid;
-    place-items: center;
-    width: 3.25rem;
-    aspect-ratio: 1;
-    border: 1px solid var(--blue);
-    border-radius: 50%;
-    color: var(--blue);
-    font-size: 1rem;
-    transition: background .25s var(--ease), color .25s var(--ease);
-}
-.embed-facade:hover .embed-facade-play,
-.embed-facade:focus-visible .embed-facade-play { background: var(--blue); color: #080808; }
-.embed-facade-title {
-    font-family: "Barlow Condensed", Inter, sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-}
-.embed-facade-note {
-    max-width: 34ch;
-    color: var(--muted);
-    font-size: .74rem;
-    line-height: 1.5;
-}
-.modal-feature-video-player .embed-facade { height: 100%; }
-
 /* -------------------------------------------------------------- mobile nav */
 /* The links used to be hidden outright below 800px, which left phones with no
    navigation at all. They become a disclosure panel instead. */
@@ -1344,18 +1245,23 @@ button:focus-visible,
     .nav-toggle { display: block; }
     .nav-content { flex-wrap: wrap; }
 
-    /* Supersedes the earlier rules that hid every link on small screens. */
+    /* Supersedes the earlier rules that hid every link on small screens.
+
+       Collapsed with max-height rather than `grid-template-rows: 0fr`, which
+       only sizes the FIRST row -- the remaining items land in implicit rows and
+       keep their height, leaving a closed navbar 212px tall with the hero
+       showing through it. The ceiling only has to clear five items. */
     .nav-links {
-        display: grid;
-        grid-template-rows: 0fr;
+        display: block;
         flex-basis: 100%;
         gap: 0;
-        transition: grid-template-rows .3s var(--ease);
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .3s var(--ease);
     }
     .nav-links > li:not(.performance-control) { display: block; }
-    .nav-links > li { overflow: hidden; min-height: 0; }
     .navbar:not([data-nav-open]) .nav-links > li { visibility: hidden; }
-    .navbar[data-nav-open] .nav-links { grid-template-rows: 1fr; }
+    .navbar[data-nav-open] .nav-links { max-height: 20rem; }
     .navbar[data-nav-open] .nav-links > li { visibility: visible; }
     .nav-links a,
     .nav-links .performance-toggle {
@@ -1373,12 +1279,9 @@ button:focus-visible,
         border-bottom-color: var(--line);
     }
 
-    .consent-banner { flex-direction: column; align-items: stretch; text-align: left; }
-    .consent-actions > .btn { flex: 1; justify-content: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .consent-banner { animation: none; }
     .nav-links { transition: none; }
     .nav-toggle > span,
     .nav-toggle > span::before,

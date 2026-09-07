@@ -421,9 +421,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('current-year').textContent = new Date().getFullYear();
     setupMobileNav();
     setupImageRecovery();
-    // Bumped whenever portfolio-data.json changes shape or media paths, so a
-    // returning visitor never gets a cached file pointing at images that moved.
-    fetch('portfolio-data.json?v=20260907-srcset')
+    // `no-cache` revalidates rather than trusting the cached copy: a stale data
+    // file naming images that have since been renamed is the one way a correct
+    // deploy can still render a grid full of broken pictures.
+    fetch('portfolio-data.json', { cache: 'no-cache' })
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
             renderProfile(data.profile);
@@ -3233,6 +3234,22 @@ function escapeAttribute(value) {
         .replace(/>/g, '&gt;');
 }
 
+// Markup for one project video. Videos live only inside the project modal, so
+// nothing is requested from YouTube until someone opens a project that has one.
+//
+// The privacy-enhanced host is used regardless: it behaves identically for the
+// viewer but keeps YouTube from writing tracking storage before playback.
+function buildVideoEmbed(src, title, options = {}) {
+    const hardened = String(src || '').replace(
+        /^https?:\/\/(?:www\.)?youtube\.com\//,
+        'https://www.youtube-nocookie.com/'
+    );
+    if (!hardened) return '';
+    return `<iframe src="${escapeAttribute(hardened)}" title="${escapeAttribute(title || 'Project video')}"`
+        + (options.lazy ? ' loading="lazy"' : '')
+        + ' allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+}
+
 // Alt text for a project's lead image. `imageAlt` and `motionImageAlt` in the
 // data describe what is actually in the frame; the title is only a fallback for
 // a project whose description has not been written yet, and it is a poor one --
@@ -4066,7 +4083,7 @@ function openModal(project) {
     if (featureVideo && featureVideoPlayer) {
         featureVideo.hidden = !project.featureVideo?.src;
         featureVideoPlayer.innerHTML = project.featureVideo?.src
-            ? PortfolioConsent.embed(project.featureVideo.src, project.featureVideo.label || `${project.title} video`)
+            ? buildVideoEmbed(project.featureVideo.src, project.featureVideo.label || `${project.title} video`)
             : '';
     }
     deepDiveHeading.hidden = isCoursework || !project.sections?.length || overviewItems.length === 0;
@@ -4087,7 +4104,7 @@ function openModal(project) {
         : `<div class="media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;
     const media = document.getElementById('modal-media');
     media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
-        ? `<figure class="modal-media-item modal-video">${PortfolioConsent.embed(item.src, item.label, { lazy: true })}<figcaption>${item.label}</figcaption></figure>`
+        ? `<figure class="modal-media-item modal-video">${buildVideoEmbed(item.src, item.label, { lazy: true })}<figcaption>${item.label}</figcaption></figure>`
         : item.src
         ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${escapeAttribute(item.alt || item.label)}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}" aria-hidden="true"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
