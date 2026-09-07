@@ -15,8 +15,9 @@ I use the site to keep my robotics, CAD, controls, manufacturing, and 3D-printin
 - `project-example.json` is a project record I can copy when adding something new.
 
 Supporting pages and files: `privacy.html`, `terms.html`, `404.html`, `page.css`
-(shared styling for those three), `fonts.css`, `icons.css`, `robots.txt`,
-`sitemap.xml`, and `site.webmanifest`.
+and `page.js` (shared styling and the zoom-aware root font size for those
+three), `fonts.css`, `icons.css`, `robots.txt`, `sitemap.xml`, and
+`site.webmanifest`.
 
 ## Nothing loads from a third party
 

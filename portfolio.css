@@ -1160,24 +1160,6 @@ button:focus-visible,
     color: #080808;
 }
 
-/* --------------------------------------------------- contact call to action */
-.contact-cta {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-3);
-    margin: var(--space-6) 0 var(--space-5);
-}
-.contact-cta .btn {
-    padding: var(--space-4) var(--space-6);
-    font-size: .82rem;
-}
-.contact-cta-note {
-    color: var(--muted);
-    font-size: .78rem;
-    letter-spacing: .04em;
-}
-
 /* ----------------------------------------------------------- footer links */
 .footer-content {
     display: flex;

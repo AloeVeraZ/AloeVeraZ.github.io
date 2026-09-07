@@ -3313,20 +3313,13 @@ function renderProfile(profile) {
         : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
     document.getElementById('hero-social').innerHTML += resumeIcon;
 
-    // One unmistakable action to close the page on. Email is promoted to that
-    // button, so it is dropped from the quieter row below -- otherwise the same
-    // "Email Me" appears twice, a few pixels apart, in two different weights.
-    const cta = document.getElementById('contact-cta');
-    const emailIsPrimary = Boolean(cta && emailUrl);
-    if (emailIsPrimary) {
-        const externalAttributes = emailUrl.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
-        cta.innerHTML = `<a href="${emailUrl}"${externalAttributes} class="btn primary-btn">`
-            + '<i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Email Me</a>'
-            + `<span class="contact-cta-note">${escapeAttribute(emailAddress)}</span>`;
-    }
-    const secondaryLinks = emailIsPrimary ? links.filter(([url]) => url !== emailUrl) : links;
+    // Resume, GitHub and Email Me are one row of equal buttons, and they fill
+    // the three cells of the same page grid every other region uses. Email was
+    // briefly promoted to a louder primary button above this row; that read as a
+    // competing control rather than as the close of the section, so it sits back
+    // here in the same weight as the other two.
     document.getElementById('contact-links-container').innerHTML =
-        resumeButton + secondaryLinks.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
+        resumeButton + links.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
 }
 
 function renderSkills(categories) {
