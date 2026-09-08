@@ -2926,6 +2926,49 @@ function setupGalaxyField(canvas, reducedMotion) {
             requestDraw();
         });
     };
+    // Opening a collection inserts a screenful or two into the middle of the
+    // document, and everything below it slides down. The scene does not: it is
+    // placed once, in page coordinates, and stays there. So the footer, the
+    // contact row, the headings and the collection rows below all travel down
+    // over stationary scenery, and the clearance that keeps the field out from
+    // behind text dims whatever they land on -- which is why black holes and
+    // bodies faded out on opening a collection and came back on closing it.
+    // Nothing was removed; the page moved out from under them.
+    //
+    // So the sky below the insertion point moves with the content. It is one
+    // pass over four arrays and a redraw of the star tiles, it keeps every
+    // object's relationship to the page exactly as it was placed, and it
+    // composes: two collections open and one closed again leaves the field
+    // where it started, because each shift is measured in the page coordinates
+    // of the moment.
+    const shiftSceneBelow = (anchor, delta) => {
+        if (!delta || quality !== 'high') return;
+        // Nothing to move before the first build.
+        if (!blackHoles.length && !regions.length) return;
+        for (const tier of tierList) {
+            for (const object of tier.objects || []) {
+                if (object.documentY >= anchor) object.documentY += delta;
+            }
+        }
+        for (const region of regions) if (region.y >= anchor) region.y += delta;
+        for (const hole of blackHoles) if (hole.documentY >= anchor) hole.documentY += delta;
+        for (const pulsar of pulsars) if (pulsar.documentY >= anchor) pulsar.documentY += delta;
+        // Orbiting bodies hold a reference to the hole or region they circle,
+        // so they come along on their own.
+        //
+        // Growing the built height by the same amount keeps the insertion from
+        // tripping the rebuild threshold, which would reroll the placement this
+        // shift just preserved.
+        if (delta > 0) builtPageHeight += delta;
+        pageHeight = Math.max(document.documentElement.scrollHeight, height);
+        buildStaticStarTiles();
+        deferLayout();
+        requestDraw();
+    };
+    document.addEventListener('portfolio:content-shifted', event => {
+        shiftSceneBelow(event.detail.anchor, event.detail.delta);
+    });
+
     const deferLayout = () => {
         if (quality !== 'high') return;
         clearTimeout(layoutTimer);
@@ -3670,9 +3713,35 @@ function renderProjectCollections(collections, projects) {
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => {
             const opening = toggle.getAttribute('aria-expanded') !== 'true';
+            // Where the document is about to grow, and by how much. The backdrop
+            // is placed in page coordinates, so without this it sits still while
+            // every heading below slides down across it. The anchor comes off
+            // the row itself: the panel underneath is display:none until this
+            // click lands and has no rectangle to read.
+            const anchor = toggle.getBoundingClientRect().bottom + window.scrollY;
+            // The row's own height, not the document's: sections carry
+            // content-visibility, so their real height resolves as they come
+            // into view and the document total can move on its own between two
+            // reads a frame apart. How far this row grows is how far everything
+            // below it slides, and nothing else can disturb that measurement.
+            const heightBefore = group.getBoundingClientRect().height;
             toggle.setAttribute('aria-expanded', String(opening));
             content.hidden = !opening;
-            if (opening) window.requestAnimationFrame(initializeCarousel);
+            const announceShift = () => {
+                const delta = group.getBoundingClientRect().height - heightBefore;
+                if (!delta) return;
+                document.dispatchEvent(new CustomEvent('portfolio:content-shifted', {
+                    detail: { anchor, delta }
+                }));
+            };
+            // A carousel sets its own height when it initialises, so on the way
+            // open the document is not finished growing until that has run.
+            if (opening) {
+                window.requestAnimationFrame(() => {
+                    initializeCarousel();
+                    announceShift();
+                });
+            } else announceShift();
         });
         container.appendChild(group);
     });
