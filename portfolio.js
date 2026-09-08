@@ -4104,7 +4104,15 @@ function setupCarousel(carousel, controls, options = {}) {
         interactionActive = true;
         dragPointerId = event.pointerId;
         cancelAutoplay();
-        stopAndCenterCurrentMotion();
+        // Stop where it stands. Re-centring here slid the card out from under
+        // the cursor between press and release, so the click landed on the
+        // track instead of on a card and the first press appeared to do
+        // nothing -- worst on the outermost cards, which are the narrowest.
+        window.cancelAnimationFrame(scrollAnimation);
+        if (isAnimating) {
+            isAnimating = false;
+            syncIndexToNearestCard();
+        }
         dragStartX = event.clientX;
         dragStartY = event.clientY;
         dragLastX = event.clientX;

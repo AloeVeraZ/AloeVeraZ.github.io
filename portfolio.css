@@ -810,13 +810,26 @@ footer { background: transparent; }
     display: none;
 }
 
-:root { --content-section-gap: var(--rhythm-section); }
+:root {
+    --content-section-gap: var(--rhythm-section);
+    /* content-visibility: auto on a section brings paint containment with it,
+       and that clips to the section's padding box. The first line of a header is
+       leading-trimmed, so its line box reaches above its own box -- sitting
+       flush against that edge, the capitals of Toolkit, Portfolio and Connect
+       were sliced off at the top. This is a hair of padding to move the clip off
+       the type, taken straight back out of the margin so nothing else moves.
+       About never showed it because its own top padding already held it clear. */
+    --section-paint-headroom: var(--space-3);
+}
 main > .section {
     margin: 0;
-    padding: 0;
+    padding-top: var(--section-paint-headroom);
+    padding-bottom: 0;
 }
 main > #about { padding-top: var(--content-section-gap); }
-main > .section + .section { margin-top: var(--content-section-gap); }
+main > .section + .section {
+    margin-top: calc(var(--content-section-gap) - var(--section-paint-headroom));
+}
 #projects .featured-grid { margin-bottom: 0; }
 #projects .project-library {
     margin-top: 0;
@@ -1062,42 +1075,50 @@ html[data-effects="high"] .ambient-glow {
 html[data-effects="high"] .ambient-glow.is-active {
     opacity: .72;
 }
-/* Left alone, the whole backdrop goes to black together. Every layer fades on
-   exactly the same curve and the same clock as the grid -- one of them lagging
-   behind is what makes the page look like a stack of effects rather than a
-   single view that is settling. */
-html[data-effects="high"].effects-background-idle .background-grid,
-html[data-effects="high"].effects-background-idle .ambient-glow,
-html[data-effects="high"].effects-background-idle .galaxy-field,
-html[data-effects="high"].effects-background-idle .galaxy-nebula {
-    opacity: 0;
-    transition-duration: 1.4s;
-    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
-}
-html[data-effects="high"].effects-background-click-fading .background-grid,
-html[data-effects="high"].effects-background-click-fading .ambient-glow,
-html[data-effects="high"].effects-background-click-fading .galaxy-field,
-html[data-effects="high"].effects-background-click-fading .galaxy-nebula {
-    opacity: 0;
-    transition-duration: 3.5s;
-    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
-}
-
 @media (max-width: 800px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
     .performance-toggle { font-size: .72rem; }
 }
 
-/* Low FX keeps a static deep field without a canvas loop or sprite atlas. */
+/* Low FX draws the same lattice the canvas does in High FX -- the same two
+   densities, the same blue major and white minor -- so switching modes changes
+   how the backdrop moves, not what it is. This used to replace that lattice
+   outright with three fields of scattered dots, which read as a starfield with
+   no grid in it at all. The two soft clouds stay: they are the depth, and they
+   sit behind the lines rather than instead of them. */
 html[data-effects="low"] .background-grid {
     background-image:
+        linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(145,200,255,.095) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px),
         radial-gradient(ellipse at 16% 24%, rgba(134,160,190,.055), transparent 35%),
-        radial-gradient(ellipse at 85% 66%, rgba(175,151,125,.035), transparent 30%),
-        radial-gradient(circle at 31px 43px, rgba(219,230,241,.32) .65px, transparent 1.2px),
-        radial-gradient(circle at 87px 117px, rgba(172,197,219,.23) .55px, transparent 1px),
-        radial-gradient(circle at 153px 71px, rgba(228,221,204,.22) .6px, transparent 1.1px);
-    background-size: 100% 100%, 100% 100%, 233px 271px, 347px 307px, 419px 389px;
+        radial-gradient(ellipse at 85% 66%, rgba(175,151,125,.035), transparent 30%);
+    background-size:
+        3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem,
+        100% 100%, 100% 100%;
+}
+
+/* Left alone, the whole backdrop goes to black together. Every layer fades on
+   exactly the same curve and the same clock as the grid -- one of them lagging
+   behind is what makes the page look like a stack of effects rather than a
+   single view that is settling. */
+html.effects-background-idle .background-grid,
+html.effects-background-idle .ambient-glow,
+html.effects-background-idle .galaxy-field,
+html.effects-background-idle .galaxy-nebula {
+    opacity: 0;
+    transition-duration: 1.4s;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
+}
+html.effects-background-click-fading .background-grid,
+html.effects-background-click-fading .ambient-glow,
+html.effects-background-click-fading .galaxy-field,
+html.effects-background-click-fading .galaxy-nebula {
+    opacity: 0;
+    transition-duration: 3.5s;
+    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 
 /* ---- The page grid --------------------------------------------------------
