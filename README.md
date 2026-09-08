@@ -19,6 +19,40 @@ and `page.js` (shared styling and the zoom-aware root font size for those
 three), `fonts.css`, `icons.css`, `robots.txt`, `sitemap.xml`, and
 `site.webmanifest`.
 
+## Spacing
+
+Every vertical gap on the site comes from one of six tokens, declared and
+explained at the top of `portfolio.css` and copied into `page.css`:
+
+| Token | Value | Used between |
+| --- | --- | --- |
+| `--rhythm-label` | 12px | a label and the heading it names; one list item and the next |
+| `--rhythm-heading` | 16px | a heading and the line that supports it; one line of a passage and the next |
+| `--rhythm-rule` | 16px | either side of a rule inside a card |
+| `--rhythm-block` | 24px | one block and the next inside a section |
+| `--rhythm-header` | 48px | a header and the content it heads |
+| `--rhythm-section` | 48–96px | one section and the next |
+
+Which token a gap takes depends on what the two things are to each other, not
+on where they sit, so the hero's badge stands above the name at exactly the
+distance a section's label stands above its title. Nothing sets a spacing value
+of its own; if a new pair does not fit one of the six, the pair is probably
+named wrong.
+
+These are the distances you *see*, not the distances between two boxes. A line
+box is taller than the letters in it, and by a different amount for every
+line-height on the page — which is why the hero's name used to sit visibly
+closer to the badge above it than to the tagline below it, despite having the
+larger margin of the two. Each text block is therefore leading-trimmed: a pair
+of zero-height pseudo-elements pulls its box in to cap height at the top and
+the baseline at the bottom, using the font metrics in the same `:root` block.
+The end of `portfolio.css` carries the arithmetic. To trim a new block, set
+`--lh` to its line-height as a plain number, write `line-height: var(--lh)`,
+and add it to the list for the face it is set in.
+
+`tools/measure-faces.js` re-reads those font metrics, and is the thing to run
+if a typeface is ever swapped or resubset.
+
 ## Nothing loads from a third party
 
 Fonts, icons, and every project image are served from this domain. Opening the
@@ -61,6 +95,9 @@ python tools/build-icons.py       # subset Font Awesome to the icons in use
 python tools/build-fonts.py       # download and self-host Inter + Barlow Condensed
 python tools/build-brand.py       # favicon set and the social preview card
 ```
+
+`tools/measure-faces.js` is not part of that run: it is pasted into the browser
+console and prints the `--face-*` metrics the leading trim needs.
 
 Run `build-icons.py` again whenever the markup starts using a new `fa-` icon,
 otherwise that glyph will not be in the subset and will render as a blank box.

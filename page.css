@@ -20,6 +20,24 @@
     --space-6: 2rem;
     --space-7: 3rem;
     --space-9: 6rem;
+
+    /* The portfolio's vertical rhythm and font metrics, copied for the same
+       reason the colours are: these pages have to look like the same site.
+       portfolio.css carries the full explanation of both. */
+    --rhythm-label: var(--space-3);
+    --rhythm-heading: var(--space-4);
+    --rhythm-block: var(--space-5);
+    --rhythm-header: var(--space-7);
+
+    --face-display-ascent: 1;
+    --face-display-descent: .2;
+    --face-display-cap: .7031;
+    --face-text-ascent: .969;
+    --face-text-descent: .241;
+    --face-text-cap: .7344;
+
+    /* The body line-height, named so the trim below can do arithmetic on it. */
+    --lh-body: 1.65;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,7 +51,7 @@ body {
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--bg);
     color: var(--ink);
-    line-height: 1.65;
+    line-height: var(--lh-body);
     /* the same 48px lattice the portfolio draws behind its canvas */
     background-image:
         linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
@@ -106,8 +124,9 @@ a { color: inherit; }
 }
 
 .page-eyebrow {
+    --lh: var(--lh-body);
     display: block;
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--rhythm-label);
     color: var(--blue);
     font-size: .72rem;
     font-weight: 700;
@@ -116,28 +135,38 @@ a { color: inherit; }
 }
 
 .page-main h1 {
+    --lh: 1.02;
     font-family: "Barlow Condensed", Inter, sans-serif;
     font-size: clamp(2.3rem, 7vw, 3.4rem);
     font-weight: 800;
-    line-height: 1.02;
+    line-height: var(--lh);
     letter-spacing: -.02em;
     text-transform: uppercase;
 }
 
 .page-updated {
-    margin-top: var(--space-3);
+    --lh: var(--lh-body);
+    margin-top: var(--rhythm-heading);
     color: var(--muted);
     font-size: .82rem;
 }
 
-.page-lede {
-    margin-top: var(--space-5);
+/* Scoped past `.page-main p + p`, which would otherwise give the opening
+   paragraph the gap that belongs between two paragraphs of one passage. */
+.page-main .page-lede {
+    --lh: var(--lh-body);
+    margin-top: var(--rhythm-block);
     font-size: 1.06rem;
     color: var(--ink);
 }
 
 .page-main h2 {
-    margin: var(--space-7) 0 var(--space-3);
+    --lh: var(--lh-body);
+    /* Only a top margin: the gap below a heading belongs to the block under
+       it, because that block is the one that knows how much of its own dead
+       space the trim has already taken out. Two margins here would collapse
+       to the larger, and the trimmed one always loses. */
+    margin: var(--rhythm-header) 0 0;
     font-family: "Barlow Condensed", Inter, sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
@@ -150,21 +179,32 @@ a { color: inherit; }
     display: block;
     width: 2rem;
     height: 2px;
-    margin-bottom: var(--space-3);
+    /* The blue rule stands 12px clear of the capitals below it, so it carries
+       the heading's top trim as well as the gap. */
+    margin-bottom: calc(var(--rhythm-label) - var(--trim-top));
     background: var(--blue);
 }
 
-.page-main p, .page-main li {
+.page-main p, .page-main li, .page-main ul {
+    --lh: var(--lh-body);
     color: var(--muted);
     font-size: .95rem;
 }
-.page-main p + p { margin-top: var(--space-4); }
+.page-main p + p,
+.page-main h2 + p { margin-top: var(--rhythm-heading); }
 
+/* A list item cannot take the pseudo-element trim: its marker is placed
+   against the first line box, and a zero-height table box standing in front of
+   that line pushes the bullet onto a line of its own. So the list folds the
+   trim into its margins instead. Every item is set at the same size, so both
+   trims resolve against the same em and the arithmetic is exact. */
 .page-main ul {
-    margin: var(--space-4) 0 0;
+    margin: calc(var(--rhythm-heading) - var(--trim-top)) 0 calc(-1 * var(--trim-bottom));
     padding-left: 1.1rem;
 }
-.page-main li + li { margin-top: var(--space-2); }
+.page-main li + li {
+    margin-top: calc(var(--rhythm-label) - var(--trim-top) - var(--trim-bottom));
+}
 
 .page-main strong { color: var(--ink); font-weight: 600; }
 
@@ -176,7 +216,7 @@ a { color: inherit; }
 .page-main a:not(.btn):hover { color: var(--ink); }
 
 .page-note {
-    margin-top: var(--space-7);
+    margin-top: var(--rhythm-header);
     padding: var(--space-5);
     border: 1px solid var(--line);
     background: var(--surface);
@@ -209,24 +249,28 @@ a { color: inherit; }
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
-    margin-top: var(--space-6);
+    margin-top: var(--rhythm-block);
 }
 
 /* Decorative, so it sits well below body-text contrast on purpose -- but not so
    far below that it reads as a rendering fault. */
-.error-code {
+/* Scoped past `.page-main p`, which would otherwise hand this display
+   numeral the body face's metrics and the body's line-height. */
+.page-main .error-code {
+    --lh: .85;
+    margin-bottom: var(--rhythm-block);
     font-family: "Barlow Condensed", Inter, sans-serif;
     font-size: clamp(5rem, 22vw, 11rem);
     font-weight: 800;
-    line-height: .85;
+    line-height: var(--lh);
     letter-spacing: -.03em;
     color: #24252a;
     -webkit-text-stroke: 1px rgba(157, 196, 234, .35);
 }
 
 .error-links {
-    margin-top: var(--space-7);
-    padding-top: var(--space-5);
+    margin-top: var(--rhythm-header);
+    padding-top: var(--rhythm-block);
     border-top: 1px solid var(--line);
 }
 .error-links h2 { margin-top: 0; }
@@ -255,6 +299,54 @@ a { color: inherit; }
 }
 .page-footer a { text-decoration: none; transition: color .2s var(--ease); }
 .page-footer a:hover, .page-footer a:focus-visible { color: var(--ink); }
+
+/* ------------------------------------------------------------ leading trim
+   The same measurement portfolio.css explains in full: each text block's box
+   is pulled in to its own letters -- cap height above, baseline below -- so
+   the gaps written above are the gaps you actually see. Set --lh to the
+   block's line-height as a plain number and list it under its face. */
+.page-main h1,
+.page-main h2,
+.page-main .error-code {
+    --trim-top: calc((
+        (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
+        + var(--face-display-ascent) - var(--face-display-cap)) * 1em);
+    --trim-bottom: calc((
+        (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
+        + var(--face-display-descent)) * 1em);
+}
+.page-eyebrow,
+.page-updated,
+.page-lede,
+.page-main p,
+.page-main li,
+.page-main ul {
+    --trim-top: calc((
+        (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
+        + var(--face-text-ascent) - var(--face-text-cap)) * 1em);
+    --trim-bottom: calc((
+        (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
+        + var(--face-text-descent)) * 1em);
+}
+.page-main h1::before,
+.page-eyebrow::before,
+.page-updated::before,
+.page-lede::before,
+.page-main p::before {
+    content: "";
+    display: table;
+    margin-bottom: calc(-1 * var(--trim-top));
+}
+.page-main h1::after,
+.page-main h2::after,
+.page-eyebrow::after,
+.page-updated::after,
+.page-lede::after,
+.page-main p::after {
+    content: "";
+    display: table;
+    margin-top: calc(-1 * var(--trim-bottom));
+}
 
 @media (max-width: 560px) {
     .page-nav-inner { flex-direction: column; align-items: flex-start; gap: var(--space-2); }

@@ -3173,10 +3173,12 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         activeRect = null;
     };
 
-    // A card inside a carousel is already placed by the carousel -- the High FX
-    // ring hands each card its own 3D transform -- so it never takes a tilt.
+    // Every project card leans, wherever it stands. A card inside a carousel is
+    // already placed by that carousel, so the CSS folds the same tilt, lift and
+    // press properties into the placement it owns rather than replacing it --
+    // the archive rings keep turning underneath the lean.
     const canTilt = card => card.classList.contains('project-card')
-        && !card.closest('.project-carousel')
+        && !card.classList.contains('carousel-clone')
         && !reducedMotion.matches
         && highEffects();
 
@@ -3233,7 +3235,13 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     // Scrolling moves the card out from under the cached rectangle. Re-reading
     // it here would force a layout on every scrolled frame, so it is only
     // marked stale and re-read on the next pointer move.
-    window.addEventListener('scroll', () => { activeRect = null; }, { passive: true });
+    //
+    // Captured rather than bound to the window, because a carousel scrolls
+    // itself: dragging a ring past the cursor slides the card the pointer is
+    // resting on, and a stale rectangle would have it leaning away from where
+    // the cursor actually is. Scroll events do not bubble, so this is the only
+    // way to hear an element's own.
+    document.addEventListener('scroll', () => { activeRect = null; }, { capture: true, passive: true });
     window.addEventListener('resize', () => { activeRect = null; }, { passive: true });
     const leaveCard = () => {
         lastHitTarget = null;

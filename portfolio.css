@@ -43,9 +43,45 @@
     --gutter: var(--space-5);
     --pad-card: var(--space-5);
     --pad-panel: clamp(var(--space-5), 4vw, var(--space-7));
-    --rhythm-section: clamp(var(--space-7), 6vw, var(--space-9));
-    --rhythm-header: var(--space-7);
+
+    /* ---- Vertical rhythm ----------------------------------------------
+       Five gaps, and every stacked pair on the site is one of them. Which
+       one it is depends on what the two things are to each other, not on
+       where they sit, so the hero's badge sits above its name at exactly
+       the distance a section's label sits above its title.
+
+         --rhythm-label    12px  an eyebrow label to the heading it names
+         --rhythm-heading  16px  a heading to the line that supports it
+         --rhythm-rule     16px  the clear either side of a rule in a card
+         --rhythm-block    24px  one block to the next inside a section
+         --rhythm-header   48px  a header to the content it heads
+         --rhythm-section  48-96px  a section to the next section
+
+       These are *optical* distances: the display type below is leading-
+       trimmed (see the end of this file), so what is written here is the
+       gap you see between one block's letters and the next's, not the gap
+       between two boxes that each carry their own dead space.               */
+    --rhythm-label: var(--space-3);
+    --rhythm-heading: var(--space-4);
+    /* A rule inside a card is a heading-strength break, not a block-strength
+       one, so it takes the same clear on both sides as a heading does. */
+    --rhythm-rule: var(--space-4);
     --rhythm-block: var(--space-5);
+    --rhythm-header: var(--space-7);
+    --rhythm-section: clamp(var(--space-7), 6vw, var(--space-9));
+
+    /* Font metrics for that trim, in em, read off the shipped woff2 files
+       with canvas TextMetrics (tools/measure-faces.js reproduces them).
+       `ascent`/`descent` are the hhea box the line box is built from;
+       `cap` is the top of a capital, which is where a heading looks like
+       it starts. Barlow Condensed carries the same metrics at every weight
+       the site loads, so one set covers all of them. */
+    --face-display-ascent: 1;
+    --face-display-descent: .2;
+    --face-display-cap: .7031;
+    --face-text-ascent: .969;
+    --face-text-descent: .241;
+    --face-text-cap: .7344;
 
     /* One hover language: controls rise a little, cards rise more. */
     --lift-control: -3px;
@@ -332,10 +368,9 @@ html.effects-background-click-fading .ambient-glow {
 .hero-section::after { width: clamp(110px, 16vw, 220px); aspect-ratio: 1; background: #94999f; left: 8%; bottom: 12%; transform: rotate(45deg) translateY(var(--scroll-shift-reverse)); opacity: .13; }
 .hero-content { width: min(100%, 56.25rem); text-align: center; }
 .badge { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: rgba(21,22,25,.68); border: 1px solid var(--line); color: var(--blue); font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.hero-badge { margin-bottom: var(--space-5); }
-.hero-name { max-width: 56.25rem; margin: 0 auto; font-size: clamp(3.8rem, 10.2vw, 8.5rem); font-weight: 700; letter-spacing: -.085em; line-height: .87; }
-.hero-tagline { max-width: 40.625rem; margin: var(--space-6) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
-.social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--space-6) 0; }
+.hero-name { --lh: .87; max-width: 56.25rem; margin: 0 auto; font-size: clamp(3.8rem, 10.2vw, 8.5rem); font-weight: 700; letter-spacing: -.085em; line-height: var(--lh); }
+.hero-tagline { --lh: 1.55; line-height: var(--lh); max-width: 40.625rem; margin: var(--rhythm-heading) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
+.social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--rhythm-block) 0; }
 .social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
 .social-links a:hover { background: var(--surface-raised); color: var(--ink); --control-lift: var(--lift-control); }
 .resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; opacity: .65; }
@@ -350,23 +385,24 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .section { padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
 .section-header { max-width: 45rem; margin-bottom: var(--rhythm-header); }
-.section-label { display: block; margin-bottom: var(--space-3); color: var(--yellow); font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-.section-title { font-size: clamp(2.6rem, 6vw, 5rem); letter-spacing: -.075em; line-height: .92; }
-.section-subtitle, .library-heading p, .contact-desc { margin-top: var(--space-4); color: var(--muted); max-width: 38.125rem; }
+.section-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--yellow); font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.section-title { --lh: .92; font-size: clamp(2.6rem, 6vw, 5rem); letter-spacing: -.075em; line-height: var(--lh); }
+.section-subtitle, .library-heading p, .contact-desc { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: var(--muted); max-width: 38.125rem; }
 .glass-panel { background: var(--surface); border: 1px solid var(--line); padding: var(--pad-panel); }
-.bio-text { width: 100%; max-width: none; color: #dedee0; font-size: clamp(1.05rem, 2vw, 1.35rem); }
+.bio-text { --lh: 1.55; line-height: var(--lh); width: 100%; max-width: none; color: #dedee0; font-size: clamp(1.05rem, 2vw, 1.35rem); }
 .about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--rhythm-block); background: var(--surface); border: 0; }
+.about-highlight p { --lh: 1.55; line-height: var(--lh); }
 .about-highlight { position: relative; z-index: 0; display: flex; flex-direction: column; min-height: 10.3125rem; padding: var(--pad-card); background: var(--surface); border: 1px solid var(--line); }
 .about-highlight + .about-highlight { margin-left: -1px; }
-.about-highlight > .about-highlight-label { display: block; margin-bottom: var(--space-3); color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.about-highlight h3 { margin-bottom: var(--space-2); font-size: 1.1rem; letter-spacing: -.035em; line-height: 1.05; }
+.about-highlight > .about-highlight-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.about-highlight h3 { --lh: 1.05; margin-bottom: var(--rhythm-heading); font-size: 1.1rem; letter-spacing: -.035em; line-height: var(--lh); }
 .about-highlight p { color: var(--muted); font-size: .87rem; }
-.about-highlight .about-highlight-subline { margin-top: var(--space-4); color: var(--ink); font-size: .76rem; line-height: 1.45; }
-.about-highlight-role { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
-.about-highlight-role h4 { color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-size: 1rem; letter-spacing: .01em; line-height: 1.1; text-transform: uppercase; }
-.about-highlight-role p { margin-top: var(--space-1); color: #b9d6f5; font-size: .76rem; font-weight: 700; }
+.about-highlight .about-highlight-subline { --lh: 1.45; margin-top: var(--rhythm-heading); color: var(--ink); font-size: .76rem; line-height: var(--lh); }
+.about-highlight-role { margin-top: var(--rhythm-rule); padding-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
+.about-highlight-role h4 { --lh: 1.1; line-height: var(--lh); color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-size: 1rem; letter-spacing: .01em; text-transform: uppercase; }
+.about-highlight-role p { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: #b9d6f5; font-size: .76rem; font-weight: 700; }
 .about-highlight-link { display: flex; color: inherit; text-decoration: none; cursor: pointer; }
-.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--space-4); color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--rhythm-rule); color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .about-highlight-link:hover .about-highlight-cta i { transform: translateY(3px); }
 .about-highlight-cta i { transition: transform .2s var(--ease); }
 #about > .section-header, #about > .bio-text,
@@ -375,7 +411,7 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { display: flex; flex-direction: column; justify-content: center; min-height: 13.75rem; padding: var(--pad-card); background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
-.skill-group-title { margin-bottom: var(--space-4); font-size: 1.05rem; letter-spacing: -.03em; }
+.skill-group-title { --lh: 1.55; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: 1.05rem; letter-spacing: -.03em; }
 .skill-tags, .project-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(85,168,255,.35); color: #9dccff; font-size: .7rem; font-weight: 700; }
 
@@ -393,42 +429,42 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .project-info { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: var(--pad-card); }
 .project-heading { flex: 0 0 auto; }
 .project-copy { display: flex; flex: 1; align-items: center; min-height: 0; }
-.project-title { margin-bottom: var(--space-3); font-size: 1.2rem; letter-spacing: -.04em; line-height: 1.08; }
-.project-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: #9dccff; font-size: .76rem; font-weight: 800; letter-spacing: .02em; }
-.project-summary { color: var(--muted); font-size: 1rem; line-height: 1.55; }
-.project-tags { margin-top: var(--space-5); }
-.project-action-links { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--space-4); margin-top: var(--space-4); border-top: 1px solid var(--line); }
+.project-title { --lh: 1.08; margin-bottom: var(--rhythm-heading); font-size: 1.2rem; letter-spacing: -.04em; line-height: var(--lh); }
+.project-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: #9dccff; font-size: .76rem; font-weight: 800; letter-spacing: .02em; }
+.project-summary { --lh: 1.55; color: var(--muted); font-size: 1rem; line-height: var(--lh); }
+.project-tags { margin-top: var(--rhythm-block); }
+.project-action-links { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--rhythm-rule); margin-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
 .link-btn { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); background: #303138; border: 1px solid var(--line); font-size: .72rem; font-weight: 700; transition: background .2s; }
 .link-btn:hover { background: #3a3c43; color: var(--ink); }
 
 .project-library { padding-top: var(--rhythm-section); border-top: 1px solid var(--line); }
 .library-heading { max-width: 42.5rem; margin-bottom: var(--rhythm-header); }
-.library-heading h3 { font-size: clamp(2.4rem, 6vw, 4.5rem); letter-spacing: -.075em; line-height: .9; }
+.library-heading h3 { --lh: .9; font-size: clamp(2.4rem, 6vw, 4.5rem); letter-spacing: -.075em; line-height: var(--lh); }
 .project-collections { border-top: 1px solid var(--line); }
 .project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: calc(4.875rem + var(--space-3)); }
 .collection-toggle { width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--space-6); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
 .collection-toggle:hover { color: #dfe4ea; }
 .collection-index { color: var(--red); font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
-.collection-copy { display: grid; min-width: 0; gap: var(--space-1); }
-.collection-copy strong { font-size: clamp(1.2rem, 2.5vw, 1.75rem); letter-spacing: -.05em; }
-.collection-copy small { color: var(--muted); }
+.collection-copy { display: grid; min-width: 0; gap: var(--rhythm-heading); }
+.collection-copy strong { --lh: 1.55; line-height: var(--lh); font-size: clamp(1.2rem, 2.5vw, 1.75rem); letter-spacing: -.05em; }
+.collection-copy small { --lh: 1.55; line-height: var(--lh); color: var(--muted); }
 .collection-copy strong, .collection-copy small, .project-title, .project-summary, .modal-title { overflow-wrap: anywhere; }
 .collection-toggle > i { justify-self: end; transition: transform .3s var(--ease); }
 .collection-toggle[aria-expanded="true"] > i { color: var(--blue); transform: rotate(180deg); }
-.collection-content { padding-bottom: var(--space-5); }
-.carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-4); color: var(--muted); font-size: .76rem; }
+.collection-content { padding-bottom: var(--rhythm-block); }
+.carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: .76rem; }
 .carousel-controls > div { display: flex; gap: var(--space-2); }
 .carousel-arrow { width: 2.25rem; height: 2.25rem; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s, border-color .2s, color .2s; }
 .carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
 @keyframes nudge { 50% { transform: scale(.85); } }
-.project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--space-5); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
+.project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--rhythm-block); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
 .project-carousel::-webkit-scrollbar { display: none; }
 .project-carousel .project-card { flex: 0 0 calc((100% - var(--gutter) * 2) / 3); scroll-snap-align: start; }
 .project-carousel .carousel-clone { pointer-events: none; }
 .project-carousel .project-image-wrapper, .compact-project-grid .project-image-wrapper { height: var(--carousel-image-height); }
 .project-carousel .project-action-links, .compact-project-grid .project-action-links { display: none; }
-.compact-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); padding-bottom: var(--space-5); }
+.compact-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); padding-bottom: var(--rhythm-block); }
 
 .contact-section { margin-top: 0; }
 .contact-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--rhythm-block); }
@@ -440,45 +476,45 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(88vh, var(--modal-max-height)); overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); background: var(--surface); color: var(--ink); border-color: rgba(244,244,241,.2); box-shadow: none; }
 .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; width: 2.625rem; height: 2.625rem; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
 .modal-close:hover { background: #3a3c43; color: var(--ink); transform: rotate(90deg); }
-.modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--space-5); }
-.modal-title { max-width: 37.5rem; font-size: clamp(1.8rem, 5vw, 3.5rem); letter-spacing: -.065em; line-height: .95; }
-.modal-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0 0 var(--space-5); }
+.modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
+.modal-title { --lh: .95; max-width: 37.5rem; font-size: clamp(1.8rem, 5vw, 3.5rem); letter-spacing: -.065em; line-height: var(--lh); }
+.modal-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0 0 var(--rhythm-block); }
 .modal-header-actions .tag { color: #9dccff; border-color: rgba(85,168,255,.35); }
 .modal-quick-link { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); color: var(--ink); border: 1px solid rgba(85,168,255,.5); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; transition: background .2s, color .2s; }
 .modal-quick-link:hover { color: #080808; background: var(--blue); }
 .modal-quick-link[hidden] { display: none; }
-.modal-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-4); color: #9dccff; font-size: .82rem; font-weight: 800; }
+.modal-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: #9dccff; font-size: .82rem; font-weight: 800; }
 .modal-period[hidden] { display: none; }
-.modal-program-summary { margin: 0 0 var(--space-5); max-width: 42.5rem; color: var(--muted); font-size: .88rem; line-height: 1.6; }
+.modal-program-summary { --lh: 1.6; margin: 0 0 var(--rhythm-block); max-width: 42.5rem; color: var(--muted); font-size: .88rem; line-height: var(--lh); }
 .modal-program-summary[hidden] { display: none; }
-.modal-image { display: block; width: 100%; height: auto; max-height: 410px; aspect-ratio: 16 / 9; min-height: 0; margin-bottom: var(--space-5); overflow: hidden; background: #0c0c0c; }
+.modal-image { display: block; width: 100%; height: auto; max-height: 410px; aspect-ratio: 16 / 9; min-height: 0; margin-bottom: var(--rhythm-block); overflow: hidden; background: #0c0c0c; }
 .modal-image img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; }
 .modal-image.is-certificate { background: #0c0c0c; }
 .modal-image.is-certificate img { width: 100%; height: 100%; object-fit: contain; }
 .modal-image.has-motion-media { display: block; height: auto; max-height: 410px; aspect-ratio: 16 / 9; background: #0c0c0c; }
 .modal-image.has-motion-media img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
-.modal-summary { color: #dedee0; font-size: 1.12rem; font-weight: 600; }
+.modal-summary { --lh: 1.55; line-height: var(--lh); color: #dedee0; font-size: 1.12rem; font-weight: 600; }
 .modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
-.modal-overview { margin: var(--space-7) 0; padding: var(--space-5); border: 1px solid rgba(85,168,255,.28); background: linear-gradient(145deg, rgba(85,168,255,.07), rgba(255,255,255,.018) 44%, transparent); }
-.modal-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
+.modal-overview { margin: var(--rhythm-header) 0; padding: var(--space-5); border: 1px solid rgba(85,168,255,.28); background: linear-gradient(145deg, rgba(85,168,255,.07), rgba(255,255,255,.018) 44%, transparent); }
+.modal-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--rhythm-block); }
 .modal-section-heading span { color: #9dccff; font-size: .74rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .modal-section-heading h3 { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -.025em; line-height: .95; text-transform: uppercase; }
 .modal-overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); background: transparent; }
 .modal-overview-grid.is-class-rundown { grid-template-columns: 1fr; }
 .modal-overview-item { position: relative; min-width: 0; padding: var(--pad-card); overflow: hidden; border: 1px solid rgba(244,244,241,.11); background: linear-gradient(155deg, rgba(49,51,58,.96), rgba(29,30,35,.96)); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
 .modal-overview-item::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(to bottom, #b8dcff, var(--blue) 46%, rgba(85,168,255,.12)); }
-.modal-overview-item > span { display: block; margin-bottom: var(--space-4); color: #9dccff; font-family: "Barlow Condensed", sans-serif; font-size: clamp(2.35rem, 5vw, 3.35rem); font-weight: 800; letter-spacing: -.045em; line-height: .82; }
-.modal-overview-item h4 { margin-bottom: var(--space-2); font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.2rem, 2vw, 1.4rem); letter-spacing: .015em; line-height: 1.05; text-transform: uppercase; }
+.modal-overview-item > span { --lh: .82; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-heading); color: #9dccff; font-family: "Barlow Condensed", sans-serif; font-size: clamp(2.35rem, 5vw, 3.35rem); font-weight: 800; letter-spacing: -.045em; line-height: .82; }
+.modal-overview-item h4 { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.2rem, 2vw, 1.4rem); letter-spacing: .015em; line-height: 1.05; text-transform: uppercase; }
 .modal-overview-item p { color: #c7c7cb; font-size: .91rem; line-height: 1.7; }
-.modal-feature-video { margin: 0 0 var(--space-7); }
+.modal-feature-video { margin: 0 0 var(--rhythm-header); }
 .modal-feature-video[hidden] { display: none; }
 .modal-feature-video-player { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #191a1f; border: 1px solid var(--line); }
 .modal-feature-video-player iframe { width: 100%; height: 100%; display: block; border: 0; }
-.modal-deep-dive-heading { margin-top: var(--space-7); margin-bottom: var(--space-5); }
-.modal-details { margin: var(--space-4) 0 var(--space-6); color: var(--muted); line-height: 1.75; }
-.modal-detail-section + .modal-detail-section { margin-top: var(--space-5); }
-.modal-detail-section h4 { margin-bottom: var(--space-2); color: var(--ink); font-size: 1.05rem; letter-spacing: -.025em; }
-.modal-media { display: grid; grid-template-columns: 1fr; gap: var(--gutter); margin: 0 0 var(--space-6); align-items: start; }
+.modal-deep-dive-heading { margin-top: var(--rhythm-header); margin-bottom: var(--rhythm-block); }
+.modal-details { margin: var(--rhythm-heading) 0 var(--rhythm-block); color: var(--muted); line-height: 1.75; }
+.modal-detail-section + .modal-detail-section { margin-top: var(--rhythm-block); }
+.modal-detail-section h4 { margin-bottom: var(--rhythm-heading); color: var(--ink); font-size: 1.05rem; letter-spacing: -.025em; }
+.modal-media { display: grid; grid-template-columns: 1fr; gap: var(--gutter); margin: 0 0 var(--rhythm-block); align-items: start; }
 .modal-media-item { display: flex; width: 100%; min-height: 0; margin: 0; flex-direction: column; align-self: start; background: #0c0c0c; overflow: hidden; }
 .modal-media-item img { width: 100%; height: auto; display: block; object-fit: contain; object-position: center; }
 .modal-media-item.media-contain { background: #0c0c0c; }
@@ -563,9 +599,9 @@ body { background-color: var(--bg); background-image: none; }
 .hero-content { width: min(100%, var(--hero-content-max-width)); max-width: var(--hero-content-max-width); text-align: left; }
 .hero-badge { color: var(--blue); background: transparent; border: 0; padding: 0; font-family: "Barlow Condensed", sans-serif; font-size: .95rem; letter-spacing: .16em; }
 .hero-name, .section-title, .library-heading h3, .modal-title { font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 700; text-transform: uppercase; }
-.hero-name { max-width: var(--hero-content-max-width); margin: 0; font-size: clamp(5rem, 13vw, 11.5rem); letter-spacing: -.055em; line-height: .74; }
-.hero-tagline { max-width: 35rem; margin: var(--space-6) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
-.social-links { justify-content: flex-start; margin: var(--space-6) 0; }
+.hero-name { --lh: .74; max-width: var(--hero-content-max-width); margin: 0; font-size: clamp(5rem, 13vw, 11.5rem); letter-spacing: -.055em; line-height: var(--lh); }
+.hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
+.social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
 .social-links a, .resume-icon-unavailable { border-radius: 0; background: transparent; }
 .social-links a:hover { background: var(--blue); color: #080808; }
 .hero-buttons { justify-content: flex-start; }
@@ -585,10 +621,10 @@ body { background-color: var(--bg); background-image: none; }
 main { padding-top: 0; }
 .section { transition-duration: .42s; }
 .section-label { color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .9rem; letter-spacing: .17em; }
-.section-title { font-size: clamp(3.7rem, 8vw, 7rem); letter-spacing: -.035em; line-height: .8; }
+.section-title { --lh: .8; font-size: clamp(3.7rem, 8vw, 7rem); letter-spacing: -.035em; line-height: var(--lh); }
 .section-subtitle, .library-heading p, .contact-desc { font-size: .95rem; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
-.bio-text { font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: 1.45; }
+.bio-text { --lh: 1.45; font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: var(--lh); }
 .about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
@@ -605,7 +641,7 @@ main { padding-top: 0; }
 .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
 .project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: "Barlow Condensed", sans-serif; font-size: .78rem; letter-spacing: .08em; }
 .project-info { padding: var(--pad-card); }
-.project-title { font-size: clamp(1.85rem, 2.25vw, 2.15rem); line-height: .94; }
+.project-title { --lh: .94; font-size: clamp(1.85rem, 2.25vw, 2.15rem); line-height: var(--lh); }
 .project-action-links { border-color: var(--line); }
 .link-btn { border-radius: 0; background: transparent; }
 .link-btn:hover { background: var(--blue); color: #080808; }
@@ -625,7 +661,7 @@ main { padding-top: 0; }
 .modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
 footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
-#contact .contact-desc { margin-top: var(--space-4); }
+#contact .contact-desc { margin-top: var(--rhythm-heading); }
 #contact .contact-links { margin-top: var(--rhythm-block); }
 #contact .resume-unavailable {
     background: transparent;
@@ -664,7 +700,11 @@ footer { background: transparent; }
     .hero-section::before, .hero-section::after { transition: none; }
 }
 
-/* Keep the hero buttons quiet until someone interacts with them. */
+/* Both hero buttons are the same control. "Explore Projects" used to be blue
+   from the start and "Get in Touch" only on hover, which read as one real
+   action and one afterthought -- they are two ways into the same page. Blue is
+   the answer to a cursor everywhere else on the site (the nav, the contact
+   row, the carousel arrows, the social icons), so it is the answer here too. */
 .hero-buttons > .hero-action {
     background: transparent;
     border-color: var(--line);
@@ -777,7 +817,7 @@ main > #contact { padding-bottom: var(--rhythm-section); }
 .featured-carousel-controls {
     display: none;
     width: 100%;
-    padding-bottom: var(--space-4);
+    padding-bottom: var(--rhythm-heading);
 }
 .featured-carousel-controls.is-active { display: flex; }
 
@@ -787,7 +827,7 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     gap: var(--gutter);
     width: 100%;
     margin: 0;
-    padding: var(--space-5) 0 var(--space-6);
+    padding: var(--rhythm-block) 0 var(--rhythm-block);
     overflow-x: hidden;
     overflow-y: visible;
     perspective: 75rem;
@@ -803,26 +843,22 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     opacity: calc(1 - (var(--carousel-depth, 0) * .24));
     transform:
         perspective(68.75rem)
+        translateY(calc(var(--carousel-depth, 0) * 1.125rem + var(--card-lift, 0px)))
         rotateY(calc(var(--carousel-position, 0) * 11deg))
-        translateY(calc(var(--carousel-depth, 0) * 1.125rem))
+        rotateX(var(--card-tilt-x, 0deg))
+        rotateY(var(--card-tilt-y, 0deg))
         translateZ(calc(var(--carousel-depth, 0) * -5.5rem))
-        scale(calc(1 - (var(--carousel-depth, 0) * .07)));
+        scale(calc((1 - (var(--carousel-depth, 0) * .07)) * var(--card-press, 1)));
     transform-origin: center center;
     transform-style: preserve-3d;
-    transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear;
+    transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear, var(--card-answer-transition);
 }
 .project-carousel .project-card.is-carousel-active {
     border-color: rgba(123,168,216,.62);
     box-shadow: 0 22px 52px rgba(0,0,0,.34), 0 0 0 1px rgba(123,168,216,.12);
 }
-.project-carousel .project-card:hover {
-    transform:
-        perspective(68.75rem)
-        rotateY(calc(var(--carousel-position, 0) * 11deg))
-        translateY(calc(var(--carousel-depth, 0) * 1.125rem))
-        translateZ(calc(var(--carousel-depth, 0) * -5.5rem))
-        scale(calc(1 - (var(--carousel-depth, 0) * .07)));
-}
+/* The hover lift is the only thing this used to cancel, and now the card
+   answers with it, so the rule has nothing left to say. */
 
 /* Ring size is set in JavaScript from the number of projects in the collection. */
 .circular-project-carousel {
@@ -838,8 +874,8 @@ main > #contact { padding-bottom: var(--rhythm-section); }
 }
 html[data-effects="high"] .circular-project-carousel {
     min-height: clamp(var(--ring-height-min), 44vw, var(--ring-height-max));
-    padding-top: var(--space-5);
-    padding-bottom: var(--space-5);
+    padding-top: var(--rhythm-block);
+    padding-bottom: var(--rhythm-block);
     perspective: 87.5rem;
 }
 html[data-effects="high"] .circular-project-carousel .project-card,
@@ -847,12 +883,22 @@ html[data-effects="high"] .circular-project-carousel .project-card:hover {
     position: relative;
     backface-visibility: hidden;
     opacity: var(--carousel-ring-opacity, 0);
+    /* The ring places the card; the last three functions are the card's own
+       answer to the pointer, composed on top of that placement rather than
+       replacing it. Order matters: the lift rides with the ring translation
+       so it stays vertical on screen, and the tilt is applied after the ring's
+       own rotation so the card leans toward the cursor from wherever it sits. */
     transform:
         perspective(81.25rem)
-        translate3d(var(--carousel-ring-x, 0px), var(--carousel-ring-y, 0px), var(--carousel-ring-z, 0px))
+        translate3d(
+            var(--carousel-ring-x, 0px),
+            calc(var(--carousel-ring-y, 0px) + var(--card-lift, 0px)),
+            var(--carousel-ring-z, 0px))
         rotateY(var(--carousel-ring-rotate, 0deg))
-        scale(var(--carousel-ring-scale, 1));
-    transition: border-color .3s ease, box-shadow .3s ease;
+        rotateX(var(--card-tilt-x, 0deg))
+        rotateY(var(--card-tilt-y, 0deg))
+        scale(calc(var(--carousel-ring-scale, 1) * var(--card-press, 1)));
+    transition: border-color .3s ease, box-shadow .3s ease, var(--card-answer-transition);
 }
 html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
     box-shadow: 0 26px 64px rgba(0,0,0,.42), 0 0 0 1px rgba(123,168,216,.15);
@@ -894,7 +940,7 @@ html[data-effects="high"] .circular-project-carousel .project-info {
     align-items: center;
     gap: var(--space-2);
     min-height: var(--space-5);
-    margin: 0 0 var(--space-5);
+    margin: 0 0 var(--rhythm-block);
 }
 .carousel-indicator {
     width: .625rem;
@@ -916,10 +962,12 @@ html[data-effects="high"] .circular-project-carousel .project-info {
     box-shadow: 0 0 18px color-mix(in srgb, var(--indicator-color, var(--blue)) 45%, transparent);
 }
 
+/* Low FX drops the ring and the tilt but keeps the press: a click still has
+   to say that it landed. */
 html[data-effects="low"] .project-carousel .project-card,
 html[data-effects="low"] .featured-project-carousel .project-card {
     opacity: 1;
-    transform: none;
+    transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     will-change: auto;
 }
 
@@ -933,8 +981,8 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
     .project-card { height: var(--project-card-height-mobile); }
     html[data-effects="high"] .circular-project-carousel {
         min-height: var(--ring-height-min);
-        padding-top: var(--space-4);
-        padding-bottom: var(--space-5);
+        padding-top: var(--rhythm-block);
+        padding-bottom: var(--rhythm-block);
     }
     html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: var(--ring-image-height-compact); }
     .featured-carousel-controls,
@@ -958,16 +1006,13 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
 /* On narrow screens, featured projects collapse to one card at a time. */
 .featured-project-carousel.is-compact-carousel {
     gap: var(--gutter);
-    padding: var(--space-4) 0 var(--space-5);
+    padding: var(--rhythm-block) 0;
 }
 .featured-project-carousel.is-compact-carousel .project-card {
     flex: 0 0 100%;
     opacity: 1;
-    transform: none;
+    transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     will-change: auto;
-}
-.featured-project-carousel.is-compact-carousel .project-card:hover {
-    transform: none;
 }
 .featured-project-carousel:not(.is-compact-carousel) + .carousel-indicators {
     display: none;
@@ -1133,33 +1178,6 @@ button:focus-visible,
     outline-offset: 3px;
 }
 
-/* One loud action per view: the hero's, and the contact CTA. */
-.primary-btn {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #080808;
-}
-.primary-btn:hover,
-.primary-btn:focus-visible {
-    background: #c6e0f7;
-    border-color: #c6e0f7;
-    color: #080808;
-}
-/* The quiet-until-hover rule above would otherwise flatten the primary button
-   back into the row, so restate it for the loud one. */
-.hero-buttons > .hero-action.primary-btn {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #080808;
-}
-.hero-buttons > .hero-action.primary-btn:hover,
-.hero-buttons > .hero-action.primary-btn:focus-visible,
-.hero-buttons > .hero-action.primary-btn:active {
-    background: #c6e0f7;
-    border-color: #c6e0f7;
-    color: #080808;
-}
-
 /* ----------------------------------------------------------- footer links */
 .footer-content {
     display: flex;
@@ -1300,11 +1318,43 @@ button:focus-visible,
      the page acknowledged a press before this.
 
    Every one of them is a custom property that the existing transforms compose
-   with, never a `transform` of its own. That is what keeps the ring carousel
-   working: it already owns .project-card's transform in High FX at a higher
-   specificity, so ring cards keep their 3D placement and simply never take a
-   tilt (portfolio.js does not mark them either).
+   with, never a `transform` of its own. A card in a carousel is placed by that
+   carousel -- the High FX ring hands each one its own 3D position -- so the
+   carousel rules fold these same properties into the placement they already
+   own, and every project card on the page answers the pointer the same way:
+   the three featured ones, and all sixty in the archive.
+
+   The four properties are registered below so they interpolate. That is what
+   lets a carousel card ease its lean back to flat without putting `transform`
+   itself in a transition, which would smear the ring's own motion behind the
+   drag. The registrations are the reason every use of them still carries a
+   var() fallback: an engine without @property has to resolve the transform.
    ========================================================================== */
+
+@property --card-tilt-x { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --card-tilt-y { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --card-lift { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --card-press { syntax: "<number>"; inherits: false; initial-value: 1; }
+
+/* Carousel cards splice this into their own transition list. The lean follows
+   the cursor with the same weight the grid cards get from their .2s transform
+   transition, and the ring's placement stays instant because it is not in the
+   list.
+
+   It is declared on the card rather than on :root so --card-answer-duration
+   resolves against the card: a nested var() inside a custom property is
+   substituted where the property is declared, so on :root every card would be
+   stuck with :root's duration and the shorter press timing below could never
+   reach it. A `transition-duration` override cannot reach it either -- the
+   ring's own `transition` shorthand outranks one. */
+.project-card {
+    --card-answer-duration: .2s;
+    --card-answer-transition:
+        --card-tilt-x var(--card-answer-duration) var(--ease),
+        --card-tilt-y var(--card-answer-duration) var(--ease),
+        --card-lift var(--card-answer-duration) var(--ease),
+        --card-press var(--card-answer-duration) var(--ease);
+}
 
 /* The hover lifts above set --card-lift / --control-lift. These are the only
    rules that turn them into an actual transform, and they sit at the end of
@@ -1321,10 +1371,11 @@ button:focus-visible,
     transform: translateY(var(--control-lift, 0px)) scale(var(--control-press, 1));
 }
 
-/* Deliberately weaker than `html[data-effects="high"] .circular-project-carousel
-   .project-card` (0,3,1), so a ring card that somehow picked up the class still
-   keeps its ring transform. */
-.project-card.is-tilting {
+/* Scoped to a card standing in a plain grid. A carousel folds the same tilt
+   into the placement it already owns, so this rule has to stay out of its way
+   -- and `.project-carousel .project-card` alone would not, being the same
+   specificity and further up the file. */
+:not(.project-carousel) > .project-card.is-tilting {
     transform:
         perspective(62.5rem)
         rotateX(var(--card-tilt-x, 0deg))
@@ -1352,6 +1403,7 @@ button:focus-visible,
 /* Faster in than out: the press should feel instant and the release should
    settle. Named surface by surface rather than as a bare `.is-pressed`, which
    would also retime the cursor dot -- it uses the same class name. */
+.project-card.is-pressed { --card-answer-duration: .09s; }
 .project-card.is-pressed,
 .about-highlight.is-pressed,
 .skill-group.is-pressed,
@@ -1419,7 +1471,141 @@ html[data-effects="high"] .skill-group::after {
 
 @media (prefers-reduced-motion: reduce) {
     .press-ripple { display: none; }
-    .project-card.is-tilting {
+    :not(.project-carousel) > .project-card.is-tilting {
         transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     }
+}
+
+
+/* ==========================================================================
+   Leading trim
+
+   A line box is taller than the letters inside it. Half the leading sits
+   above the ascender and half below the descender, and the ascender itself
+   reaches higher than a capital -- so a heading set at line-height .74 has
+   dead space above its capitals and its tails hang out below the box. That
+   is why the same 24px margin used to read as about 8px under the hero name
+   and as a comfortable 20px under a paragraph, and it is what the eye was
+   measuring when the gaps looked unequal.
+
+   These rules pull each block's box in to its own letters: cap height at the
+   top, alphabetic baseline at the bottom, which is what `text-box-trim` will
+   do natively once every engine ships it. Done by hand it works everywhere
+   and needs nothing but the font's metrics.
+
+   To trim a block: set --lh to its line-height as a plain number, use
+   `line-height: var(--lh)`, and list it under the face it is set in. The
+   arithmetic is the same either way --
+
+       trim above = half the leading + (ascender - cap height)
+       trim below = half the leading + descender
+
+   -- and both come out in em, so they follow every clamp() on the page
+   without a second breakpoint.
+   ========================================================================== */
+
+.hero-name,
+.section-title,
+.library-heading h3,
+.modal-title,
+.section-label,
+.project-title,
+.about-highlight h3,
+.skill-group-title,
+.collection-copy strong,
+.modal-overview-item > span,
+.modal-overview-item h4,
+.about-highlight-role h4,
+.hero-badge {
+    --trim-top: calc((
+        (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
+        + var(--face-display-ascent) - var(--face-display-cap)) * 1em);
+    --trim-bottom: calc((
+        (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
+        + var(--face-display-descent)) * 1em);
+}
+.about-highlight > .about-highlight-label,
+.about-highlight p,
+.project-summary,
+.modal-summary,
+.modal-program-summary,
+.hero-tagline,
+.section-subtitle,
+.library-heading p,
+.contact-desc,
+.bio-text,
+.collection-copy small {
+    --trim-top: calc((
+        (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
+        + var(--face-text-ascent) - var(--face-text-cap)) * 1em);
+    --trim-bottom: calc((
+        (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
+        + var(--face-text-descent)) * 1em);
+}
+
+/* `display: table` keeps these from collapsing into the first and last line
+   boxes, which is the whole trick: a zero-height block whose negative margin
+   eats the dead space instead of the text. */
+.hero-name::before,
+.section-title::before,
+.library-heading h3::before,
+.modal-title::before,
+.section-label::before,
+.project-title::before,
+.about-highlight h3::before,
+.skill-group-title::before,
+.collection-copy strong::before,
+.collection-copy small::before,
+.modal-overview-item > span::before,
+.modal-overview-item h4::before,
+.about-highlight-role h4::before,
+.about-highlight > .about-highlight-label::before,
+.about-highlight p::before,
+.project-summary::before,
+.modal-summary::before,
+.modal-program-summary::before,
+.hero-tagline::before,
+.section-subtitle::before,
+.library-heading p::before,
+.contact-desc::before,
+.bio-text::before {
+    content: "";
+    display: table;
+    margin-bottom: calc(-1 * var(--trim-top));
+}
+.hero-name::after,
+.section-title::after,
+.library-heading h3::after,
+.modal-title::after,
+.section-label::after,
+.project-title::after,
+.about-highlight h3::after,
+.skill-group-title::after,
+.collection-copy strong::after,
+.collection-copy small::after,
+.modal-overview-item > span::after,
+.modal-overview-item h4::after,
+.about-highlight-role h4::after,
+.about-highlight > .about-highlight-label::after,
+.about-highlight p::after,
+.project-summary::after,
+.modal-summary::after,
+.modal-program-summary::after,
+.hero-tagline::after,
+.section-subtitle::after,
+.library-heading p::after,
+.contact-desc::after,
+.bio-text::after {
+    content: "";
+    display: table;
+    margin-top: calc(-1 * var(--trim-bottom));
+}
+
+/* The badge is an inline-flex row -- a pseudo-element inside it would become
+   a flex item and open a gap of its own -- so its trim is folded into the
+   margin instead. Nothing stacks above it, so only the bottom is in play. */
+.hero-badge {
+    --lh: 1;
+    line-height: var(--lh);
+    margin-bottom: calc(var(--rhythm-label) - var(--trim-bottom));
 }
