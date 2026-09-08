@@ -408,9 +408,16 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .about-highlight-role h4 { --lh: 1.1; line-height: var(--lh); color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-size: 1rem; letter-spacing: .01em; text-transform: uppercase; }
 .about-highlight-role p { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: #b9d6f5; font-size: .76rem; font-weight: 700; }
 .about-highlight-link { display: flex; color: inherit; text-decoration: none; cursor: pointer; }
-.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--rhythm-rule); color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.about-highlight-link:hover .about-highlight-cta i { transform: translateY(3px); }
-.about-highlight-cta i { transition: transform .2s var(--ease); }
+.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--rhythm-rule); color: var(--ink); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; transition: color .18s ease; }
+/* At rest the arrow points up and the row reads as ordinary text. Under the
+   cursor it turns blue and flips to point down at the collection it opens --
+   the glyph is a down arrow held upside down, so hovering rotates it back the
+   right way up rather than swapping it for a different icon. */
+.about-highlight-cta i { transform: rotate(180deg); transition: transform .18s var(--ease), color .18s ease; }
+.about-highlight-link:hover .about-highlight-cta,
+.about-highlight-link:focus-visible .about-highlight-cta { color: var(--blue); }
+.about-highlight-link:hover .about-highlight-cta i,
+.about-highlight-link:focus-visible .about-highlight-cta i { transform: rotate(360deg); }
 #about > .section-header, #about > .bio-text,
 #contact > .section-header, #contact > .contact-desc, #contact > .contact-links { margin-left: 0; }
 

@@ -321,6 +321,12 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
     });
 
+    // Anything in front of the backdrop that answers a pointer itself. While
+    // the cursor is over one of these the field stops following it: two things
+    // reacting to the same cursor at once reads as the page competing with
+    // itself, and the card is the one being pointed at.
+    const FOREGROUND_SELECTOR = 'a, button, input, textarea, select, [role="button"],'
+        + ' .project-card, .about-highlight, .skill-group, .modal-card, .collection-toggle';
     let pointerFrame = 0;
     let latestPointerEvent;
     let highEffectsTouchSwipeActive = false;
@@ -334,6 +340,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
             const glowRadius = 140 * interfaceScale;
             cursor.move(latestPointerEvent);
+            // The cursor dot keeps following -- it is the pointer, not the
+            // backdrop -- but the field and the lens let go.
+            const target = latestPointerEvent.target;
+            if (target instanceof Element && target.closest(FOREGROUND_SELECTOR)) {
+                galaxy.release();
+                ambientGlow.classList.remove('is-active');
+                pointerFrame = 0;
+                return;
+            }
             galaxy.move(latestPointerEvent);
             ambientGlow.classList.add('is-active');
             ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - glowRadius}px, ${latestPointerEvent.clientY - glowRadius}px, 0)`;
@@ -3080,7 +3095,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         requestDraw(); // Reduced motion redraws only on user/layout changes.
         deferLayout();
     };
-    document.documentElement.addEventListener('pointerleave', () => { pointer.active = false; });
+    // Not only when the cursor leaves the window: the backdrop also lets go
+    // while the cursor is busy with something in front of it.
+    const release = () => { pointer.active = false; };
+    document.documentElement.addEventListener('pointerleave', release);
     window.addEventListener('resize', deferLayout, { passive: true });
     document.addEventListener('visibilitychange', () => {
         pointer.active = false; touchWells.length = 0;
@@ -3135,7 +3153,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     new MutationObserver(syncIdleSleep).observe(document.documentElement, { attributeFilter: ['class'] });
     syncIdleSleep();
     refreshLayout();
-    return { move, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd };
+    return { move, release, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd };
 }
 
 
