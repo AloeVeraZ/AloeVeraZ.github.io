@@ -4129,7 +4129,12 @@ function setupCarousel(carousel, controls, options = {}) {
             dragDirection = Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.12
                 ? 'horizontal'
                 : 'vertical';
-            if (dragDirection === 'horizontal') carousel.setPointerCapture?.(event.pointerId);
+            // A pointer released between the press and this decision no longer
+            // exists to capture, and the throw would take the rest of the drag
+            // handler with it.
+            if (dragDirection === 'horizontal') {
+                try { carousel.setPointerCapture?.(event.pointerId); } catch { /* gone already */ }
+            }
         }
         if (dragDirection === 'horizontal') {
             event.preventDefault();
@@ -4148,7 +4153,19 @@ function setupCarousel(carousel, controls, options = {}) {
             carousel.releasePointerCapture(dragPointerId);
         }
         dragPointerId = null;
-        if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
+        // A drag that actually travelled lands on whatever it was dragged to.
+        // Stepping one card from where the drag *started* is what put the ring
+        // on the card before the one under the cursor: drag past two and it
+        // still only moved by one, backwards from where you let go.
+        const dragMetrics = getMetrics();
+        const cardTravel = dragMetrics ? dragMetrics.distance : 0;
+        if (dragDirection === 'horizontal'
+            && cardTravel > 0
+            && Math.abs(horizontalDistance) >= cardTravel * .5) {
+            snapToNearestCard();
+        } else if (dragDirection === 'horizontal' && Math.abs(horizontalDistance) >= 36) {
+            // Too short to have reached the next card, but quick and deliberate:
+            // a flick still advances one, which is how a phone expects to swipe.
             move(horizontalDistance < 0 ? 1 : -1);
         } else if (dragDirection) {
             snapToNearestCard();

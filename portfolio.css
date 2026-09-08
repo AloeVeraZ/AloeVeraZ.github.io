@@ -827,6 +827,16 @@ main > .section {
     padding-bottom: 0;
 }
 main > #about { padding-top: var(--content-section-gap); }
+/* The featured cards fill this section edge to edge, so the outer two lean
+   straight into the paint clip and the corner nearest the cursor was sliced
+   off. Widen the clip on both sides and take the same amount straight back as
+   padding: the cards do not move, they simply have somewhere to rotate into.
+   Only this section -- About and Contact paint a panel background, and
+   widening their box would show. */
+main > #projects {
+    padding-inline: var(--section-paint-headroom);
+    margin-inline: calc(-1 * var(--section-paint-headroom));
+}
 main > .section + .section {
     margin-top: calc(var(--content-section-gap) - var(--section-paint-headroom));
 }
