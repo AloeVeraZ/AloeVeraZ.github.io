@@ -789,9 +789,18 @@ function setupGalaxyField(canvas, reducedMotion) {
 
     // Granular content protection leaves gutters and the spaces between
     // collection rows available. The fixed navigation is handled separately.
+    //
+    // Only what the backdrop can actually be seen through belongs here. Cards
+    // -- project, About, Skills -- are opaque, so the field behind one is
+    // already hidden by the card itself; protecting them bought nothing and
+    // cost a great deal, because the clearance falls off over a radius and so
+    // reached out past every card edge into the gutters around it. Opening one
+    // collection put sixty card-sized rectangles on the page at once, and the
+    // black holes and drifting bodies anywhere near them faded out until it
+    // was closed again. They stay lit now, and simply sit behind the cards.
     const protectedSelector = '.hero-badge, .hero-name, .hero-tagline, .social-links a, '
         + '.resume-icon-unavailable, .hero-buttons .btn, .section-label, .section-title, '
-        + '.section-subtitle, .bio-text, .about-highlight, .skill-group, .project-card, '
+        + '.section-subtitle, .bio-text, '
         + '.library-heading, .collection-index, .collection-copy strong, .collection-copy small, '
         + '.collection-toggle > i, .carousel-controls, .carousel-indicators, '
         + '.contact-desc, .contact-links .btn, footer';
