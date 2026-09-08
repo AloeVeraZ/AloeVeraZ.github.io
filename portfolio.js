@@ -3146,6 +3146,12 @@ function setupGalaxyField(canvas, reducedMotion) {
 const REACTIVE_CARD_SELECTOR = '.project-card, .about-highlight, .skill-group';
 const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-btn, .carousel-arrow, .social-links a';
 const CARD_TILT_DEGREES = 4;
+
+// Set by setupPointerReactiveSurfaces, and called by anything that moves a card
+// out from under a cursor that has not itself moved -- which is every carousel
+// step. A scroll event would have been the natural signal, but an element's
+// scroll does not bubble, and a captured one never arrives either.
+let retargetPointerSurfaces = () => {};
 const PRESS_RIPPLE_MAX_SIZE = 460;
 
 // Pointer-reactive cards. One listener for the whole page rather than a pair
@@ -3161,6 +3167,7 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     let pointerX = 0;
     let pointerY = 0;
     let frame = 0;
+    let retargetFrame = 0;
 
     const clearActiveCard = () => {
         if (!activeCard) return;
@@ -3178,7 +3185,6 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     // press properties into the placement it owns rather than replacing it --
     // the archive rings keep turning underneath the lean.
     const canTilt = card => card.classList.contains('project-card')
-        && !card.classList.contains('carousel-clone')
         && !reducedMotion.matches
         && highEffects();
 
@@ -3235,14 +3241,29 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     // Scrolling moves the card out from under the cached rectangle. Re-reading
     // it here would force a layout on every scrolled frame, so it is only
     // marked stale and re-read on the next pointer move.
-    //
-    // Captured rather than bound to the window, because a carousel scrolls
-    // itself: dragging a ring past the cursor slides the card the pointer is
-    // resting on, and a stale rectangle would have it leaning away from where
-    // the cursor actually is. Scroll events do not bubble, so this is the only
-    // way to hear an element's own.
-    document.addEventListener('scroll', () => { activeRect = null; }, { capture: true, passive: true });
+    window.addEventListener('scroll', () => { activeRect = null; }, { passive: true });
     window.addEventListener('resize', () => { activeRect = null; }, { passive: true });
+
+    // A carousel slides its cards past a cursor that never moved, so the
+    // listener above hears nothing: the lean would stay on the card that has
+    // walked away and the one now under the cursor would never take it. Ask the
+    // document what is under the pointer instead, coalesced to one hit test per
+    // frame -- which is what a real pointermove would have cost anyway.
+    retargetPointerSurfaces = () => {
+        activeRect = null;
+        if (!finePointer.matches || retargetFrame) return;
+        retargetFrame = window.requestAnimationFrame(() => {
+            retargetFrame = 0;
+            const under = document.elementFromPoint(pointerX, pointerY);
+            const card = under instanceof Element ? under.closest(REACTIVE_CARD_SELECTOR) : null;
+            lastHitTarget = under;
+            if (card !== activeCard) {
+                clearActiveCard();
+                activeCard = card;
+            }
+            if (activeCard) schedulePaint();
+        });
+    };
     const leaveCard = () => {
         lastHitTarget = null;
         clearActiveCard();
@@ -3853,16 +3874,22 @@ function setupCarousel(carousel, controls, options = {}) {
                 card.style.setProperty('--carousel-ring-scale', ringScale.toFixed(3));
                 card.style.setProperty('--carousel-ring-opacity', circleOpacity.toFixed(3));
                 card.style.zIndex = String(Math.round(90 - absolutePosition * 30));
-                card.style.pointerEvents = visibleOnRing
-                    && Math.abs(position) < 1.25
-                    ? 'auto'
-                    : 'none';
+                // Anything the visitor can actually see on the ring answers the
+                // pointer: the two outermost cards lean and light up like the
+                // three in front of them, and a click on one walks the ring
+                // round to it. Only the cards fading out past the edge are shut
+                // off, so a card that is barely a ghost cannot take a click
+                // meant for the one in front of it.
+                card.style.pointerEvents = circleOpacity > .2 ? 'auto' : 'none';
             } else {
                 card.style.zIndex = String(10 - Math.round(depth * 3));
                 card.style.pointerEvents = Math.abs(position) < 1.25 ? 'auto' : 'none';
             }
             card.classList.toggle('is-carousel-active', depth < .18);
         });
+        // The cards have just moved; whatever is under the cursor now may not
+        // be what was under it a frame ago.
+        retargetPointerSurfaces();
     };
 
     const initialize = () => {
@@ -3960,24 +3987,59 @@ function setupCarousel(carousel, controls, options = {}) {
         }
         const metrics = getMetrics();
         if (!metrics || metrics.lastIndex <= 0) return;
-        const direction = Math.sign(step);
+        // A card two out along the ring is two steps away, not one. Never more
+        // than the clone buffer, or the rebase above would have nothing
+        // identical to land on.
+        const requested = Math.trunc(step) || Math.sign(step);
+        const direction = cloneCount > 0
+            ? Math.max(-cloneCount, Math.min(requested, cloneCount))
+            : requested;
         const positionCount = originalCards.length;
 
         if (isAnimating) {
             window.cancelAnimationFrame(scrollAnimation);
             isAnimating = false;
         }
+        // An arrow pressed faster than a step can animate lets the index run
+        // away from the ring that is still catching up to it. The clone buffer
+        // is the only slack the rebase below has to work with, so the lead can
+        // never be allowed past it: beyond that the rebase computes a negative
+        // scroll position, the browser clamps it to zero, and the ring lurches
+        // several cards at once. Past the limit, the next step starts from
+        // where the ring actually is.
+        if (!settings.finite && cloneCount > 0
+            && Math.abs(currentPhysicalIndex - getNearestPhysicalIndex()) > cloneCount) {
+            syncIndexToNearestCard();
+        }
+        // Rebasing is driven by where the ring *is*, not by where the index has
+        // got to. Shifting the scroll back by a turn is only safe once the ring
+        // itself is a whole turn along; going by the index instead put the
+        // scroll below zero whenever the index was running ahead, and a clamped
+        // scroll is a ring that has jumped several cards at once.
+        const ringPosition = settings.finite ? 0 : getNearestPhysicalIndex();
         if (!settings.finite
-            && (currentPhysicalIndex < cloneCount
-                || currentPhysicalIndex >= cloneCount + originalCards.length)) {
-            currentPhysicalIndex = cloneCount + currentIndex;
-            setInternalScrollPosition(getTargetForPhysicalIndex(currentPhysicalIndex));
+            && (ringPosition < cloneCount
+                || ringPosition >= cloneCount + originalCards.length)) {
+            // Walking into the clone buffer is rebased back onto the real cards.
+            // The clone is identical, so the swap is invisible -- as long as
+            // both the index and the scroll move by exactly the same thing: one
+            // whole turn of the ring. Re-seating the scroll at the index's
+            // canonical position instead threw away however much of the last
+            // step had not finished, and with the index a card or two ahead the
+            // arithmetic went negative, the browser clamped it to zero, and the
+            // ring lurched. Shifting by a turn cannot leave the strip, because
+            // the ring has to be a whole turn along before this runs at all.
+            const turn = getTargetForPhysicalIndex(cloneCount + originalCards.length)
+                - getTargetForPhysicalIndex(cloneCount);
+            const direction = ringPosition < cloneCount ? 1 : -1;
+            currentPhysicalIndex += direction * originalCards.length;
+            setInternalScrollPosition(carousel.scrollLeft + direction * turn);
             updateCardDepth();
         }
 
         const nextIndex = settings.finite
             ? Math.max(0, Math.min(currentIndex + direction, metrics.lastIndex))
-            : (currentIndex + direction + positionCount) % positionCount;
+            : ((currentIndex + direction) % positionCount + positionCount) % positionCount;
         if (settings.finite && nextIndex === currentIndex) {
             updateIndicators();
             return;
@@ -4116,13 +4178,23 @@ function setupCarousel(carousel, controls, options = {}) {
         const selectedCard = event.target.closest('.project-card');
         if (!selectedCard || !carousel.contains(selectedCard)) return;
         const selectedPosition = Number.parseFloat(selectedCard.style.getPropertyValue('--carousel-position')) || 0;
-        if (Math.abs(selectedPosition) < .55) return;
-        if (Math.abs(selectedPosition) >= 1.25) return;
+        const logicalIndex = Number(selectedCard.dataset.carouselIndex);
+        // The card in front opens where it stands, through its own click
+        // listener -- unless it is a clone, which has none: cloneNode copies
+        // markup, not handlers, and the ring can come to rest on one.
+        if (Math.abs(selectedPosition) < .55) {
+            if (!selectedCard.classList.contains('carousel-clone')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            originalCards[logicalIndex]?._openProject?.();
+            return;
+        }
+        // Any other card is brought round first, by however many places it is
+        // out, so the project you opened is the one you are looking at.
         event.preventDefault();
         event.stopPropagation();
-        const logicalIndex = Number(selectedCard.dataset.carouselIndex);
         stopAndCenterCurrentMotion();
-        move(Math.sign(selectedPosition));
+        move(Math.round(selectedPosition) || Math.sign(selectedPosition));
         carousel.dataset.keepAnimatingThroughModal = 'true';
         originalCards[logicalIndex]?._openProject?.();
         delete carousel.dataset.keepAnimatingThroughModal;

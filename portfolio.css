@@ -70,6 +70,12 @@
     --rhythm-header: var(--space-7);
     --rhythm-section: clamp(var(--space-7), 6vw, var(--space-9));
 
+    /* Where a jumped-to anchor comes to rest. The navbar is fixed and 78px
+       tall, so without this a nav link parks the section's label underneath it
+       and the eyebrow -- Toolkit, Portfolio, Connect -- is simply not there.
+       One block's clear below the bar, so the landing looks deliberate. */
+    --scroll-clearance: calc(4.875rem + var(--rhythm-block));
+
     /* Font metrics for that trim, in em, read off the shipped woff2 files
        with canvas TextMetrics (tools/measure-faces.js reproduces them).
        `ascent`/`descent` are the hhea box the line box is built from;
@@ -382,7 +388,7 @@ html.effects-background-click-fading .ambient-glow {
 .secondary-btn { background: var(--surface); }
 .secondary-btn:hover { background: var(--surface-raised); }
 main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, var(--space-9)))); margin: auto; padding: 0; }
-.section { padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
+.section { scroll-margin-top: var(--scroll-clearance); padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
 .section-header { max-width: 45rem; margin-bottom: var(--rhythm-header); }
 .section-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--yellow); font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
@@ -441,7 +447,7 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .library-heading { max-width: 42.5rem; margin-bottom: var(--rhythm-header); }
 .library-heading h3 { --lh: .9; font-size: clamp(2.4rem, 6vw, 4.5rem); letter-spacing: -.075em; line-height: var(--lh); }
 .project-collections { border-top: 1px solid var(--line); }
-.project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: calc(4.875rem + var(--space-3)); }
+.project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: var(--scroll-clearance); }
 .collection-toggle { width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--space-6); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
 .collection-toggle:hover { color: #dfe4ea; }
 .collection-index { color: var(--red); font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
@@ -461,6 +467,10 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--rhythm-block); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
 .project-carousel::-webkit-scrollbar { display: none; }
 .project-carousel .project-card { flex: 0 0 calc((100% - var(--gutter) * 2) / 3); scroll-snap-align: start; }
+/* Off while the ring is idle, and switched back on per card by the layout
+   pass, which is the only thing that knows whether a given clone is one of
+   the five the visitor can actually see. A clone standing on the ring is
+   the same card to the eye and answers the pointer like one. */
 .project-carousel .carousel-clone { pointer-events: none; }
 .project-carousel .project-image-wrapper, .compact-project-grid .project-image-wrapper { height: var(--carousel-image-height); }
 .project-carousel .project-action-links, .compact-project-grid .project-action-links { display: none; }
