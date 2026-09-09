@@ -207,53 +207,11 @@ button { font: inherit; }
     from { opacity: .82; transform: translate(-50%, -50%); }
     to { opacity: 0; transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(.2); }
 }
-.ambient-glow {
-    --grid-offset-x: calc(8.75rem - 50vw);
-    --grid-offset-y: calc(8.75rem - 20vh);
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 17.5rem;
-    height: 17.5rem;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-        radial-gradient(circle, rgba(123,168,216,.075), transparent 72%),
-        linear-gradient(rgba(145,200,255,.075) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.075) 1px, transparent 1px),
-        linear-gradient(rgba(145,200,255,.022) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.022) 1px, transparent 1px);
-    background-size: 100% 100%, 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
-    background-position:
-        center,
-        var(--grid-offset-x) var(--grid-offset-y),
-        var(--grid-offset-x) var(--grid-offset-y),
-        var(--grid-offset-x) var(--grid-offset-y),
-        var(--grid-offset-x) var(--grid-offset-y);
-    background-repeat: no-repeat, repeat, repeat, repeat, repeat;
-    -webkit-mask-image: radial-gradient(circle, #000 0 38%, rgba(0,0,0,.58) 56%, transparent 72%);
-    mask-image: radial-gradient(circle, #000 0 38%, rgba(0,0,0,.58) 56%, transparent 72%);
-    transform: translate3d(calc(50vw - 8.75rem), calc(20vh - 8.75rem), 0);
-    opacity: 1;
-    transition: opacity 1.4s ease;
-    will-change: transform;
-    contain: strict;
-}
 
 html.effects-background-idle body { background-color: #000; }
-/* Cursor illumination settles while the celestial environment stays alive. */
-html.effects-background-idle .ambient-glow {
-    opacity: 0;
-    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
-}
 html.effects-background-click-fading body {
     background-color: #000;
     transition-duration: 3.5s;
-}
-html.effects-background-click-fading .ambient-glow {
-    opacity: 0;
-    transition-duration: 3.5s;
-    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 
 .navbar, .hero-section, main, footer { position: relative; z-index: 1; }
@@ -322,7 +280,7 @@ html.effects-background-click-fading .ambient-glow {
 }
 .nav-links { list-style: none; display: flex; gap: var(--space-5); color: var(--muted); font-size: .85rem; }
 .nav-links a { transition: color .2s ease; }
-.nav-links a:hover { color: var(--ink); }
+.nav-links a:hover { color: var(--blue); }
 .performance-control { display: flex; align-items: center; }
 .performance-toggle {
     display: inline-flex;
@@ -339,7 +297,7 @@ html.effects-background-click-fading .ambient-glow {
     text-transform: inherit;
 }
 .performance-toggle:hover,
-.performance-toggle:focus-visible { color: var(--ink); }
+.performance-toggle:focus-visible { color: var(--blue); }
 .performance-toggle-track {
     position: relative;
     width: 1.875rem;
@@ -379,7 +337,7 @@ html.effects-background-click-fading .ambient-glow {
 .social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--rhythm-block) 0; }
 .social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
 .social-links a:hover { background: var(--surface-raised); color: var(--ink); --control-lift: var(--lift-control); }
-.resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; opacity: .65; }
+.resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: inherit; }
 .hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: .86rem; font-weight: 700; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
 .btn:hover { --control-lift: var(--lift-control); }
@@ -620,7 +578,8 @@ body { background-color: var(--bg); background-image: none; }
 .hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
 .social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
 .social-links a, .resume-icon-unavailable { border-radius: 0; background: transparent; }
-.social-links a:hover { background: var(--blue); color: #080808; }
+.social-links a:hover,
+.resume-icon-unavailable:hover { background: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .hero-buttons { justify-content: flex-start; }
 .btn { border-radius: 0; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
 .secondary-btn { background: transparent; }
@@ -712,7 +671,6 @@ footer { background: transparent; }
 
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .ambient-glow { display: none; }
     .section { opacity: 1; transform: none; transition: none; }
     .hero-section::before, .hero-section::after { transition: none; }
 }
@@ -1071,7 +1029,6 @@ html[data-effects="low"] .background-grid {
 }
 html[data-effects="low"] .galaxy-field,
 html[data-effects="low"] .galaxy-nebula,
-html[data-effects="low"] .ambient-glow,
 html[data-effects="low"] .cursor-dot,
 html[data-effects="low"] .cursor-spark,
 html[data-effects="low"] .cursor-ripple {
@@ -1084,13 +1041,6 @@ html[data-effects="low"] .cursor-ripple {
    thing giving away that the backdrop was layers rather than a surface. */
 html[data-effects="high"] .background-grid {
     display: none;
-}
-html[data-effects="high"] .ambient-glow {
-    opacity: 0;
-    transition: opacity .32s ease;
-}
-html[data-effects="high"] .ambient-glow.is-active {
-    opacity: .72;
 }
 @media (max-width: 800px) {
     .nav-links { display: flex; }
@@ -1122,7 +1072,6 @@ html[data-effects="low"] .background-grid {
    behind is what makes the page look like a stack of effects rather than a
    single view that is settling. */
 html.effects-background-idle .background-grid,
-html.effects-background-idle .ambient-glow,
 html.effects-background-idle .galaxy-field,
 html.effects-background-idle .galaxy-nebula {
     opacity: 0;
@@ -1130,7 +1079,6 @@ html.effects-background-idle .galaxy-nebula {
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 html.effects-background-click-fading .background-grid,
-html.effects-background-click-fading .ambient-glow,
 html.effects-background-click-fading .galaxy-field,
 html.effects-background-click-fading .galaxy-nebula {
     opacity: 0;
@@ -1248,7 +1196,7 @@ button:focus-visible,
     transition: color .2s var(--ease);
 }
 .footer-links a:hover,
-.footer-links a:focus-visible { color: var(--ink); }
+.footer-links a:focus-visible { color: var(--blue); }
 
 /* -------------------------------------------------------------- mobile nav */
 /* The links used to be hidden outright below 800px, which left phones with no
@@ -1415,7 +1363,8 @@ button:focus-visible,
 .btn,
 .link-btn,
 .carousel-arrow,
-.social-links a {
+.social-links a,
+.resume-icon-unavailable {
     transform: translateY(var(--control-lift, 0px)) scale(var(--control-press, 1));
 }
 
@@ -1467,7 +1416,8 @@ button:focus-visible,
 .btn,
 .link-btn,
 .carousel-arrow,
-.social-links a {
+.social-links a,
+.resume-icon-unavailable {
     position: relative;
     overflow: hidden;
 }

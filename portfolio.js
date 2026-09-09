@@ -1,7 +1,3 @@
-// How long the background stays awake after a finger leaves the glass, so the
-// dent's rebound plays out before the idle fade starts.
-const SWIPE_WAKE_RELEASE_DURATION = 500;
-
 document.addEventListener('DOMContentLoaded', () => {
     const updateViewportScale = () => {
         const browserFrameWidth = window.outerWidth || window.screen?.availWidth || window.innerWidth;
@@ -46,18 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const galaxyNebula = document.createElement('div');
     galaxyNebula.className = 'galaxy-nebula';
     galaxyNebula.setAttribute('aria-hidden', 'true');
-    const ambientGlow = document.createElement('div');
-    ambientGlow.className = 'ambient-glow';
-    ambientGlow.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
     backgroundGrid.after(galaxyField);
     galaxyField.after(galaxyNebula);
-    galaxyNebula.after(ambientGlow);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
     pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
-    ambientGlow.after(pageScrollProgress);
+    galaxyNebula.after(pageScrollProgress);
     const cursorDot = document.createElement('span');
     cursorDot.className = 'cursor-dot';
     cursorDot.setAttribute('aria-hidden', 'true');
@@ -113,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let automaticDowngradeComplete = false;
     let backgroundIdleTimer = 0;
     let backgroundFadeTimer = 0;
-    let activeTouchCount = 0;
 
     const clearBackgroundIdleTimer = () => {
         if (backgroundIdleTimer) window.clearTimeout(backgroundIdleTimer);
@@ -122,11 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
         backgroundFadeTimer = 0;
     };
 
-    // Long enough that a normal reading pause or a gap between scroll flicks
-    // does not trigger a whole fade-out/fade-in cycle. At 900ms the background
-    // visibly flashed any time the cursor rested for a moment.
-    const BACKGROUND_IDLE_DELAY = 2600;
-    const wakeEffectsBackground = (activity = 'cursor') => {
+    // The backdrop used to put itself out whenever nothing was happening: 2.6s
+    // after the cursor stopped, and on its own clock after a click -- lit for a
+    // second, then three and a half seconds down to nothing. Pressing a
+    // collection row ran that whole cycle, so opening one lit the sky up and
+    // pressing again took it away, which reads as the background answering the
+    // panel rather than sitting behind it. It holds one brightness now. The
+    // only thing that still darkens it is the tab going away, where there is
+    // nobody to see it and parking the render loop costs nothing.
+    const wakeEffectsBackground = () => {
         const root = document.documentElement;
         // Touching classList on every pointermove churns style + observers for
         // no reason; only clear the state when it is actually set.
@@ -134,45 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
             root.classList.remove('effects-background-idle', 'effects-background-click-fading');
         }
         clearBackgroundIdleTimer();
-
-        // A finger resting on the glass is still an interaction. Without this,
-        // holding one still for a few seconds ran the idle fade and took the
-        // dent with it while the finger was still pressing it.
-        if (activeTouchCount > 0) return;
-
-        if (activity === 'click') {
-            backgroundFadeTimer = window.setTimeout(() => {
-                backgroundFadeTimer = 0;
-                if (!document.hidden) {
-                    document.documentElement.classList.add('effects-background-click-fading');
-                }
-            }, 1000);
-            backgroundIdleTimer = window.setTimeout(() => {
-                backgroundIdleTimer = 0;
-                if (!document.hidden) {
-                    document.documentElement.classList.remove('effects-background-click-fading');
-                    document.documentElement.classList.add('effects-background-idle');
-                }
-            }, 4500);
-            return;
-        }
-
-        if (activity === 'swipe-release') {
-            backgroundIdleTimer = window.setTimeout(() => {
-                backgroundIdleTimer = 0;
-                if (!document.hidden) {
-                    document.documentElement.classList.add('effects-background-idle');
-                }
-            }, SWIPE_WAKE_RELEASE_DURATION);
-            return;
-        }
-
-        backgroundIdleTimer = window.setTimeout(() => {
-            backgroundIdleTimer = 0;
-            if (!document.hidden) {
-                document.documentElement.classList.add('effects-background-idle');
-            }
-        }, BACKGROUND_IDLE_DELAY);
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -321,12 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceMonitorFrame = requestAnimationFrame(monitorPerformance);
     });
 
-    // Anything in front of the backdrop that answers a pointer itself. While
-    // the cursor is over one of these the field stops following it: two things
-    // reacting to the same cursor at once reads as the page competing with
-    // itself, and the card is the one being pointed at.
-    const FOREGROUND_SELECTOR = 'a, button, input, textarea, select, [role="button"],'
-        + ' .project-card, .about-highlight, .skill-group, .modal-card, .collection-toggle';
     let pointerFrame = 0;
     let latestPointerEvent;
     let highEffectsTouchSwipeActive = false;
@@ -337,25 +287,14 @@ document.addEventListener('DOMContentLoaded', () => {
         latestPointerEvent = event;
         if (pointerFrame) return;
         pointerFrame = requestAnimationFrame(() => {
-            const interfaceScale = Number.parseFloat(document.documentElement.dataset.viewportScale) || 1;
-            const glowRadius = 140 * interfaceScale;
+            // The cursor dot, and the field -- which reads the pointer only to
+            // shove the bodies nearest it out of the way. The lens that used to
+            // travel with the cursor is gone: it lit whatever it passed over and
+            // went out again over every button and card, which is the brightening
+            // and dimming the field itself was doing, one light switching on and
+            // off under the reader's hand as they moved toward a control.
             cursor.move(latestPointerEvent);
-            // The cursor dot keeps following -- it is the pointer, not the
-            // backdrop -- but the field and the lens let go.
-            const target = latestPointerEvent.target;
-            if (target instanceof Element && target.closest(FOREGROUND_SELECTOR)) {
-                galaxy.release();
-                ambientGlow.classList.remove('is-active');
-                pointerFrame = 0;
-                return;
-            }
             galaxy.move(latestPointerEvent);
-            ambientGlow.classList.add('is-active');
-            ambientGlow.style.transform = `translate3d(${latestPointerEvent.clientX - glowRadius}px, ${latestPointerEvent.clientY - glowRadius}px, 0)`;
-            // Cancels the element's own translate, so the lattice inside the
-            // lens is pinned to the viewport: the light moves, the grid does not.
-            ambientGlow.style.setProperty('--grid-offset-x', `${glowRadius - latestPointerEvent.clientX}px`);
-            ambientGlow.style.setProperty('--grid-offset-y', `${glowRadius - latestPointerEvent.clientY}px`);
             pointerFrame = 0;
         });
     };
@@ -366,11 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchstart', event => {
         highEffectsTouchSwipeActive = false;
         touchSwipeReleased = false;
-        activeTouchCount = event.touches.length;
         wakeEffectsBackground();
         if (effectsMode !== 'high') return;
         Array.from(event.changedTouches).forEach(touch => {
-            galaxy.touchStart(touch.identifier, touch.clientX, touch.clientY);
+            // touch.target is where the finger landed and stays that element for
+            // the life of the touch, which is exactly the test the field wants.
+            galaxy.touchStart(touch.identifier, touch.clientX, touch.clientY, touch.target);
         });
     }, { passive: true });
     window.addEventListener('touchmove', event => {
@@ -384,20 +324,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
     ['touchend', 'touchcancel'].forEach(eventName => {
         window.addEventListener(eventName, event => {
-            activeTouchCount = event.touches.length;
             Array.from(event.changedTouches).forEach(touch => galaxy.touchEnd(touch.identifier));
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
             touchSwipeReleased = true;
-            ambientGlow.classList.remove('is-active');
-            wakeEffectsBackground('swipe-release');
+            wakeEffectsBackground();
         }, { passive: true });
     });
     // A stylus is a fingertip with a finer point: same dent, same rebound.
     window.addEventListener('pointerdown', event => {
-        wakeEffectsBackground('click');
+        wakeEffectsBackground();
         if (effectsMode === 'high' && event.pointerType === 'pen') {
-            galaxy.touchStart(`pen-${event.pointerId}`, event.clientX, event.clientY);
+            galaxy.touchStart(`pen-${event.pointerId}`, event.clientX, event.clientY, event.target);
         }
     }, { passive: true });
     window.addEventListener('pointermove', event => {
@@ -408,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.pointerType === 'pen') galaxy.touchEnd(`pen-${event.pointerId}`);
         }, { passive: true });
     });
-    document.documentElement.addEventListener('pointerleave', () => ambientGlow.classList.remove('is-active'));
     window.addEventListener('keydown', wakeEffectsBackground, { passive: true });
     window.addEventListener('wheel', () => {
         touchSwipeReleased = false;
@@ -564,7 +501,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // the normal compositing sync, which shows up as flicker/tearing against the
     // page behind it. It only exists to cut stylus latency, which we do not need.
     const context = canvas.getContext('2d', { alpha: true });
-    if (!context) return { move() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {} };
+    if (!context) return { move() {}, release() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {} };
 
     // Keep the existing tiered, seeded canvas architecture. Regions now own
     // their lights and haze, so a system has a shared composition at every scale.
@@ -624,17 +561,32 @@ function setupGalaxyField(canvas, reducedMotion) {
     const universeSeed = (Math.random() * 0x100000000) >>> 0;
     const seedFor = (salt, index = 0) =>
         (universeSeed ^ salt ^ Math.imul(index + 1, 2654435761)) >>> 0;
-    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, active: false,
+    const pointer = { x: 0, y: 0, sx: 0, sy: 0, active: false,
         px: 0, py: 0, vx: 0, vy: 0, sampledAt: 0, speed: 0 };
     const particles = Array.from({ length: 160 }, () => ({ active: false }));
     const ripples = Array.from({ length: 5 }, () => ({ active: false }));
     let pressedSpace = null, suppressSpaceClick = false;
-    const interactionSelector = 'a, button, input, textarea, select, summary, [role="button"], '
-        + '[contenteditable], .project-card, .project-carousel, .navbar, .modal, .modal-overlay';
-    const openSpace = event => !document.querySelector('.modal-overlay.active')
-        && !event.target.closest(interactionSelector)
-        && event.clientY > navigationBottom + 8
-        && clearanceAt(event.clientX, event.clientY + scrollPosition, 12, visibleRects) > .8;
+    // The sheet is reachable across the whole page -- over headings, over body
+    // copy, over the row that opens a collection -- because all of that is text
+    // printed on the field rather than an object sitting on top of it. What does
+    // sit on top is the cards: the skill groups, the About highlights, and the
+    // project cards a collection opens. A press landing on one of those belongs
+    // to the card, so the field must not answer it. Modals, the fixed nav, a
+    // carousel mid-swipe and any real input are excluded for the same reason --
+    // something in front of the sheet is already using that press.
+    //
+    // This used to also refuse anywhere within 12px of text, which is most of a
+    // page made of text: the field read as dead almost everywhere it was not
+    // literally empty sky.
+    // The same three the page already treats as cards for tilt and press, so a
+    // card can never answer a pointer and let the field answer it too.
+    const cardSelector = `${REACTIVE_CARD_SELECTOR}, .modal-card, `
+        + '.modal, .modal-overlay, .navbar, .project-carousel, '
+        + 'input, textarea, select, [contenteditable]';
+    const openSpaceAt = (target, clientY) => !document.querySelector('.modal-overlay.active')
+        && !(target instanceof Element && target.closest(cardSelector))
+        && clientY > navigationBottom + 8;
+    const openSpace = event => openSpaceAt(event.target, event.clientY);
     // A fingertip presses a dimple into the field. The sheet sags under it,
     // nearby scenery slides down the slope, and on release it springs back
     // through flat before settling. Wells live in screen space: the page
@@ -1364,220 +1316,280 @@ function setupGalaxyField(canvas, reducedMotion) {
         }
     };
 
-    const buildScene = () => {
-        for (const tier of tierList) tier.objects = [];
-        regions = [];
+    // Everything the draw loop assumes about a tier: sorted by page position so
+    // the visible slice can be found by binary search, a margin wide enough for
+    // the largest sprite it holds, and the live list the animated frames walk.
+    // Run after any change to what a tier contains -- a full build, or a single
+    // band of sky grown or removed under a collection opening and closing.
+    const finalizeTiers = () => {
+        for (const tier of tierList) {
+            tier.objects.sort((a, b) => a.documentY - b.documentY);
+            tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
+            if (tier.objects.some(item => item.interactive)) tier.margin += 360;
+            // Keep the full list for reduced motion, which draws the points
+            // directly. Animated frames only visit stars not already in tiles.
+            tier.liveObjects = tier === tiers.stars
+                ? tier.objects.filter(object => !object.staticField) : tier.objects;
+            for (const object of tier.objects) {
+                object.fillColor = `rgb(${object.color})`;
+                // Rockets have to find a world and follow it while it parallaxes,
+                // which means each body has to know its own depth.
+                object.factor = tier.factor;
+                // How much text this object sits behind, measured once, where it
+                // was placed, and then its own property for good. It used to be
+                // recomputed every frame against wherever the text happened to
+                // be, so a heading sliding down when a collection opened took a
+                // planet from full brightness to seven percent of it -- the same
+                // planet, in the same place, blinking out and back as the page
+                // grew and shrank under it. Nothing about the sky should answer
+                // to what the page is doing in front of it.
+                if (!tier.points && object.clearance === undefined) {
+                    object.clearance = clearanceAt(object.x, object.documentY,
+                        Math.max(10, object.radius * .46), protectedRects);
+                }
+            }
+        }
+    };
+
+    // One band of sky: three overlapping systems, the scenery that belongs to
+    // them, and a jittered lattice that fills whatever the three leave bare.
+    // Lifted out of buildScene so an opening collection can grow new sky into
+    // the gap it makes without rerolling the universe around it. `index` seeds
+    // the band and `top` places it, and nothing else varies -- so the same gap
+    // always grows the same sky back.
+    const SEGMENT_HEIGHT = 680;
+    const buildSegment = (index, top, salt = 0xC0FFEE, segmentHeight = SEGMENT_HEIGHT) => {
         const mobile = width < 700;
         const density = mobile ? .68 : 1;
-        const segmentHeight = 680;
-        // Build past the current page so the height churn that content-visibility
-        // causes while scrolling never crosses the rebuild threshold.
-        const sceneHeight = Math.max(builtPageHeight, pageHeight);
-        const segments = Math.ceil(sceneHeight / segmentHeight);
-        // Each segment has its own seed: expanding a collection adds scenery
-        // below without rerolling the entire universe above it.
-        for (let segment = 0; segment < segments; segment++) {
-            const rng = createSeededRandom(seedFor(0xC0FFEE, segment));
-            const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
-            const side = rng() < .5;
-            // Anchoring three quarters of the systems in the gutters left a
-            // conspicuously empty column down the middle of the page. Half of
-            // them sit in the central band now, and the bands overlap so the
-            // field reads as one continuous scene instead of three stripes.
-            const centerMass = rng() < .5;
-            const region = {
-                x: width * (centerMass ? randomRange(rng, .3, .7)
-                    : (side ? randomRange(rng, .015, .3) : randomRange(rng, .7, .985))),
-                y: segment * segmentHeight + randomRange(rng, 170, 480),
-                radius: Math.min(width * .45, randomRange(rng, 220, 380)),
-                flatten: randomRange(rng, .45, .95),
-                color: chooseColor(rng), type
-            };
-            regions.push(region);
-            // An exact mirror produced matched pairs hugging both edges, which
-            // is what made the layout look placed rather than found. Drift the
-            // companion off the reflection so the two sit at unrelated
-            // distances from the centre.
-            const companion = {
-                ...region,
-                x: clamp(width - region.x + width * randomRange(rng, -.22, .22), width * .06, width * .94),
-                y: region.y + randomRange(rng, -220, 240),
-                radius: region.radius * .65
-            };
-            regions.push(companion);
-            // A third, dimmer system in the middle band. It carries the fine
-            // scenery -- dust, unresolved smudges, small bodies -- rather than
-            // bright landmarks, so the centre fills in without competing with
-            // the text sitting over it.
-            const midfield = {
-                ...region,
-                x: width * randomRange(rng, .34, .66),
-                y: region.y + randomRange(rng, -300, 340),
-                radius: region.radius * randomRange(rng, .5, .78),
-                flatten: randomRange(rng, .5, 1),
-                color: chooseColor(rng)
-            };
-            regions.push(midfield);
+        const rng = createSeededRandom(seedFor(salt, index));
+        const type = Math.floor(rng() * 4); // luminous system, binary, cloud, loose association
+        const side = rng() < .5;
+        // Anchoring three quarters of the systems in the gutters left a
+        // conspicuously empty column down the middle of the page. Half of
+        // them sit in the central band now, and the bands overlap so the
+        // field reads as one continuous scene instead of three stripes.
+        const centerMass = rng() < .5;
+        const region = {
+            x: width * (centerMass ? randomRange(rng, .3, .7)
+                : (side ? randomRange(rng, .015, .3) : randomRange(rng, .7, .985))),
+            y: top + randomRange(rng, .25, .71) * segmentHeight,
+            radius: Math.min(width * .45, randomRange(rng, 220, 380)),
+            flatten: randomRange(rng, .45, .95),
+            color: chooseColor(rng), type
+        };
+        regions.push(region);
+        // An exact mirror produced matched pairs hugging both edges, which
+        // is what made the layout look placed rather than found. Drift the
+        // companion off the reflection so the two sit at unrelated
+        // distances from the centre.
+        const companion = {
+            ...region,
+            x: clamp(width - region.x + width * randomRange(rng, -.22, .22), width * .06, width * .94),
+            y: region.y + randomRange(rng, -220, 240),
+            radius: region.radius * .65
+        };
+        regions.push(companion);
+        // A third, dimmer system in the middle band. It carries the fine
+        // scenery -- dust, unresolved smudges, small bodies -- rather than
+        // bright landmarks, so the centre fills in without competing with
+        // the text sitting over it.
+        const midfield = {
+            ...region,
+            x: width * randomRange(rng, .34, .66),
+            y: region.y + randomRange(rng, -300, 340),
+            radius: region.radius * randomRange(rng, .5, .78),
+            flatten: randomRange(rng, .5, 1),
+            color: chooseColor(rng)
+        };
+        regions.push(midfield);
 
-            // Give the hero's open right side its own system, above the title's
-            // baseline, instead of pushing every light below the large heading.
-            // The side is fixed by the layout -- the name owns the left -- but
-            // where it sits in that space is not.
-            if (segment === 0 && !mobile) {
-                region.x = width * randomRange(rng, .82, .96);
-                region.y = height * randomRange(rng, .24, .48);
-                region.radius = width * randomRange(rng, .12, .19);
-            }
+        // Give the hero's open right side its own system, above the title's
+        // baseline, instead of pushing every light below the large heading.
+        // The side is fixed by the layout -- the name owns the left -- but
+        // where it sits in that space is not.
+        if (!index && !top && !mobile) {
+            region.x = width * randomRange(rng, .82, .96);
+            region.y = height * randomRange(rng, .24, .48);
+            region.radius = width * randomRange(rng, .12, .19);
+        }
 
-            // An even baseline under uneven systems, with many nearly invisible
-            // points. No page-height cap that thins out expanded collections.
-            // Deep-field stars are deliberately tiny and numerous in High FX,
-            // like a telescope exposure: density rises while individual alpha
-            // and radius stay restrained.
-            const count = Math.round((width * segmentHeight / 500) * density * (mobile ? .72 : 1));
-            for (let i = 0; i < count; i++) {
-                const clustered = rng() < .48;
-                const groupRoll = rng();
-                const group = groupRoll < .5 ? region : groupRoll < .78 ? companion : midfield;
-                const position = clustered ? around(rng, group) : { x: rng() * width, y: (segment + rng()) * segmentHeight };
-                const depth = rng();
-                const bright = rng() < .022;
-                add('stars', makeObject(rng, position.x, position.y,
-                    bright ? 1.15 + rng() * 1.15 : .2 + rng() ** 1.9 * .9,
-                    chooseDeepColor(rng), {
-                    alpha: bright ? .64 + rng() * .3 : .1 + rng() ** 1.8 * .62,
-                    drift: .6 + depth * 3.4, pulse: .2 + rng() * .4,
-                    glint: bright && rng() < .38,
-                    staticField: !bright
-                }));
-            }
-            // A fine veil of unresolved dust prevents the field from feeling
-            // algorithmically empty between the larger seeded systems.
-            for (let i = 0; i < Math.round(150 * density); i++) {
-                const dustRoll = rng();
-                const position = around(rng, dustRoll < .44 ? region : dustRoll < .72 ? companion : midfield, 1.4);
-                add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .5, pulse: .16 }));
-            }
-            for (const group of [region, companion]) {
-                add('galaxies', makeObject(rng, group.x, group.y, group.radius * (type === 2 ? 1.1 : .75), group.color, {
-                    sprite: galaxySprite(rng, group.color), alpha: type === 2 ? .8 : .5, drift: 2, stretch: .65 + rng() * .3, haze: true
-                }));
-                // Cluster-linked atmospheric light shares the midground's
-                // projection, while the unresolved galaxy sits much farther back.
-                add('smallPlanets', makeObject(rng, group.x, group.y, group.radius * 1.6, group.color, {
-                    sprite: lightSprite(group.color, 2), alpha: .13, stretch: .66, haze: true, drift: 3
-                }));
-                for (let i = 0; i < Math.round(10 * density); i++) {
-                    const p = around(rng, group, 1.3);
-                    const color = rng() < .7 ? group.color : chooseColor(rng);
-                    add('tinyDistant', makeObject(rng, p.x, p.y, 3 + rng() * 8, color, {
-                        sprite: lightSprite(color, 0), alpha: .17 + rng() * .5, drift: .7
-                    }));
-                }
-                // Small, unresolved galaxy smudges echo deep-field exposures;
-                // they are sparse enough to remain landmarks rather than icons.
-                for (let i = 0; i < Math.round(2.5 * density); i++) {
-                    const p = around(rng, group, 1.15);
-                    const microColor = chooseDeepColor(rng);
-                    add('tinyDistant', makeObject(rng, p.x, p.y, 7 + rng() * 12, microColor, {
-                        sprite: galaxySprite(rng, microColor), alpha: .08 + rng() * .16,
-                        stretch: .32 + rng() * .55, angle: rng() * TAU, drift: .32, haze: true
-                    }));
-                }
-                for (let i = 0; i < Math.round((type === 2 ? 11 : 16) * density); i++) placeBody(rng, 'smallPlanets', group, 7, 18);
-                for (let i = 0; i < Math.round(7 * density); i++) placeBody(rng, 'mediumStars', group, 12, 27);
-                for (let i = 0; i < Math.round((type === 1 ? 6 : 5) * density); i++) placeBody(rng, 'mediumPlanets', group, 25, 52);
-                const largePlanetCount = type === 2 ? 1 : 2;
-                for (let i = 0; i < largePlanetCount; i++) {
-                    placeBody(rng, 'largePlanets', group, 64, 115, type !== 2 && i === 0);
-                }
-            }
-            if (type === 0) placeBody(rng, 'largePlanets', region, 85, 140, true);
-
-            // The middle band gets the same kinds of scenery at reduced weight:
-            // a soft galaxy, its haze, a scatter of unresolved smudges and a
-            // handful of small bodies. No large planets and no anchors -- the
-            // centre should read as depth behind the page, not as a subject.
-            add('galaxies', makeObject(rng, midfield.x, midfield.y, midfield.radius * .8, midfield.color, {
-                sprite: galaxySprite(rng, midfield.color), alpha: .32, drift: 2,
-                stretch: .6 + rng() * .35, haze: true
+        // An even baseline under uneven systems, with many nearly invisible
+        // points. No page-height cap that thins out expanded collections.
+        // Deep-field stars are deliberately tiny and numerous in High FX,
+        // like a telescope exposure: density rises while individual alpha
+        // and radius stay restrained.
+        const count = Math.round((width * segmentHeight / 500) * density * (mobile ? .72 : 1));
+        for (let i = 0; i < count; i++) {
+            const clustered = rng() < .48;
+            const groupRoll = rng();
+            const group = groupRoll < .5 ? region : groupRoll < .78 ? companion : midfield;
+            const position = clustered ? around(rng, group) : { x: rng() * width, y: top + rng() * segmentHeight };
+            const depth = rng();
+            const bright = rng() < .022;
+            add('stars', makeObject(rng, position.x, position.y,
+                bright ? 1.15 + rng() * 1.15 : .2 + rng() ** 1.9 * .9,
+                chooseDeepColor(rng), {
+                alpha: bright ? .64 + rng() * .3 : .1 + rng() ** 1.8 * .62,
+                drift: .6 + depth * 3.4, pulse: .2 + rng() * .4,
+                glint: bright && rng() < .38,
+                staticField: !bright
             }));
-            add('smallPlanets', makeObject(rng, midfield.x, midfield.y, midfield.radius * 1.45, midfield.color, {
-                sprite: lightSprite(midfield.color, 2), alpha: .085, stretch: .7, haze: true, drift: 3
+        }
+        // A fine veil of unresolved dust prevents the field from feeling
+        // algorithmically empty between the larger seeded systems.
+        for (let i = 0; i < Math.round(150 * density); i++) {
+            const dustRoll = rng();
+            const position = around(rng, dustRoll < .44 ? region : dustRoll < .72 ? companion : midfield, 1.4);
+            add('dust', makeObject(rng, position.x, position.y, .16 + rng() * .34, chooseDeepColor(rng), { alpha: .035 + rng() * .12, drift: .5, pulse: .16 }));
+        }
+        for (const group of [region, companion]) {
+            add('galaxies', makeObject(rng, group.x, group.y, group.radius * (type === 2 ? 1.1 : .75), group.color, {
+                sprite: galaxySprite(rng, group.color), alpha: type === 2 ? .8 : .5, drift: 2, stretch: .65 + rng() * .3, haze: true
             }));
-            for (let i = 0; i < Math.round(8 * density); i++) {
-                const p = around(rng, midfield, 1.35);
-                const color = rng() < .7 ? midfield.color : chooseColor(rng);
-                add('tinyDistant', makeObject(rng, p.x, p.y, 2.5 + rng() * 6.5, color, {
-                    sprite: lightSprite(color, 0), alpha: .13 + rng() * .38, drift: .7
+            // Cluster-linked atmospheric light shares the midground's
+            // projection, while the unresolved galaxy sits much farther back.
+            add('smallPlanets', makeObject(rng, group.x, group.y, group.radius * 1.6, group.color, {
+                sprite: lightSprite(group.color, 2), alpha: .13, stretch: .66, haze: true, drift: 3
+            }));
+            for (let i = 0; i < Math.round(10 * density); i++) {
+                const p = around(rng, group, 1.3);
+                const color = rng() < .7 ? group.color : chooseColor(rng);
+                add('tinyDistant', makeObject(rng, p.x, p.y, 3 + rng() * 8, color, {
+                    sprite: lightSprite(color, 0), alpha: .17 + rng() * .5, drift: .7
                 }));
             }
-            for (let i = 0; i < Math.round(2 * density); i++) {
-                const p = around(rng, midfield, 1.2);
+            // Small, unresolved galaxy smudges echo deep-field exposures;
+            // they are sparse enough to remain landmarks rather than icons.
+            for (let i = 0; i < Math.round(2.5 * density); i++) {
+                const p = around(rng, group, 1.15);
                 const microColor = chooseDeepColor(rng);
-                add('tinyDistant', makeObject(rng, p.x, p.y, 6 + rng() * 11, microColor, {
-                    sprite: galaxySprite(rng, microColor), alpha: .07 + rng() * .13,
+                add('tinyDistant', makeObject(rng, p.x, p.y, 7 + rng() * 12, microColor, {
+                    sprite: galaxySprite(rng, microColor), alpha: .08 + rng() * .16,
                     stretch: .32 + rng() * .55, angle: rng() * TAU, drift: .32, haze: true
                 }));
             }
-            // Bodies are the expensive half of a system -- the planet tiers are
-            // interactive, so each one is hit-tested every frame. The middle
-            // gets a restrained handful; its density comes from the dust and
-            // the unresolved smudges above, which are cheap.
-            for (let i = 0; i < Math.round(5 * density); i++) placeBody(rng, 'smallPlanets', midfield, 6, 15);
-            for (let i = 0; i < Math.round(3 * density); i++) placeBody(rng, 'mediumStars', midfield, 10, 22);
-            for (let i = 0; i < Math.round(1 * density); i++) placeBody(rng, 'mediumPlanets', midfield, 22, 44);
-
-            // Three systems per segment always leave holes between them, and a
-            // hole in a star field reads as a rendering failure rather than as
-            // space. Walk a jittered lattice over the segment; wherever a cell
-            // lands outside every system's envelope, give it its own faint
-            // scatter. Weighted toward baked stars because those cost nothing
-            // per frame, so filling the gaps does not cost what the systems do.
-            const systems = [region, companion, midfield];
-            const columns = mobile ? 3 : 5, rows = 3;
-            for (let column = 0; column < columns; column++) for (let row = 0; row < rows; row++) {
-                const gapX = (column + randomRange(rng, .15, .85)) / columns * width;
-                const gapY = segment * segmentHeight
-                    + (row + randomRange(rng, .15, .85)) / rows * segmentHeight;
-                let covered = 0;
-                for (const system of systems) {
-                    const dx = (gapX - system.x) / system.radius;
-                    const dy = (gapY - system.y) / (system.radius * system.flatten);
-                    covered = Math.max(covered, 1 - Math.min(1, Math.hypot(dx, dy) / 1.35));
-                }
-                // Anything already within reach of a system is left alone; the
-                // rest fills in proportionally to how bare it actually is.
-                if (covered > .3) continue;
-                const emptiness = 1 - covered / .3;
-                const patch = {
-                    x: gapX, y: gapY, radius: randomRange(rng, 110, 210),
-                    flatten: randomRange(rng, .6, 1)
-                };
-                for (let i = 0; i < Math.round(34 * density * emptiness); i++) {
-                    const p = around(rng, patch, 1.15);
-                    add('stars', makeObject(rng, p.x, p.y, .2 + rng() ** 1.9 * .8, chooseDeepColor(rng), {
-                        alpha: .09 + rng() ** 1.8 * .5, drift: .6,
-                        pulse: .2 + rng() * .35, staticField: true
-                    }));
-                }
-                for (let i = 0; i < Math.round(7 * density * emptiness); i++) {
-                    const p = around(rng, patch, 1.3);
-                    add('dust', makeObject(rng, p.x, p.y, .16 + rng() * .3, chooseDeepColor(rng),
-                        { alpha: .03 + rng() * .1, drift: .5, pulse: .16 }));
-                }
-                // One unresolved smudge now and then, so a gap has something to
-                // rest on rather than reading as evenly sprinkled noise.
-                if (rng() < .55 * emptiness) {
-                    const p = around(rng, patch, .8);
-                    const color = chooseDeepColor(rng);
-                    add('tinyDistant', makeObject(rng, p.x, p.y, 4 + rng() * 9, color, {
-                        sprite: rng() < .5 ? galaxySprite(rng, color) : lightSprite(color, 0),
-                        alpha: .07 + rng() * .18, stretch: .35 + rng() * .5,
-                        angle: rng() * TAU, drift: .35, haze: true
-                    }));
-                }
+            for (let i = 0; i < Math.round((type === 2 ? 11 : 16) * density); i++) placeBody(rng, 'smallPlanets', group, 7, 18);
+            for (let i = 0; i < Math.round(7 * density); i++) placeBody(rng, 'mediumStars', group, 12, 27);
+            for (let i = 0; i < Math.round((type === 1 ? 6 : 5) * density); i++) placeBody(rng, 'mediumPlanets', group, 25, 52);
+            const largePlanetCount = type === 2 ? 1 : 2;
+            for (let i = 0; i < largePlanetCount; i++) {
+                placeBody(rng, 'largePlanets', group, 64, 115, type !== 2 && i === 0);
             }
+        }
+        if (type === 0) placeBody(rng, 'largePlanets', region, 85, 140, true);
+
+        // The middle band gets the same kinds of scenery at reduced weight:
+        // a soft galaxy, its haze, a scatter of unresolved smudges and a
+        // handful of small bodies. No large planets and no anchors -- the
+        // centre should read as depth behind the page, not as a subject.
+        add('galaxies', makeObject(rng, midfield.x, midfield.y, midfield.radius * .8, midfield.color, {
+            sprite: galaxySprite(rng, midfield.color), alpha: .32, drift: 2,
+            stretch: .6 + rng() * .35, haze: true
+        }));
+        add('smallPlanets', makeObject(rng, midfield.x, midfield.y, midfield.radius * 1.45, midfield.color, {
+            sprite: lightSprite(midfield.color, 2), alpha: .085, stretch: .7, haze: true, drift: 3
+        }));
+        for (let i = 0; i < Math.round(8 * density); i++) {
+            const p = around(rng, midfield, 1.35);
+            const color = rng() < .7 ? midfield.color : chooseColor(rng);
+            add('tinyDistant', makeObject(rng, p.x, p.y, 2.5 + rng() * 6.5, color, {
+                sprite: lightSprite(color, 0), alpha: .13 + rng() * .38, drift: .7
+            }));
+        }
+        for (let i = 0; i < Math.round(2 * density); i++) {
+            const p = around(rng, midfield, 1.2);
+            const microColor = chooseDeepColor(rng);
+            add('tinyDistant', makeObject(rng, p.x, p.y, 6 + rng() * 11, microColor, {
+                sprite: galaxySprite(rng, microColor), alpha: .07 + rng() * .13,
+                stretch: .32 + rng() * .55, angle: rng() * TAU, drift: .32, haze: true
+            }));
+        }
+        // Bodies are the expensive half of a system -- the planet tiers are
+        // interactive, so each one is hit-tested every frame. The middle
+        // gets a restrained handful; its density comes from the dust and
+        // the unresolved smudges above, which are cheap.
+        for (let i = 0; i < Math.round(5 * density); i++) placeBody(rng, 'smallPlanets', midfield, 6, 15);
+        for (let i = 0; i < Math.round(3 * density); i++) placeBody(rng, 'mediumStars', midfield, 10, 22);
+        for (let i = 0; i < Math.round(1 * density); i++) placeBody(rng, 'mediumPlanets', midfield, 22, 44);
+
+        // Three systems per segment always leave holes between them, and a
+        // hole in a star field reads as a rendering failure rather than as
+        // space. Walk a jittered lattice over the segment; wherever a cell
+        // lands outside every system's envelope, give it its own faint
+        // scatter. Weighted toward baked stars because those cost nothing
+        // per frame, so filling the gaps does not cost what the systems do.
+        const systems = [region, companion, midfield];
+        const columns = mobile ? 3 : 5, rows = 3;
+        for (let column = 0; column < columns; column++) for (let row = 0; row < rows; row++) {
+            const gapX = (column + randomRange(rng, .15, .85)) / columns * width;
+            const gapY = top
+                + (row + randomRange(rng, .15, .85)) / rows * segmentHeight;
+            let covered = 0;
+            for (const system of systems) {
+                const dx = (gapX - system.x) / system.radius;
+                const dy = (gapY - system.y) / (system.radius * system.flatten);
+                covered = Math.max(covered, 1 - Math.min(1, Math.hypot(dx, dy) / 1.35));
+            }
+            // Anything already within reach of a system is left alone; the
+            // rest fills in proportionally to how bare it actually is.
+            if (covered > .3) continue;
+            const emptiness = 1 - covered / .3;
+            const patch = {
+                x: gapX, y: gapY, radius: randomRange(rng, 110, 210),
+                flatten: randomRange(rng, .6, 1)
+            };
+            for (let i = 0; i < Math.round(34 * density * emptiness); i++) {
+                const p = around(rng, patch, 1.15);
+                add('stars', makeObject(rng, p.x, p.y, .2 + rng() ** 1.9 * .8, chooseDeepColor(rng), {
+                    alpha: .09 + rng() ** 1.8 * .5, drift: .6,
+                    pulse: .2 + rng() * .35, staticField: true
+                }));
+            }
+            for (let i = 0; i < Math.round(7 * density * emptiness); i++) {
+                const p = around(rng, patch, 1.3);
+                add('dust', makeObject(rng, p.x, p.y, .16 + rng() * .3, chooseDeepColor(rng),
+                    { alpha: .03 + rng() * .1, drift: .5, pulse: .16 }));
+            }
+            // One unresolved smudge now and then, so a gap has something to
+            // rest on rather than reading as evenly sprinkled noise.
+            if (rng() < .55 * emptiness) {
+                const p = around(rng, patch, .8);
+                const color = chooseDeepColor(rng);
+                add('tinyDistant', makeObject(rng, p.x, p.y, 4 + rng() * 9, color, {
+                    sprite: rng() < .5 ? galaxySprite(rng, color) : lightSprite(color, 0),
+                    alpha: .07 + rng() * .18, stretch: .35 + rng() * .5,
+                    angle: rng() * TAU, drift: .35, haze: true
+                }));
+            }
+        }
+    };
+
+    // Segment N is seeded by N and sits at N * SEGMENT_HEIGHT, always. So the
+    // sky is not a picture cut to fit the page -- it is one fixed universe the
+    // page reveals as much of as it happens to need. Asking for more of it can
+    // never disturb a single thing already placed above.
+    let builtSegments = 0;
+    const extendSceneTo = target => {
+        if (!width) return false;
+        const needed = Math.ceil(target / SEGMENT_HEIGHT);
+        if (needed <= builtSegments) return false;
+        for (; builtSegments < needed; builtSegments++) {
+            buildSegment(builtSegments, builtSegments * SEGMENT_HEIGHT);
+        }
+        builtPageHeight = Math.max(builtPageHeight, builtSegments * SEGMENT_HEIGHT);
+        finalizeTiers();
+        return true;
+    };
+    const buildScene = () => {
+        for (const tier of tierList) tier.objects = [];
+        regions = [];
+        builtSegments = 0;
+        const mobile = width < 700;
+        // Build past the current page so the height churn that content-visibility
+        // causes while scrolling never has to reach for more sky.
+        const sceneHeight = Math.max(builtPageHeight, pageHeight);
+        for (; builtSegments < Math.ceil(sceneHeight / SEGMENT_HEIGHT); builtSegments++) {
+            buildSegment(builtSegments, builtSegments * SEGMENT_HEIGHT);
         }
         // A few much bigger crops sell scale. Their hot center stays close to
         // the edge and their atmospheric envelope extends far beyond it.
@@ -1619,21 +1631,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                     { alpha: .18 + clusterRng() * .56, drift: .5, orbit: 0, pulse: .08 }));
             }
         }
-        for (const tier of tierList) {
-            tier.objects.sort((a, b) => a.documentY - b.documentY);
-            tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
-            if (tier.objects.some(item => item.interactive)) tier.margin += 360;
-            // Keep the full list for reduced motion, which draws the points
-            // directly. Animated frames only visit stars not already in tiles.
-            tier.liveObjects = tier === tiers.stars
-                ? tier.objects.filter(object => !object.staticField) : tier.objects;
-            for (const object of tier.objects) {
-                object.fillColor = `rgb(${object.color})`;
-                // Rockets have to find a world and follow it while it parallaxes,
-                // which means each body has to know its own depth.
-                object.factor = tier.factor;
-            }
-        }
+        finalizeTiers();
         pressedSpace = null;
         // Anything holding a reference into the old scene is now pointing at a
         // world that no longer exists.
@@ -1706,7 +1704,9 @@ function setupGalaxyField(canvas, reducedMotion) {
                 hole.disturbance = Math.max(hole.disturbance, push.gain
                     * Math.max(0, 1 - Math.hypot(push.lx - position.x, push.ly - position.y) / (hole.radius * 2.2)));
             }
-            hole.clearance = clearanceAt(position.x, position.y + scrollPosition, hole.radius * .8, visibleRects);
+            if (hole.clearance === undefined) {
+                hole.clearance = clearanceAt(hole.x, hole.documentY, hole.radius * .8, protectedRects);
+            }
             projectedHoles.push(hole);
         }
     };
@@ -1746,8 +1746,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         pusherCount = 0;
         if (pointer.active && pusherCount < pushers.length) {
             const push = pushers[pusherCount++];
-            push.x = (pointer.x + 1) * width / 2;
-            push.y = (pointer.y + 1) * height / 2;
+            push.x = pointer.sx;
+            push.y = pointer.sy;
             push.lx = pointer.px; push.ly = pointer.py;
             push.vx = pointer.vx; push.vy = pointer.vy;
             // The cursor smears and sparks the light it passes, but does not
@@ -2118,7 +2118,10 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (p.y < -40 || p.y > height + 40) continue;
             const fade = body.hole ? smoothstep(clamp((body.orbitRadius / anchor.radius - .28) / .3, 0, 1))
                 * smoothstep(clamp((.94 - body.orbitRadius / anchor.radius) / .1, 0, 1)) : 1;
-            context.globalAlpha = (.035 + clearanceAt(p.x, p.y + scrollPosition, body.radius, visibleRects) * .38) * fade * (p.alpha ?? 1);
+            if (body.clearance === undefined) {
+                body.clearance = clearanceAt(anchor.x, anchor.documentY ?? anchor.y, body.radius, protectedRects);
+            }
+            context.globalAlpha = (.035 + body.clearance * .38) * fade * (p.alpha ?? 1);
             const radius = body.radius * (p.scale ?? 1);
             context.drawImage(body.sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
         }
@@ -2127,8 +2130,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         for (const star of pulsars) {
             const p = projectPosition(star.x, star.documentY, star.factor, cameraX, cameraY);
             if (p.y < -40 || p.y > height + 40) continue;
-            const alpha = (.3 + Math.sin(time * .42 + star.phase) * .12)
-                * clearanceAt(p.x, p.y + scrollPosition, 35, visibleRects);
+            if (star.clearance === undefined) {
+                star.clearance = clearanceAt(star.x, star.documentY, 35, protectedRects);
+            }
+            const alpha = (.3 + Math.sin(time * .42 + star.phase) * .12) * star.clearance;
             context.save();
             context.translate(p.x, p.y);
             context.rotate(time * .025 + star.phase);
@@ -2721,10 +2726,15 @@ function setupGalaxyField(canvas, reducedMotion) {
         if (animated) sceneTime += delta * .001;
         const time = reducedMotion.matches ? 0 : sceneTime;
         const ease = 1 - Math.exp(-delta / 280);
-        pointer.x += ((animated && pointer.active ? pointer.targetX : 0) - pointer.x) * ease;
-        pointer.y += ((animated && pointer.active ? pointer.targetY : 0) - pointer.y) * ease;
-        const cameraX = animated ? pointer.x : 0;
-        const cameraY = animated ? pointer.y : 0;
+        // The camera is pinned. Leaning it toward the cursor slid every layer of
+        // the field at once, which is what read as the sky teleporting whenever
+        // the pointer crossed onto a card and it snapped back. What follows the
+        // cursor now is a single smoothed point, and the only thing that reads it
+        // is the push below: bodies near the cursor get shoved, and nothing else
+        // in the scene knows the mouse exists.
+        pointer.sx += (pointer.px - pointer.sx) * ease;
+        pointer.sy += (pointer.py - pointer.sy) * ease;
+        const cameraX = 0, cameraY = 0;
         if (animated) { updateTouchWells(delta); syncPushers(); } else pusherCount = 0;
         if (performance.now() - pointer.sampledAt > 45) {
             pointer.vx *= Math.exp(-delta / 85); pointer.vy *= Math.exp(-delta / 85);
@@ -2795,16 +2805,14 @@ function setupGalaxyField(canvas, reducedMotion) {
                 // punched through the field.
                 if (sink !== 1) alpha *= clamp(.58 + .42 * sink, .2, 1.2);
                 if (!tier.points) {
-                    const clearance = clearanceAt(x, y + scrollPosition, Math.max(10, radius * .46), visibleRects);
-                    // A dim remnant remains behind text; hotter objects emerge
-                    // continuously as parallax carries them into negative space.
+                    // Frozen at placement -- see finalizeTiers. A dim remnant
+                    // remains behind the text an object was placed under, and it
+                    // stays exactly that dim for the life of the visit.
+                    const clearance = object.clearance ?? 1;
                     alpha *= object.haze ? .5 + clearance * .5 : .07 + clearance * .93;
                     alpha *= .1 + .9 * smoothstep(clamp((y - navigationBottom + radius * .1) / Math.max(24, radius * .5), 0, 1));
-                    if (animated && pointer.active && !object.haze && factor > .7) {
-                        const dx = x - (pointer.x + 1) * width / 2;
-                        const dy = y - (pointer.y + 1) * height / 2;
-                        alpha *= 1 + Math.max(0, 1 - (dx * dx + dy * dy) / 50000) * .075;
-                    }
+                    // Nothing here lifts with the cursor. A body near the pointer
+                    // moves out of its way; it does not also light up.
                 }
                 context.globalAlpha = clamp(alpha, 0, 1);
                 if (tier.points) {
@@ -2914,10 +2922,16 @@ function setupGalaxyField(canvas, reducedMotion) {
             // scroll. Only a width/quality change, or real growth past what has
             // already been built, justifies rerolling the scene.
             const signature = `${width}:${quality}`;
-            if (signature !== layoutSignature || pageHeight > builtPageHeight * 1.12) {
+            if (signature !== layoutSignature) {
                 layoutSignature = signature;
                 builtPageHeight = Math.max(pageHeight * 1.6, pageHeight + 1500, builtPageHeight);
                 buildScene();
+            } else if (extendSceneTo(pageHeight + 1500)) {
+                // The document outgrew the sky that had been laid down. Lay down
+                // more of it under the new bottom -- never a rebuild, which would
+                // rerun clearance-based placement against text that has just
+                // moved and jump the whole field while the reader is watching.
+                buildStaticStarTiles();
             } else if (!staticStarTiles.length) {
                 // Low FX releases the tiles. Restore them when High FX returns
                 // without rerolling the unchanged scene or losing faint stars.
@@ -2927,47 +2941,34 @@ function setupGalaxyField(canvas, reducedMotion) {
         });
     };
     // Opening a collection inserts a screenful or two into the middle of the
-    // document, and everything below it slides down. The scene does not: it is
-    // placed once, in page coordinates, and stays there. So the footer, the
-    // contact row, the headings and the collection rows below all travel down
-    // over stationary scenery, and the clearance that keeps the field out from
-    // behind text dims whatever they land on -- which is why black holes and
-    // bodies faded out on opening a collection and came back on closing it.
-    // Nothing was removed; the page moved out from under them.
+    // document, and everything below it slides down. The sky does not move with
+    // it, and that is deliberate: it is placed once in page coordinates and
+    // stays exactly where the visit found it. Whatever the reader is looking at
+    // when they press a row is the same field a moment later -- nothing slides,
+    // nothing is inserted behind the panel, nothing is rerolled.
     //
-    // So the sky below the insertion point moves with the content. It is one
-    // pass over four arrays and a redraw of the star tiles, it keeps every
-    // object's relationship to the page exactly as it was placed, and it
-    // composes: two collections open and one closed again leaves the field
-    // where it started, because each shift is measured in the page coordinates
-    // of the moment.
-    const shiftSceneBelow = (anchor, delta) => {
-        if (!delta || quality !== 'high') return;
-        // Nothing to move before the first build.
+    // What the panel actually needs is not new sky in the middle of the page.
+    // The sky is already there: the scene is built well past the document's own
+    // bottom, so the space a panel opens into is space that was already dressed.
+    // All that is left to do is make sure the document has not outgrown what has
+    // been laid down, and if it has, lay down more of it under the new bottom --
+    // below the contact row and the footer, off the end of the page, where there
+    // is nothing for the reader to see change.
+    const growSceneForContent = () => {
+        if (quality !== 'high') return;
+        // Nothing to extend before the first build.
         if (!blackHoles.length && !regions.length) return;
-        for (const tier of tierList) {
-            for (const object of tier.objects || []) {
-                if (object.documentY >= anchor) object.documentY += delta;
-            }
-        }
-        for (const region of regions) if (region.y >= anchor) region.y += delta;
-        for (const hole of blackHoles) if (hole.documentY >= anchor) hole.documentY += delta;
-        for (const pulsar of pulsars) if (pulsar.documentY >= anchor) pulsar.documentY += delta;
-        // Orbiting bodies hold a reference to the hole or region they circle,
-        // so they come along on their own.
-        //
-        // Growing the built height by the same amount keeps the insertion from
-        // tripping the rebuild threshold, which would reroll the placement this
-        // shift just preserved.
-        if (delta > 0) builtPageHeight += delta;
         pageHeight = Math.max(document.documentElement.scrollHeight, height);
+        // Reach past the new bottom by the margin a fresh build uses, so opening
+        // the next collection usually finds its sky already waiting.
+        extendSceneTo(pageHeight + 1500);
+        // The baked star tiles are cut to the document, so a taller document
+        // needs another row or two of them regardless of whether the scene grew.
         buildStaticStarTiles();
         deferLayout();
         requestDraw();
     };
-    document.addEventListener('portfolio:content-shifted', event => {
-        shiftSceneBelow(event.detail.anchor, event.detail.delta);
-    });
+    document.addEventListener('portfolio:content-shifted', growSceneForContent);
 
     const deferLayout = () => {
         if (quality !== 'high') return;
@@ -3042,8 +3043,11 @@ function setupGalaxyField(canvas, reducedMotion) {
     const warped = { x: 0, y: 0, sink: 1, stretch: 1 };
     const findWell = identifier => touchWells.find(well => well.id === identifier);
 
-    const touchStart = (identifier, x, y) => {
+    const touchStart = (identifier, x, y, target) => {
         if (quality !== 'high' || reducedMotion.matches || touchWells.length >= 5) return;
+        // Measured where the press landed, not where it travels: a drag that
+        // starts on open sheet keeps its dent even as it passes over a card.
+        if (target !== undefined && !openSpaceAt(target, y)) return;
         const existing = findWell(identifier);
         if (existing) { existing.releasedAt = 0; existing.releaseDepth = 0; return; }
         touchWells.push({
@@ -3098,15 +3102,28 @@ function setupGalaxyField(canvas, reducedMotion) {
             if (since > .12 && Math.abs(well.depth) < .012) touchWells.splice(index, 1);
         }
     };
+    // The cursor does not reach the backdrop. It used to lean the whole field a
+    // few pixels toward wherever the pointer was, shove nearby bodies along in
+    // front of it, and lift the light on anything close -- and all three let go
+    // the instant the pointer crossed onto a button or a card. So just reaching
+    // for a collection row hauled the sky back to centre and dropped the light,
+    // and moving off brought it back: the background lurching and brightening
+    // in answer to the mouse. Nothing in front of the page moves what is behind
+    // it now. The cursor dot and the page's own hover states are untouched --
+    // this is only the field letting go of the pointer.
     const move = event => {
         if (quality !== 'high' || reducedMotion.matches || event.pointerType === 'touch') return;
         const now = event.timeStamp || performance.now(), elapsed = now - pointer.sampledAt;
-        // pointerup and a queued pointermove can report the same position.
-        // They are not zero-speed samples: adding them erases a fresh throw.
-        if (pointer.sampledAt && event.clientX === pointer.px && event.clientY === pointer.py) {
-            pointer.active = true;
-            return;
-        }
+        // Bodies are pushed by where the cursor is and how fast it is going, so a
+        // repeated sample is not a zero-speed one -- it would erase a fresh throw.
+        if (pointer.sampledAt && event.clientX === pointer.px && event.clientY === pointer.py) return;
+        // The smoothed point eases toward the cursor over about a third of a
+        // second, which is what keeps a body's shove weighty rather than jittery.
+        // On the very first sample there is nothing to ease from: left at its
+        // initial zero it would travel in from the top-left corner, dragging a
+        // wave of displaced bodies diagonally across the whole sky. Start it
+        // under the cursor instead.
+        if (!pointer.sampledAt) { pointer.sx = event.clientX; pointer.sy = event.clientY; }
         if (pointer.sampledAt && elapsed > 0 && elapsed < 150) {
             const mix = 1 - Math.exp(-elapsed / 28);
             pointer.vx += (clamp((event.clientX - pointer.px) * 1000 / elapsed, -2400, 2400) - pointer.vx) * mix;
@@ -3114,28 +3131,43 @@ function setupGalaxyField(canvas, reducedMotion) {
         } else pointer.vx = pointer.vy = 0;
         pointer.px = event.clientX; pointer.py = event.clientY; pointer.sampledAt = now;
         pointer.speed = Math.hypot(pointer.vx, pointer.vy);
-        pointer.targetX = clamp(event.clientX / width * 2 - 1, -1, 1);
-        pointer.targetY = clamp(event.clientY / height * 2 - 1, -1, 1);
-        pointer.active = true;
+        // The same rule a press follows: the cursor reaches the sheet everywhere
+        // except over a card, where the card owns the pointer. Crossing that line
+        // only stops the push -- the bodies drift back on their own, and nothing
+        // else in the field so much as flickers.
+        pointer.active = openSpaceAt(event.target, event.clientY);
         requestDraw();
     };
-    // Scenery is never grabbed or thrown: a press on open sheet only records
-    // where it landed, so a clean click can send one ripple across the field.
+    // A mouse presses the same dimple into the sheet that a fingertip does, and
+    // drags it, and lets it spring back. The cursor merely passing over the
+    // field still does nothing at all -- this is a press, something the reader
+    // chose to do, not the backdrop chasing the pointer around the page.
+    // Scenery is never grabbed or thrown: a clean press that does not travel
+    // also sends one ripple out from where it landed.
+    const mouseWell = pointerId => `mouse-${pointerId}`;
     window.addEventListener('pointerdown', event => {
         if (quality !== 'high' || reducedMotion.matches || event.button !== 0 || !openSpace(event)) return;
         pressedSpace = { x: event.clientX, y: event.clientY, id: event.pointerId };
         suppressSpaceClick = false;
+        if (event.pointerType === 'mouse') {
+            touchStart(mouseWell(event.pointerId), event.clientX, event.clientY, event.target);
+        }
     });
     window.addEventListener('pointermove', event => {
-        if (pressedSpace && Math.hypot(event.clientX - pressedSpace.x, event.clientY - pressedSpace.y) > 9) suppressSpaceClick = true;
+        if (!pressedSpace || pressedSpace.id !== event.pointerId) return;
+        if (Math.hypot(event.clientX - pressedSpace.x, event.clientY - pressedSpace.y) > 9) suppressSpaceClick = true;
+        if (event.pointerType === 'mouse') touchMove(mouseWell(event.pointerId), event.clientX, event.clientY);
     }, { passive: true });
-    window.addEventListener('pointerup', event => {
-        if (pressedSpace?.id === event.pointerId && !suppressSpaceClick && openSpace(event)) {
+    const endMousePress = event => {
+        if (pressedSpace?.id !== event.pointerId) return;
+        if (event.type === 'pointerup' && !suppressSpaceClick && openSpace(event)) {
             addRipple(event.clientX, event.clientY, event.pointerType === 'mouse' ? .5 : .2);
         }
+        if (event.pointerType === 'mouse') touchEnd(mouseWell(event.pointerId));
         pressedSpace = null;
-    }, { passive: true });
-    window.addEventListener('pointercancel', () => { pressedSpace = null; }, { passive: true });
+    };
+    window.addEventListener('pointerup', endMousePress, { passive: true });
+    window.addEventListener('pointercancel', endMousePress, { passive: true });
     window.addEventListener('blur', () => { pointer.active = false; pressedSpace = null; });
     const scroll = y => {
         if (quality !== 'high') return;
@@ -3559,7 +3591,12 @@ function renderProfile(profile) {
         : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Resume</span>`;
     const resumeIcon = profile.resume
         ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></a>`
-        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
+        // Reads as a live control beside the other icons rather than a dead one,
+        // because the résumé is coming. It still carries aria-disabled and still
+        // goes nowhere, so nothing is promised to a screen reader that the page
+        // cannot deliver -- set `resume` in portfolio-data.json and it becomes a
+        // real link with no other change.
+        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Résumé coming soon"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
     document.getElementById('hero-social').innerHTML += resumeIcon;
 
     // Resume, GitHub and Email Me are one row of equal buttons, and they fill
@@ -3713,35 +3750,22 @@ function renderProjectCollections(collections, projects) {
         const toggle = group.querySelector('.collection-toggle');
         toggle.addEventListener('click', () => {
             const opening = toggle.getAttribute('aria-expanded') !== 'true';
-            // Where the document is about to grow, and by how much. The backdrop
-            // is placed in page coordinates, so without this it sits still while
-            // every heading below slides down across it. The anchor comes off
-            // the row itself: the panel underneath is display:none until this
-            // click lands and has no rectangle to read.
-            const anchor = toggle.getBoundingClientRect().bottom + window.scrollY;
-            // The row's own height, not the document's: sections carry
-            // content-visibility, so their real height resolves as they come
-            // into view and the document total can move on its own between two
-            // reads a frame apart. How far this row grows is how far everything
-            // below it slides, and nothing else can disturb that measurement.
-            const heightBefore = group.getBoundingClientRect().height;
             toggle.setAttribute('aria-expanded', String(opening));
             content.hidden = !opening;
-            const announceShift = () => {
-                const delta = group.getBoundingClientRect().height - heightBefore;
-                if (!delta) return;
-                document.dispatchEvent(new CustomEvent('portfolio:content-shifted', {
-                    detail: { anchor, delta }
-                }));
-            };
+            // The backdrop is placed in page coordinates and stays there, so it
+            // needs nothing from this beyond a nudge that the document is now a
+            // different height -- the star tiles are cut to that height, and a
+            // page grown past the sky already laid down needs more of it under
+            // the new bottom.
+            const announceGrowth = () => document.dispatchEvent(new Event('portfolio:content-shifted'));
             // A carousel sets its own height when it initialises, so on the way
             // open the document is not finished growing until that has run.
             if (opening) {
                 window.requestAnimationFrame(() => {
                     initializeCarousel();
-                    announceShift();
+                    announceGrowth();
                 });
-            } else announceShift();
+            } else announceGrowth();
         });
         container.appendChild(group);
     });

@@ -10,7 +10,7 @@
     --ink: #f7f4ed;
     --muted: #b4b1a9;
     --line: rgba(247, 244, 237, .16);
-    --blue: #9dc4ea;
+    --blue: #7ba8d8;
     --ease: cubic-bezier(.2, .75, .2, 1);
 
     --space-2: .5rem;
@@ -298,7 +298,7 @@ a { color: inherit; }
     gap: var(--space-5);
 }
 .page-footer a { text-decoration: none; transition: color .2s var(--ease); }
-.page-footer a:hover, .page-footer a:focus-visible { color: var(--ink); }
+.page-footer a:hover, .page-footer a:focus-visible { color: var(--blue); }
 
 /* ------------------------------------------------------------ leading trim
    The same measurement portfolio.css explains in full: each text block's box
