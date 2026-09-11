@@ -21,6 +21,14 @@
     --space-7: 3rem;
     --space-9: 6rem;
 
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --page-inline-gutter: var(--space-4);
+    --page-inline-start: max(var(--page-inline-gutter), var(--safe-area-left));
+    --page-inline-end: max(var(--page-inline-gutter), var(--safe-area-right));
+
     /* The portfolio's vertical rhythm and font metrics, copied for the same
        reason the colours are: these pages have to look like the same site.
        portfolio.css carries the full explanation of both. */
@@ -46,6 +54,7 @@ html { background: var(--bg); -webkit-text-size-adjust: 100%; }
 
 body {
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     flex-direction: column;
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -85,9 +94,9 @@ a { color: inherit; }
     background: rgba(8, 8, 8, .96);
 }
 .page-nav-inner {
-    width: min(100% - 2rem, 60rem);
+    width: min(calc(100% - var(--page-inline-start) - var(--page-inline-end)), 60rem);
     margin: 0 auto;
-    padding: var(--space-4) 0;
+    padding: calc(var(--space-4) + var(--safe-area-top)) 0 var(--space-4);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -118,7 +127,7 @@ a { color: inherit; }
 /* ------------------------------------------------------------------- body */
 .page-main {
     flex: 1;
-    width: min(100% - 2rem, 46rem);
+    width: min(calc(100% - var(--page-inline-start) - var(--page-inline-end)), 46rem);
     margin: 0 auto;
     padding: clamp(var(--space-7), 8vw, var(--space-9)) 0 var(--space-9);
 }
@@ -279,12 +288,12 @@ a { color: inherit; }
 /* ---------------------------------------------------------------- footer */
 .page-footer {
     border-top: 1px solid var(--line);
-    padding: var(--space-6) 0;
+    padding: var(--space-6) 0 calc(var(--space-6) + var(--safe-area-bottom));
     color: var(--muted);
     font-size: .8rem;
 }
 .page-footer-inner {
-    width: min(100% - 2rem, 60rem);
+    width: min(calc(100% - var(--page-inline-start) - var(--page-inline-end)), 60rem);
     margin: 0 auto;
     display: flex;
     flex-wrap: wrap;
@@ -351,6 +360,31 @@ a { color: inherit; }
 @media (max-width: 560px) {
     .page-nav-inner { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
     .page-footer-inner { flex-direction: column; align-items: flex-start; }
+}
+
+@media (pointer: coarse) {
+    .btn,
+    .page-back { min-height: 2.75rem; }
+}
+
+@media (device-posture: folded) and (min-width: 640px) {
+    .page-main {
+        width: min(46rem, calc((100% - clamp(var(--space-5), 3vw, var(--space-7))) / 2 - var(--page-inline-start)));
+        margin-left: var(--page-inline-start);
+        margin-right: 0;
+    }
+}
+
+@media (horizontal-viewport-segments: 2) {
+    .page-main {
+        width: min(46rem, calc(env(viewport-segment-width 0 0) - var(--page-inline-start) - var(--space-4)));
+        margin-left: var(--page-inline-start);
+        margin-right: 0;
+    }
+}
+
+@media (min-width: 3400px) {
+    html { font-size: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

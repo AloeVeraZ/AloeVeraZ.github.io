@@ -1,37 +1,66 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const updateViewportScale = () => {
-        const browserFrameWidth = window.outerWidth || window.screen?.availWidth || window.innerWidth;
-        const measuredScale = browserFrameWidth > 0 ? window.innerWidth / browserFrameWidth : 1;
-        const layoutScale = measuredScale > 1.08
-            ? Math.min(Math.max(measuredScale, 1), 4)
-            : 1;
-        document.documentElement.style.fontSize = `${(16 * layoutScale).toFixed(2)}px`;
-        const scalableDimensions = {
-            '--site-max-width': 1440,
-            '--nav-max-width': 1440,
-            '--hero-content-max-width': 1080,
-            '--project-card-height': 680,
-            '--project-card-height-mobile': 650,
-            '--project-image-height': 240,
-            '--carousel-image-height': 240,
-            '--ring-image-height': 240,
-            '--ring-image-height-compact': 220,
-            '--ring-height-min': 520,
-            '--ring-height-max': 560,
-            '--modal-max-width': 820,
-            '--modal-max-height': 860
-        };
-        // Gutters and rhythm are rem, and the root font-size is already scaled
-        // above, so they carry the same factor without a second px override.
-
-        Object.entries(scalableDimensions).forEach(([property, pixels]) => {
-            document.documentElement.style.setProperty(property, `${(pixels * layoutScale).toFixed(2)}px`);
-        });
-        document.documentElement.dataset.viewportScale = layoutScale.toFixed(3);
+function setupResponsiveEnvironment() {
+    const root = document.documentElement;
+    const media = {
+        coarsePointer: window.matchMedia('(pointer: coarse)'),
+        finePointer: window.matchMedia('(pointer: fine)'),
+        hover: window.matchMedia('(hover: hover)'),
+        portrait: window.matchMedia('(orientation: portrait)'),
+        folded: window.matchMedia('(device-posture: folded)'),
+        continuous: window.matchMedia('(device-posture: continuous)'),
+        horizontalSegments: window.matchMedia('(horizontal-viewport-segments: 2)'),
+        verticalSegments: window.matchMedia('(vertical-viewport-segments: 2)')
     };
-    updateViewportScale();
-    window.addEventListener('resize', updateViewportScale, { passive: true });
-    window.visualViewport?.addEventListener('resize', updateViewportScale, { passive: true });
+
+    const update = () => {
+        // CSS pixels already account for OS scale, browser zoom, and display
+        // density. Classify the space the page actually owns instead of trying
+        // to infer physical resolution from screen or browser-frame dimensions.
+        const width = root.clientWidth || window.innerWidth;
+        const visualHeight = window.visualViewport?.height || window.innerHeight;
+        const tier = width < 360
+            ? 'micro'
+            : width < 640
+                ? 'compact'
+                : width < 1008
+                    ? 'medium'
+                    : width < 1600
+                        ? 'large'
+                        : width < 2560
+                            ? 'wide'
+                            : 'ultrawide';
+        const input = media.coarsePointer.matches && !media.hover.matches
+            ? 'touch'
+            : media.finePointer.matches && media.hover.matches
+                ? 'precise'
+                : 'mixed';
+        const posture = media.folded.matches
+            ? 'folded'
+            : media.continuous.matches
+                ? 'continuous'
+                : 'unknown';
+        const segments = media.horizontalSegments.matches
+            ? 'horizontal-2'
+            : media.verticalSegments.matches
+                ? 'vertical-2'
+                : 'single';
+
+        root.dataset.viewportTier = tier;
+        root.dataset.primaryInput = input;
+        root.dataset.orientation = media.portrait.matches ? 'portrait' : 'landscape';
+        root.dataset.devicePosture = posture;
+        root.dataset.viewportSegments = segments;
+        root.style.setProperty('--visual-viewport-height', `${Math.max(Math.round(visualHeight), 1)}px`);
+    };
+
+    Object.values(media).forEach(query => query.addEventListener?.('change', update));
+    window.addEventListener('resize', update, { passive: true });
+    window.addEventListener('orientationchange', update, { passive: true });
+    window.visualViewport?.addEventListener('resize', update, { passive: true });
+    update();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupResponsiveEnvironment();
 
     const backgroundGrid = document.createElement('div');
     backgroundGrid.className = 'background-grid';
@@ -449,7 +478,7 @@ function setupImageRecovery() {
     }, true);
 }
 
-// Below 800px the nav links collapse behind a toggle. Without this they were
+// Below 900px the nav links collapse behind a toggle. Without this they were
 // simply hidden, leaving a phone with no way to reach a section.
 function setupMobileNav() {
     const navbar = document.querySelector('.navbar');
@@ -479,7 +508,7 @@ function setupMobileNav() {
     });
     // Widening past the breakpoint leaves the desktop row visible anyway, so
     // drop the open state rather than keep a stale aria-expanded="true".
-    window.matchMedia('(max-width: 800px)').addEventListener('change', event => {
+    window.matchMedia('(max-width: 900px)').addEventListener('change', event => {
         if (!event.matches) setOpen(false);
     });
 }
@@ -3250,9 +3279,10 @@ const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-bt
 const CARD_TILT_DEGREES = 4;
 
 // Set by setupPointerReactiveSurfaces, and called by anything that moves a card
-// out from under a cursor that has not itself moved -- which is every carousel
-// step. A scroll event would have been the natural signal, but an element's
-// scroll does not bubble, and a captured one never arrives either.
+// out from under a cursor that has not itself moved -- every carousel step, and
+// every scroll of the page itself. For a carousel a scroll event would have
+// been the natural signal, but an element's scroll does not bubble, and a
+// captured one never arrives either.
 let retargetPointerSurfaces = () => {};
 const PRESS_RIPPLE_MAX_SIZE = 460;
 
@@ -3268,6 +3298,8 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     let lastHitTarget = null;
     let pointerX = 0;
     let pointerY = 0;
+    // Whether that position belongs to a cursor that is over the page right now.
+    let pointerInside = false;
     let frame = 0;
     let retargetFrame = 0;
 
@@ -3282,13 +3314,12 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         activeRect = null;
     };
 
-    // Every project card leans, wherever it stands. A card inside a carousel is
-    // already placed by that carousel, so the CSS folds the same tilt, lift and
-    // press properties into the placement it owns rather than replacing it --
-    // the archive rings keep turning underneath the lean.
-    const canTilt = card => card.classList.contains('project-card')
-        && !reducedMotion.matches
-        && highEffects();
+    // Every card leans, wherever it stands -- the project cards, and the About
+    // and Skills cards beside them. A card inside a carousel is already placed
+    // by that carousel, so the CSS folds the same tilt, lift and press
+    // properties into the placement it owns rather than replacing it -- the
+    // archive rings keep turning underneath the lean.
+    const canTilt = () => !reducedMotion.matches && highEffects();
 
     const paint = () => {
         frame = 0;
@@ -3301,7 +3332,7 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         activeCard.style.setProperty('--card-glow-x', `${offsetX.toFixed(1)}px`);
         activeCard.style.setProperty('--card-glow-y', `${offsetY.toFixed(1)}px`);
         activeCard.style.setProperty('--card-glow', '1');
-        if (!canTilt(activeCard)) return;
+        if (!canTilt()) return;
         // Same mapping motion-primitives uses: the pointer's position across the
         // box as -0.5..0.5, read straight into rotateX and -rotateY, so the card
         // leans toward the cursor.
@@ -3318,12 +3349,14 @@ function setupPointerReactiveSurfaces(reducedMotion) {
 
     document.addEventListener('pointermove', event => {
         if (event.pointerType !== 'mouse' || !finePointer.matches) {
+            pointerInside = false;
             lastHitTarget = null;
             clearActiveCard();
             return;
         }
         pointerX = event.clientX;
         pointerY = event.clientY;
+        pointerInside = true;
         // closest() only when the pointer actually crosses into a new element,
         // which is the same trick the cursor dot uses to stay cheap.
         if (event.target !== lastHitTarget) {
@@ -3340,20 +3373,33 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         if (activeCard) schedulePaint();
     }, { passive: true });
 
-    // Scrolling moves the card out from under the cached rectangle. Re-reading
-    // it here would force a layout on every scrolled frame, so it is only
-    // marked stale and re-read on the next pointer move.
-    window.addEventListener('scroll', () => { activeRect = null; }, { passive: true });
+    // A wheel carries the cursor's position as well, so a page scrolled right
+    // after it loads -- before the mouse has moved at all -- still knows which
+    // card the cursor is resting on.
+    window.addEventListener('wheel', event => {
+        if (!finePointer.matches) return;
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        pointerInside = true;
+    }, { passive: true });
+
+    // Scrolling slides the page under a cursor that has not moved, and no
+    // pointermove says so: the card that scrolled away kept its light and its
+    // lean, and the one arriving under the cursor never picked them up. Each
+    // scrolled frame is treated as the cursor travelling across the page
+    // instead -- one hit test and one rectangle read a frame, the same price a
+    // real pointermove pays.
+    window.addEventListener('scroll', () => retargetPointerSurfaces(), { passive: true });
     window.addEventListener('resize', () => { activeRect = null; }, { passive: true });
 
     // A carousel slides its cards past a cursor that never moved, so the
-    // listener above hears nothing: the lean would stay on the card that has
-    // walked away and the one now under the cursor would never take it. Ask the
-    // document what is under the pointer instead, coalesced to one hit test per
-    // frame -- which is what a real pointermove would have cost anyway.
+    // pointermove listener hears nothing: the lean would stay on the card that
+    // has walked away and the one now under the cursor would never take it. Ask
+    // the document what is under the pointer instead, coalesced to one hit test
+    // per frame -- which is what a real pointermove would have cost anyway.
     retargetPointerSurfaces = () => {
         activeRect = null;
-        if (!finePointer.matches || retargetFrame) return;
+        if (!finePointer.matches || !pointerInside || retargetFrame) return;
         retargetFrame = window.requestAnimationFrame(() => {
             retargetFrame = 0;
             const under = document.elementFromPoint(pointerX, pointerY);
@@ -3363,10 +3409,18 @@ function setupPointerReactiveSurfaces(reducedMotion) {
                 clearActiveCard();
                 activeCard = card;
             }
-            if (activeCard) schedulePaint();
+            // This already runs inside a frame, so paint in it rather than one
+            // frame behind whatever just moved the card.
+            if (activeCard) {
+                window.cancelAnimationFrame(frame);
+                paint();
+            }
         });
     };
+    // A cursor that has left the page leaves only a stale position behind, and
+    // nothing should be retargeted to that.
     const leaveCard = () => {
+        pointerInside = false;
         lastHitTarget = null;
         clearActiveCard();
     };
@@ -3435,6 +3489,21 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     };
     syncPointerMode();
 
+    const syncInteractive = target => {
+        if (target === lastTarget) return;
+        lastTarget = target;
+        const interactive = target instanceof Element && target.closest('a, button, .project-card');
+        cursorDot.classList.toggle('is-interactive', Boolean(interactive));
+    };
+
+    // Scrolling the page under a still cursor changes what the dot is over
+    // without a single pointermove. The browser still announces the element it
+    // has arrived on with a pointerover, which is all the dot needs.
+    window.addEventListener('pointerover', event => {
+        if (!enabled || !finePointer.matches || event.pointerType !== 'mouse') return;
+        syncInteractive(event.target);
+    }, { passive: true });
+
     const move = event => {
         if (!enabled || !finePointer.matches || event.pointerType !== 'mouse') {
             if (event.pointerType && event.pointerType !== 'mouse') {
@@ -3449,12 +3518,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
         previousY = event.clientY;
         cursorDot.style.transform = `translate3d(${previousX}px, ${previousY}px, 0) translate(-50%, -50%)`;
         cursorDot.classList.add('is-visible');
-
-        if (event.target !== lastTarget) {
-            lastTarget = event.target;
-            const interactive = event.target instanceof Element && event.target.closest('a, button, .project-card');
-            cursorDot.classList.toggle('is-interactive', Boolean(interactive));
-        }
+        syncInteractive(event.target);
 
         const now = performance.now();
         if (!reducedMotion.matches && movementSpeed > 10 && now - lastSparkAt > 80) {
@@ -3503,7 +3567,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
 // How wide a project card image actually renders: full bleed on a phone, and a
 // single grid column on anything larger. Kept next to the card markup because
 // it has to match the --carousel-card-max-width the grid resolves to.
-const CARD_IMAGE_SIZES = '(max-width: 800px) calc(100vw - 2rem), 440px';
+const CARD_IMAGE_SIZES = '(max-width: 639px) calc(100vw - 2rem), (max-width: 1007px) calc((100vw - 3.5rem) / 2), (max-width: 1599px) 440px, (max-width: 2559px) 560px, 640px';
 
 // Project prose goes into HTML attributes in a few places. Anything with a
 // quote or an angle bracket in it would otherwise break out of the attribute.
@@ -3567,6 +3631,11 @@ function renderProfile(profile) {
                 }));
             });
         });
+        setupResponsiveCardSlider(highlights, {
+            cardSelector: '.about-highlight',
+            controlLabel: 'Browse education and experience',
+            regionLabel: 'Education and experience highlights'
+        });
     }
     const emailAddress = profile.email?.trim();
     const prefersNativeEmailApp = navigator.userAgentData?.mobile === true
@@ -3609,7 +3678,323 @@ function renderProfile(profile) {
 }
 
 function renderSkills(categories) {
-    document.getElementById('skills-container').innerHTML = categories.map(cat => `<div class="skill-group"><h3 class="skill-group-title">${cat.name}</h3><div class="skill-tags">${cat.skills.map(skill => `<span class="tag">${skill}</span>`).join('')}</div></div>`).join('');
+    const container = document.getElementById('skills-container');
+    container.innerHTML = categories.map(cat => `<div class="skill-group"><h3 class="skill-group-title">${cat.name}</h3><div class="skill-tags">${cat.skills.map(skill => `<span class="tag">${skill}</span>`).join('')}</div></div>`).join('');
+    setupResponsiveCardSlider(container, {
+        cardSelector: '.skill-group',
+        controlLabel: 'Browse skill categories',
+        regionLabel: 'Skill categories'
+    });
+}
+
+// About and Skills follow the same responsive contract as Featured Projects:
+// one complete three-card row when it fits, two cards per view at medium
+// widths, and one per view on a compact phone. The class is removed entirely
+// on a roomy viewport, which restores the original grid and removes horizontal
+// scrolling instead of leaving an invisible carousel around the cards.
+function setupResponsiveCardSlider(container, options) {
+    const cards = [...container.querySelectorAll(options.cardSelector)];
+    if (cards.length < 2 || container.dataset.responsiveSliderReady === 'true') return;
+    container.dataset.responsiveSliderReady = 'true';
+
+    const controls = document.createElement('div');
+    controls.className = 'carousel-controls responsive-card-slider-controls';
+    controls.innerHTML = `<span>${options.controlLabel}</span><div><button class="carousel-arrow carousel-prev" type="button" aria-label="Previous ${options.regionLabel}"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" type="button" aria-label="Next ${options.regionLabel}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    container.before(controls);
+
+    const indicators = document.createElement('div');
+    indicators.className = 'carousel-indicators responsive-card-slider-indicators';
+    indicators.setAttribute('aria-label', `Choose ${options.regionLabel}`);
+    container.after(indicators);
+
+    const previous = controls.querySelector('.carousel-prev');
+    const next = controls.querySelector('.carousel-next');
+    const compactViewport = window.matchMedia('(max-width: 639px)');
+    const carouselConstraints = [
+        window.matchMedia('(max-width: 1080px)'),
+        window.matchMedia('(device-posture: folded)'),
+        window.matchMedia('(horizontal-viewport-segments: 2)')
+    ];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let currentIndex = 0;
+    let maxIndex = 0;
+    let scrollFrame = 0;
+
+    const getDistance = () => {
+        const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
+        return (cards[0]?.getBoundingClientRect().width || 0) + gap;
+    };
+
+    const updateControls = () => {
+        previous.disabled = currentIndex <= 0;
+        next.disabled = currentIndex >= maxIndex;
+        [...indicators.children].forEach((indicator, index) => {
+            const active = index === currentIndex;
+            indicator.classList.toggle('is-active', active);
+            if (active) indicator.setAttribute('aria-current', 'true');
+            else indicator.removeAttribute('aria-current');
+        });
+    };
+
+    const rebuildIndicators = () => {
+        const pageCount = maxIndex + 1;
+        if (indicators.childElementCount === pageCount) return;
+        indicators.innerHTML = '';
+        Array.from({ length: pageCount }, (_, index) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'carousel-indicator';
+            dot.setAttribute('aria-label', `Show ${options.regionLabel} ${index + 1}`);
+            dot.addEventListener('click', () => goTo(index));
+            indicators.appendChild(dot);
+            return dot;
+        });
+    };
+
+    const goTo = (index, animate = true) => {
+        currentIndex = Math.max(0, Math.min(index, maxIndex));
+        const distance = getDistance();
+        container.scrollTo({
+            left: currentIndex * distance,
+            behavior: animate && !reducedMotion.matches ? 'smooth' : 'auto'
+        });
+        updateControls();
+    };
+
+    const updateLayout = () => {
+        const useSlider = carouselConstraints.some(constraint => constraint.matches);
+        container.classList.toggle('is-responsive-card-slider', useSlider);
+        container.parentElement?.classList.toggle('has-responsive-card-slider', useSlider);
+        controls.classList.toggle('is-active', useSlider);
+        indicators.classList.toggle('is-active', useSlider);
+
+        if (!useSlider) {
+            currentIndex = 0;
+            maxIndex = 0;
+            container.removeAttribute('role');
+            container.removeAttribute('aria-roledescription');
+            container.removeAttribute('aria-label');
+            container.scrollLeft = 0;
+            updateControls();
+            return;
+        }
+
+        const visibleCards = compactViewport.matches ? 1 : 2;
+        maxIndex = Math.max(cards.length - visibleCards, 0);
+        currentIndex = Math.min(currentIndex, maxIndex);
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-roledescription', 'carousel');
+        container.setAttribute('aria-label', options.regionLabel);
+        rebuildIndicators();
+        goTo(currentIndex, false);
+    };
+
+    previous.addEventListener('click', () => goTo(currentIndex - 1));
+    next.addEventListener('click', () => goTo(currentIndex + 1));
+    container.addEventListener('scroll', () => {
+        if (!container.classList.contains('is-responsive-card-slider') || scrollFrame) return;
+        scrollFrame = window.requestAnimationFrame(() => {
+            scrollFrame = 0;
+            const distance = getDistance();
+            if (!distance) return;
+            currentIndex = Math.max(0, Math.min(Math.round(container.scrollLeft / distance), maxIndex));
+            updateControls();
+            retargetPointerSurfaces();
+        });
+    }, { passive: true });
+
+    // A mouse drags the row the way it drags Featured, with the same landing
+    // rules. Touch is left to the browser: its own swipe already carries
+    // momentum and settles on a snap point, so it needs nothing from here.
+    let drag = null;
+    let suppressClick = false;
+    const settleDrag = () => {
+        if (!drag?.horizontal) container.classList.remove('is-dragging');
+    };
+    const finishDrag = event => {
+        if (!drag || event.pointerId !== drag.id) return;
+        const { horizontal, startX, lastX, startLeft } = drag;
+        drag = null;
+        if (!horizontal) return;
+        const distance = getDistance();
+        if (!distance) {
+            settleDrag();
+            return;
+        }
+        // Half a card or more lands on whatever the drag reached; anything
+        // shorter but deliberate still steps one, the way a phone swipe does;
+        // a nudge settles back where it started.
+        const travelled = lastX - startX;
+        const startIndex = Math.round(startLeft / distance);
+        const target = Math.abs(travelled) >= distance * .5
+            ? Math.round(container.scrollLeft / distance)
+            : Math.abs(travelled) >= 36
+                ? startIndex + (travelled < 0 ? 1 : -1)
+                : startIndex;
+        // The click that follows this release belongs to the drag, not to the
+        // card it started on. It is dispatched before any timer can run.
+        suppressClick = true;
+        window.setTimeout(() => { suppressClick = false; }, 0);
+        goTo(target);
+        if (Math.abs(container.scrollLeft - currentIndex * distance) < 1) {
+            settleDrag();
+        } else {
+            container.addEventListener('scrollend', settleDrag, { once: true });
+            window.setTimeout(settleDrag, 700);
+        }
+    };
+    container.addEventListener('pointerdown', event => {
+        if (event.pointerType !== 'mouse' || event.button !== 0
+            || !container.classList.contains('is-responsive-card-slider')) return;
+        drag = {
+            id: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            startLeft: container.scrollLeft,
+            horizontal: null
+        };
+    }, { passive: true });
+    container.addEventListener('pointermove', event => {
+        if (!drag || event.pointerId !== drag.id) return;
+        // Released somewhere this element never heard about.
+        if (!(event.buttons & 1)) {
+            finishDrag(event);
+            return;
+        }
+        const horizontalDistance = event.clientX - drag.startX;
+        const verticalDistance = event.clientY - drag.startY;
+        drag.lastX = event.clientX;
+        if (drag.horizontal === null) {
+            if (Math.hypot(horizontalDistance, verticalDistance) <= 8) return;
+            drag.horizontal = Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.12;
+            if (!drag.horizontal) return;
+            try { container.setPointerCapture(event.pointerId); } catch { /* released already */ }
+            window.getSelection()?.removeAllRanges();
+            container.classList.add('is-dragging');
+        }
+        if (drag.horizontal) container.scrollLeft = drag.startLeft - horizontalDistance;
+    }, { passive: true });
+    container.addEventListener('pointerup', finishDrag, { passive: true });
+    container.addEventListener('pointercancel', finishDrag, { passive: true });
+    container.addEventListener('click', event => {
+        if (!suppressClick) return;
+        event.preventDefault();
+        event.stopPropagation();
+    }, true);
+    // About cards are links, and a link starts the browser's own drag after a
+    // few pixels -- which cancels the pointer before the swipe has begun.
+    container.addEventListener('dragstart', event => {
+        if (container.classList.contains('is-responsive-card-slider')) event.preventDefault();
+    });
+
+    // Autoplay only runs while the row really is a slider, so every layout pass
+    // that can switch it to or from the grid tells it.
+    const autoplay = setupSliderAutoplay({
+        areas: [controls, container, indicators],
+        track: container,
+        isActive: () => container.classList.contains('is-responsive-card-slider'),
+        advance: () => goTo(currentIndex >= maxIndex ? 0 : currentIndex + 1)
+    });
+    const relayout = () => {
+        updateLayout();
+        autoplay.sync();
+    };
+    carouselConstraints.forEach(constraint => constraint.addEventListener?.('change', relayout));
+    compactViewport.addEventListener?.('change', relayout);
+    const layoutObserver = new ResizeObserver(() => window.requestAnimationFrame(relayout));
+    layoutObserver.observe(container);
+    relayout();
+}
+
+// The About, Skills and Featured sliders move on by themselves -- but only for
+// someone browsing with a mouse. On a touch screen a row that slides away from
+// under a thumb is a nuisance, and a reduced-motion preference turns it off
+// outright. Pointing at a slider (its cards, its arrows or its dots) holds it
+// still, as does keyboard focus inside it, and one that has just been moved by
+// hand waits longer before carrying on. It rests while it is off screen or the
+// tab is hidden, and after the last page it comes back round to the first.
+// The archive rings under My Projects keep their own autoplay in setupCarousel;
+// nothing here touches them.
+const SLIDER_AUTOPLAY_INTERVAL = 5500;
+const SLIDER_AUTOPLAY_AFTER_INTERACTION = 9000;
+
+function setupSliderAutoplay({ areas, track, isActive, advance }) {
+    const mouse = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const hovered = new Set(areas.filter(area => area.matches(':hover')));
+    let focused = areas.some(area => area.contains(document.activeElement));
+    let visible = false;
+    let resumeAt = 0;
+    let timer = 0;
+
+    const canRun = () => mouse.matches
+        && !reducedMotion.matches
+        && isActive()
+        && visible
+        && hovered.size === 0
+        && !focused
+        && !document.hidden;
+
+    const tick = () => {
+        timer = 0;
+        if (!canRun()) return;
+        // A project open over the page is waited out, not scrolled behind.
+        if (!document.getElementById('project-modal')?.classList.contains('active')) advance();
+        start();
+    };
+    const start = () => {
+        timer = window.setTimeout(tick, Math.max(SLIDER_AUTOPLAY_INTERVAL, resumeAt - Date.now()));
+    };
+    // Bring the timer in line with the current state, without cutting short a
+    // countdown that is already running.
+    const sync = () => {
+        if (!canRun()) {
+            window.clearTimeout(timer);
+            timer = 0;
+        } else if (!timer) {
+            start();
+        }
+    };
+    // A fresh countdown: once the pointer has left, or a hand has moved it.
+    const restart = () => {
+        window.clearTimeout(timer);
+        timer = 0;
+        sync();
+    };
+
+    areas.forEach(area => {
+        area.addEventListener('pointerenter', event => {
+            if (event.pointerType !== 'mouse') return;
+            hovered.add(area);
+            sync();
+        });
+        area.addEventListener('pointerleave', () => {
+            hovered.delete(area);
+            restart();
+        });
+        area.addEventListener('focusin', () => {
+            focused = true;
+            sync();
+        });
+        area.addEventListener('focusout', event => {
+            if (areas.some(other => other.contains(event.relatedTarget))) return;
+            focused = false;
+            restart();
+        });
+        ['pointerdown', 'wheel', 'keydown'].forEach(type => area.addEventListener(type, () => {
+            resumeAt = Date.now() + SLIDER_AUTOPLAY_AFTER_INTERACTION;
+            restart();
+        }, { passive: true }));
+    });
+    new IntersectionObserver(entries => {
+        visible = entries[entries.length - 1].intersectionRatio >= .15;
+        sync();
+    }, { threshold: [0, .15] }).observe(track);
+    document.addEventListener('visibilitychange', sync);
+    mouse.addEventListener?.('change', sync);
+    reducedMotion.addEventListener?.('change', sync);
+    return { sync };
 }
 
 function renderFeaturedProjects(projects) {
@@ -3635,22 +4020,43 @@ function setupFeaturedCarousel(container) {
         autoplay: false,
         finite: true,
         indicators: true,
-        enabled: () => container.classList.contains('is-compact-carousel')
+        enabled: () => container.classList.contains('is-responsive-carousel')
     });
-    // Featured projects step with the rest of the page rather than on a width
-    // of their own: three-up, two-up, then the one-up carousel at exactly the
-    // breakpoint where every other grid on the page has also collapsed to one
-    // column. Measuring this container instead used to put the page in a band
-    // where About was still three-up and Projects was already a carousel.
-    const singleColumn = window.matchMedia('(max-width: 800px)');
+    // The featured set is either one complete three-card row or a slider. At
+    // medium widths the slider shows two cards; compact screens show one. A
+    // folded or segmented viewport also uses the slider even when its combined
+    // width exceeds the normal breakpoint, because each half is still narrow.
+    const carouselConstraints = [
+        window.matchMedia('(max-width: 1080px)'),
+        window.matchMedia('(device-posture: folded)'),
+        window.matchMedia('(horizontal-viewport-segments: 2)')
+    ];
+    // Autoplay steps through the dots rather than reaching into setupCarousel,
+    // which the archive rings share: a dot already animates to its card, and
+    // back round to the first, without the nudge an arrow press plays.
+    const indicators = container.nextElementSibling?.classList.contains('carousel-indicators')
+        ? container.nextElementSibling
+        : null;
+    const autoplay = setupSliderAutoplay({
+        areas: [controls, container, indicators].filter(Boolean),
+        track: container,
+        isActive: () => container.classList.contains('is-responsive-carousel'),
+        advance: () => {
+            const dots = [...(indicators?.children || [])];
+            if (!dots.length) return;
+            const active = dots.findIndex(dot => dot.classList.contains('is-active'));
+            dots[(active + 1) % dots.length].click();
+        }
+    });
     const updateLayout = () => {
-        const useCarousel = singleColumn.matches;
+        const useCarousel = carouselConstraints.some(constraint => constraint.matches);
         container.classList.toggle('project-carousel', useCarousel);
-        container.classList.toggle('is-compact-carousel', useCarousel);
+        container.classList.toggle('is-responsive-carousel', useCarousel);
         controls.classList.toggle('is-active', useCarousel);
         initialize();
+        autoplay.sync();
     };
-    singleColumn.addEventListener('change', updateLayout);
+    carouselConstraints.forEach(constraint => constraint.addEventListener?.('change', updateLayout));
     const layoutObserver = new ResizeObserver(() => window.requestAnimationFrame(updateLayout));
     layoutObserver.observe(container);
     // Settle the first layout synchronously. Deferring it to rAF meant a page
@@ -4439,18 +4845,19 @@ function openModal(project) {
     overviewLabel.textContent = isCoursework ? 'Coursework' : 'Quick Overview';
     overviewTitle.textContent = isCoursework ? 'What I Did in Class' : 'The Main Parts';
     overviewGrid.classList.remove('is-class-rundown');
+    const defaultOverviewHeadings = isCoursework
+        ? ['What I Needed to Learn', 'What I Worked On', 'What I Took From It']
+        : ['Why I Made It', 'What I Did', 'How It Turned Out'];
+    const overviewHeadings = Array.isArray(project.overview?.headings)
+        && project.overview.headings.length === 3
+        ? project.overview.headings
+        : defaultOverviewHeadings;
     const overviewItems = project.overview
-        ? isCoursework
-            ? [
-                ['What I Needed to Learn', project.overview.problem],
-                ['What I Worked On', project.overview.method],
-                ['What I Took From It', project.overview.result]
-            ]
-            : [
-                ['Why I Made It', project.overview.problem],
-                ['What I Did', project.overview.method],
-                ['How It Turned Out', project.overview.result]
-            ]
+        ? [
+            [overviewHeadings[0], project.overview.problem],
+            [overviewHeadings[1], project.overview.method],
+            [overviewHeadings[2], project.overview.result]
+        ]
         : (project.sections || [])
             .slice(0, 3)
             .map(section => [section.heading, section.body]);

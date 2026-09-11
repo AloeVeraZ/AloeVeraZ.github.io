@@ -13,7 +13,7 @@
     --nav-max-width: 1440px;
     --hero-content-max-width: 1080px;
     --project-card-height: 680px;
-    --project-card-height-mobile: 650px;
+    --project-card-height-mobile: 680px;
     --project-image-height: 240px;
     --carousel-image-height: 240px;
     --ring-image-height: 240px;
@@ -22,6 +22,19 @@
     --ring-height-max: 560px;
     --modal-max-width: 820px;
     --modal-max-height: 860px;
+
+    /* The browser exposes notches, rounded corners, and fold-safe regions in
+       CSS pixels. These gutters preserve the same visual rhythm while moving
+       critical content inward only when the hardware requires it. */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --page-inline-gutter: clamp(var(--space-4), 3vw, var(--space-7));
+    --page-inline-start: max(var(--page-inline-gutter), var(--safe-area-left));
+    --page-inline-end: max(var(--page-inline-gutter), var(--safe-area-right));
+    --nav-bar-height: 4.875rem;
+    --visual-viewport-height: 100vh;
 
     /* ---- Spacing ------------------------------------------------------
        One scale, 4px base. Its structural steps -- 12, 24, 48, 96 -- are
@@ -74,7 +87,7 @@
        tall, so without this a nav link parks the section's label underneath it
        and the eyebrow -- Toolkit, Portfolio, Connect -- is simply not there.
        One block's clear below the bar, so the landing looks deliberate. */
-    --scroll-clearance: calc(4.875rem + var(--rhythm-block));
+    --scroll-clearance: calc(var(--nav-bar-height) + var(--safe-area-top) + var(--rhythm-block));
 
     /* Font metrics for that trim, in em, read off the shipped woff2 files
        with canvas TextMetrics (tools/measure-faces.js reproduces them).
@@ -96,8 +109,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; scrollbar-width: none; background-color: var(--bg); }
-body { position: relative; isolation: isolate; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; -ms-overflow-style: none; transition: background-color .65s ease; }
+html { min-width: 0; scroll-behavior: smooth; scrollbar-width: none; background-color: var(--bg); }
+body { position: relative; min-width: 0; isolation: isolate; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; -ms-overflow-style: none; transition: background-color .65s ease; }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar { display: none; }
 a { color: inherit; text-decoration: none; }
@@ -252,7 +265,7 @@ html.effects-background-click-fading body {
     transform: scaleY(0);
     transform-origin: top;
 }
-@media (max-width: 800px) {
+@media (max-width: 639px) {
     .galaxy-nebula {
         opacity: .58;
     }
@@ -270,7 +283,7 @@ html.effects-background-click-fading body {
 
 .navbar { position: fixed; inset: 0 0 auto; z-index: 1000; border-bottom: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
 .has-scrolled .navbar { background: #080808; border-color: var(--line); }
-.nav-content { width: min(var(--nav-max-width), calc(100% - var(--space-7))); min-height: 4.5rem; display: flex; align-items: center; justify-content: space-between; margin: auto; }
+.nav-content { width: min(var(--nav-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); min-height: calc(var(--nav-bar-height) + var(--safe-area-top)); display: flex; align-items: center; justify-content: space-between; margin: auto; padding-top: var(--safe-area-top); }
 .logo {
     display: inline-block;
     color: var(--ink);
@@ -326,7 +339,7 @@ html.effects-background-click-fading body {
     transform: translateX(.875rem);
 }
 
-.hero-section { min-height: 92vh; display: grid; place-items: center; overflow: hidden; isolation: isolate; padding: var(--space-9) var(--space-5) var(--space-8); }
+.hero-section { min-height: 92vh; min-height: 92svh; display: grid; place-items: center; overflow: hidden; isolation: isolate; padding: var(--space-9) var(--page-inline-end) var(--space-8) var(--page-inline-start); }
 .hero-section::before, .hero-section::after { content: ""; position: absolute; z-index: -1; transition: transform .5s var(--ease); }
 .hero-section::before { width: min(34vw, 500px); aspect-ratio: 1; border-radius: 50%; background: #5e7186; right: -8vw; top: 14%; opacity: .19; transform: translateY(var(--scroll-shift)); }
 .hero-section::after { width: clamp(110px, 16vw, 220px); aspect-ratio: 1; background: #94999f; left: 8%; bottom: 12%; transform: rotate(45deg) translateY(var(--scroll-shift-reverse)); opacity: .13; }
@@ -345,7 +358,7 @@ html.effects-background-click-fading body {
 .resume-unavailable:hover { background: #e4e5e7; transform: none; }
 .secondary-btn { background: var(--surface); }
 .secondary-btn:hover { background: var(--surface-raised); }
-main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, var(--space-9)))); margin: auto; padding: 0; }
+main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); margin: auto; padding: 0; }
 .section { scroll-margin-top: var(--scroll-clearance); padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
 .section-header { max-width: 45rem; margin-bottom: var(--rhythm-header); }
@@ -446,9 +459,9 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .contact-links .btn { justify-content: center; min-height: 3.375rem; text-align: center; }
 .contact-links .resume-unavailable { opacity: 1; cursor: default; }
 
-.modal-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; align-items: center; padding: var(--space-4); overflow-y: auto; background: rgba(5,6,8,.94); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.modal-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; align-items: center; padding: max(var(--space-4), var(--safe-area-top)) max(var(--space-4), var(--safe-area-right)) max(var(--space-4), var(--safe-area-bottom)) max(var(--space-4), var(--safe-area-left)); overflow-y: auto; background: rgba(5,6,8,.94); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
-.modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(88vh, var(--modal-max-height)); overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); background: var(--surface); color: var(--ink); border-color: rgba(244,244,241,.2); box-shadow: none; }
+.modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(calc(var(--visual-viewport-height) - max(var(--space-4), var(--safe-area-top)) - max(var(--space-4), var(--safe-area-bottom))), var(--modal-max-height)); overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); background: var(--surface); color: var(--ink); border-color: rgba(244,244,241,.2); box-shadow: none; }
 .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; width: 2.625rem; height: 2.625rem; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
 .modal-close:hover { background: #3a3c43; color: var(--ink); transform: rotate(90deg); }
 .modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
@@ -509,17 +522,17 @@ main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, 
 .modal-card .link-btn { background: #303138; border-color: var(--line); color: var(--ink); }
 .modal-card .link-btn:hover { background: #3a3c43; }
 
-footer { padding: var(--space-7) var(--space-5); border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: .82rem; }
+footer { padding: var(--space-7) var(--page-inline-end) max(var(--space-7), var(--safe-area-bottom)) var(--page-inline-start); border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: .82rem; }
 
-@media (max-width: 800px) {
-    .nav-content, main { width: min(100% - 2rem, var(--site-max-width)); }
+@media (max-width: 900px) {
+    .nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
     .nav-links { display: none; }
     .hero-section::before { width: 260px; right: -110px; }
     .hero-section::after { width: 100px; left: -30px; }
     .featured-grid { margin-bottom: var(--rhythm-section); }
     .carousel-controls span { display: none; }
-    .modal-overlay { align-items: flex-start; padding: var(--space-3); }
-    .modal-card { max-height: 94vh; }
+    .modal-overlay { align-items: flex-start; padding: max(var(--space-3), var(--safe-area-top)) max(var(--space-3), var(--safe-area-right)) max(var(--space-3), var(--safe-area-bottom)) max(var(--space-3), var(--safe-area-left)); }
+    .modal-card { max-height: min(calc(var(--visual-viewport-height) - max(var(--space-3), var(--safe-area-top)) - max(var(--space-3), var(--safe-area-bottom))), var(--modal-max-height)); }
     .modal-header { padding-right: var(--space-7); }
     .modal-overview-grid { grid-template-columns: 1fr; }
     .modal-section-heading { align-items: flex-start; flex-direction: column; }
@@ -528,9 +541,9 @@ footer { padding: var(--space-7) var(--space-5); border-top: 1px solid var(--lin
 
 body { background-color: var(--bg); background-image: none; }
 .navbar { border-bottom-color: rgba(247,244,237,.09); background: #080808; }
-.nav-content, main { width: min(var(--site-max-width), calc(100% - clamp(var(--space-6), 6vw, var(--space-9)))); }
+.nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
 
-.nav-content { min-height: 4.875rem; }
+.nav-content { min-height: calc(var(--nav-bar-height) + var(--safe-area-top)); }
 .logo {
     font-family: "Barlow Condensed", sans-serif;
     font-size: 1.35rem;
@@ -565,9 +578,10 @@ body { background-color: var(--bg); background-image: none; }
     min-height: auto;
     place-items: start;
     padding:
-        calc(4.875rem + var(--space-7))
-        max(calc(clamp(var(--space-6), 6vw, var(--space-9)) / 2), calc((100vw - var(--site-max-width)) / 2))
-        0;
+        calc(var(--nav-bar-height) + var(--safe-area-top) + var(--space-7))
+        max(var(--page-inline-end), calc((100vw - var(--site-max-width)) / 2))
+        0
+        max(var(--page-inline-start), calc((100vw - var(--site-max-width)) / 2));
 }
 .hero-section::before { width: min(42vw, 680px); border-radius: 0; background: var(--blue); right: -13vw; top: 7%; opacity: .12; transform: rotate(45deg) translateY(var(--scroll-shift)); }
 .hero-section::after { width: clamp(90px, 12vw, 175px); background: var(--red); left: auto; right: 16%; bottom: 9%; opacity: .68; }
@@ -655,9 +669,9 @@ footer { background: transparent; }
     .cursor-spark, .cursor-ripple { display: none; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
-@media (max-width: 800px) {
-    .nav-content, main { width: min(100% - 2rem, var(--site-max-width)); }
-    .hero-section { padding: calc(4.875rem + var(--space-7)) var(--space-4) 0; }
+@media (max-width: 639px) {
+    .nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
+    .hero-section { padding: calc(var(--nav-bar-height) + var(--safe-area-top) + var(--space-7)) var(--page-inline-end) 0 var(--page-inline-start); }
     .hero-name {
         max-width: 100%;
         font-size: clamp(2.9rem, 15.5vw, 5rem);
@@ -732,7 +746,7 @@ footer { background: transparent; }
     box-shadow: 0 6px 0 rgba(123,168,216,.22);
     --card-lift: var(--lift-card);
 }
-@media (max-width: 800px) {
+@media (max-width: 639px) {
     .about-highlight,
     .skill-group {
         height: auto;
@@ -792,15 +806,19 @@ main > .section {
     padding-bottom: 0;
 }
 main > #about { padding-top: var(--content-section-gap); }
-/* The featured cards fill this section edge to edge, so the outer two lean
-   straight into the paint clip and the corner nearest the cursor was sliced
-   off. Widen the clip on both sides and take the same amount straight back as
-   padding: the cards do not move, they simply have somewhere to rotate into.
-   Only this section -- About and Contact paint a panel background, and
-   widening their box would show. */
+/* The featured and skill cards fill their sections edge to edge, so the outer
+   two lean straight into the paint clip and the corner nearest the cursor was
+   sliced off. Widen the clip on both sides and take the same amount straight
+   back as padding: the cards do not move, they simply have somewhere to rotate
+   into. The room is a gutter's worth, or as much page margin as there is to
+   lend -- the same reach the sliders take (--slider-bleed), because a wider
+   card leans further out. About's cards already stand inside its panel
+   padding, and widening a panel's box would show. */
+main > #skills,
 main > #projects {
-    padding-inline: var(--section-paint-headroom);
-    margin-inline: calc(-1 * var(--section-paint-headroom));
+    --section-lean-room: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
+    padding-inline: var(--section-lean-room);
+    margin-inline: calc(-1 * var(--section-lean-room));
 }
 main > .section + .section {
     margin-top: calc(var(--content-section-gap) - var(--section-paint-headroom));
@@ -925,12 +943,9 @@ html[data-effects="high"] .circular-project-carousel .project-info {
     cursor: not-allowed;
     transform: none;
 }
+/* Just the two arrows: no tray is drawn around them. */
 .carousel-controls > div {
     margin-left: auto;
-    padding: var(--space-1);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: rgba(18,19,23,.78);
 }
 .carousel-indicators {
     display: flex;
@@ -975,7 +990,7 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
     will-change: transform, opacity;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 639px) {
     .project-card { height: var(--project-card-height-mobile); }
     html[data-effects="high"] .circular-project-carousel {
         min-height: var(--ring-height-min);
@@ -1001,19 +1016,39 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
     }
 }
 
-/* On narrow screens, featured projects collapse to one card at a time. */
-.featured-project-carousel.is-compact-carousel {
+/* Featured cards are one complete three-card row or a slider: two cards across
+   at medium widths, then one across on compact screens.
+
+   A slider is a scroll box, and a scroll box clips, so a card leaning or
+   lifting at its edge lost a corner. The box reaches into the page gutter by
+   --slider-bleed instead, with padding that sets the cards back on the page
+   column: they sit where they did, and the centring maths, which measures from
+   the box's padding edge, comes out the same. Its container perspective goes
+   too -- a flat row has no depth for it to add, and stacked on the card's own
+   it only threw the leaning corner further out. position: relative keeps the
+   box the offsetParent that maths reads from, which the perspective used to. */
+.featured-project-carousel.is-responsive-carousel {
+    --slider-bleed: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
+    position: relative;
+    width: auto;
     gap: var(--gutter);
-    padding: var(--rhythm-block) 0;
+    margin-inline: calc(var(--slider-bleed) * -1);
+    padding: var(--rhythm-block) var(--slider-bleed);
+    perspective: none;
 }
-.featured-project-carousel.is-compact-carousel .project-card {
-    flex: 0 0 100%;
+.featured-project-carousel.is-responsive-carousel .project-card {
+    flex: 0 0 calc((100% - var(--gutter)) / 2);
     opacity: 1;
     transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     will-change: auto;
 }
-.featured-project-carousel:not(.is-compact-carousel) + .carousel-indicators {
+.featured-project-carousel:not(.is-responsive-carousel) + .carousel-indicators {
     display: none;
+}
+@media (max-width: 639px) {
+    .featured-project-carousel.is-responsive-carousel .project-card {
+        flex-basis: 100%;
+    }
 }
 
 /* Low FX keeps the static grid and removes continuous animation. */
@@ -1042,7 +1077,7 @@ html[data-effects="low"] .cursor-ripple {
 html[data-effects="high"] .background-grid {
     display: none;
 }
-@media (max-width: 800px) {
+@media (max-width: 900px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
     .performance-toggle { font-size: .72rem; }
@@ -1120,7 +1155,7 @@ html.effects-background-click-fading .galaxy-nebula {
         flex: 0 0 calc((100% - var(--gutter)) / 2);
     }
 }
-@media (max-width: 800px) {
+@media (max-width: 639px) {
     .about-highlights,
     .skills-categories,
     .projects-grid,
@@ -1130,6 +1165,235 @@ html.effects-background-click-fading .galaxy-nebula {
     }
     .project-carousel .project-card {
         flex: 0 0 100%;
+    }
+}
+
+/* ====================================================================
+   Responsive viewport continuum
+
+   Browsers already convert physical resolution and display scaling into CSS
+   pixels, so these tiers follow the space the page actually receives. A
+   folded outer display or a narrow desktop window gets the compact layout;
+   an unfolded book-style display gets the medium two-column layout; laptop,
+   desktop, and wide-monitor windows grow without changing the visual system.
+   ==================================================================== */
+
+@media (max-width: 359px) {
+    :root {
+        --page-inline-gutter: var(--space-3);
+        --pad-card: var(--space-4);
+        --project-card-height-mobile: 720px;
+        --project-image-height: 184px;
+        --carousel-image-height: 184px;
+        --ring-image-height-compact: 184px;
+    }
+    .hero-name { font-size: clamp(2.55rem, 15vw, 3.25rem); }
+    .hero-buttons > .btn { flex: 1 1 100%; justify-content: center; }
+    .collection-toggle {
+        grid-template-columns: var(--space-6) minmax(0, 1fr) var(--space-5);
+        gap: var(--space-3);
+    }
+    .project-summary { font-size: .94rem; }
+}
+
+@media (min-width: 360px) and (max-width: 639px) {
+    :root {
+        --project-card-height-mobile: 700px;
+        --project-image-height: 220px;
+        --carousel-image-height: 220px;
+        --ring-image-height-compact: 220px;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1080px) {
+    :root {
+        --project-card-height: clamp(680px, calc(760px - 8vw), 710px);
+        --project-image-height: clamp(220px, 24vw, 240px);
+        --carousel-image-height: clamp(220px, 24vw, 240px);
+        --ring-image-height: clamp(220px, 24vw, 240px);
+    }
+}
+
+@media (min-width: 1600px) {
+    :root {
+        --site-max-width: 1680px;
+        --nav-max-width: 1680px;
+        --hero-content-max-width: 1240px;
+        --project-card-height: 700px;
+        --project-image-height: 260px;
+        --carousel-image-height: 260px;
+        --ring-image-height: 260px;
+        --ring-height-min: 560px;
+        --ring-height-max: 620px;
+        --modal-max-width: 900px;
+    }
+}
+
+@media (min-width: 2560px) {
+    :root {
+        --site-max-width: 1920px;
+        --nav-max-width: 1920px;
+        --hero-content-max-width: 1400px;
+        --project-card-height: 720px;
+        --project-image-height: 280px;
+        --carousel-image-height: 280px;
+        --ring-image-height: 280px;
+        --ring-height-min: 600px;
+        --ring-height-max: 660px;
+        --modal-max-width: 980px;
+    }
+}
+
+@media (min-width: 3400px) {
+    html { font-size: 18px; }
+    :root {
+        --site-max-width: 2160px;
+        --nav-max-width: 2160px;
+        --hero-content-max-width: 1540px;
+        --project-card-height: 760px;
+        --project-image-height: 300px;
+        --carousel-image-height: 300px;
+        --ring-image-height: 300px;
+        --ring-height-min: 640px;
+        --ring-height-max: 700px;
+        --modal-max-width: 1060px;
+        --modal-max-height: 1000px;
+    }
+}
+
+/* Touch-first devices keep every control at least as large as Apple's 44pt
+   target while pointer-first laptops and desktops retain the denser controls. */
+html[data-primary-input="touch"] .btn,
+html[data-primary-input="touch"] .social-links a,
+html[data-primary-input="touch"] .resume-icon-unavailable,
+html[data-primary-input="touch"] .carousel-arrow,
+html[data-primary-input="touch"] .modal-close,
+html[data-primary-input="touch"] .nav-toggle {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .hero-section {
+        padding-top: calc(var(--nav-bar-height) + var(--safe-area-top) + var(--space-5));
+    }
+    .modal-overlay { align-items: flex-start; }
+}
+
+/* Some browsers report the book posture before they expose segment geometry.
+   In that case, a centered two-pane fallback still keeps important content on
+   one side of the crease. Narrow outer screens remain on the compact rules. */
+@media (min-width: 640px) {
+    html[data-device-posture="folded"][data-viewport-segments="single"] {
+        --gutter: clamp(var(--space-5), 3vw, var(--space-7));
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .hero-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: var(--gutter);
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .hero-content {
+        grid-column: 1;
+        width: 100%;
+        max-width: none;
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .hero-name {
+        font-size: clamp(3.25rem, 6vw, 6.75rem);
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .about-highlights,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .skills-categories,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .projects-grid,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .compact-project-grid,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .contact-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .project-carousel .project-card {
+        flex-basis: calc((100% - var(--gutter)) / 2);
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .section-header,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .library-heading,
+    html[data-device-posture="folded"][data-viewport-segments="single"] .bio-text,
+    html[data-device-posture="folded"][data-viewport-segments="single"] #contact > .contact-desc {
+        max-width: calc((100vw - var(--gutter)) / 2 - var(--page-inline-start));
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .modal-overlay {
+        justify-content: flex-start;
+        padding-inline-start: var(--page-inline-start);
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"] .modal-card {
+        width: min(var(--modal-max-width), calc((100vw - var(--gutter)) / 2 - var(--page-inline-start) - var(--space-4)));
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"][data-effects="high"] .circular-project-carousel {
+        min-height: auto;
+        perspective: none;
+    }
+    html[data-device-posture="folded"][data-viewport-segments="single"][data-effects="high"] .circular-project-carousel .project-card,
+    html[data-device-posture="folded"][data-viewport-segments="single"][data-effects="high"] .circular-project-carousel .project-card:hover {
+        opacity: 1;
+        transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
+    }
+}
+
+/* On dual-screen or occluding-hinge hardware, the gap between the two logical
+   viewport segments becomes the shared grid gutter. Columns then land wholly
+   inside a segment instead of placing text, controls, or cards under the hinge. */
+@media (horizontal-viewport-segments: 2) {
+    :root {
+        --fold-segment-gap: calc(env(viewport-segment-left 1 0) - env(viewport-segment-right 0 0));
+        --gutter: max(var(--space-5), var(--fold-segment-gap));
+    }
+    .hero-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: var(--gutter);
+    }
+    .hero-content {
+        grid-column: 1;
+        width: 100%;
+        max-width: none;
+    }
+    .hero-name { font-size: clamp(3.25rem, 6vw, 6.75rem); }
+    .section-header,
+    .library-heading,
+    .bio-text,
+    #contact > .contact-desc {
+        max-width: calc(env(viewport-segment-width 0 0) - var(--page-inline-start));
+    }
+    .about-highlights,
+    .skills-categories,
+    .projects-grid,
+    .compact-project-grid,
+    .contact-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .project-carousel .project-card {
+        flex-basis: calc((100% - var(--gutter)) / 2);
+    }
+    .collection-copy {
+        max-width: calc(env(viewport-segment-width 0 0) - var(--page-inline-start) - var(--space-7));
+    }
+    .modal-overlay {
+        justify-content: flex-start;
+        padding-inline-start: var(--page-inline-start);
+    }
+    .modal-card {
+        width: min(var(--modal-max-width), calc(env(viewport-segment-width 0 0) - var(--page-inline-start) - var(--space-4)));
+    }
+    html[data-effects="high"] .circular-project-carousel {
+        min-height: auto;
+        perspective: none;
+    }
+    html[data-effects="high"] .circular-project-carousel .project-card,
+    html[data-effects="high"] .circular-project-carousel .project-card:hover {
+        opacity: 1;
+        transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
+    }
+}
+
+/* A horizontally hinged laptop posture keeps modal content inside the upper
+   logical segment so its close control never sits behind the fold. */
+@media (vertical-viewport-segments: 2) and (device-posture: folded) {
+    .modal-overlay { align-items: flex-start; }
+    .modal-card {
+        max-height: calc(env(viewport-segment-height 0 0) - var(--space-6));
     }
 }
 
@@ -1199,7 +1463,7 @@ button:focus-visible,
 .footer-links a:focus-visible { color: var(--blue); }
 
 /* -------------------------------------------------------------- mobile nav */
-/* The links used to be hidden outright below 800px, which left phones with no
+/* The links used to be hidden outright on narrow screens, which left phones with no
    navigation at all. They become a disclosure panel instead. */
 .nav-toggle {
     display: none;
@@ -1237,7 +1501,7 @@ button:focus-visible,
 .nav-toggle[aria-expanded="true"] > span::before { transform: rotate(45deg); }
 .nav-toggle[aria-expanded="true"] > span::after { transform: rotate(-45deg); }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
     .nav-toggle { display: block; }
     .nav-content {
         flex-wrap: wrap;
@@ -1371,8 +1635,13 @@ button:focus-visible,
 /* Scoped to a card standing in a plain grid. A carousel folds the same tilt
    into the placement it already owns, so this rule has to stay out of its way
    -- and `.project-carousel .project-card` alone would not, being the same
-   specificity and further up the file. */
-:not(.project-carousel) > .project-card.is-tilting {
+   specificity and further up the file. The About and Skills cards never stand
+   in a carousel -- their sliders are plain scrolling rows -- so they lean
+   through this rule wherever they are, eased by their own .2s transform
+   transition just like a grid project card. */
+:not(.project-carousel) > .project-card.is-tilting,
+.about-highlight.is-tilting,
+.skill-group.is-tilting {
     transform:
         perspective(62.5rem)
         rotateX(var(--card-tilt-x, 0deg))
@@ -1469,9 +1738,144 @@ html[data-effects="high"] .skill-group::after {
 
 @media (prefers-reduced-motion: reduce) {
     .press-ripple { display: none; }
-    :not(.project-carousel) > .project-card.is-tilting {
+    :not(.project-carousel) > .project-card.is-tilting,
+    .about-highlight.is-tilting,
+    .skill-group.is-tilting {
         transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive About / Skills sliders and centered Contact links
+
+   JavaScript adds the slider class only while all three cards cannot fit. A
+   desktop therefore keeps the original grid, has no scroll container, and
+   shows no carousel controls. Contact is deliberately excluded: its controls
+   wrap into centered rows at every width and never scroll sideways. */
+.responsive-card-slider-controls,
+.responsive-card-slider-indicators {
+    display: none;
+}
+.responsive-card-slider-controls.is-active {
+    display: flex;
+}
+.responsive-card-slider-indicators.is-active {
+    display: flex;
+}
+/* Touch keeps the browser's own horizontal swipe, with its momentum and snap.
+   The padding is the same room the featured slider keeps: a scroller clips on
+   both axes, a hovered card rises out of its row by --lift-card, and a card at
+   either end leans past it. The row reaches out by --slider-bleed and its
+   padding sets the cards back on their column; scroll-padding moves the snap
+   points with them, so every stop -- and setupResponsiveCardSlider's
+   index * distance arithmetic -- lands exactly where it did. */
+.about-highlights.is-responsive-card-slider,
+.skills-categories.is-responsive-card-slider {
+    --slider-bleed: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
+    display: flex;
+    width: auto;
+    grid-template-columns: none;
+    align-items: stretch;
+    gap: var(--gutter);
+    margin-inline: calc(var(--slider-bleed) * -1);
+    padding: var(--rhythm-block) var(--slider-bleed);
+    scroll-padding-inline: var(--slider-bleed);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+}
+/* A mouse drag moves the row by hand, so snapping waits until the drag has
+   landed (see setupResponsiveCardSlider). */
+.about-highlights.is-responsive-card-slider.is-dragging,
+.skills-categories.is-responsive-card-slider.is-dragging {
+    scroll-snap-type: none;
+    cursor: grabbing;
+    user-select: none;
+}
+.about-highlights.is-responsive-card-slider::-webkit-scrollbar,
+.skills-categories.is-responsive-card-slider::-webkit-scrollbar {
+    display: none;
+}
+.about-highlights.is-responsive-card-slider > .about-highlight,
+.skills-categories.is-responsive-card-slider > .skill-group {
+    flex: 0 0 calc((100% - var(--gutter)) / 2);
+    margin-top: 0;
+    scroll-snap-align: start;
+}
+#about.has-responsive-card-slider .responsive-card-slider-controls {
+    margin-top: var(--rhythm-block);
+}
+#about.has-responsive-card-slider .about-highlights {
+    margin-top: 0;
+}
+@media (max-width: 639px) {
+    .about-highlights.is-responsive-card-slider > .about-highlight,
+    .skills-categories.is-responsive-card-slider > .skill-group {
+        flex-basis: 100%;
+    }
+}
+
+#contact > .section-header,
+#contact > .contact-desc {
+    margin-inline: auto;
+    text-align: center;
+}
+#contact > .contact-links {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: stretch;
+    flex-wrap: wrap;
+    overflow: visible;
+}
+#contact > .contact-links > .btn {
+    flex: 0 1 calc((100% - var(--gutter) * 2) / 3);
+    min-width: min(100%, 14rem);
+}
+@media (max-width: 1080px) {
+    #contact > .contact-links > .btn {
+        flex-basis: calc((100% - var(--gutter)) / 2);
+    }
+}
+@media (max-width: 639px) {
+    #contact > .contact-links > .btn {
+        flex-basis: 100%;
+    }
+}
+
+/* Featured cards get the same cursor-led lean as cards inside the Personal
+   Projects collections. The responsive slider's flattening rule used to win
+   the cascade and suppress only this part of the shared High FX treatment.
+
+   Like the ring, the tilt stays in the transform whether or not the card is
+   leaning, and only its angles move. A slider card has no transform
+   transition, so gating the rotation on .is-tilting eased the lean in and then
+   dropped it flat the moment the cursor left; the registered --card-tilt-*
+   transitions carry it both ways instead. */
+html[data-effects="high"] .featured-project-carousel.is-responsive-carousel .project-card {
+    transform:
+        perspective(62.5rem)
+        rotateX(var(--card-tilt-x, 0deg))
+        rotateY(var(--card-tilt-y, 0deg))
+        translateY(var(--card-lift, 0px))
+        scale(var(--card-press, 1));
+}
+
+/* The archive rings get the same room as the featured slider. A ring is a
+   scroll box too: the card at its centre leaned into its top edge, and into
+   its sides once a single card fills the ring at phone widths. The box reaches
+   out into the gutter and up into the empty foot of the arrow row above it,
+   and its padding takes all of that straight back, so every card sits where it
+   did and the ring's maths, measured from its own padding edge, is untouched. */
+html[data-effects="high"] .circular-project-carousel {
+    --slider-bleed: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
+    width: auto;
+    margin-inline: calc(var(--slider-bleed) * -1);
+    margin-top: calc(var(--rhythm-heading) * -1);
+    padding-inline: var(--slider-bleed);
+    padding-top: calc(var(--rhythm-block) + var(--rhythm-heading));
 }
 
 
