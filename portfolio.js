@@ -3687,6 +3687,14 @@ function renderSkills(categories) {
     });
 }
 
+// The one arrow every carousel control draws: a round-capped chevron stroked in
+// the button's own colour, so hover and disabled restyle it along with the
+// rest of the button. An inline path rather than an icon-font glyph keeps the
+// stroke's rounded ends, and does not depend on which glyphs the Font Awesome
+// subset ships.
+const CAROUSEL_CHEVRON_LEFT = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15.5 5 8.5 12l7 7"/></svg>';
+const CAROUSEL_CHEVRON_RIGHT = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5l7 7-7 7"/></svg>';
+
 // About and Skills follow the same responsive contract as Featured Projects:
 // one complete three-card row when it fits, two cards per view at medium
 // widths, and one per view on a compact phone. The class is removed entirely
@@ -3699,7 +3707,7 @@ function setupResponsiveCardSlider(container, options) {
 
     const controls = document.createElement('div');
     controls.className = 'carousel-controls responsive-card-slider-controls';
-    controls.innerHTML = `<span>${options.controlLabel}</span><div><button class="carousel-arrow carousel-prev" type="button" aria-label="Previous ${options.regionLabel}"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" type="button" aria-label="Next ${options.regionLabel}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    controls.innerHTML = `<span>${options.controlLabel}</span><div><button class="carousel-arrow carousel-prev" type="button" aria-label="Previous ${options.regionLabel}">${CAROUSEL_CHEVRON_LEFT}</button><button class="carousel-arrow carousel-next" type="button" aria-label="Next ${options.regionLabel}">${CAROUSEL_CHEVRON_RIGHT}</button></div>`;
     container.before(controls);
 
     const indicators = document.createElement('div');
@@ -4014,7 +4022,7 @@ function setupFeaturedCarousel(container) {
     container.classList.add('featured-project-carousel');
     const controls = document.createElement('div');
     controls.className = 'carousel-controls featured-carousel-controls';
-    controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" aria-label="Next featured project"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    controls.innerHTML = `<span>Browse featured projects</span><div><button class="carousel-arrow carousel-prev" aria-label="Previous featured project">${CAROUSEL_CHEVRON_LEFT}</button><button class="carousel-arrow carousel-next" aria-label="Next featured project">${CAROUSEL_CHEVRON_RIGHT}</button></div>`;
     container.before(controls);
     const initialize = setupCarousel(container, controls, {
         autoplay: false,
@@ -4149,7 +4157,7 @@ function renderProjectCollections(collections, projects) {
         if (useCarousel) {
             const controls = document.createElement('div');
             controls.className = 'carousel-controls';
-            controls.innerHTML = `<div><button class="carousel-arrow carousel-prev" aria-label="Previous project"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button class="carousel-arrow carousel-next" aria-label="Next project"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+            controls.innerHTML = `<div><button class="carousel-arrow carousel-prev" aria-label="Previous project">${CAROUSEL_CHEVRON_LEFT}</button><button class="carousel-arrow carousel-next" aria-label="Next project">${CAROUSEL_CHEVRON_RIGHT}</button></div>`;
             content.prepend(controls);
             initializeCarousel = setupCarousel(gallery, controls, { autoplay: true, ring: true });
         }

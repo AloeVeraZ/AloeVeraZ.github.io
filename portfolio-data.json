@@ -144,6 +144,7 @@
             "id": "kiwi-swerve-drivetrain",
             "title": "Kiwi Swerve Drivetrain",
             "category": "Robotics",
+            "period": "Started September 2025",
             "collectionOrder": 1,
             "featured": true,
             "featuredOrder": 1,
@@ -229,6 +230,7 @@
             "id": "a-eye-animatronic-chatbot",
             "title": "AI Eye Animatronic Chatbot",
             "category": "Robotics",
+            "period": "Started April 2025",
             "collectionOrder": 15,
             "summary": "I turned a four servo animatronic eye into an interactive voice assistant that can listen, respond, blink, and move naturally during a conversation.",
             "cardSummary": "The AI Eye Animatronic Chatbot combines an interactive AI assistant with a motorized animatronic eye that moves and reacts during conversations. It uses local AI driven responses and expressive eye movements to create a more engaging and lifelike human robot interaction.",
@@ -273,6 +275,7 @@
             "id": "coaxial-swerve-drive",
             "title": "Coaxial Swerve Drive",
             "category": "Robotics",
+            "period": "Started January 2025",
             "collectionOrder": 3,
             "summary": "I redesigned my compact coaxial swerve pod to make it cheaper, easier to manufacture, and more practical for FTC teams, with the goal of eventually turning it into a product. I stopped development for sale after FTC announced a new actuator system that would make the pod's existing motor and servo setup less relevant.",
             "cardSummary": "V1 proved that I could package a coaxial swerve module inside a four inch cube, but the custom shafts, printed housing, and specialized components pushed the cost of one module to nearly $400. V2 focused on reducing that cost by using more readily available gears, bearings, and shafts while adding GoBILDA, REV, and AndyMark mounting patterns for FTC compatibility, but I ended the product plan after FTC announced a transition away from the brushed motors and standalone servos the design relied on.",
@@ -330,6 +333,7 @@
             "id": "simple-swerve-drive",
             "title": "Simple Swerve Drive",
             "category": "Robotics",
+            "period": "Started March 4, 2024",
             "collectionOrder": 4,
             "summary": "I designed and iterated a compact differential swerve drivetrain until it fit within FTC size constraints and could be built around either REV or GoBILDA motors.",
             "cardSummary": "I explored differential swerve as a way to control both driving and steering with the same two motors. My first chassis measured 18.25 inches wide, so I redesigned the motor layout and eventually created a compact two pod drivetrain that fit within the FTC 18 inch size limit.",
@@ -382,6 +386,7 @@
             "id": "ftc-9384-eggwuuhh",
             "title": "FTC 9384 Robot: EggWUUUHH",
             "category": "Robotics",
+            "period": "Started September 9, 2023",
             "collectionOrder": 5,
             "summary": "EggWUUUHH was Team 9384's CENTERSTAGE competition robot and the final FTC robot I worked on during high school. Over the course of the season, we redesigned it four times as testing and competition revealed new problems with nearly every major mechanism.",
             "cardSummary": "We rebuilt this robot four times in one season. Every practice and competition found something new in the intake, lift, outtake, launcher, or climber, so the design never stayed finished for long. By the last version it could complete every major CENTERSTAGE task along with ranking 12th during the NYC Championship.",
@@ -437,6 +442,7 @@
             "id": "tubba-odometry",
             "title": "Tubba Odometry Pods",
             "category": "Robotics",
+            "period": "Started Fall 2023",
             "collectionOrder": 6,
             "featured": true,
             "summary": "I designed these dead wheel odometry pods for Team 9384's 2023 2024 CENTERSTAGE robot, EggWUUUHH, before small FTC pods were easy to buy.",
@@ -496,6 +502,7 @@
             "id": "ftc-9384-crabby",
             "title": "FTC 9384 Robot: Crabby",
             "category": "Robotics",
+            "period": "Started September 10, 2022",
             "collectionOrder": 7,
             "summary": "Crabby was Team 9384’s POWERPLAY competition robot, developed through three major iterations as we worked to increase scoring speed, improve turret accuracy, and make the entire robot more stable.",
             "cardSummary": "Crabby was my first full FTC robot where I led much of the mechanical development. We rebuilt it three times throughout the POWERPLAY season, improving the chassis, lift, claw, and direct drive turret until the final version was rigid and consistent enough to take to the state championship where we placed 9th.",
@@ -547,6 +554,7 @@
             "id": "omnibot",
             "title": "OmniBot",
             "category": "Club Projects",
+            "period": "Started August 2026",
             "collectionOrder": 1,
             "summary": "We built OmniBot as an affordable robotics platform for City Tech students to learn mechanical design, programming, controls, and computer vision through a system they could fully understand and modify.",
             "cardSummary": "OmniBot is the club robot I wish we had when I was first learning coding. The parts cost under $100, most of the structure can be printed, along with the three omni wheels let it slide or rotate in any direction. Students can drive it from a controller or its local Wi-Fi page, then open the CAD and code to change how it works.",
@@ -658,6 +666,7 @@
             "id": "digital-camera",
             "title": "Digital Camera",
             "category": "Electronics",
+            "period": "Started Summer 2026",
             "collectionOrder": 16,
             "summary": "I built a compact digital camera around an ESP32 S3, then redesigned it into a more complete handheld device with a live viewfinder, physical controls, onboard storage, and battery power.",
             "cardSummary": "My first ESP32 S3 camera could take photos, but without a screen I had to connect over Wi-Fi just to see what I captured. For V2, I rebuilt the project into a self contained handheld camera with a live viewfinder, physical controls, menus, a photo gallery, battery power, MicroSD storage, and a custom enclosure.",
@@ -732,6 +741,7 @@
             "id": "trainui",
             "title": "TrainUI XL",
             "category": "Software",
+            "period": "Started July 2026",
             "collectionOrder": 2,
             "featured": true,
             "featuredOrder": 3,
@@ -788,6 +798,7 @@
             "id": "zerog-hydra-3d-printer",
             "title": "ZeroG Hydra 3D Printer",
             "category": "3D Printing",
+            "period": "Started June 2024",
             "collectionOrder": 12,
             "featured": true,
             "summary": "I am building Hydra as a large CoreXY printer that can handle most of its calibration and first layer setup automatically. I started building this when the X1C came out so at the time this machine was very advanced.",
@@ -840,114 +851,10 @@
             "imageSrcset": "assets/zerog-hydra-900.webp 900w, assets/zerog-hydra.webp 1200w"
         },
         {
-            "id": "delta-3d-printer",
-            "title": "Delta 3D Printer",
-            "category": "3D Printing",
-            "collectionOrder": 13,
-            "summary": "I rebuilt this delta printer with motors that have encoder feedback, direct drive extrusion, and a strong CPAP cooling system.",
-            "cardSummary": "This TEVO Little Monster became my test bed for making a delta printer fast without making the toolhead heavy. I made three effector designs, moved to nozzle probing, and used closed-loop steppers for feedback. A CPAP blower stays on the frame and sends air through a hose, which gives the printer strong cooling without carrying the whole fan.",
-            "details": "",
-            "image": "assets/delta-printer.webp",
-            "tags": [
-                "Delta Kinematics",
-                "Klipper",
-                "Closed Loop Steppers",
-                "CPAP Cooling"
-            ],
-            "overview": {
-                "problem": "The delta frame could move fast, but friction, weak cooling, and hard calibration kept the prints from coming out clean every time.",
-                "method": "I made several toolhead versions before switching to direct drive, motors with encoder feedback, stronger cooling from a remote blower, and a probe that uses the nozzle.",
-                "result": "The rebuilt printer still has the speed of a delta machine, but now the extrusion, cooling, and calibration are more consistent."
-            },
-            "sections": [
-                {
-                    "heading": "Challenge",
-                    "body": "I wanted the speed of a delta printer without giving up print quality. I used stepper motors with encoder feedback, a light effector, and strong part cooling while working through the calibration and space problems that come with a delta machine."
-                },
-                {
-                    "heading": "Development",
-                    "body": "I kept the TEVO Little Monster frame, power supply, and solid state relay. The first Bowden setup added friction and left marks on the prints, so I later switched to direct drive and mounted a CPAP blower on the frame with a light hose going to the effector."
-                },
-                {
-                    "heading": "Toolhead Iterations",
-                    "body": "Version two combined the ducts, hotend, extruder, and probe but exposed problems with airflow and the probe offset. Version three lowered the hotend and center of gravity, improved the ducts, and added a detachable nozzle probe. NEMA 17 motors with encoder feedback and a TFT35 KlipperScreen completed the control system."
-                },
-                {
-                    "heading": "Result",
-                    "body": "The finished machine prints quickly and consistently. It has encoder feedback on the motors, direct drive extrusion, better calibration, powerful cooling, and a custom screen interface."
-                }
-            ],
-            "links": {
-                "github": {
-                    "url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Delta/code",
-                    "label": "Printer Config"
-                },
-                "grabcad": "",
-                "video": "",
-                "projectUrl": {
-                    "url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Delta",
-                    "label": "Build Docs"
-                }
-            },
-            "imageAlt": "A tall delta 3D printer with three vertical rails, a circular build plate and an overhead effector."
-        },
-        {
-            "id": "voron-v02900",
-            "title": "Voron V0.2990",
-            "category": "3D Printing",
-            "collectionOrder": 14,
-            "summary": "I modified this small Voron to print faster, cool parts better, and be easier to watch and repair.",
-            "cardSummary": "I started with a normal serialized Voron V0.2R1 and kept changing it after the build was finished. The small 120 mm printer now has a higher-flow toolhead, extra part cooling, enclosure filtration, sensors, lights, and camera monitoring. Hinged access to the electronics may be my favorite change because it makes repairs much less annoying.",
-            "details": "",
-            "image": "assets/voron-v02900.webp",
-            "tags": [
-                "Voron",
-                "Klipper",
-                "High Speed Printing",
-                "Custom Toolhead"
-            ],
-            "overview": {
-                "problem": "The small Voron worked well, but heat, extrusion flow, monitoring, and hard to reach electronics held it back during long or fast prints.",
-                "method": "I changed the toolhead for higher flow, added outside cooling, enclosure sensors, air filtration, print failure monitoring, and wiring that is easier to reach.",
-                "result": "The changes made the printer faster, easier to repair, and safer to watch during long prints."
-            },
-            "sections": [
-                {
-                    "heading": "Challenge",
-                    "body": "I started with the community designed Voron and looked for the parts that were holding it back. Most of my changes went into extrusion, cooling, monitoring, filtration, and making the electronics easier to reach."
-                },
-                {
-                    "heading": "Performance Upgrades",
-                    "body": "A custom toolhead combines a stronger extruder and high flow hotend for printing around 225 to 350 mm/s with travel speeds up to 650 mm/s. An external 12032 fan increases part cooling without adding excessive moving mass."
-                },
-                {
-                    "heading": "Reliability and Usability",
-                    "body": "The enclosure adds active carbon filtration, a chamber thermistor, reinforced panels with RGB lighting, upgraded hinges, and a camera for failure detection and timelapses. A filament runout and extrusion sensor monitors material flow, while a larger Mini12864 display improves local control."
-                },
-                {
-                    "heading": "Serviceability",
-                    "body": "The electronics are mounted on DIN rails behind a hinged rear door, and a quiet Noctua fan keeps them cool. These changes make the printer faster, safer, and much easier to work on."
-                }
-            ],
-            "links": {
-                "github": {
-                    "url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Voron%20V0.2990/code",
-                    "label": "Printer Config"
-                },
-                "grabcad": "",
-                "video": "",
-                "projectUrl": {
-                    "url": "https://github.com/AloeVeraZ/3DPrinters/tree/main/Voron%20V0.2990",
-                    "label": "Build Docs"
-                }
-            },
-            "imageAlt": "A Voron V0.2 CoreXY 3D printer in a clear enclosure lit red, printing on a wooden floor.",
-            "imageSrcset": "assets/voron-v02900-900.webp 900w, assets/voron-v02900.webp 1200w"
-        },
-        {
             "id": "self-balancing-robot",
             "title": "Self Balancing Robot",
             "category": "Club Projects",
+            "period": "Started February 2026",
             "collectionOrder": 2,
             "summary": "We built three self balancing robots using parts available at school to learn about PID control, sensors, motor control, and mechanical stability.",
             "cardSummary": "We built three versions of a self balancing robot to demonstrate how feedback control works in a physical system. Each robot uses an IMU to measure its angle and two motors to move the wheels back underneath its center of mass. Building multiple versions also let us compare different controllers, chassis layouts, and PID tuning.",
@@ -1028,6 +935,7 @@
             "id": "crab-crawler",
             "title": "Crab Crawler",
             "category": "Club Projects",
+            "period": "Started Spring 2026",
             "collectionOrder": 3,
             "summary": "We built three versions of a walking robot to experiment with servo movement, wireless control, cameras, and compact electronics.",
             "cardSummary": "Crab Crawler started as a much larger Arduino walking robot and eventually became two smaller ESP32 CAM versions. The robots walk using timed servo movements and the later versions can be controlled over Wi-Fi while streaming live video. Broken servos, cracked printed parts, and limited space inside the smaller frames pushed us to redesign the robot several times.",
@@ -1093,6 +1001,7 @@
             "id": "trainui-mini",
             "title": "TrainUI Mini",
             "category": "Club Projects",
+            "period": "Started August 2026",
             "collectionOrder": 6,
             "summary": "After building TrainUI XL, I turned the same idea into a smaller and cheaper ESP32 project that I could use to teach City Tech club members.",
             "cardSummary": "TrainUI Mini came after the full size TrainUI XL. I wanted a version our City Tech club could afford and use for teaching, so I rebuilt the basic train and weather display around a single ESP32 S3 with a 2.13 inch e-paper screen. The project covers APIs, Wi-Fi, embedded programming, and e-paper while still producing something useful after the lesson.",
@@ -1162,6 +1071,7 @@
             "id": "autocad-i",
             "title": "AutoCAD I",
             "category": "Coursework",
+            "period": "Started Fall 2024",
             "collectionOrder": 1,
             "summary": "This class taught me the basics of AutoCAD through drawings, dimensions, layouts, and printing.",
             "cardSummary": "This class gave me more practice using AutoCAD for technical drawings and taught me how to keep everything consistent and organized. I worked with coordinates, dimensions, title blocks, layouts, and plotted PDFs through weekly assignments, quizzes, exams, and a final project. Since I already had experience with CAD in Fusion 360, most of the modeling was pretty straightforward, but the class helped me get more comfortable with proper drafting standards and drawing setup.",
@@ -1200,6 +1110,7 @@
             "id": "autocad-ii",
             "title": "AutoCAD II",
             "category": "Coursework",
+            "period": "Started Spring 2025",
             "collectionOrder": 2,
             "summary": "AutoCAD II moved past single drawings and into larger inch and metric drawing sets, reusable layouts, and 3D parts.",
             "cardSummary": "This class focused more on putting complete drawing sets together instead of just making individual drawings. I had to keep multiple sheets organized, use consistent title blocks, and make sure the 2D and 3D work followed the same format. It also helped me practice making drawings that were clear, organized, and easy to read.",
@@ -1238,6 +1149,7 @@
             "id": "mastercam-coursework",
             "title": "Mastercam",
             "category": "Coursework",
+            "period": "Started Fall 2025",
             "collectionOrder": 3,
             "summary": "Seven Mastercam projects taught me how to take part geometry, plan the machining, and post usable CNC code.",
             "cardSummary": "I already knew how to draw a part, but Mastercam made me decide how a mill would actually cut it. Every tutorial started with stock and a coordinate system, then moved through tools, feeds, operations, and simulation. I did not post the NC file until the backplot made sense and the toolpath cleared the stock correctly.",
@@ -1287,6 +1199,7 @@
             "id": "matlab-coursework",
             "title": "MATLAB",
             "category": "Coursework",
+            "period": "Started Fall 2025",
             "collectionOrder": 4,
             "summary": "I used MATLAB for engineering calculations, data sets, plots, and seven projects that went beyond the normal weekly labs.",
             "cardSummary": "The class started with scripts, matrices, and functions, but the larger projects were the useful part for me. I worked with orbital motion, atmospheric models, GPU data, generated audio, and demographic trends. Turning each problem into code made it easier to rerun the calculation with different inputs instead of solving it from scratch every time.",
@@ -1326,6 +1239,7 @@
             "id": "mech-1101-machine-shop",
             "title": "MECH 1101 Machine Shop",
             "category": "Coursework",
+            "period": "Started September 25, 2024",
             "collectionOrder": 5,
             "summary": "My group machined a blank steel plate into a finished part, then inspected every hole, edge, and dimension.",
             "cardSummary": "The part looked simple on the drawing, but it needed several different hole operations and a square notch. We had to lay everything out before cutting, keep track of which holes were tapped or finished another way, and leave enough material to file the edges. The final inspection showed how one early mistake could carry into the rest of the work.",
@@ -1364,6 +1278,7 @@
             "id": "autodesk-inventor",
             "title": "Autodesk Inventor",
             "category": "Coursework",
+            "period": "Started Spring 2026",
             "collectionOrder": 6,
             "summary": "Inventor was the class where I took CAD parts all the way into assemblies, drawings, exploded views, and a stress test.",
             "cardSummary": "This class focused on using Autodesk Inventor for parametric modeling, sheet metal, assemblies, technical drawings, presentations, and basic FEA. Most of the work was straightforward because I already had CAD experience, but it gave me more practice using Inventor’s workflow and putting parts, assemblies, and drawings together in one project.",
@@ -1403,6 +1318,7 @@
             "id": "cuny-geopolymer-research",
             "title": "Geopolymer Research",
             "category": "Awards & Certificates",
+            "period": "Started Summer 2025",
             "collectionOrder": 1,
             "summary": "I rebuilt an Ender 5 Plus for paste extrusion while our group tested fly ash geopolymer mixes for printing and carbon dioxide adsorption.",
             "cardSummary": "This printer does not melt plastic. It pushes an uncured geopolymer paste through a hose and nozzle, so the material behaves more like wet concrete. My part of the research was converting the machine and getting that heavy mixture to come out at a useful, repeatable rate.",
@@ -1467,6 +1383,7 @@
             "id": "city-tech-nyu-summer-camp",
             "title": "City Tech & NYU Summer Camp",
             "category": "Awards & Certificates",
+            "period": "May 27 to June 26, 2025",
             "collectionOrder": 2,
             "summary": "I took part in a month long advanced materials and manufacturing program where I worked with materials testing, CAD, 3D printing, CNC machining, inspection, and product development.",
             "cardSummary": "For a month, I moved between City Tech and NYU learning a different side of manufacturing almost every week. I went from examining materials under microscopes to programming a CNC mill, making parts with different 3D printing processes, and checking finished dimensions on a CMM.",
@@ -1539,6 +1456,7 @@
             "id": "research-project-03",
             "title": "STEM Research Academy Near Peer Mentor",
             "category": "Awards & Certificates",
+            "period": "Started July 2026",
             "collectionOrder": 3,
             "summary": "I worked as a near peer mentor for two high school students while they learned robotics fundamentals and built a complete Raspberry Pi controlled mecanum robot.",
             "cardSummary": "I spent six weeks mentoring two high school students through a robotics project that started with small training robots and ended with a full mecanum build. Most of my role was helping them understand electronics, programming, Linux, Raspberry Pi setup, and how those systems connected to the mechanical side of the robot.",
@@ -1608,6 +1526,7 @@
             "id": "research-project-04",
             "title": "NYC FIRST STEM Center Summer Internship",
             "category": "Awards & Certificates",
+            "period": "July 6 to August 14, 2026",
             "collectionOrder": 4,
             "summary": "This six week internship took me from a one day mecanum prototype to four machined A301 swerve modules running on a complete chassis.",
             "cardSummary": "I spent six weeks at the NYC FIRST STEM Center working on a robot built around the new A301 motors and Systemcore hardware. I started with a mecanum test chassis, then spent most of the internship developing the custom swerve modules that eventually turned it into a complete four-module robot.",
@@ -2098,7 +2017,7 @@
                 }
             },
             "imageAlt": "The first plywood A301 mecanum chassis prototype with its wheels fitted.",
-            "imageSrcset": "assets/mecanum-chassis-prototype-900.webp 900w, assets/mecanum-chassis-prototype.webp 1600w"
+            "imageSrcset": "assets/mecanum-chassis-prototype-900.webp 900w, assets/mecanum-chassis-prototype.webp 1200w"
         }
     ]
 }
