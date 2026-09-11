@@ -394,7 +394,7 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { display: flex; flex-direction: column; justify-content: center; min-height: 13.75rem; padding: var(--pad-card); background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
+.skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
 .skill-group-title { --lh: 1.55; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: 1.05rem; letter-spacing: -.03em; }
 .skill-tags, .project-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(85,168,255,.35); color: #9dccff; font-size: .7rem; font-weight: 700; }
@@ -616,12 +616,12 @@ main { padding-top: 0; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
 .bio-text { --lh: 1.45; font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: var(--lh); }
 .about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
+.about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); --card-lift: var(--lift-card); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
 .skills-categories { border-color: var(--line); }
 .skill-group { min-height: 15rem; background: rgba(17,17,17,.9); }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { background: #151d26; border-color: var(--blue); box-shadow: 0 6px 0 rgba(123,168,216,.22); --card-lift: var(--lift-card); }
+.skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
 .tag { border-color: rgba(123,168,216,.5); color: #b9d6f5; }
 .projects-grid { gap: var(--gutter); border: 0; }
 .project-card { background: #101010; border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
@@ -743,8 +743,15 @@ footer { background: transparent; }
     z-index: 2;
     background: #151d26;
     border-color: var(--blue);
-    box-shadow: 0 6px 0 rgba(123,168,216,.22);
     --card-lift: var(--lift-card);
+}
+/* Low FX only. A card there simply rises, and the slab left under it shows how
+   far. High FX leans the card toward the cursor instead, and the same flat
+   offset under a tilted card stops reading as a shadow -- it is a grey bar
+   stuck to the card's foot. */
+html[data-effects="low"] .about-highlight:hover,
+html[data-effects="low"] .skill-group:hover {
+    box-shadow: 0 6px 0 rgba(123,168,216,.22);
 }
 @media (max-width: 639px) {
     .about-highlight,
@@ -806,16 +813,20 @@ main > .section {
     padding-bottom: 0;
 }
 main > #about { padding-top: var(--content-section-gap); }
-/* The featured and skill cards fill their sections edge to edge, so the outer
-   two lean straight into the paint clip and the corner nearest the cursor was
-   sliced off. Widen the clip on both sides and take the same amount straight
-   back as padding: the cards do not move, they simply have somewhere to rotate
-   into. The room is a gutter's worth, or as much page margin as there is to
-   lend -- the same reach the sliders take (--slider-bleed), because a wider
-   card leans further out. About's cards already stand inside its panel
-   padding, and widening a panel's box would show. */
+/* The cards fill their sections edge to edge, so the outer two lean straight
+   into the paint clip and the corner nearest the cursor was sliced off. Widen
+   the clip on both sides and take the same amount straight back as padding:
+   the cards do not move, they simply have somewhere to rotate into. The room
+   is a gutter's worth, or as much page margin as there is to lend -- the same
+   reach the sliders take (--slider-bleed), because a wider card leans further
+   out. About and Contact are panels whose fill and border were dropped long
+   ago; the panel padding they kept set both sections up to 48px inside the
+   edges every other section keeps, so their corners never lined up with the
+   cards around them. They take the same room instead. */
+main > #about,
 main > #skills,
-main > #projects {
+main > #projects,
+main > #contact {
     --section-lean-room: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
     padding-inline: var(--section-lean-room);
     margin-inline: calc(-1 * var(--section-lean-room));
@@ -824,9 +835,13 @@ main > .section + .section {
     margin-top: calc(var(--content-section-gap) - var(--section-paint-headroom));
 }
 #projects .featured-grid { margin-bottom: 0; }
+/* The rule that opens the archive stands halfway down one section gap: the
+   featured cards and the Archive label are exactly as far apart as any two
+   sections, with the line centred between them. It used to sit flush under
+   the cards -- nothing above it and a whole section gap below. */
 #projects .project-library {
-    margin-top: 0;
-    padding-top: var(--content-section-gap);
+    margin-top: calc(var(--content-section-gap) / 2);
+    padding-top: calc(var(--content-section-gap) / 2);
 }
 main > #contact { padding-bottom: var(--rhythm-section); }
 
@@ -961,13 +976,15 @@ html[data-effects="high"] .circular-project-carousel .project-info {
 .carousel-controls > div {
     margin-left: auto;
 }
+/* The dots close the row they sit under, so what follows them is the next
+   section's own gap -- not that gap plus another 24px. */
 .carousel-indicators {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--space-2);
     min-height: var(--space-5);
-    margin: 0 0 var(--rhythm-block);
+    margin: 0;
 }
 .carousel-indicator {
     width: .625rem;
@@ -1273,6 +1290,80 @@ html.effects-background-click-fading .galaxy-nebula {
         --modal-max-width: 1060px;
         --modal-max-height: 1000px;
     }
+}
+
+/* --------------------------------------------------------------------------
+   Project cards fit the window
+
+   A project card is never taller than the window can show at once: the
+   visible height under the fixed bar, less a margin above and below. The tier
+   heights above (--project-card-height, --project-card-height-mobile) are now
+   the most a card grows to on a tall screen; a shorter window gets a shorter
+   card, down to --card-min-height. Every card shares the one height, so a row
+   still lines up. Inside, the picture gives way first -- it is a share of the
+   card rather than a fixed height -- and the writing keeps a readable size. */
+:root {
+    --viewport-block: 100vh;
+    --card-fit-height: calc(var(--viewport-block) - var(--nav-bar-height) - var(--safe-area-top) - var(--space-5) * 2);
+    --card-min-height: 30rem;
+    --card-height: clamp(var(--card-min-height), var(--card-fit-height), var(--project-card-height));
+}
+@supports (height: 100svh) {
+    /* The small viewport: the height with a phone's toolbars showing, so a
+       card does not grow and shrink as they slide away during a scroll. */
+    :root { --viewport-block: 100svh; }
+}
+@media (max-width: 639px) {
+    :root { --card-height: clamp(var(--card-min-height), var(--card-fit-height), var(--project-card-height-mobile)); }
+}
+.project-card {
+    --card-image-height: calc(var(--card-height) * .36);
+    height: var(--card-height);
+}
+/* Without this the text column keeps its content's height and, in a short
+   card, runs out past the bottom -- tags and all -- instead of letting the
+   description give up the room. */
+.project-info { min-height: 0; }
+.project-image-wrapper { height: min(var(--project-image-height), var(--card-image-height)); }
+.project-carousel .project-image-wrapper,
+.compact-project-grid .project-image-wrapper { height: min(var(--carousel-image-height), var(--card-image-height)); }
+html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height), var(--card-image-height)); }
+@media (max-width: 639px) {
+    html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height-compact), var(--card-image-height)); }
+}
+/* A card is a preview. Its links live in the project it opens, the way every
+   carousel card already had them, so the featured row no longer carries an
+   extra strip of buttons that none of the other cards have. */
+.project-card .project-action-links { display: none; }
+/* The description hangs straight under the date, one heading step down, and
+   the tags stand at the card's foot. Centred in the leftover room instead, a
+   short description started lower than a long one beside it, so the lines of
+   a row never met. If a window is ever too short for it, it fades out at the
+   foot instead of being cut through a line -- the fade only switches on while
+   the text actually overflows, because a scroll timeline over a box with
+   nothing to scroll is inactive and applies nothing. */
+.project-copy {
+    align-items: flex-start;
+    overflow: hidden;
+}
+@supports (animation-timeline: scroll()) {
+    .project-copy {
+        animation: card-copy-overflow linear both;
+        animation-timeline: scroll(self block);
+    }
+}
+@keyframes card-copy-overflow {
+    from, to {
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.75rem), transparent);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 1.75rem), transparent);
+    }
+}
+/* A shorter window gets a slightly denser card rather than a clipped one. */
+@media (max-height: 820px) {
+    .project-title { font-size: clamp(1.6rem, 2vw, 1.9rem); }
+    .project-period { margin-bottom: var(--space-3); }
+    .project-summary { --lh: 1.5; font-size: .9375rem; }
+    .project-tags { margin-top: var(--space-4); }
 }
 
 /* Touch-first devices keep every control at least as large as Apple's 44pt
@@ -1932,6 +2023,7 @@ html[data-effects="high"] .circular-project-carousel {
 .modal-overview-item > span,
 .modal-overview-item h4,
 .about-highlight-role h4,
+.modal-section-heading > h3,
 .hero-badge {
     --trim-top: calc((
         (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
@@ -1950,7 +2042,8 @@ html[data-effects="high"] .circular-project-carousel {
 .library-heading p,
 .contact-desc,
 .bio-text,
-.collection-copy small {
+.collection-copy small,
+.modal-section-heading > span {
     --trim-top: calc((
         (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
         + var(--face-text-ascent) - var(--face-text-cap)) * 1em);
@@ -1984,7 +2077,9 @@ html[data-effects="high"] .circular-project-carousel {
 .section-subtitle::before,
 .library-heading p::before,
 .contact-desc::before,
-.bio-text::before {
+.bio-text::before,
+.modal-section-heading > span::before,
+.modal-section-heading > h3::before {
     content: "";
     display: table;
     margin-bottom: calc(-1 * var(--trim-top));
@@ -2011,7 +2106,9 @@ html[data-effects="high"] .circular-project-carousel {
 .section-subtitle::after,
 .library-heading p::after,
 .contact-desc::after,
-.bio-text::after {
+.bio-text::after,
+.modal-section-heading > span::after,
+.modal-section-heading > h3::after {
     content: "";
     display: table;
     margin-top: calc(-1 * var(--trim-bottom));
@@ -2024,4 +2121,160 @@ html[data-effects="high"] .circular-project-carousel {
     --lh: 1;
     line-height: var(--lh);
     margin-bottom: calc(var(--rhythm-label) - var(--trim-bottom));
+}
+
+/* ==========================================================================
+   Concentric corners
+
+   Apple's rule (SwiftUI, Edge.Corner.Style.concentric): a corner nested inside
+   a container takes the container's radius less the distance between the two
+   corners, and never less than a floor -- concentric(minimum:). Every curve
+   then shares its centre with the curve around it, instead of each surface
+   picking a number of its own.
+
+   The surfaces on the page -- project, About and Skills cards -- share one
+   radius, and everything inside a card is derived from it: a card's padding is
+   wider than its radius, so the chips inside land on the floor. The project
+   sheet runs the rule outward from the one control in its corner. The close
+   button is a 44px circle 16px in from the top and the side, so the sheet's
+   corner is the circle's 22px plus those 16px: both curves share a centre and
+   the gap between them is 16px all the way round. Buttons standing on the page
+   are capsules and icon buttons are circles, the two shapes that stay
+   concentric wherever they are placed.
+   ========================================================================== */
+:root {
+    --control-size: 2.75rem;
+    --radius-surface: 1.25rem;
+    --radius-sheet: calc(var(--control-size) / 2 + var(--space-4));
+    --radius-floor: .5rem;
+    --radius-card: var(--radius-surface);
+    --radius-control: var(--radius-floor);
+    --radius-in-card: max(var(--radius-floor), calc(var(--radius-surface) - var(--pad-card)));
+    --radius-in-sheet: max(calc(var(--radius-floor) * 1.5), calc(var(--radius-sheet) - var(--pad-panel)));
+}
+.project-card,
+.circular-project-carousel .project-card,
+.featured-project-carousel .project-card,
+.about-highlight,
+.skill-group,
+.glass-panel {
+    border-radius: var(--radius-surface);
+}
+.modal-card { border-radius: var(--radius-sheet); }
+.modal-image,
+.modal-overview,
+.modal-media-item,
+.modal-detail-section,
+.modal-feature-video-player,
+.modal-overview-grid,
+.media-placeholder {
+    border-radius: var(--radius-in-sheet);
+}
+/* The overview's numbered parts stand a further 24px inside the overview box,
+   deeper than its 12px corner reaches, so they take the floor. */
+.modal-overview-item { border-radius: var(--radius-floor); }
+/* A placeholder standing in for a card's picture fills the top of the card,
+   where the card's own corners already round it. */
+.project-card .media-placeholder { border-radius: 0; }
+.tag,
+.project-category-badge { border-radius: var(--radius-in-card); }
+.btn,
+.link-btn,
+.modal-quick-link,
+.badge { border-radius: 999px; }
+.social-links a,
+.resume-icon-unavailable,
+.carousel-arrow,
+.modal-close,
+.nav-toggle { border-radius: 50%; }
+/* The category chip stands on the same left edge as the title and the
+   description under it, one step up from the picture's foot. */
+.project-category-badge {
+    left: var(--pad-card);
+    bottom: var(--space-3);
+}
+
+/* Every About and Skills card puts its name in the same place: one inset from
+   the top-left corner. Skills used to centre their content in the card, so a
+   card with fewer tags put its name lower than its neighbours did. The fullest
+   card in a row now sets the row's height, with the same 24px at its foot as
+   at its head; a fixed 15rem floor used to leave the Skills cards a deeper gap
+   under their last row of tags than above their names. */
+.skill-group { justify-content: flex-start; }
+.about-highlight,
+.skill-group { min-height: 0; }
+
+/* One rhythm for every section header. The label, the title and the line that
+   introduces the section read as one group, 16px apart, and the section's
+   content starts 48px below it. Featured Projects and the archive were built
+   this way already; About and Contact held their intro 48px under the title,
+   then started their cards only 24px under the intro. */
+#about > .section-header,
+#contact > .section-header { margin-bottom: var(--rhythm-heading); }
+#about .about-highlights,
+#about.has-responsive-card-slider .responsive-card-slider-controls,
+#contact .contact-links { margin-top: var(--rhythm-header); }
+
+/* ==========================================================================
+   One control size
+
+   Everything a visitor presses stands 44px tall -- Apple's minimum target,
+   which touch screens were already given -- so rows of controls line up with
+   each other: the hero's icon circles are exactly as tall as the buttons under
+   them, a circle's radius is a capsule's end, and the Contact buttons match
+   the hero's. A capsule holds its label as far from each end as the end is
+   round, and every row of controls keeps its members 12px apart.
+   ========================================================================== */
+.btn,
+.contact-links .btn {
+    min-height: var(--control-size);
+    padding-block: 0;
+    padding-inline: calc(var(--control-size) / 2);
+}
+.social-links a,
+.resume-icon-unavailable,
+.carousel-arrow,
+.modal-close,
+.nav-toggle {
+    width: var(--control-size);
+    height: var(--control-size);
+}
+.carousel-controls > div { gap: var(--space-3); }
+
+/* The sheet scrolls the way the page does, with no bar down its side. The bar
+   cut a straight edge through the sheet's rounded corner and pushed the close
+   button 32px from the side while it sat 16px from the top. */
+.modal-card { scrollbar-width: none; }
+.modal-card::-webkit-scrollbar { display: none; }
+
+/* A heading in the sheet is built like one on the page: its label 12px above
+   its title, both on the left edge. It used to put the label at the left and
+   the title at the right -- the one heading on the site that did. */
+.modal-section-heading { display: block; }
+.modal-section-heading > span {
+    --lh: 1.55;
+    display: block;
+    line-height: var(--lh);
+    margin-bottom: var(--rhythm-label);
+}
+.modal-section-heading > h3 {
+    --lh: .95;
+    line-height: var(--lh);
+}
+
+/* An archive row reads along its name: the number and the arrow are centred on
+   the name's capitals, the way a symbol sits beside a word. Centred on the
+   whole two-line block, they floated between the name and the line under it.
+   Baseline alignment cannot do this -- as far as the grid can tell, the name's
+   first baseline is the leading trim's zero-height box at the top of its caps. */
+.collection-toggle {
+    --collection-name-size: clamp(1.6rem, 3.2vw, 2.25rem);
+    align-items: start;
+}
+.collection-copy strong { font-size: var(--collection-name-size); }
+.collection-toggle > .collection-index,
+.collection-toggle > i {
+    display: flex;
+    align-items: center;
+    height: calc(var(--collection-name-size) * var(--face-display-cap));
 }

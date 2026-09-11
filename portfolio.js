@@ -4183,6 +4183,79 @@ function renderProjectCollections(collections, projects) {
         });
         container.appendChild(group);
     });
+    // Every card is on the page now, featured and archive alike.
+    setupProjectCardFit();
+}
+
+// Cards are as tall as the window lets them be (see "Project cards fit the
+// window" in portfolio.css) but never shorter than the longest front
+// description needs: a short window scrolls a little rather than cutting
+// anyone's writing off mid-sentence. How much room that is depends on how the
+// text wraps at the width a card gets right now, so it is measured rather than
+// guessed -- every card laid out once off screen, tall enough that its picture
+// sits at full size, and the tallest need wins.
+const CARD_IMAGE_SHARE = .36; // keep in step with --card-image-height
+let refitProjectCards = null;
+
+function setupProjectCardFit() {
+    if (refitProjectCards) {
+        refitProjectCards();
+        return;
+    }
+    const measure = () => {
+        const cards = [...document.querySelectorAll('.project-card:not(.carousel-clone)')];
+        const sample = cards.find(card => card.offsetWidth > 0);
+        if (!sample) return;
+        const probe = document.createElement('div');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = `position:absolute;left:-10000px;top:0;width:${sample.offsetWidth}px;visibility:hidden;pointer-events:none;`;
+        const seen = new Set();
+        cards.forEach(card => {
+            const key = card.querySelector('.project-title')?.textContent;
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            const clone = card.cloneNode(true);
+            // Only the writing's size matters here; the pictures need not load again.
+            clone.querySelectorAll('img').forEach(image => {
+                image.removeAttribute('srcset');
+                image.removeAttribute('src');
+            });
+            // The clone's own card height, not the page's: the picture is a
+            // share of whichever is in force, and at 2000px that share is past
+            // the tier cap, so the picture reads back at its full size.
+            clone.style.setProperty('--card-height', '2000px');
+            probe.appendChild(clone);
+        });
+        document.body.appendChild(probe);
+        let need = 0;
+        probe.querySelectorAll('.project-card').forEach(clone => {
+            const info = clone.querySelector('.project-info');
+            const copy = clone.querySelector('.project-copy');
+            const summary = clone.querySelector('.project-summary');
+            if (!info || !copy || !summary) return;
+            // The text column with its description given exactly the room it
+            // takes. scrollHeight rather than offsetHeight: the leading trim
+            // hangs the last line box -- descenders included -- below the
+            // paragraph's own box, and that has to fit too.
+            const text = info.clientHeight - copy.clientHeight + summary.scrollHeight + 1;
+            const pictureCap = clone.querySelector('.project-image-wrapper')?.offsetHeight || 0;
+            const byShare = text / (1 - CARD_IMAGE_SHARE);
+            need = Math.max(need, byShare * CARD_IMAGE_SHARE <= pictureCap ? byShare : pictureCap + text);
+        });
+        probe.remove();
+        // A few pixels of slack for the sub-pixel rounding between the column
+        // measured here and the one the card really gets.
+        if (need) document.documentElement.style.setProperty('--card-min-height', `${Math.ceil(need) + 6}px`);
+    };
+    let timer = 0;
+    const schedule = () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(measure, 150);
+    };
+    refitProjectCards = measure;
+    measure();
+    document.fonts?.ready.then(schedule);
+    window.addEventListener('resize', schedule, { passive: true });
 }
 
 function setupCarousel(carousel, controls, options = {}) {
