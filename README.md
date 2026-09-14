@@ -9,6 +9,7 @@ I use the site to keep my robotics, CAD, controls, manufacturing, and 3D-printin
 - `index.html` contains the page structure and project modal.
 - `portfolio.css` handles the layout, responsive styles, and visual effects.
 - `portfolio.js` renders the profile, project collections, carousels, and modal content.
+- `navbar.css` styles the floating navigation bar, and `glass.js` gives it -- and the About, Skills and project cards and the hero and contact buttons -- their liquid glass. In High FX, Chromium browsers bend the page behind them with SVG filters; Safari and Firefox, which cannot filter a live backdrop that way, frost the page behind the bar and bend the sky under it on its canvas instead, and the cards keep a see-through tint. Low FX keeps the glass with a light blur and bends nothing. The notes at the top of `glass.js` explain the modes.
 - `portfolio-data.json` holds the profile, skills, project write-ups, media, and links.
 - `consent.js` keeps YouTube embeds from loading until a visitor asks for them.
 - `assets/` contains the project photos, GIFs, graphics, and the self-hosted fonts.
@@ -136,8 +137,8 @@ console and prints the `--face-*` metrics the leading trim needs.
 Run `build-icons.py` again whenever the markup starts using a new `fa-` icon,
 otherwise that glyph will not be in the subset and will render as a blank box.
 
-After changing `portfolio.css`, `navbar.css`, `page.css`, `portfolio.js`, or
-`portfolio-data.json`, bump the `?v=` cache-busting suffix in the HTML files
+After changing `portfolio.css`, `navbar.css`, `page.css`, `portfolio.js`,
+`glass.js`, or `portfolio-data.json`, bump the `?v=` cache-busting suffix in the HTML files
 (and the one on the `portfolio-data.json` fetch inside `portfolio.js`) so
 returning visitors do not get a stale copy.
 

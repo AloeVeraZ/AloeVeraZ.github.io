@@ -41,13 +41,110 @@
     border-radius: var(--radius-surface);
     transition: background .28s, border-color .28s, box-shadow .28s;
 }
+/* ---- Liquid glass ---------------------------------------------------------
+   The bar that appears on scroll is a sheet of glass. glass.js decides how
+   much of the effect this browser can show and writes it to html[data-glass].
+   Each mode changes only what happens to the backdrop; the layers are the
+   same everywhere:
+
+     refract  High FX, Chromium: the backdrop bends through an SVG filter
+     lens     High FX, Safari and Firefox: the page behind frosts, and the sky
+              bends under the bar on its own canvas
+     frost    Low FX: a light blur, and nothing bends
+
+   The tint is darkest across the middle of the bar, where the words sit, and
+   clears toward the top and bottom edges, where the glass bends the most.
+   Dimmed by the backdrop filter first, the middle holds the links at 7:1
+   over the brightest thing that can scroll behind them -- the hero's name, a
+   white photo -- and the text carries a soft shadow on top of that. */
+.navbar { --glass-tint: .7; --glass-rim: .3; }
+.navbar .nav-content::before {
+    border-color: rgba(255, 255, 255, .08);
+    background:
+        radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
+        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 30%),
+        linear-gradient(180deg,
+            rgba(14, 15, 18, var(--glass-rim)),
+            rgba(14, 15, 18, var(--glass-tint)) 1rem,
+            rgba(14, 15, 18, var(--glass-tint)) calc(100% - 1rem),
+            rgba(14, 15, 18, var(--glass-rim)));
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, .3),
+        inset 0 1px 1px rgba(255, 255, 255, .14),
+        inset 0 -1px 1px rgba(255, 255, 255, .04);
+    opacity: 0;
+    transition: opacity .28s;
+}
+/* The backdrop filter only runs while the glass is showing: at the top of the
+   page there is no bar, and nothing behind it should be paying for one. */
 .has-scrolled .navbar .nav-content::before,
 .navbar[data-nav-open] .nav-content::before {
-    background: rgba(16, 17, 19, .84);
-    border-color: rgba(255, 255, 255, .11);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+    opacity: 1;
+    -webkit-backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
+    backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
+}
+/* Only a hair of blur in lens mode: the bending happens on the sky beneath,
+   and a heavier frost would smear it away before it reached the eye. */
+html[data-glass="lens"] .has-scrolled .navbar .nav-content::before {
+    -webkit-backdrop-filter: blur(1.2px) saturate(1.6) brightness(.82);
+    backdrop-filter: blur(1.2px) saturate(1.6) brightness(.82);
+}
+html[data-glass="refract"] .has-scrolled .navbar .nav-content::before {
+    /* glass.js hangs the filter it built to the bar's size on the bar */
+    backdrop-filter: var(--glass-filter, blur(4px)) saturate(1.6) brightness(.82);
+}
+/* An open menu is frosted in every mode: it is nearly opaque, so there is
+   little to see bend, and it changes height on every frame as it opens. */
+html[data-glass] .navbar[data-nav-open] .nav-content::before {
+    -webkit-backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
+    backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
+}
+/* A browser with no backdrop filter at all dims nothing behind the glass, so
+   the tint has to do all of it. */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .navbar { --glass-tint: .8; --glass-rim: .55; }
+}
+/* The rim: a hairline that catches the light along the top edge and fades
+   round the ends -- a masked gradient border, so it can vary along its
+   length the way light does on a bevel. */
+.navbar .nav-content::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    padding: 1px;
+    border-radius: var(--radius-surface);
+    background: linear-gradient(170deg,
+        rgba(255, 255, 255, .5),
+        rgba(255, 255, 255, .12) 26%,
+        rgba(255, 255, 255, .03) 60%,
+        rgba(255, 255, 255, .16));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .28s;
+}
+.has-scrolled .navbar .nav-content::after,
+.navbar[data-nav-open] .nav-content::after { opacity: 1; }
+/* On glass the links are set near white, with a shadow that keeps each word
+   legible whatever scrolls behind it. */
+.has-scrolled .navbar { --nav-muted: rgba(247, 244, 237, .92); }
+.has-scrolled .navbar .logo,
+.has-scrolled .navbar .nav-links > li > a,
+.has-scrolled .navbar .performance-toggle {
+    text-shadow: 0 0 .75rem rgba(0, 0, 0, .55), 0 1px 2px rgba(0, 0, 0, .35);
+}
+/* Anyone who has asked their system for less transparency, or for more
+   contrast, gets a solid bar instead of glass. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .navbar .nav-content::before {
+        background: #101113 !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
 }
 .navbar .logo {
     position: relative;
@@ -188,7 +285,9 @@
         padding-block: .75rem;
         font-size: var(--type-small);
     }
-    .navbar[data-nav-open] .nav-content::before { background: #101113; }
+    /* An open menu sits over the hero's lettering, so its glass is nearly
+       opaque there: the links have to read at a glance. */
+    .navbar[data-nav-open] .nav-content::before { --glass-tint: .88; --glass-rim: .88; }
 }
 @media (max-width: 639px) {
     .navbar {
@@ -207,5 +306,6 @@
     .navbar .performance-toggle,
     .navbar .performance-toggle-track,
     .navbar .performance-toggle-track i,
-    .navbar .nav-content::before { transition: none; }
+    .navbar .nav-content::before,
+    .navbar .nav-content::after { transition: none; }
 }

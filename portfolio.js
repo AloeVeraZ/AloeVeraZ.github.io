@@ -2885,6 +2885,10 @@ function setupGalaxyField(canvas, reducedMotion) {
         drawTouchWells();
         context.globalAlpha = 1;
         context.globalCompositeOperation = 'source-over';
+        // Where the navigation's glass floats over the sky, the sky bends --
+        // in the browsers that cannot bend a live backdrop themselves. See
+        // glass.js; in Chromium this returns without drawing anything.
+        window.portfolioNavGlass?.paintBackdrop(context, pixelRatio);
         if (animated && !sleeping) animationFrame = requestAnimationFrame(draw);
     };
     const requestDraw = () => {

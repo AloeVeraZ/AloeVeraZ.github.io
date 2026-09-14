@@ -2,6 +2,12 @@
     --bg: #080808;
     --surface: #111111;
     --surface-raised: #1a1a1a;
+    /* The cards' and buttons' liquid glass (glass.js): the surface grey, letting
+       a little of the page behind it through. Solid again for anyone who asks
+       their system for less transparency or more contrast -- see "Glass
+       surfaces" below. */
+    --glass-surface: rgba(17, 17, 17, .84);
+    --glass-surface-hover: rgba(21, 29, 38, .9);
     --ink: #f7f4ed;
     /* The one grey for secondary text, and the same one the policy pages
        use. It sat a step darker here, which read as dim over the backdrop. */
@@ -679,13 +685,13 @@ body { background-color: var(--bg); background-image: none; }
 .hero-name { --lh: .74; max-width: var(--hero-content-max-width); margin: 0; font-size: clamp(5rem, 13vw, 11.5rem); letter-spacing: -.055em; line-height: var(--lh); }
 .hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
 .social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
-.social-links a, .resume-icon-unavailable { border-radius: 0; background: transparent; }
+.social-links a, .resume-icon-unavailable { border-radius: 0; background: var(--glass-surface); }
 .social-links a:hover,
 .resume-icon-unavailable:hover { background: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .hero-buttons { justify-content: flex-start; }
-.secondary-btn { background: transparent; }
+.secondary-btn { background: var(--glass-surface); }
 .hero-buttons .btn {
-    background: transparent;
+    background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -706,8 +712,8 @@ main { padding-top: 0; }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
 .projects-grid { gap: var(--gutter); border: 0; }
-.project-card { background: #101010; border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
-.project-card:hover { border-color: var(--blue); background: #151515; box-shadow: none; --card-lift: var(--lift-card); }
+.project-card { background: var(--glass-surface); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
+.project-card:hover { border-color: var(--blue); background: rgba(21, 21, 21, .9); box-shadow: none; --card-lift: var(--lift-card); }
 .project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.035); }
 .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
@@ -733,7 +739,7 @@ footer { background: transparent; }
 #contact .contact-desc { margin-top: var(--rhythm-heading); }
 #contact .contact-links { margin-top: var(--rhythm-block); }
 #contact .resume-unavailable {
-    background: transparent;
+    background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
     opacity: 1;
@@ -774,7 +780,7 @@ footer { background: transparent; }
    the answer to a cursor everywhere else on the site (the nav, the contact
    row, the carousel arrows, the social icons), so it is the answer here too. */
 .hero-buttons > .hero-action {
-    background: transparent;
+    background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
 }
@@ -804,7 +810,7 @@ footer { background: transparent; }
     height: auto;
     min-height: 15rem;
     padding: var(--pad-card);
-    background: var(--surface);
+    background: var(--glass-surface);
     border: 1px solid var(--line);
     border-radius: .875rem;
     transition:
@@ -820,7 +826,7 @@ footer { background: transparent; }
 .about-highlight:hover,
 .skill-group:hover {
     z-index: 2;
-    background: #151d26;
+    background: var(--glass-surface-hover);
     border-color: var(--blue);
     --card-lift: var(--lift-card);
 }
@@ -837,6 +843,29 @@ html[data-effects="low"] .skill-group:hover {
     .skill-group {
         height: auto;
         min-height: 15rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Glass surfaces
+
+   The About, Skills and project cards and the hero, social and contact
+   buttons are the navigation's glass, thinner: the surface grey, letting a
+   little of the page behind them through (--glass-surface, at the top of this
+   file). In Chromium's High FX, glass.js also builds each one a displacement
+   filter to its size, so what shows through bends at the edges -- and keeps
+   bending while the card moves: turning on the ring, leaning toward the
+   cursor, sliding along a row. Elsewhere they keep the tint and bend nothing.
+   So little shows through that every word on them keeps its contrast. */
+html[data-glass="refract"] :is(.about-highlight, .skill-group, .project-card,
+    .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn) {
+    backdrop-filter: var(--glass-filter, none) saturate(1.3) brightness(.85);
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    :root {
+        --glass-surface: var(--surface);
+        --glass-surface-hover: #151d26;
     }
 }
 
@@ -978,6 +1007,7 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     pointer-events: none;
     -webkit-user-drag: none;
     -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 /* The hover lift is the only thing this used to cancel, and now the card
@@ -1004,6 +1034,7 @@ html[data-effects="high"] .circular-project-carousel {
 html[data-effects="high"] .circular-project-carousel .project-card,
 html[data-effects="high"] .circular-project-carousel .project-card:hover {
     position: relative;
+    -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     opacity: var(--carousel-ring-opacity, 0);
     /* The ring places the card; the last three functions are the card's own
@@ -1034,6 +1065,7 @@ html[data-effects="high"] .circular-project-carousel .project-info {
 }
 .project-carousel.is-dragging {
     cursor: grabbing;
+    -webkit-user-select: none;
     user-select: none;
 }
 .project-carousel:not(.is-dragging) {
@@ -1999,6 +2031,7 @@ html[data-effects="high"] .skill-group::after {
 .skills-categories.is-responsive-card-slider.is-dragging {
     scroll-snap-type: none;
     cursor: grabbing;
+    -webkit-user-select: none;
     user-select: none;
 }
 .about-highlights.is-responsive-card-slider::-webkit-scrollbar,
