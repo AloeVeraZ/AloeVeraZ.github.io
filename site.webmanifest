@@ -4,7 +4,7 @@
     "description": "Robotics, CAD design, prototyping and autonomous systems projects.",
     "start_url": "/",
     "scope": "/",
-    "display": "standalone",
+    "display": "browser",
     "background_color": "#080808",
     "theme_color": "#080808",
     "icons": [
