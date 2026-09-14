@@ -607,9 +607,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     // This used to also refuse anywhere within 12px of text, which is most of a
     // page made of text: the field read as dead almost everywhere it was not
     // literally empty sky.
-    // The same three the page already treats as cards for tilt and press, so a
-    // card can never answer a pointer and let the field answer it too.
-    const cardSelector = `${REACTIVE_CARD_SELECTOR}, .modal-card, `
+    // The same three cards that lean and press, so a card can never answer a
+    // pointer and let the field answer it too.
+    const cardSelector = `${CARD_SURFACE_SELECTOR}, .modal-card, `
         + '.modal, .modal-overlay, .navbar, .project-carousel, '
         + 'input, textarea, select, [contenteditable]';
     const openSpaceAt = (target, clientY) => !document.querySelector('.modal-overlay.active')
@@ -3278,9 +3278,16 @@ function setupGalaxyField(canvas, reducedMotion) {
 // The spotlight and the tilt are lifted from motion-primitives' Spotlight and
 // Tilt; their rotation default is 15deg, which is far too much for a card the
 // size of a project card, so this runs at 4deg at the very corner.
-const REACTIVE_CARD_SELECTOR = '.project-card, .about-highlight, .skill-group';
+const CARD_SURFACE_SELECTOR = '.project-card, .about-highlight, .skill-group';
+// The glass buttons answer the pointer as the cards do -- they lean toward it
+// -- but lean much further: a button a few dozen pixels across has to turn a
+// long way before the lean shows at all.
+const GLASS_BUTTON_SELECTOR = '.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable, '
+    + '.contact-links > .btn, .carousel-arrow';
+const REACTIVE_CARD_SELECTOR = `${CARD_SURFACE_SELECTOR}, ${GLASS_BUTTON_SELECTOR}`;
 const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-btn, .carousel-arrow, .social-links a';
 const CARD_TILT_DEGREES = 4;
+const BUTTON_TILT_DEGREES = 12;
 
 // Set by setupPointerReactiveSurfaces, and called by anything that moves a card
 // out from under a cursor that has not itself moved -- every carousel step, and
@@ -3312,7 +3319,7 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         // Dropping the class and zeroing the angles in the same frame lets the
         // card's own transform transition carry it back to flat.
         activeCard.classList.remove('is-tilting');
-        ['--card-glow', '--card-glow-x', '--card-glow-y', '--card-tilt-x', '--card-tilt-y']
+        ['--card-glow', '--card-glow-x', '--card-glow-y', '--card-tilt-x', '--card-tilt-y', '--lean-width']
             .forEach(property => activeCard.style.removeProperty(property));
         activeCard = null;
         activeRect = null;
@@ -3342,8 +3349,13 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         // leans toward the cursor.
         const acrossX = offsetX / width - .5;
         const acrossY = offsetY / height - .5;
-        activeCard.style.setProperty('--card-tilt-x', `${(acrossY * 2 * CARD_TILT_DEGREES).toFixed(2)}deg`);
-        activeCard.style.setProperty('--card-tilt-y', `${(-acrossX * 2 * CARD_TILT_DEGREES).toFixed(2)}deg`);
+        const isButton = activeCard.matches(GLASS_BUTTON_SELECTOR);
+        const degrees = isButton ? BUTTON_TILT_DEGREES : CARD_TILT_DEGREES;
+        // A pill leans over a depth in proportion to its own width (see
+        // portfolio.css), so a wide one turns as gently as a narrow one.
+        if (isButton) activeCard.style.setProperty('--lean-width', `${width.toFixed(0)}px`);
+        activeCard.style.setProperty('--card-tilt-x', `${(acrossY * 2 * degrees).toFixed(2)}deg`);
+        activeCard.style.setProperty('--card-tilt-y', `${(-acrossX * 2 * degrees).toFixed(2)}deg`);
         activeCard.classList.add('is-tilting');
     };
 
@@ -4191,13 +4203,15 @@ function renderProjectCollections(collections, projects) {
     setupProjectCardFit();
 }
 
-// Cards are as tall as the window lets them be (see "Project cards fit the
-// window" in portfolio.css) but never shorter than the longest front
-// description needs: a short window scrolls a little rather than cutting
-// anyone's writing off mid-sentence. How much room that is depends on how the
-// text wraps at the width a card gets right now, so it is measured rather than
-// guessed -- every card laid out once off screen, tall enough that its picture
-// sits at full size, and the tallest need wins.
+// Cards grow to hold the longest front description -- up to their tier
+// height, or past it where there is room -- but never past the room the
+// window has under the bar (see "Project cards fit the window" in
+// portfolio.css): a short window gets a card that fits it, and a description
+// that still runs long fades out at the card's foot. How much room a
+// description needs depends on how the text wraps at the width a card gets
+// right now, so it is measured rather than guessed -- every card laid out once
+// off screen, tall enough that its picture sits at full size, and the tallest
+// need wins.
 const CARD_IMAGE_SHARE = .36; // keep in step with --card-image-height
 let refitProjectCards = null;
 
@@ -4249,7 +4263,7 @@ function setupProjectCardFit() {
         probe.remove();
         // A few pixels of slack for the sub-pixel rounding between the column
         // measured here and the one the card really gets.
-        if (need) document.documentElement.style.setProperty('--card-min-height', `${Math.ceil(need) + 6}px`);
+        if (need) document.documentElement.style.setProperty('--card-content-height', `${Math.ceil(need) + 6}px`);
     };
     let timer = 0;
     const schedule = () => {

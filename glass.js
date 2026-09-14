@@ -7,9 +7,10 @@
 
      bar      the navigation. Thick, clear toward its top and bottom edges,
               and bent the most.
-     surface  the About, Skills and project cards, and the hero, social and
-              contact buttons. The same glass, thinner and mostly tinted dark
-              grey: a little of the page shows through, bent at the edges.
+     surface  the About, Skills and project cards, the hero, social and
+              contact buttons, and the carousel arrows. The same glass,
+              thinner and frosted (portfolio.css): the sky shows through
+              softly, bent at the edges.
 
    How much of it a browser can show is written to html[data-glass]:
 
@@ -24,11 +25,11 @@
               them WebKit). None of those can run an SVG filter on a backdrop,
               so the bar frosts the page behind it instead and bends the sky --
               which this site paints itself -- on its own canvas: portfolio.js
-              calls paintBackdrop() once a frame. Cards and buttons keep their
-              tint.
+              calls paintBackdrop() once a frame. Cards and buttons frost.
      frost    Low FX, everywhere, and for anyone whose system asks for less
-              transparency or more contrast: the bar blurs lightly, nothing
-              bends, and cards and buttons keep their tint. */
+              transparency or more contrast: the bar blurs lightly, cards and
+              buttons frost, and nothing bends. (The stylesheets make all of
+              it solid for the second group.) */
 (() => {
     'use strict';
 
@@ -49,15 +50,17 @@
         ? window.matchMedia('(prefers-reduced-transparency: reduce), (prefers-contrast: more)')
         : null;
 
-    // Every card and button made of the thinner glass, and the containers
-    // they are rendered into once the page's data has loaded.
+    // Every card and button made of the thinner glass, and the places they
+    // are rendered into once the page's data has loaded -- whole sections,
+    // because a slider's arrows are set down beside its cards rather than
+    // among them.
     const SURFACES = [
         '.about-highlight', '.skill-group', '.project-card',
         '.hero-buttons > .btn', '.social-links > a', '.social-links > .resume-icon-unavailable',
-        '.contact-links > .btn'
+        '.contact-links > .btn', '.carousel-arrow'
     ].join(', ');
-    const SURFACE_ROOTS = ['.hero-buttons', '#hero-social', '#about-highlights', '#skills-container',
-        '#featured-projects-container', '#project-collections', '#contact-links-container'];
+    const SURFACE_ROOTS = ['.hero-buttons', '#hero-social', '#about', '#skills', '#projects',
+        '#contact-links-container'];
 
     // The rim. bevel is how far in from the edge the glass curves; stretch is
     // the most it may magnify what is behind it, right at the edge; CURVE is
@@ -66,10 +69,10 @@
     // them.) Every point samples from further in than the point just outside
     // it, so the glass never folds what is behind it into mirrored slices.
     // dispersion bends blue a trace further than red, as real glass does --
-    // on the bar only: through the thinner glass too little shows for it to
-    // be seen. soften is the frost, in px -- none on the thinner glass, where
-    // so little shows through that a blur would cost two passes a card and
-    // change nothing anyone could see. density is the map's resolution.
+    // on the bar only: the thinner glass is frosted, and a fringe that fine
+    // would not survive it. soften is the frost, in px -- none on the thinner
+    // glass, which portfolio.css frosts with a blur of its own before this
+    // filter bends what shows through. density is the map's resolution.
     const GLASS = {
         bar: { bevel: 26, stretch: 1.8, dispersion: .008, soften: 1, density: 2 },
         surface: { bevel: 18, stretch: 1.7, dispersion: 0, soften: 0, density: 1 }

@@ -52,22 +52,19 @@
               bends under the bar on its own canvas
      frost    Low FX: a light blur, and nothing bends
 
-   The tint is darkest across the middle of the bar, where the words sit, and
-   clears toward the top and bottom edges, where the glass bends the most.
-   Dimmed by the backdrop filter first, the middle holds the links at 7:1
-   over the brightest thing that can scroll behind them -- the hero's name, a
-   white photo -- and the text carries a soft shadow on top of that. */
-.navbar { --glass-tint: .7; --glass-rim: .3; }
+   The tint is one even sheet, as clear right across as the glass is at its
+   edges, so the whole bar reads as glass. It used to darken across the
+   middle, under the words, which read as a dark band laid through the glass.
+   The links keep legible over the brightest thing that can scroll behind
+   them -- the hero's name, a white photo -- through the backdrop filter's
+   dimming and the soft shadow the text carries. */
+.navbar { --glass-tint: .3; }
 .navbar .nav-content::before {
-    border-color: rgba(255, 255, 255, .08);
+    border-color: var(--glass-edge-ring);
     background:
         radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
         linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 30%),
-        linear-gradient(180deg,
-            rgba(14, 15, 18, var(--glass-rim)),
-            rgba(14, 15, 18, var(--glass-tint)) 1rem,
-            rgba(14, 15, 18, var(--glass-tint)) calc(100% - 1rem),
-            rgba(14, 15, 18, var(--glass-rim)));
+        rgba(14, 15, 18, var(--glass-tint));
     box-shadow:
         0 12px 32px rgba(0, 0, 0, .3),
         inset 0 1px 1px rgba(255, 255, 255, .14),
@@ -102,11 +99,12 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
 /* A browser with no backdrop filter at all dims nothing behind the glass, so
    the tint has to do all of it. */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-    .navbar { --glass-tint: .8; --glass-rim: .55; }
+    .navbar { --glass-tint: .8; }
 }
 /* The rim: a hairline that catches the light along the top edge and fades
    round the ends -- a masked gradient border, so it can vary along its
-   length the way light does on a bevel. */
+   length the way light does on a bevel. Every card and button made of the
+   same glass wears the same rim (--glass-edge, in portfolio.css). */
 .navbar .nav-content::after {
     content: "";
     position: absolute;
@@ -114,11 +112,7 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
     z-index: -1;
     padding: 1px;
     border-radius: var(--radius-surface);
-    background: linear-gradient(170deg,
-        rgba(255, 255, 255, .5),
-        rgba(255, 255, 255, .12) 26%,
-        rgba(255, 255, 255, .03) 60%,
-        rgba(255, 255, 255, .16));
+    background: var(--glass-edge);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -287,7 +281,7 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
     }
     /* An open menu sits over the hero's lettering, so its glass is nearly
        opaque there: the links have to read at a glance. */
-    .navbar[data-nav-open] .nav-content::before { --glass-tint: .88; --glass-rim: .88; }
+    .navbar[data-nav-open] .nav-content::before { --glass-tint: .88; }
 }
 @media (max-width: 639px) {
     .navbar {

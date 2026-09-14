@@ -2,12 +2,36 @@
     --bg: #080808;
     --surface: #111111;
     --surface-raised: #1a1a1a;
-    /* The cards' and buttons' liquid glass (glass.js): the surface grey, letting
-       a little of the page behind it through. Solid again for anyone who asks
-       their system for less transparency or more contrast -- see "Glass
-       surfaces" below. */
-    --glass-surface: rgba(17, 17, 17, .84);
-    --glass-surface-hover: rgba(21, 29, 38, .9);
+    /* The cards' and buttons' liquid glass (glass.js): a thin surface grey that
+       the sky shows through, frosted. The project cards keep a denser sheet.
+       Solid again for anyone who asks their system for less transparency or
+       more contrast -- see "Glass surfaces" below. */
+    --glass-surface: rgba(26, 27, 30, .45);
+    --glass-surface-dense: rgba(26, 27, 30, .84);
+    /* The rim every sheet of glass wears, the navigation's included: a faint
+       ring all the way round, and over it a hairline of light that is
+       brightest along the top-left edge and fades round the sides. A card's
+       edge runs far longer between its corners than a button's, and in the
+       same light it read as a plain grey line, so cards take a brighter one. */
+    --glass-edge-ring: rgba(255, 255, 255, .08);
+    --glass-edge: linear-gradient(170deg,
+        rgba(255, 255, 255, .5),
+        rgba(255, 255, 255, .12) 26%,
+        rgba(255, 255, 255, .03) 60%,
+        rgba(255, 255, 255, .16));
+    --glass-edge-card-ring: rgba(255, 255, 255, .12);
+    --glass-edge-card: linear-gradient(170deg,
+        rgba(255, 255, 255, .62),
+        rgba(255, 255, 255, .23) 26%,
+        rgba(255, 255, 255, .1) 60%,
+        rgba(255, 255, 255, .28));
+    /* A glass button lit by the cursor: the site's blue as a sheet of tinted
+       glass rather than paint -- half see-through, with a highlight where the
+       light comes in at its top, glowing faintly on the page beneath it. In
+       High FX the highlight follows the cursor across it (Glass surfaces). */
+    --glass-lit-body: rgba(123, 168, 216, .5);
+    --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
+    --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .45);
     --ink: #f7f4ed;
     /* The one grey for secondary text, and the same one the policy pages
        use. It sat a step darker here, which read as dim over the backdrop. */
@@ -413,15 +437,11 @@ html.effects-background-click-fading body {
 .hero-tagline { --lh: 1.55; line-height: var(--lh); max-width: 40.625rem; margin: var(--rhythm-heading) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
 .social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--rhythm-block) 0; }
 .social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
-.social-links a:hover { background: var(--surface-raised); color: var(--ink); --control-lift: var(--lift-control); }
 .resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: inherit; }
 .hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
-.btn:hover { --control-lift: var(--lift-control); }
 .resume-unavailable { cursor: not-allowed; opacity: .65; }
-.resume-unavailable:hover { background: #e4e5e7; transform: none; }
 .secondary-btn { background: var(--surface); }
-.secondary-btn:hover { background: var(--surface-raised); }
 main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); margin: auto; padding: 0; }
 .section { scroll-margin-top: var(--scroll-clearance); padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
@@ -522,8 +542,7 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .collection-content { padding-bottom: var(--rhythm-block); }
 .carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: var(--type-meta); }
 .carousel-controls > div { display: flex; gap: var(--space-4); }
-.carousel-arrow { --arrow-fill: rgba(247, 244, 237, .1); display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
-.carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
+.carousel-arrow { --arrow-fill: var(--glass-surface); display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
 @keyframes nudge { 50% { transform: scale(.85); } }
 .project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--rhythm-block); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
@@ -686,20 +705,12 @@ body { background-color: var(--bg); background-image: none; }
 .hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
 .social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
 .social-links a, .resume-icon-unavailable { border-radius: 0; background: var(--glass-surface); }
-.social-links a:hover,
-.resume-icon-unavailable:hover { background: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .hero-buttons { justify-content: flex-start; }
 .secondary-btn { background: var(--glass-surface); }
 .hero-buttons .btn {
     background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
-}
-.hero-buttons .btn:hover,
-.hero-buttons .btn:active {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #080808;
 }
 main { padding-top: 0; }
 .section { transition-duration: .42s; }
@@ -712,8 +723,8 @@ main { padding-top: 0; }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
 .projects-grid { gap: var(--gutter); border: 0; }
-.project-card { background: var(--glass-surface); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
-.project-card:hover { border-color: var(--blue); background: rgba(21, 21, 21, .9); box-shadow: none; --card-lift: var(--lift-card); }
+.project-card { background: var(--glass-surface-dense); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
+.project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
 .project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.035); }
 .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
@@ -738,13 +749,14 @@ footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
 #contact .contact-desc { margin-top: var(--rhythm-heading); }
 #contact .contact-links { margin-top: var(--rhythm-block); }
-#contact .resume-unavailable {
+/* Class-strength, not an ID, so a lit glass button (Glass surfaces) can still
+   turn it blue under the cursor. */
+.contact-links > .resume-unavailable {
     background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
     opacity: 1;
 }
-#contact .btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -778,19 +790,12 @@ footer { background: transparent; }
    from the start and "Get in Touch" only on hover, which read as one real
    action and one afterthought -- they are two ways into the same page. Blue is
    the answer to a cursor everywhere else on the site (the nav, the contact
-   row, the carousel arrows, the social icons), so it is the answer here too. */
+   row, the carousel arrows, the social icons), so it is the answer here too:
+   both light the way every glass button does (Glass surfaces, below). */
 .hero-buttons > .hero-action {
     background: var(--glass-surface);
     border-color: var(--line);
     color: var(--ink);
-}
-.hero-buttons > .hero-action:hover,
-.hero-buttons > .hero-action:focus-visible,
-.hero-buttons > .hero-action:active {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #080808;
-    --control-lift: var(--lift-control);
 }
 
 /* About and skills cards share the same grid so both sections line up. */
@@ -823,20 +828,15 @@ footer { background: transparent; }
 .skill-group + .skill-group {
     margin-left: 0;
 }
+/* A card answers the cursor at its rim alone (see Glass surfaces). The glass
+   keeps its tint -- the older hover rules above would tint it blue -- and Low
+   FX no longer leaves a blue slab under its foot: with both, the whole card
+   went blue at once. */
 .about-highlight:hover,
 .skill-group:hover {
     z-index: 2;
-    background: var(--glass-surface-hover);
-    border-color: var(--blue);
+    background: var(--glass-surface);
     --card-lift: var(--lift-card);
-}
-/* Low FX only. A card there simply rises, and the slab left under it shows how
-   far. High FX leans the card toward the cursor instead, and the same flat
-   offset under a tilted card stops reading as a shadow -- it is a grey bar
-   stuck to the card's foot. */
-html[data-effects="low"] .about-highlight:hover,
-html[data-effects="low"] .skill-group:hover {
-    box-shadow: 0 6px 0 rgba(123,168,216,.22);
 }
 @media (max-width: 639px) {
     .about-highlight,
@@ -849,24 +849,209 @@ html[data-effects="low"] .skill-group:hover {
 /* --------------------------------------------------------------------------
    Glass surfaces
 
-   The About, Skills and project cards and the hero, social and contact
-   buttons are the navigation's glass, thinner: the surface grey, letting a
-   little of the page behind them through (--glass-surface, at the top of this
-   file). In Chromium's High FX, glass.js also builds each one a displacement
-   filter to its size, so what shows through bends at the edges -- and keeps
-   bending while the card moves: turning on the ring, leaning toward the
-   cursor, sliding along a row. Elsewhere they keep the tint and bend nothing.
-   So little shows through that every word on them keeps its contrast. */
-html[data-glass="refract"] :is(.about-highlight, .skill-group, .project-card,
-    .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn) {
-    backdrop-filter: var(--glass-filter, none) saturate(1.3) brightness(.85);
+   The About and Skills cards, the hero, social and contact buttons and the
+   carousel arrows are the navigation's glass, thinner: a faint surface grey
+   (--glass-surface, at the top of this file) that the sky shows through,
+   frosted so every word on them keeps its contrast over the brightest cluster
+   that can drift behind. The project cards are the same glass, denser: their
+   copy runs longest, and on the archive ring they stand in front of one
+   another.
+
+   In High FX, Chromium also bends what shows through at the edges: glass.js
+   builds each surface a displacement filter to its size, and the bend keeps
+   up while the surface moves -- turning on the ring, leaning toward the
+   cursor, sliding along a row. Safari and Firefox cannot run that filter on a
+   live backdrop, and Low FX leaves the bending out, so there they only
+   frost. */
+/* How much of the sky's light the frost lets through: enough to read as light
+   glass, not so much that the brightest cluster drifting behind a card washes
+   its grey text below 5:1. */
+:root { --glass-blur: 8px; --glass-brightness: .88; }
+html[data-glass] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
+/* The frost goes on first and the bend after it, so the rim magnifies the
+   frosted sky rather than smearing a sharp one. A surface frosts without
+   bending until glass.js has hung its filter on it. */
+html[data-glass="refract"] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    backdrop-filter: blur(var(--glass-blur)) var(--glass-filter,) saturate(1.4) brightness(var(--glass-brightness));
+}
+html[data-glass="refract"] .project-card {
+    backdrop-filter: var(--glass-filter, none) saturate(1.3) brightness(.9);
+}
+
+/* Every sheet of glass wears the navigation's rim in place of a border. It is
+   drawn the way navbar.css draws the bar's -- a masked gradient ring, so it
+   can catch the light along its length -- and over everything on the
+   surface: a card's picture, its spotlight, a press ripple. With the border
+   gone, the glass runs right out to the edge beneath it. Cards take the
+   brighter rim (--glass-edge-card, at the top of this file). */
+html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    border-width: 0;
+}
+:is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--glass-edge), linear-gradient(var(--glass-edge-ring), var(--glass-edge-ring));
+    /* A card's blue is a shadow laid over the rim rather than a gradient in
+       its place: a shadow's colour can fade in, where a gradient can only
+       swap. */
+    box-shadow: inset 0 0 0 1px rgba(123, 168, 216, 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    transition: box-shadow .2s ease;
+}
+:is(.about-highlight, .skill-group, .project-card)::before {
+    background: var(--glass-edge-card), linear-gradient(var(--glass-edge-card-ring), var(--glass-edge-card-ring));
+}
+
+/* A card answers the cursor at its rim alone: the rim turns blue and the
+   glass inside stays as it is. Only where there is a cursor -- a phone keeps
+   the last thing it touched hovered, and would leave that card outlined. */
+@media (hover: hover) {
+    :is(.about-highlight, .skill-group, .project-card):hover::before {
+        box-shadow: inset 0 0 0 1px var(--blue);
+    }
+}
+:is(.about-highlight, .skill-group, .project-card):focus-visible::before,
+:is(.about-highlight, .skill-group):focus-within::before {
+    box-shadow: inset 0 0 0 1px var(--blue);
+}
+
+/* A button fills with blue glass instead (--glass-lit). In High FX that is
+   the site's blue half see-through, so the sky still shows through it -- all
+   but solid, it read as a flat blue shape laid over the glass -- and the label
+   stays light, as it is on the glass. Low FX keeps the solid blue it had, with
+   dark writing on it. Either way the rim keeps catching the light round the
+   edge. The fill is a layer of its own, under the label, so it can fade in,
+   which a gradient cannot. On a phone, which keeps the last button it touched
+   hovered, the blue shows only while a finger is on the button. */
+:root { --glass-lit-ink: var(--ink); }
+html[data-effects="low"] {
+    --glass-lit-body: linear-gradient(180deg, rgba(123, 168, 216, .86), rgba(96, 144, 198, .92));
+    --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
+    --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .55);
+    --glass-lit-ink: #080808;
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    transition: transform .25s var(--ease), color .25s ease, box-shadow .25s ease;
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-lit);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+}
+@media (hover: hover) {
+    :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+        .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
+        color: var(--glass-lit-ink);
+        box-shadow: var(--glass-lit-glow);
+    }
+    :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+        .contact-links > .btn, .carousel-arrow):not(:disabled):hover::after {
+        opacity: 1;
+    }
+    /* A press gives way to the hover's lift, so it still reads as pushed in. */
+    :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+        .contact-links > .btn, .carousel-arrow):not(:disabled, .is-pressed):hover {
+        --control-lift: var(--lift-control);
+    }
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed) {
+    color: var(--glass-lit-ink);
+    box-shadow: var(--glass-lit-glow);
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed)::after {
+    opacity: 1;
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow).is-pressed::after {
+    transition-duration: .09s;
+}
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow):not(:disabled, .is-pressed):focus-visible {
+    --control-lift: var(--lift-control);
+}
+/* In High FX a glass button leans toward the cursor the way the cards do
+   (setupPointerReactiveSurfaces), and once it is lit, the light on it slides
+   across to meet the cursor. How far a lean shows depends on the depth it is
+   drawn over as much as on its angle, so each shape takes its own. A round
+   button, a few dozen pixels across, leans over a short one, or its edges
+   would move less than a pixel and the lean would go unseen. A pill leans
+   over one in proportion to its own width, so the Contact buttons, twice as
+   wide as the hero's, turn just as gently: at one fixed depth, their end
+   nearest the cursor swung two dozen pixels out past the button. */
+:is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow):not(:disabled).is-tilting {
+    transform:
+        perspective(var(--lean-depth, 18rem))
+        rotateX(var(--card-tilt-x, 0deg))
+        rotateY(var(--card-tilt-y, 0deg))
+        translateY(var(--control-lift, 0px))
+        scale(var(--control-press, 1));
+}
+:is(.social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow) {
+    --lean-depth: 5rem;
+}
+:is(.hero-buttons > .btn, .contact-links > .btn) {
+    --lean-depth: calc(var(--lean-width, 12rem) * 3);
+}
+html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
+}
+/* The hero ends on its buttons, right at the edge its overflow clips to, so a
+   lit button's glow and a leaning button's foot were cut off along it. Room
+   below them, taken straight back out of the margin: nothing moves. */
+.hero-section {
+    padding-bottom: var(--rhythm-block);
+    margin-bottom: calc(-1 * var(--rhythm-block));
+}
+
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
     :root {
         --glass-surface: var(--surface);
-        --glass-surface-hover: #151d26;
+        --glass-surface-dense: var(--surface);
     }
+    /* Solid, so there is nothing behind them to frost. */
+    html[data-glass] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+        .social-links > a, .social-links > .resume-icon-unavailable,
+        .contact-links > .btn, .carousel-arrow) {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+/* A browser that cannot frost a backdrop at all leaves the tint to carry the
+   contrast on its own, as the denser sheet does. */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root { --glass-surface: var(--glass-surface-dense); }
 }
 
 :root {
@@ -939,6 +1124,17 @@ main > #contact {
     padding-inline: var(--section-lean-room);
     margin-inline: calc(-1 * var(--section-lean-room));
 }
+/* About and Skills end on their cards, so a card's foot lay right on the edge
+   that paint containment clips at. A card leaning toward a cursor it has just
+   scrolled under dips a pixel or two past its own box before it lifts, and its
+   lower rim was sliced off flat. The same room below as at the sides, taken
+   straight back out of the margin, which folds into the next section's: the
+   gap between the two is unchanged. */
+main > #about,
+main > #skills {
+    padding-bottom: var(--section-lean-room);
+    margin-bottom: calc(-1 * var(--section-lean-room));
+}
 main > .section + .section {
     margin-top: calc(var(--content-section-gap) - var(--section-paint-headroom));
 }
@@ -992,14 +1188,15 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     transform-style: preserve-3d;
     transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear, var(--card-answer-transition);
 }
+/* The card a carousel is showing stands forward on a deeper shadow. Its rim
+   stays the glass's own until the cursor reaches it, like every other. */
 .project-carousel .project-card.is-carousel-active {
-    border-color: rgba(123,168,216,.62);
-    box-shadow: 0 22px 52px rgba(0,0,0,.34), 0 0 0 1px rgba(123,168,216,.12);
+    box-shadow: 0 22px 52px rgba(0,0,0,.34);
 }
 /* A carousel only hands over the picture it is showing. A press on a card to
    either side of the centre is the start of a swipe, but the browser read it
    as a grab and dragged the photo or GIF out instead. So only the card at the
-   centre -- the one outlined in blue -- lets its picture be dragged, copied or
+   centre -- the one standing forward -- lets its picture be dragged, copied or
    long-pressed; everywhere else the press falls through to the card, which
    still swipes, still plays its GIF on hover, and still turns the ring round
    to it on a click. Mid-swipe no card is centred, so nothing can be grabbed. */
@@ -1026,7 +1223,9 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     border-radius: .875rem;
 }
 html[data-effects="high"] .circular-project-carousel {
-    min-height: clamp(var(--ring-height-min), 44vw, var(--ring-height-max));
+    /* Never taller than the card it turns and the padding round it, so a
+       short window's shorter cards are not left standing over an empty foot. */
+    min-height: min(clamp(var(--ring-height-min), 44vw, var(--ring-height-max)), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
     padding-top: var(--rhythm-block);
     padding-bottom: var(--rhythm-block);
     perspective: 87.5rem;
@@ -1055,7 +1254,7 @@ html[data-effects="high"] .circular-project-carousel .project-card:hover {
     transition: border-color .3s ease, box-shadow .3s ease, var(--card-answer-transition);
 }
 html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
-    box-shadow: 0 26px 64px rgba(0,0,0,.42), 0 0 0 1px rgba(123,168,216,.15);
+    box-shadow: 0 26px 64px rgba(0,0,0,.42);
 }
 html[data-effects="high"] .circular-project-carousel .project-image-wrapper {
     height: var(--ring-image-height);
@@ -1148,7 +1347,7 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
 @media (max-width: 639px) {
     .project-card { height: var(--project-card-height-mobile); }
     html[data-effects="high"] .circular-project-carousel {
-        min-height: var(--ring-height-min);
+        min-height: min(var(--ring-height-min), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
         padding-top: var(--rhythm-block);
         padding-bottom: var(--rhythm-block);
     }
@@ -1428,18 +1627,29 @@ html.effects-background-click-fading .galaxy-nebula {
 /* --------------------------------------------------------------------------
    Project cards fit the window
 
-   A project card is never taller than the window can show at once: the
-   visible height under the fixed bar, less a margin above and below. The tier
-   heights above (--project-card-height, --project-card-height-mobile) are now
-   the most a card grows to on a tall screen; a shorter window gets a shorter
-   card, down to --card-min-height. Every card shares the one height, so a row
-   still lines up. Inside, the picture gives way first -- it is a share of the
-   card rather than a fixed height -- and the writing keeps a readable size. */
+   A project card is never taller than the room between the floating bar and
+   the foot of the window: scrolled into place, its top sits just under the
+   glass and its foot just above the window's edge -- at any window size and
+   any zoom, since both are measured in the same CSS pixels. The tier heights
+   above (--project-card-height, --project-card-height-mobile) are the most a
+   card grows to on a tall screen, and within that room a card also grows to
+   hold its longest description (--card-content-height, measured by
+   setupProjectCardFit) -- but never past the room. That measure used to be a
+   floor, and on a laptop, where the narrower columns wrap every description
+   onto more lines, it stood the cards over a hundred pixels taller than the
+   window. Every card shares the one height, so a row still lines up. Inside,
+   the picture gives way first -- a share of the card, and a smaller one in a
+   short window so the writing keeps its room -- and a description that still
+   runs long fades out at the foot. */
 :root {
     --viewport-block: 100vh;
-    --card-fit-height: calc(var(--viewport-block) - var(--nav-bar-height) - var(--safe-area-top) - var(--space-5) * 2);
-    --card-min-height: 30rem;
-    --card-height: clamp(var(--card-min-height), var(--card-fit-height), var(--project-card-height));
+    /* The bar floats 1rem under the top of the window and stands 3.5rem tall
+       (navbar.css); on a phone it floats .5rem down. */
+    --nav-bar-bottom: calc(4.5rem + var(--safe-area-top));
+    --card-fit-gap: var(--space-2);
+    --card-fit-height: calc(var(--viewport-block) - var(--nav-bar-bottom) - var(--card-fit-gap) * 2);
+    --card-content-height: 30rem;
+    --card-height: max(18rem, min(var(--card-fit-height), max(var(--card-content-height), var(--project-card-height))));
 }
 @supports (height: 100svh) {
     /* The small viewport: the height with a phone's toolbars showing, so a
@@ -1447,10 +1657,13 @@ html.effects-background-click-fading .galaxy-nebula {
     :root { --viewport-block: 100svh; }
 }
 @media (max-width: 639px) {
-    :root { --card-height: clamp(var(--card-min-height), var(--card-fit-height), var(--project-card-height-mobile)); }
+    :root {
+        --nav-bar-bottom: calc(4rem + var(--safe-area-top));
+        --card-height: max(18rem, min(var(--card-fit-height), max(var(--card-content-height), var(--project-card-height-mobile))));
+    }
 }
 .project-card {
-    --card-image-height: calc(var(--card-height) * .36);
+    --card-image-height: max(6rem, min(calc(var(--card-height) * .36), calc(var(--card-height) - 17rem)));
     height: var(--card-height);
 }
 /* Without this the text column keeps its content's height and, in a short
