@@ -3,9 +3,17 @@
     --surface: #111111;
     --surface-raised: #1a1a1a;
     --ink: #f7f4ed;
-    --muted: #a7a49d;
+    /* The one grey for secondary text, and the same one the policy pages
+       use. It sat a step darker here, which read as dim over the backdrop. */
+    --muted: #b4b1a9;
     --line: rgba(247, 244, 237, .16);
     --blue: #7ba8d8;
+    /* Two quieter blues for text. The lighter one names things -- the label
+       over a heading, the numbered parts of a project -- and the softer one
+       carries small facts: dates, tags, roles. --blue itself stays the colour
+       of whatever answers the cursor. */
+    --blue-light: #9dccff;
+    --blue-soft: #b9d6f5;
     --red: #b7b9be;
     --yellow: #d4d5d8;
     --ease: cubic-bezier(.2,.75,.2,1);
@@ -83,10 +91,11 @@
     --rhythm-header: var(--space-7);
     --rhythm-section: clamp(var(--space-7), 6vw, var(--space-9));
 
-    /* Where a jumped-to anchor comes to rest. The navbar is fixed and 78px
-       tall, so without this a nav link parks the section's label underneath it
-       and the eyebrow -- Toolkit, Portfolio, Connect -- is simply not there.
-       One block's clear below the bar, so the landing looks deliberate. */
+    /* Where a jumped-to anchor comes to rest. The navbar is fixed over the top
+       of the page and --nav-bar-height is the room the page leaves for it, so
+       without this a nav link parks the section's label underneath it and the
+       eyebrow -- Toolkit, Portfolio, Connect -- is simply not there. One
+       block's clear below the bar, so the landing looks deliberate. */
     --scroll-clearance: calc(var(--nav-bar-height) + var(--safe-area-top) + var(--rhythm-block));
 
     /* Font metrics for that trim, in em, read off the shipped woff2 files
@@ -101,6 +110,55 @@
     --face-text-ascent: .969;
     --face-text-descent: .241;
     --face-text-cap: .7344;
+
+    /* ---- Type ---------------------------------------------------------
+       Every piece of text is one of these roles, named for what it does
+       rather than where it sits, so a label or a card's name is set the same
+       way in every section and in the project sheet. Barlow Condensed, in
+       capitals, for anything read as a name; Inter for anything read as a
+       sentence.
+
+         --type-section        44-112px  a section's title
+         --type-subsection     38-72px   a title inside a section: My Projects
+         --type-sheet-title    36-56px   a project's name in its sheet
+         --type-sheet-heading  26-40px   a heading inside the sheet
+         --type-card-title     19-22px   the name on an About, Skills or sheet card
+         --type-eyebrow        16-20px   the label over a section title
+         --type-eyebrow-sm     15px      the label over a card or sheet heading
+         --type-intro          16-18px   the line that introduces a section
+         --type-small          15px      the copy inside a card
+         --type-meta           14px      dates, captions, fine print
+         --type-label          13px      buttons, tags and other controls
+
+       Each step clamps between a phone and a desktop so the steps keep their
+       proportions at every width. The section title used to bottom out at
+       59px -- the size of the hero name on a phone, so the two read as one
+       level -- and the eyebrow over it was a 14px condensed face whose
+       capitals stood shorter than the body text's.
+
+       Nothing a visitor has to read is set below 13px, and nothing in the
+       condensed face below 14px, whose letters run small for their size.
+       Those floors are for readers with weaker eyes, not decoration: every
+       step here is in rem, so it follows the root size the page sets. */
+    --font-display: "Barlow Condensed", Impact, sans-serif;
+    --font-text: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --type-section: clamp(2.75rem, 8vw, 7rem);
+    --type-subsection: clamp(2.4rem, 6vw, 4.5rem);
+    --type-sheet-title: clamp(2.25rem, 1.5rem + 3vw, 3.5rem);
+    --type-sheet-heading: clamp(1.625rem, 1.25rem + 1.6vw, 2.5rem);
+    --type-card-title: clamp(1.1875rem, 1rem + .45vw, 1.375rem);
+    --type-eyebrow: clamp(1rem, .875rem + .4vw, 1.25rem);
+    --type-eyebrow-sm: .9375rem;
+    --type-intro: clamp(1rem, .95rem + .25vw, 1.125rem);
+    --type-small: .9375rem;
+    --type-meta: .875rem;
+    --type-label: .8125rem;
+    /* Capitals set large need less air between them than capitals set
+       small, so tracking runs the opposite way to size. */
+    --tracking-display: -.035em;
+    --tracking-title: .01em;
+    --tracking-eyebrow: .14em;
+    --tracking-caps: .08em;
 
     /* One hover language: controls rise a little, cards rise more. */
     --lift-control: -3px;
@@ -352,7 +410,7 @@ html.effects-background-click-fading body {
 .social-links a:hover { background: var(--surface-raised); color: var(--ink); --control-lift: var(--lift-control); }
 .resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: inherit; }
 .hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
-.btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: .86rem; font-weight: 700; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
 .btn:hover { --control-lift: var(--lift-control); }
 .resume-unavailable { cursor: not-allowed; opacity: .65; }
 .resume-unavailable:hover { background: #e4e5e7; transform: none; }
@@ -361,25 +419,37 @@ html.effects-background-click-fading body {
 main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); margin: auto; padding: 0; }
 .section { scroll-margin-top: var(--scroll-clearance); padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
-.section-header { max-width: 45rem; margin-bottom: var(--rhythm-header); }
-.section-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--yellow); font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-.section-title { --lh: .92; font-size: clamp(2.6rem, 6vw, 5rem); letter-spacing: -.075em; line-height: var(--lh); }
-.section-subtitle, .library-heading p, .contact-desc { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: var(--muted); max-width: 38.125rem; }
+/* Wide enough that every section title stands on one line. At 45rem Skills &
+   Expertise and Featured Projects broke onto two and read as twice the size
+   of About Me and Contact & Links. */
+.section-header { max-width: 60rem; margin-bottom: var(--rhythm-header); }
+.section-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+.section-title { --lh: .8; font-size: var(--type-section); letter-spacing: var(--tracking-display); line-height: var(--lh); }
+.section-subtitle, .library-heading p, .contact-desc { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: var(--muted); font-size: var(--type-intro); max-width: 38.125rem; }
 .glass-panel { background: var(--surface); border: 1px solid var(--line); padding: var(--pad-panel); }
-.bio-text { --lh: 1.55; line-height: var(--lh); width: 100%; max-width: none; color: #dedee0; font-size: clamp(1.05rem, 2vw, 1.35rem); }
+/* The opening line runs across two of the three columns and stops where the
+   second card below it stops, instead of running ~115 characters to the far
+   edge of the page. Once the cards go two-up the full width is a fair
+   measure again. */
+.bio-text { --lh: 1.45; line-height: var(--lh); width: 100%; max-width: calc((100% - var(--gutter) * 2) / 3 * 2 + var(--gutter)); color: #dedee0; font-size: clamp(1.18rem, 2.3vw, 1.55rem); }
+@media (max-width: 1080px) { .bio-text { max-width: none; } }
 .about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--rhythm-block); background: var(--surface); border: 0; }
 .about-highlight p { --lh: 1.55; line-height: var(--lh); }
 .about-highlight { position: relative; z-index: 0; display: flex; flex-direction: column; min-height: 10.3125rem; padding: var(--pad-card); background: var(--surface); border: 1px solid var(--line); }
 .about-highlight + .about-highlight { margin-left: -1px; }
-.about-highlight > .about-highlight-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--yellow); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.about-highlight h3 { --lh: 1.05; margin-bottom: var(--rhythm-heading); font-size: 1.1rem; letter-spacing: -.035em; line-height: var(--lh); }
-.about-highlight p { color: var(--muted); font-size: .87rem; }
-.about-highlight .about-highlight-subline { --lh: 1.45; margin-top: var(--rhythm-heading); color: var(--ink); font-size: .76rem; line-height: var(--lh); }
+/* A card's label is the section eyebrow one step down -- same face, same
+   tracking, same blue -- so a card reads as a small section of its own. */
+.about-highlight > .about-highlight-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow-sm); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+.about-highlight h3 { --lh: 1.05; margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); line-height: var(--lh); }
+.about-highlight p { color: var(--muted); font-size: var(--type-small); }
+.about-highlight .about-highlight-subline { --lh: 1.45; margin-top: var(--rhythm-heading); color: var(--ink); font-size: var(--type-meta); line-height: var(--lh); }
 .about-highlight-role { margin-top: var(--rhythm-rule); padding-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
-.about-highlight-role h4 { --lh: 1.1; line-height: var(--lh); color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-size: 1rem; letter-spacing: .01em; text-transform: uppercase; }
-.about-highlight-role p { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: #b9d6f5; font-size: .76rem; font-weight: 700; }
+/* A second role in a card is a second name, not a lesser one, so it takes
+   the card title's size. */
+.about-highlight-role h4 { --lh: 1.05; line-height: var(--lh); color: var(--ink); font-family: var(--font-display); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); text-transform: uppercase; }
+.about-highlight-role p { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: var(--blue-soft); font-size: var(--type-meta); font-weight: 600; }
 .about-highlight-link { display: flex; color: inherit; text-decoration: none; cursor: pointer; }
-.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--rhythm-rule); color: var(--ink); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; transition: color .18s ease; }
+.about-highlight-cta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: var(--rhythm-rule); color: var(--ink); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: color .18s ease; }
 /* At rest the arrow points up and the row reads as ordinary text. Under the
    cursor it turns blue and flips to point down at the collection it opens --
    the glyph is a down arrow held upside down, so hovering rotates it back the
@@ -395,9 +465,13 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .skill-group { display: flex; flex-direction: column; justify-content: center; min-height: 13.75rem; padding: var(--pad-card); background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
-.skill-group-title { --lh: 1.55; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: 1.05rem; letter-spacing: -.03em; }
+.skill-group-title { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); }
 .skill-tags, .project-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(85,168,255,.35); color: #9dccff; font-size: .7rem; font-weight: 700; }
+/* One chip everywhere -- Skills, the cards and the project sheet -- where it
+   used to be re-coloured three more times further down the file. A chip is a
+   single line, so it takes a label's leading rather than a paragraph's: at the
+   body's 1.55 every row of chips stood 4px taller than its text needed. */
+.tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(123,168,216,.5); color: var(--blue-soft); font-size: var(--type-label); font-weight: 600; line-height: 1.25; }
 
 .projects-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .featured-grid { margin-bottom: var(--rhythm-section); }
@@ -414,29 +488,33 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .project-heading { flex: 0 0 auto; }
 .project-copy { display: flex; flex: 1; align-items: center; min-height: 0; }
 .project-title { --lh: 1.08; margin-bottom: var(--rhythm-heading); font-size: 1.2rem; letter-spacing: -.04em; line-height: var(--lh); }
-.project-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: #9dccff; font-size: .76rem; font-weight: 800; letter-spacing: .02em; }
+.project-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: var(--blue-soft); font-size: var(--type-meta); font-weight: 600; }
 .project-summary { --lh: 1.55; color: var(--muted); font-size: 1rem; line-height: var(--lh); }
 .project-tags { margin-top: var(--rhythm-block); }
-.project-action-links { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--rhythm-rule); margin-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
-.link-btn { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); background: #303138; border: 1px solid var(--line); font-size: .72rem; font-weight: 700; transition: background .2s; }
-.link-btn:hover { background: #3a3c43; color: var(--ink); }
+.project-action-links { display: flex; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--rhythm-rule); margin-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
+/* The project sheet's link buttons are the page's buttons: the same capitals,
+   the same outline, the same blue under the cursor. They were grey slabs in
+   lower case, the one set of controls on the site that answered in grey. */
+.link-btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: transparent; border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
 
 .project-library { padding-top: var(--rhythm-section); border-top: 1px solid var(--line); }
 .library-heading { max-width: 42.5rem; margin-bottom: var(--rhythm-header); }
-.library-heading h3 { --lh: .9; font-size: clamp(2.4rem, 6vw, 4.5rem); letter-spacing: -.075em; line-height: var(--lh); }
+.library-heading h3 { --lh: .8; font-size: var(--type-subsection); letter-spacing: var(--tracking-display); line-height: var(--lh); }
 .project-collections { border-top: 1px solid var(--line); }
 .project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: var(--scroll-clearance); }
 .collection-toggle { width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--space-6); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
 .collection-toggle:hover { color: #dfe4ea; }
-.collection-index { color: var(--red); font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
+.collection-index { color: var(--blue-light); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); }
 .collection-copy { display: grid; min-width: 0; gap: var(--rhythm-heading); }
-.collection-copy strong { --lh: 1.55; line-height: var(--lh); font-size: clamp(1.2rem, 2.5vw, 1.75rem); letter-spacing: -.05em; }
-.collection-copy small { --lh: 1.55; line-height: var(--lh); color: var(--muted); }
+/* A name that wraps -- Internship / Work Projects does on a phone -- keeps a
+   heading's leading. At a paragraph's 1.55 its two lines stood a line apart. */
+.collection-copy strong { --lh: 1.05; line-height: var(--lh); font-family: var(--font-display); letter-spacing: var(--tracking-title); text-transform: uppercase; }
+.collection-copy small { --lh: 1.55; line-height: var(--lh); color: var(--muted); font-size: var(--type-small); }
 .collection-copy strong, .collection-copy small, .project-title, .project-summary, .modal-title { overflow-wrap: anywhere; }
 .collection-toggle > i { justify-self: end; transition: transform .3s var(--ease); }
 .collection-toggle[aria-expanded="true"] > i { color: var(--blue); transform: rotate(180deg); }
 .collection-content { padding-bottom: var(--rhythm-block); }
-.carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: .76rem; }
+.carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: var(--type-meta); }
 .carousel-controls > div { display: flex; gap: var(--space-4); }
 .carousel-arrow { --arrow-fill: rgba(247, 244, 237, .1); display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
 .carousel-arrow:hover, .carousel-arrow:focus-visible { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
@@ -465,15 +543,16 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; width: 2.625rem; height: 2.625rem; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
 .modal-close:hover { background: #3a3c43; color: var(--ink); transform: rotate(90deg); }
 .modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
-.modal-title { --lh: .95; max-width: 37.5rem; font-size: clamp(1.8rem, 5vw, 3.5rem); letter-spacing: -.065em; line-height: var(--lh); }
-.modal-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0 0 var(--rhythm-block); }
-.modal-header-actions .tag { color: #9dccff; border-color: rgba(85,168,255,.35); }
-.modal-quick-link { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); color: var(--ink); border: 1px solid rgba(85,168,255,.5); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; transition: background .2s, color .2s; }
-.modal-quick-link:hover { color: #080808; background: var(--blue); }
+/* The sheet's title is one step below a section title, and its headings one
+   step below that. On a phone all three used to land on 29px together. */
+.modal-title { --lh: .95; max-width: 37.5rem; font-size: var(--type-sheet-title); letter-spacing: var(--tracking-display); line-height: var(--lh); }
+.modal-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin: 0 0 var(--rhythm-block); }
+.modal-quick-link { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); color: var(--ink); border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
+.modal-quick-link:hover { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
 .modal-quick-link[hidden] { display: none; }
-.modal-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: #9dccff; font-size: .82rem; font-weight: 800; }
+.modal-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: var(--blue-soft); font-size: var(--type-meta); font-weight: 600; }
 .modal-period[hidden] { display: none; }
-.modal-program-summary { --lh: 1.6; margin: 0 0 var(--rhythm-block); max-width: 42.5rem; color: var(--muted); font-size: .88rem; line-height: var(--lh); }
+.modal-program-summary { --lh: 1.6; margin: 0 0 var(--rhythm-block); max-width: 42.5rem; color: var(--muted); font-size: var(--type-small); line-height: var(--lh); }
 .modal-program-summary[hidden] { display: none; }
 .modal-image { display: block; width: 100%; height: auto; max-height: 410px; aspect-ratio: 16 / 9; min-height: 0; margin-bottom: var(--rhythm-block); overflow: hidden; background: #0c0c0c; }
 .modal-image img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; }
@@ -481,27 +560,35 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-image.is-certificate img { width: 100%; height: 100%; object-fit: contain; }
 .modal-image.has-motion-media { display: block; height: auto; max-height: 410px; aspect-ratio: 16 / 9; background: #0c0c0c; }
 .modal-image.has-motion-media img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
-.modal-summary { --lh: 1.55; line-height: var(--lh); color: #dedee0; font-size: 1.12rem; font-weight: 600; }
+.modal-summary { --lh: 1.55; line-height: var(--lh); color: #dedee0; font-size: 1.125rem; font-weight: 600; }
 .modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
 .modal-overview { margin: var(--rhythm-header) 0; padding: var(--space-5); border: 1px solid rgba(85,168,255,.28); background: linear-gradient(145deg, rgba(85,168,255,.07), rgba(255,255,255,.018) 44%, transparent); }
 .modal-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--rhythm-block); }
-.modal-section-heading span { color: #9dccff; font-size: .74rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-.modal-section-heading h3 { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -.025em; line-height: .95; text-transform: uppercase; }
+/* A heading in the sheet is built like one on the page: an eyebrow in the
+   page's face and blue, one step smaller, over a condensed title. */
+.modal-section-heading span { color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow-sm); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+.modal-section-heading h3 { font-family: var(--font-display); font-size: var(--type-sheet-heading); letter-spacing: var(--tracking-display); text-transform: uppercase; }
 .modal-overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); background: transparent; }
 .modal-overview-grid.is-class-rundown { grid-template-columns: 1fr; }
 .modal-overview-item { position: relative; min-width: 0; padding: var(--pad-card); overflow: hidden; border: 1px solid rgba(244,244,241,.11); background: linear-gradient(155deg, rgba(49,51,58,.96), rgba(29,30,35,.96)); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
 .modal-overview-item::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(to bottom, #b8dcff, var(--blue) 46%, rgba(85,168,255,.12)); }
-.modal-overview-item > span { --lh: .82; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-heading); color: #9dccff; font-family: "Barlow Condensed", sans-serif; font-size: clamp(2.35rem, 5vw, 3.35rem); font-weight: 800; letter-spacing: -.045em; line-height: .82; }
-.modal-overview-item h4 { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.2rem, 2vw, 1.4rem); letter-spacing: .015em; line-height: 1.05; text-transform: uppercase; }
-.modal-overview-item p { color: #c7c7cb; font-size: .91rem; line-height: 1.7; }
+/* The numerals stay the loudest mark on a part but stop short of the sheet's
+   title -- on a phone they used to stand taller than it. */
+.modal-overview-item > span { --lh: .82; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-heading); color: var(--blue-light); font-family: var(--font-display); font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem); font-weight: 800; letter-spacing: -.045em; }
+.modal-overview-item h4 { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-family: var(--font-display); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); text-transform: uppercase; }
+.modal-overview-item p { color: #c7c7cb; font-size: var(--type-small); line-height: 1.6; }
 .modal-feature-video { margin: 0 0 var(--rhythm-header); }
 .modal-feature-video[hidden] { display: none; }
 .modal-feature-video-player { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #191a1f; border: 1px solid var(--line); }
 .modal-feature-video-player iframe { width: 100%; height: 100%; display: block; border: 0; }
 .modal-deep-dive-heading { margin-top: var(--rhythm-header); margin-bottom: var(--rhythm-block); }
-.modal-details { margin: var(--rhythm-heading) 0 var(--rhythm-block); color: var(--muted); line-height: 1.75; }
+/* Long-form copy, so a touch more leading than a card's -- but not the 1.75
+   it had, which loosened every paragraph in the sheet into separate lines. */
+.modal-details { margin: var(--rhythm-heading) 0 var(--rhythm-block); color: var(--muted); line-height: 1.65; }
 .modal-detail-section + .modal-detail-section { margin-top: var(--rhythm-block); }
-.modal-detail-section h4 { margin-bottom: var(--rhythm-heading); color: var(--ink); font-size: 1.05rem; letter-spacing: -.025em; }
+/* A heading's own leading. It inherited the copy's 1.75, which stood it
+   nearly as far from its own paragraph as from the one before it. */
+.modal-detail-section h4 { margin-bottom: var(--rhythm-heading); color: var(--ink); font-family: var(--font-display); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); line-height: 1.05; text-transform: uppercase; }
 .modal-media { display: grid; grid-template-columns: 1fr; gap: var(--gutter); margin: 0 0 var(--rhythm-block); align-items: start; }
 .modal-media-item { display: flex; width: 100%; min-height: 0; margin: 0; flex-direction: column; align-self: start; background: #0c0c0c; overflow: hidden; }
 .modal-media-item img { width: 100%; height: auto; display: block; object-fit: contain; object-position: center; }
@@ -509,20 +596,19 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-media-item.media-contain img { height: auto; padding: var(--space-2); object-fit: contain; }
 .modal-media-item.is-motion-media { background: #0c0c0c; }
 .modal-media-item.is-motion-media img { height: auto; object-fit: contain; }
-.modal-media-item figcaption { flex: 0 0 auto; padding: var(--space-3) var(--space-4); background: #34363d; color: var(--muted); font-size: .78rem; font-weight: 700; }
+/* The caption bar is lighter than the sheet, so the sheet's grey sat at only
+   5.6:1 on it -- the faintest words on the site. This grey holds 9:1. */
+.modal-media-item figcaption { flex: 0 0 auto; padding: var(--space-3) var(--space-4); background: #34363d; color: #dedee0; font-size: var(--type-meta); font-weight: 600; }
 .modal-video iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; display: block; border: 0; }
 .media-placeholder { display: grid; place-content: center; gap: var(--space-2); min-height: 100%; padding: var(--space-4); border: 1px dashed rgba(244,244,241,.28); color: var(--muted); text-align: center; }
-.media-placeholder i { font-size: 1.35rem; color: #9dccff; }
-.media-placeholder span { color: var(--ink); font-size: .83rem; font-weight: 800; }
-.media-placeholder small { max-width: 11.875rem; font-size: .72rem; }
+.media-placeholder i { font-size: 1.35rem; color: var(--blue-light); }
+.media-placeholder span { color: var(--ink); font-size: var(--type-meta); font-weight: 700; }
+.media-placeholder small { max-width: 11.875rem; font-size: var(--type-meta); }
 .card-media-placeholder { height: 100%; color: #d6d7da; border-color: rgba(244,244,241,.25); }
 .card-media-placeholder i, .card-media-placeholder span { color: #f4f4f1; }
-.modal-card .tag { color: #9dccff; border-color: rgba(85,168,255,.35); }
 .modal-card .project-action-links { border-color: var(--line); }
-.modal-card .link-btn { background: #303138; border-color: var(--line); color: var(--ink); }
-.modal-card .link-btn:hover { background: #3a3c43; }
 
-footer { padding: var(--space-7) var(--page-inline-end) max(var(--space-7), var(--safe-area-bottom)) var(--page-inline-start); border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: .82rem; }
+footer { padding: var(--space-7) var(--page-inline-end) max(var(--space-7), var(--safe-area-bottom)) var(--page-inline-start); border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: var(--type-meta); }
 
 @media (max-width: 900px) {
     .nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
@@ -586,8 +672,10 @@ body { background-color: var(--bg); background-image: none; }
 .hero-section::before { width: min(42vw, 680px); border-radius: 0; background: var(--blue); right: -13vw; top: 7%; opacity: .12; transform: rotate(45deg) translateY(var(--scroll-shift)); }
 .hero-section::after { width: clamp(90px, 12vw, 175px); background: var(--red); left: auto; right: 16%; bottom: 9%; opacity: .68; }
 .hero-content { width: min(100%, var(--hero-content-max-width)); max-width: var(--hero-content-max-width); text-align: left; }
-.hero-badge { color: var(--blue); background: transparent; border: 0; padding: 0; font-family: "Barlow Condensed", sans-serif; font-size: .95rem; letter-spacing: .16em; }
-.hero-name, .section-title, .library-heading h3, .modal-title { font-family: "Barlow Condensed", Impact, sans-serif; font-weight: 700; text-transform: uppercase; }
+/* The hero's eyebrow is the sections' eyebrow: the same size, face, tracking
+   and blue, one step up from where it was. */
+.hero-badge { color: var(--blue-light); background: transparent; border: 0; padding: 0; font-family: var(--font-display); font-size: var(--type-eyebrow); letter-spacing: var(--tracking-eyebrow); }
+.hero-name, .section-title, .library-heading h3, .modal-title { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; }
 .hero-name { --lh: .74; max-width: var(--hero-content-max-width); margin: 0; font-size: clamp(5rem, 13vw, 11.5rem); letter-spacing: -.055em; line-height: var(--lh); }
 .hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
 .social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
@@ -595,7 +683,6 @@ body { background-color: var(--bg); background-image: none; }
 .social-links a:hover,
 .resume-icon-unavailable:hover { background: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .hero-buttons { justify-content: flex-start; }
-.btn { border-radius: 0; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
 .secondary-btn { background: transparent; }
 .hero-buttons .btn {
     background: transparent;
@@ -610,45 +697,37 @@ body { background-color: var(--bg); background-image: none; }
 }
 main { padding-top: 0; }
 .section { transition-duration: .42s; }
-.section-label { color: var(--blue); font-family: "Barlow Condensed", sans-serif; font-size: .9rem; letter-spacing: .17em; }
-.section-title { --lh: .8; font-size: clamp(3.7rem, 8vw, 7rem); letter-spacing: -.035em; line-height: var(--lh); }
-.section-subtitle, .library-heading p, .contact-desc { font-size: .95rem; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
-.bio-text { --lh: 1.45; font-size: clamp(1.18rem, 2.3vw, 1.55rem); line-height: var(--lh); }
 .about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); --card-lift: var(--lift-card); }
-.about-highlight h3, .skill-group-title, .project-title { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
+.about-highlight h3, .skill-group-title, .project-title { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-title); }
 .skills-categories { border-color: var(--line); }
 .skill-group { min-height: 15rem; background: rgba(17,17,17,.9); }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
-.tag { border-color: rgba(123,168,216,.5); color: #b9d6f5; }
 .projects-grid { gap: var(--gutter); border: 0; }
 .project-card { background: #101010; border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
 .project-card:hover { border-color: var(--blue); background: #151515; box-shadow: none; --card-lift: var(--lift-card); }
 .project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.035); }
 .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
-.project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: "Barlow Condensed", sans-serif; font-size: .78rem; letter-spacing: .08em; }
+/* 14px, not 12.5: the condensed face is the hardest one on the page to read
+   small, and this is the one place it sat below its floor. */
+.project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: var(--font-display); font-size: .875rem; letter-spacing: .08em; }
 .project-info { padding: var(--pad-card); }
 .project-title { --lh: .94; font-size: clamp(1.85rem, 2.25vw, 2.15rem); line-height: var(--lh); }
 .project-action-links { border-color: var(--line); }
-.link-btn { border-radius: 0; background: transparent; }
-.link-btn:hover { background: var(--blue); color: #080808; }
+.link-btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; --control-lift: var(--lift-control); }
 .project-library { border-top: 1px solid var(--blue); }
 .collection-toggle { transition: color .2s ease; }
 .collection-toggle > .collection-index,
 .collection-toggle > .collection-copy { transition: transform .2s var(--ease); }
 .collection-toggle:hover > .collection-index,
 .collection-toggle:hover > .collection-copy { transform: translateX(var(--space-3)); }
-.collection-index { color: var(--blue); }
-.collection-copy strong { font-family: "Barlow Condensed", sans-serif; font-size: clamp(1.6rem, 3.2vw, 2.25rem); letter-spacing: .01em; text-transform: uppercase; }
 .carousel-arrow { border-radius: 0; }
 .modal-card { border: 1px solid rgba(123,168,216,.5); box-shadow: 10px 10px 0 rgba(123,168,216,.2); }
 .modal-close { border-radius: 0; }
 .modal-close:hover { background: var(--blue); color: #080808; }
-.modal-header .tag, .modal-card .tag { color: #b9d6f5; border-color: rgba(123,168,216,.5); }
-.modal-detail-section h4 { font-family: "Barlow Condensed", sans-serif; font-size: 1.45rem; letter-spacing: .01em; text-transform: uppercase; }
 footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
 #contact .contact-desc { margin-top: var(--rhythm-heading); }
@@ -887,6 +966,19 @@ main > #contact { padding-bottom: var(--rhythm-section); }
 .project-carousel .project-card.is-carousel-active {
     border-color: rgba(123,168,216,.62);
     box-shadow: 0 22px 52px rgba(0,0,0,.34), 0 0 0 1px rgba(123,168,216,.12);
+}
+/* A carousel only hands over the picture it is showing. A press on a card to
+   either side of the centre is the start of a swipe, but the browser read it
+   as a grab and dragged the photo or GIF out instead. So only the card at the
+   centre -- the one outlined in blue -- lets its picture be dragged, copied or
+   long-pressed; everywhere else the press falls through to the card, which
+   still swipes, still plays its GIF on hover, and still turns the ring round
+   to it on a click. Mid-swipe no card is centred, so nothing can be grabbed. */
+.project-carousel .project-card:not(.is-carousel-active) .project-image {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    user-select: none;
 }
 /* The hover lift is the only thing this used to cancel, and now the card
    answers with it, so the rule has nothing left to say. */
@@ -1217,14 +1309,23 @@ html.effects-background-click-fading .galaxy-nebula {
         --project-image-height: 184px;
         --carousel-image-height: 184px;
         --ring-image-height-compact: 184px;
+        /* The narrowest phones have 296px of column, and Featured Projects
+           needs 304 at the phone size. 40px keeps it on one line and still
+           well under the hero name. */
+        --type-section: 2.5rem;
     }
     .hero-name { font-size: clamp(2.55rem, 15vw, 3.25rem); }
     .hero-buttons > .btn { flex: 1 1 100%; justify-content: center; }
+    .project-summary { font-size: .94rem; }
+}
+/* On a phone an archive row's number column shrinks to its two digits. At the
+   desktop's 48px plus a 24px gap every name started 72px in, and the longest
+   broke onto a second line for want of that room. */
+@media (max-width: 639px) {
     .collection-toggle {
         grid-template-columns: var(--space-6) minmax(0, 1fr) var(--space-5);
         gap: var(--space-3);
     }
-    .project-summary { font-size: .94rem; }
 }
 
 @media (min-width: 360px) and (max-width: 639px) {
@@ -1524,9 +1625,9 @@ html[data-primary-input="touch"] .nav-toggle {
     padding: var(--space-3) var(--space-4);
     background: var(--blue);
     color: #080808;
-    font-size: .8rem;
-    font-weight: 800;
-    letter-spacing: .06em;
+    font-size: var(--type-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
 }
 .skip-link:focus {
@@ -1558,9 +1659,9 @@ button:focus-visible,
 }
 .footer-links a {
     color: var(--muted);
-    font-size: .76rem;
+    font-size: var(--type-label);
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
     transition: color .2s var(--ease);
 }
@@ -1731,6 +1832,7 @@ button:focus-visible,
 }
 .btn,
 .link-btn,
+.modal-quick-link,
 .carousel-arrow,
 .social-links a,
 .resume-icon-unavailable {
@@ -2024,6 +2126,8 @@ html[data-effects="high"] .circular-project-carousel {
 .modal-overview-item h4,
 .about-highlight-role h4,
 .modal-section-heading > h3,
+.about-highlight > .about-highlight-label,
+.modal-section-heading > span,
 .hero-badge {
     --trim-top: calc((
         (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
@@ -2032,7 +2136,6 @@ html[data-effects="high"] .circular-project-carousel {
         (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
         + var(--face-display-descent)) * 1em);
 }
-.about-highlight > .about-highlight-label,
 .about-highlight p,
 .project-summary,
 .modal-summary,
@@ -2042,8 +2145,7 @@ html[data-effects="high"] .circular-project-carousel {
 .library-heading p,
 .contact-desc,
 .bio-text,
-.collection-copy small,
-.modal-section-heading > span {
+.collection-copy small {
     --trim-top: calc((
         (var(--lh) - var(--face-text-ascent) - var(--face-text-descent)) / 2
         + var(--face-text-ascent) - var(--face-text-cap)) * 1em);
@@ -2226,7 +2328,9 @@ html[data-effects="high"] .circular-project-carousel {
    round, and every row of controls keeps its members 12px apart.
    ========================================================================== */
 .btn,
-.contact-links .btn {
+.contact-links .btn,
+.link-btn,
+.modal-quick-link {
     min-height: var(--control-size);
     padding-block: 0;
     padding-inline: calc(var(--control-size) / 2);

@@ -1,0 +1,211 @@
+/* Keep the redesigned navigation isolated from the original site styles. */
+
+.navbar {
+    --nav-muted: var(--muted);
+    /* The bar's inner padding. Its text stands on the page column -- the name
+       over the hero's left edge, the High FX switch over the cards' right
+       edge -- and the surface that appears on scroll reaches this far past
+       it, the way a card's padding sits outside the words inside it. A
+       phone's gutter is too narrow to lend the bar that much room, so there
+       the bar keeps half a rem from the window and its text sits a few pixels
+       inside the column rather than squeezing its padding to fit. */
+    --nav-pad: 1.5rem;
+    position: fixed;
+    inset: calc(1rem + var(--safe-area-top)) 0 auto;
+    z-index: 1000;
+    border: 0;
+    background: transparent;
+}
+.has-scrolled .navbar,
+.navbar[data-nav-open] { background: transparent; border: 0; }
+.navbar .nav-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    width: calc(min(var(--site-max-width), 100% - var(--page-inline-start) - var(--page-inline-end)) + var(--nav-pad) * 2);
+    /* never closer than half a rem to either side of the window */
+    max-width: calc(100% - 1rem);
+    min-height: 3.5rem;
+    margin-inline: auto;
+    padding: 0 var(--nav-pad);
+}
+.navbar .nav-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid transparent;
+    /* the same corner as every card it floats over */
+    border-radius: var(--radius-surface);
+    transition: background .28s, border-color .28s, box-shadow .28s;
+}
+.has-scrolled .navbar .nav-content::before,
+.navbar[data-nav-open] .nav-content::before {
+    background: rgba(16, 17, 19, .84);
+    border-color: rgba(255, 255, 255, .11);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+}
+.navbar .logo {
+    position: relative;
+    z-index: 1;
+    color: var(--ink);
+    -webkit-text-fill-color: currentColor;
+    background: none;
+    filter: none;
+    font-family: var(--font-text);
+    font-size: .9375rem;
+    font-weight: 550;
+    line-height: 1.65;
+    letter-spacing: -.015em;
+    text-transform: none;
+    white-space: nowrap;
+    transition: color .16s;
+}
+.navbar .logo:hover,
+.navbar .logo:focus-visible {
+    color: var(--blue);
+    background: none;
+    filter: none;
+}
+.navbar .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-text);
+    font-weight: 400;
+    line-height: 1.65;
+    letter-spacing: normal;
+    text-transform: none;
+}
+/* The links and the High FX switch are one row, so they are one size. */
+.navbar .nav-links > li > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    color: var(--nav-muted);
+    font-size: var(--type-meta);
+    transition: color .16s;
+}
+.navbar .nav-links > li > a:hover,
+.navbar .nav-links > li > a:focus-visible,
+.navbar .performance-toggle:hover,
+.navbar .performance-toggle:focus-visible { color: var(--blue); }
+.navbar .performance-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--nav-muted);
+    font-size: var(--type-meta);
+    font-weight: 400;
+    white-space: nowrap;
+    transition: color .16s;
+}
+.navbar .performance-toggle-track {
+    width: 28px;
+    height: 16px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 20px;
+    background: #202124;
+    transition: background .28s, border-color .28s;
+}
+.navbar .performance-toggle-track i {
+    top: 3px;
+    left: 3px;
+    width: 8px;
+    height: 8px;
+    background: var(--nav-muted);
+    transition: transform .28s var(--ease), background .28s;
+}
+.navbar .performance-toggle[aria-checked="true"] .performance-toggle-track {
+    background: rgba(123, 168, 216, .09);
+    border-color: rgba(123, 168, 216, .5);
+}
+.navbar .performance-toggle[aria-checked="true"] .performance-toggle-track i {
+    transform: translateX(12px);
+    background: var(--blue);
+}
+@media (min-width: 901px) {
+    .navbar .nav-links {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        justify-content: center;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+    .navbar .nav-links > li { pointer-events: auto; }
+    .navbar .performance-control { position: absolute; right: var(--nav-pad); }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+    .navbar { --nav-pad: 1rem; }
+    .navbar .nav-links { gap: 1.5rem; }
+}
+@media (max-width: 900px) {
+    /* As much padding as the page's gutter can lend while the bar keeps half
+       a rem from the window, so the text still lands on the column down to
+       640px. Below that the phone rule further down takes over. */
+    .navbar { --nav-pad: min(1rem, calc(var(--page-inline-start) - .5rem)); }
+    .navbar .nav-content { gap: 0; }
+    /* No radius of its own: the site's rule makes every icon button a circle. */
+    .navbar .nav-toggle {
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+    }
+    .navbar .nav-toggle:hover,
+    .navbar .nav-toggle:focus-visible { color: var(--blue); }
+    .navbar .nav-links {
+        display: block;
+        flex-basis: 100%;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height .3s var(--ease);
+    }
+    .navbar[data-nav-open] .nav-links { max-height: 20rem; }
+    /* An open menu is read and tapped rather than skimmed, so its rows take
+       the size of card copy instead of the bar's smaller text. */
+    .navbar .nav-links > li > a,
+    .navbar .nav-links .performance-toggle {
+        display: flex;
+        justify-content: flex-start;
+        width: 100%;
+        padding-block: .75rem;
+        font-size: var(--type-small);
+    }
+    .navbar[data-nav-open] .nav-content::before { background: #101113; }
+}
+@media (max-width: 639px) {
+    .navbar {
+        top: calc(.5rem + var(--safe-area-top));
+        --nav-pad: .75rem;
+    }
+    .navbar .logo { font-size: .875rem; }
+}
+@media (max-width: 359px) {
+    .navbar .logo { font-size: .8125rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .navbar .logo,
+    .navbar .nav-links,
+    .navbar .nav-links > li > a,
+    .navbar .performance-toggle,
+    .navbar .performance-toggle-track,
+    .navbar .performance-toggle-track i,
+    .navbar .nav-content::before { transition: none; }
+}

@@ -46,6 +46,17 @@
 
     /* The body line-height, named so the trim below can do arithmetic on it. */
     --lh-body: 1.65;
+
+    /* The type roles these pages share with the portfolio -- eyebrow, control
+       label, fine print -- and the lighter blue it sets its eyebrows in.
+       Copied from portfolio.css, which carries the whole scale. */
+    --blue-light: #9dccff;
+    --type-eyebrow: clamp(1rem, .875rem + .4vw, 1.25rem);
+    --type-meta: .875rem;
+    --type-label: .8125rem;
+    --tracking-display: -.035em;
+    --tracking-eyebrow: .14em;
+    --tracking-caps: .08em;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -102,12 +113,13 @@ a { color: inherit; }
     justify-content: space-between;
     gap: var(--space-4);
 }
+/* Set the way the portfolio's own bar sets the name, so the mark in the
+   corner is the same on every page of the site. */
 .page-logo {
-    font-family: "Barlow Condensed", Inter, sans-serif;
-    font-size: 1.05rem;
-    font-weight: 800;
-    letter-spacing: .12em;
-    text-transform: uppercase;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: .9375rem;
+    font-weight: 550;
+    letter-spacing: -.015em;
     text-decoration: none;
 }
 .page-back {
@@ -115,9 +127,9 @@ a { color: inherit; }
     align-items: center;
     gap: var(--space-2);
     color: var(--muted);
-    font-size: .78rem;
+    font-size: var(--type-label);
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
     text-decoration: none;
     transition: color .2s var(--ease);
@@ -132,14 +144,18 @@ a { color: inherit; }
     padding: clamp(var(--space-7), 8vw, var(--space-9)) 0 var(--space-9);
 }
 
+/* Set like the portfolio's section labels, in the display face -- so the trim
+   at the end of this file lists it with the headings, not the body text. */
 .page-eyebrow {
-    --lh: var(--lh-body);
+    --lh: 1.55;
     display: block;
     margin-bottom: var(--rhythm-label);
-    color: var(--blue);
-    font-size: .72rem;
+    color: var(--blue-light);
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: var(--type-eyebrow);
     font-weight: 700;
-    letter-spacing: .18em;
+    line-height: var(--lh);
+    letter-spacing: var(--tracking-eyebrow);
     text-transform: uppercase;
 }
 
@@ -147,17 +163,19 @@ a { color: inherit; }
     --lh: 1.02;
     font-family: "Barlow Condensed", Inter, sans-serif;
     font-size: clamp(2.3rem, 7vw, 3.4rem);
-    font-weight: 800;
+    font-weight: 700;
     line-height: var(--lh);
-    letter-spacing: -.02em;
+    letter-spacing: var(--tracking-display);
     text-transform: uppercase;
 }
 
-.page-updated {
+/* Scoped past `.page-main p`, which would otherwise set this date at body size
+   instead of as fine print. */
+.page-main .page-updated {
     --lh: var(--lh-body);
     margin-top: var(--rhythm-heading);
     color: var(--muted);
-    font-size: .82rem;
+    font-size: var(--type-meta);
 }
 
 /* Scoped past `.page-main p + p`, which would otherwise give the opening
@@ -239,9 +257,9 @@ a { color: inherit; }
     gap: var(--space-2);
     padding: var(--space-3) var(--space-5);
     border: 1px solid var(--line);
-    font-size: .74rem;
+    font-size: var(--type-label);
     font-weight: 700;
-    letter-spacing: .08em;
+    letter-spacing: var(--tracking-caps);
     text-transform: uppercase;
     text-decoration: none;
     cursor: pointer;
@@ -290,7 +308,7 @@ a { color: inherit; }
     border-top: 1px solid var(--line);
     padding: var(--space-6) 0 calc(var(--space-6) + var(--safe-area-bottom));
     color: var(--muted);
-    font-size: .8rem;
+    font-size: var(--type-meta);
 }
 .page-footer-inner {
     width: min(calc(100% - var(--page-inline-start) - var(--page-inline-end)), 60rem);
@@ -316,7 +334,8 @@ a { color: inherit; }
    block's line-height as a plain number and list it under its face. */
 .page-main h1,
 .page-main h2,
-.page-main .error-code {
+.page-main .error-code,
+.page-eyebrow {
     --trim-top: calc((
         (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
         + var(--face-display-ascent) - var(--face-display-cap)) * 1em);
@@ -324,7 +343,6 @@ a { color: inherit; }
         (var(--lh) - var(--face-display-ascent) - var(--face-display-descent)) / 2
         + var(--face-display-descent)) * 1em);
 }
-.page-eyebrow,
 .page-updated,
 .page-lede,
 .page-main p,

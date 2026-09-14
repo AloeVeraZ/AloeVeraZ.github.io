@@ -53,6 +53,40 @@ and add it to the list for the face it is set in.
 `tools/measure-faces.js` re-reads those font metrics, and is the thing to run
 if a typeface is ever swapped or resubset.
 
+## Type
+
+Every piece of text takes one of these roles, declared at the top of
+`portfolio.css` beside the spacing tokens. Barlow Condensed, in capitals, is for
+anything read as a name; Inter is for anything read as a sentence.
+
+| Token | Size | Used for |
+| --- | --- | --- |
+| `--type-section` | 44–112px | a section's title |
+| `--type-subsection` | 38–72px | a title inside a section: My Projects |
+| `--type-sheet-title` | 36–56px | a project's name in its sheet |
+| `--type-sheet-heading` | 26–40px | a heading inside the sheet |
+| `--type-card-title` | 19–22px | the name on an About, Skills or sheet card |
+| `--type-eyebrow` | 16–20px | the label over a section title |
+| `--type-eyebrow-sm` | 15px | the label over a card or sheet heading |
+| `--type-intro` | 16–18px | the line that introduces a section |
+| `--type-small` | 15px | the copy inside a card |
+| `--type-meta` | 14px | dates, captions, nav links, fine print |
+| `--type-label` | 13px | buttons, tags and other controls |
+
+The ranges are `clamp()`s between a phone and a desktop, so the steps keep
+their proportions at every width. The px figures assume the usual 16px root;
+every step is in rem, so they grow with it. Letter-spacing comes from four more
+tokens (`--tracking-display`, `--tracking-title`, `--tracking-eyebrow`,
+`--tracking-caps`) and text colour from `--ink`, `--muted`, `--blue-light` for
+labels and `--blue-soft` for dates and tags. A few pieces keep sizes of their
+own: the hero name and tagline, the bio, project card titles and summaries, the
+category chip, archive row names, and the project sheet's summary and numbered
+parts. A new piece of text should pick a role, not a size.
+
+The floors are for readers with weaker eyes. Nothing a visitor has to read is
+set below 13px, nothing in the condensed face below 14px, and text colours are
+chosen to hold at least 7:1 contrast against whatever sits behind them.
+
 ## Nothing loads from a third party
 
 Fonts, icons, and every project image are served from this domain. Opening the
@@ -102,10 +136,10 @@ console and prints the `--face-*` metrics the leading trim needs.
 Run `build-icons.py` again whenever the markup starts using a new `fa-` icon,
 otherwise that glyph will not be in the subset and will render as a blank box.
 
-After changing `portfolio.css`, `portfolio.js`, or `portfolio-data.json`, bump
-the `?v=` cache-busting suffix in the HTML files (and the one on the
-`portfolio-data.json` fetch inside `portfolio.js`) so returning visitors do not
-get a stale copy.
+After changing `portfolio.css`, `navbar.css`, `page.css`, `portfolio.js`, or
+`portfolio-data.json`, bump the `?v=` cache-busting suffix in the HTML files
+(and the one on the `portfolio-data.json` fetch inside `portfolio.js`) so
+returning visitors do not get a stale copy.
 
 ## Hosting notes
 
