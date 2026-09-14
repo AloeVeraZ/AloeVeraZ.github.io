@@ -1,152 +1,97 @@
-# Angelo Demetroulakos — Engineering Portfolio
+# Angelo Demetroulakos: Engineering Portfolio
 
-This is the source for my personal engineering portfolio: [aloeveraz.github.io](https://aloeveraz.github.io/).
-
-I use the site to keep my robotics, CAD, controls, manufacturing, and 3D-printing work in one place. The project cards come from one JSON file, so I can add a build without rewriting the page layout each time.
+Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), covering my robotics, CAD, controls, manufacturing and 3D printing work. Every project card is built from one JSON file, so adding a project doesn't touch the page layout.
 
 ## Files
 
-- `index.html` contains the page structure and project modal.
-- `portfolio.css` handles the layout, responsive styles, and visual effects.
-- `portfolio.js` renders the profile, project collections, carousels, and modal content.
-- `navbar.css` styles the floating navigation bar, and `glass.js` gives it -- and the About, Skills and project cards, the hero, social and contact buttons and the carousel arrows -- their liquid glass. In High FX, Chromium browsers bend the page behind them with SVG filters; Safari and Firefox, which cannot filter a live backdrop that way, frost the page behind the bar and bend the sky under it on its canvas instead, and the cards and buttons frost without bending. Low FX frosts all of it and bends nothing. Every piece of glass wears the navigation's rim; under the cursor a card's rim turns blue and a button fills with blue glass, and in High FX both lean toward it. The notes at the top of `glass.js` explain the modes.
-- `portfolio-data.json` holds the profile, skills, project write-ups, media, and links.
-- `consent.js` keeps YouTube embeds from loading until a visitor asks for them.
-- `assets/` contains the project photos, GIFs, graphics, and the self-hosted fonts.
-- `project-example.json` is a project record I can copy when adding something new.
+| File | Purpose |
+| --- | --- |
+| `index.html` | Page structure and the project sheet |
+| `portfolio.css` | Layout, responsive rules and visual effects |
+| `portfolio.js` | Renders the profile, projects, carousels and project sheet |
+| `navbar.css` | The floating navigation bar |
+| `glass.js` | The liquid glass on the bar, cards and buttons (the modes are explained at the top of the file) |
+| `portfolio-data.json` | Profile, skills, project write-ups, media and links |
+| `project-example.json` | Template for a new project |
+| `assets/` | Photos, GIFs, graphics and self-hosted fonts |
+| `tools/` | Scripts that rebuild images, icons and fonts |
 
-Supporting pages and files: `privacy.html`, `terms.html`, `404.html`, `page.css`
-and `page.js` (shared styling and the zoom-aware root font size for those
-three), `fonts.css`, `icons.css`, `robots.txt`, `sitemap.xml`, and
-`site.webmanifest`.
-
-## Spacing
-
-Every vertical gap on the site comes from one of six tokens, declared and
-explained at the top of `portfolio.css` and copied into `page.css`:
-
-| Token | Value | Used between |
-| --- | --- | --- |
-| `--rhythm-label` | 12px | a label and the heading it names; one list item and the next |
-| `--rhythm-heading` | 16px | a heading and the line that supports it; one line of a passage and the next |
-| `--rhythm-rule` | 16px | either side of a rule inside a card |
-| `--rhythm-block` | 24px | one block and the next inside a section |
-| `--rhythm-header` | 48px | a header and the content it heads |
-| `--rhythm-section` | 48–96px | one section and the next |
-
-Which token a gap takes depends on what the two things are to each other, not
-on where they sit, so the hero's badge stands above the name at exactly the
-distance a section's label stands above its title. Nothing sets a spacing value
-of its own; if a new pair does not fit one of the six, the pair is probably
-named wrong.
-
-These are the distances you *see*, not the distances between two boxes. A line
-box is taller than the letters in it, and by a different amount for every
-line-height on the page — which is why the hero's name used to sit visibly
-closer to the badge above it than to the tagline below it, despite having the
-larger margin of the two. Each text block is therefore leading-trimmed: a pair
-of zero-height pseudo-elements pulls its box in to cap height at the top and
-the baseline at the bottom, using the font metrics in the same `:root` block.
-The end of `portfolio.css` carries the arithmetic. To trim a new block, set
-`--lh` to its line-height as a plain number, write `line-height: var(--lh)`,
-and add it to the list for the face it is set in.
-
-`tools/measure-faces.js` re-reads those font metrics, and is the thing to run
-if a typeface is ever swapped or resubset.
-
-## Type
-
-Every piece of text takes one of these roles, declared at the top of
-`portfolio.css` beside the spacing tokens. Barlow Condensed, in capitals, is for
-anything read as a name; Inter is for anything read as a sentence.
-
-| Token | Size | Used for |
-| --- | --- | --- |
-| `--type-section` | 44–112px | a section's title |
-| `--type-subsection` | 38–72px | a title inside a section: My Projects |
-| `--type-sheet-title` | 36–56px | a project's name in its sheet |
-| `--type-sheet-heading` | 26–40px | a heading inside the sheet |
-| `--type-card-title` | 19–22px | the name on an About, Skills or sheet card |
-| `--type-eyebrow` | 16–20px | the label over a section title |
-| `--type-eyebrow-sm` | 15px | the label over a card or sheet heading |
-| `--type-intro` | 16–18px | the line that introduces a section |
-| `--type-small` | 15px | the copy inside a card |
-| `--type-meta` | 14px | dates, captions, nav links, fine print |
-| `--type-label` | 13px | buttons, tags and other controls |
-
-The ranges are `clamp()`s between a phone and a desktop, so the steps keep
-their proportions at every width. The px figures assume the usual 16px root;
-every step is in rem, so they grow with it. Letter-spacing comes from four more
-tokens (`--tracking-display`, `--tracking-title`, `--tracking-eyebrow`,
-`--tracking-caps`) and text colour from `--ink`, `--muted`, `--blue-light` for
-labels and `--blue-soft` for dates and tags. A few pieces keep sizes of their
-own: the hero name and tagline, the bio, project card titles and summaries, the
-category chip, archive row names, and the project sheet's summary and numbered
-parts. A new piece of text should pick a role, not a size.
-
-The floors are for readers with weaker eyes. Nothing a visitor has to read is
-set below 13px, nothing in the condensed face below 14px, and text colours are
-chosen to hold at least 7:1 contrast against whatever sits behind them.
-
-## Nothing loads from a third party
-
-Fonts, icons, and every project image are served from this domain. Opening the
-page makes no request to Google, a CDN, or an analytics service, and the site
-sets no cookies. The only outside request is YouTube, and a project video stays
-a local placeholder until someone clicks it. `privacy.html` explains this to
-visitors; keep the two in step if that ever changes.
+Also: `privacy.html`, `terms.html`, `updates.html` (the site's major versions) and `404.html` (styled by `page.css`, with `page.js` setting the zoom-aware font size), `fonts.css`, `icons.css`, `robots.txt`, `sitemap.xml` and `site.webmanifest`.
 
 ## Run locally
 
-The portfolio is a static site, but it needs a local server so the browser can load the JSON file.
+The page loads its data with `fetch`, so it needs a local server:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open [http://localhost:8000](http://localhost:8000).
+Then open <http://localhost:8000>.
 
 ## Add a project
 
-1. Add the project images to `assets/`.
-2. Copy the record in `project-example.json` into the `projects` array in `portfolio-data.json`.
-3. Replace the example values and set `category` and `collectionOrder`.
-4. Write an `imageAlt` describing what is actually in the picture — not the project name, which the heading beside it already says.
-5. Set `featured` to `true` and add a `featuredOrder` when the project belongs in the first row.
-6. Run the media scripts below, then check the card, project modal, links, and mobile layout locally.
+1. Put the images in `assets/`.
+2. Copy the record in `project-example.json` into the `projects` array in `portfolio-data.json` and fill it in, including `category` and `collectionOrder`.
+3. Write `imageAlt` to describe what the picture shows, not the project's name.
+4. To put it in the top row, set `featured` to `true` and give it a `featuredOrder`.
+5. Run the media scripts below, then check the card, project sheet, links and mobile layout locally.
 
-Empty links and media fields are skipped by the page, so unfinished material can stay out of the public portfolio until it is ready.
+Empty link and media fields are skipped, so unfinished work stays off the site.
 
-## Rebuilding media and assets
+## Media and assets
 
-The scripts in `tools/` regenerate the files that are not written by hand. They
-need Python with `pillow`, `fonttools`, and `brotli`.
+The scripts in `tools/` need Python with `pillow`, `fonttools` and `brotli`:
 
 ```bash
-python tools/build-images.py      # source photos/GIFs -> compressed WebP
-python tools/build-thumbnails.py  # 900px card variants next to each image
-python tools/link-thumbnails.py   # record each card's srcset in the JSON
+python tools/build-images.py      # source photos/GIFs -> WebP
+python tools/build-thumbnails.py  # 900px card versions of each image
+python tools/link-thumbnails.py   # write each card's srcset into the JSON
 python tools/build-icons.py       # subset Font Awesome to the icons in use
-python tools/build-fonts.py       # download and self-host Inter + Barlow Condensed
-python tools/build-brand.py       # favicon set and the social preview card
+python tools/build-fonts.py       # download and self-host Inter and Barlow Condensed
+python tools/build-brand.py       # favicons and the social preview image
 ```
 
-`tools/measure-faces.js` is not part of that run: it is pasted into the browser
-console and prints the `--face-*` metrics the leading trim needs.
+Run `build-icons.py` again after using a new `fa-` icon, or it will show up as a blank box. `tools/measure-faces.js` runs in the browser console and prints the font metrics the text trimming below depends on.
 
-Run `build-icons.py` again whenever the markup starts using a new `fa-` icon,
-otherwise that glyph will not be in the subset and will render as a blank box.
+## Caching
 
-After changing `portfolio.css`, `navbar.css`, `page.css`, `portfolio.js`,
-`glass.js`, or `portfolio-data.json`, bump the `?v=` cache-busting suffix in the HTML files
-(and the one on the `portfolio-data.json` fetch inside `portfolio.js`) so
-returning visitors do not get a stale copy.
+After changing a CSS or JS file or `portfolio-data.json`, bump its `?v=` suffix in the HTML (the data file's is on its `fetch` in `portfolio.js`) so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed.
 
-## Hosting notes
+## Spacing and type
 
-GitHub Pages serves this from the repository root. HTTPS needs no action: a
-`*.github.io` host is on the HSTS preload list and GitHub redirects `http://`
-to `https://` on its own — verified against the live site. The
-`upgrade-insecure-requests` meta tag in each page covers subresources. If this
-ever moves to a custom domain, that stops being automatic and **Settings → Pages
-→ Enforce HTTPS** has to be switched on for the new domain.
+Spacing and type sizes come from tokens at the top of `portfolio.css`, copied into `page.css`. New elements should use a token, not a raw value.
+
+| Spacing token | Value | Used between |
+| --- | --- | --- |
+| `--rhythm-label` | 12px | a label and its heading; list items |
+| `--rhythm-heading` | 16px | a heading and the text under it; paragraphs |
+| `--rhythm-rule` | 16px | a rule inside a card and what's on either side |
+| `--rhythm-block` | 24px | blocks inside a section |
+| `--rhythm-header` | 48px | a section header and its content |
+| `--rhythm-section` | 48–96px | one section and the next |
+
+Text blocks are leading-trimmed, so these are the gaps you actually see between letters rather than between line boxes. To trim a new block, set `--lh` to its line-height, use `line-height: var(--lh)`, and add it to the list for its typeface at the end of `portfolio.css`.
+
+| Type token | Size | Used for |
+| --- | --- | --- |
+| `--type-section` | 44–112px | section titles |
+| `--type-subsection` | 38–72px | titles inside a section |
+| `--type-sheet-title` | 36–56px | a project's name in its sheet |
+| `--type-sheet-heading` | 26–40px | headings in the sheet |
+| `--type-card-title` | 19–22px | card titles |
+| `--type-eyebrow` | 16–20px | labels over section titles |
+| `--type-eyebrow-sm` | 15px | labels over card and sheet headings |
+| `--type-intro` | 16–18px | section intros |
+| `--type-small` | 15px | card copy |
+| `--type-meta` | 14px | dates, captions, nav links, fine print |
+| `--type-label` | 13px | buttons, tags and other controls |
+
+Barlow Condensed, in capitals, is for names; Inter is for sentences. Letter spacing uses `--tracking-display`, `--tracking-title`, `--tracking-eyebrow` and `--tracking-caps`, and text color uses `--ink`, `--muted`, `--blue-light` (labels) and `--blue-soft` (dates and tags). A few pieces keep their own sizes: the hero name and tagline, the bio, project card titles and summaries, the category chip, archive row names, and the sheet's summary and numbered parts. Nothing a visitor has to read is smaller than 13px, or 14px in the condensed face, and text keeps at least 7:1 contrast.
+
+## Privacy
+
+Fonts, icons and images are all served from this domain, and the site sets no cookies and runs no analytics. The only outside request is YouTube: the player loads from `youtube-nocookie.com` when someone opens a project with a video. If that changes, update `privacy.html` to match.
+
+## Hosting
+
+GitHub Pages serves the repository root. HTTPS needs no setup, since `*.github.io` is on the HSTS preload list and GitHub redirects `http://` itself, and each page's `upgrade-insecure-requests` tag covers subresources. On a custom domain, turn on **Settings → Pages → Enforce HTTPS**.

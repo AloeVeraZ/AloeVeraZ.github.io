@@ -42,29 +42,30 @@
     transition: background .28s, border-color .28s, box-shadow .28s;
 }
 /* ---- Liquid glass ---------------------------------------------------------
-   The bar that appears on scroll is a sheet of glass. glass.js decides how
-   much of the effect this browser can show and writes it to html[data-glass].
-   Each mode changes only what happens to the backdrop; the layers are the
-   same everywhere:
+   The bar that appears on scroll is the same glass as the cards and buttons
+   below it (portfolio.css): the same thin surface grey (--glass-surface) and
+   the same frost (--glass-blur, --glass-brightness), so it reads as one more
+   piece of the page's glass rather than a clearer sheet laid over it. It is
+   the thickest piece, so in High FX it bends the most at its rim. glass.js
+   decides how much of the effect this browser can show and writes it to
+   html[data-glass]:
 
-     refract  High FX, Chromium: the backdrop bends through an SVG filter
+     refract  High FX, Chromium: the frosted backdrop bends through an SVG
+              filter
      lens     High FX, Safari and Firefox: the page behind frosts, and the sky
               bends under the bar on its own canvas
-     frost    Low FX: a light blur, and nothing bends
+     frost    Low FX: the page behind frosts, and nothing bends
 
-   The tint is one even sheet, as clear right across as the glass is at its
-   edges, so the whole bar reads as glass. It used to darken across the
-   middle, under the words, which read as a dark band laid through the glass.
    The links keep legible over the brightest thing that can scroll behind
-   them -- the hero's name, a white photo -- through the backdrop filter's
-   dimming and the soft shadow the text carries. */
-.navbar { --glass-tint: .3; }
+   them -- the hero's name, a white photo -- through the frost and the soft
+   shadow the text carries. */
+.navbar { --nav-tint: var(--glass-surface); }
 .navbar .nav-content::before {
     border-color: var(--glass-edge-ring);
     background:
         radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
         linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 30%),
-        rgba(14, 15, 18, var(--glass-tint));
+        var(--nav-tint);
     box-shadow:
         0 12px 32px rgba(0, 0, 0, .3),
         inset 0 1px 1px rgba(255, 255, 255, .14),
@@ -73,33 +74,28 @@
     transition: opacity .28s;
 }
 /* The backdrop filter only runs while the glass is showing: at the top of the
-   page there is no bar, and nothing behind it should be paying for one. */
+   page there is no bar, and nothing behind it should be paying for one. In
+   lens mode the frost falls on the sky glass.js has already bent, as it does
+   on the cards; a browser with no backdrop filter at all gets the cards'
+   denser sheet instead (portfolio.css). */
 .has-scrolled .navbar .nav-content::before,
 .navbar[data-nav-open] .nav-content::before {
     opacity: 1;
-    -webkit-backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
-    backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
-/* Only a hair of blur in lens mode: the bending happens on the sky beneath,
-   and a heavier frost would smear it away before it reached the eye. */
-html[data-glass="lens"] .has-scrolled .navbar .nav-content::before {
-    -webkit-backdrop-filter: blur(1.2px) saturate(1.6) brightness(.82);
-    backdrop-filter: blur(1.2px) saturate(1.6) brightness(.82);
-}
+/* The frost goes on first and the bend after it, as on the cards. Until
+   glass.js has hung its filter on the bar, the bar frosts without bending. */
 html[data-glass="refract"] .has-scrolled .navbar .nav-content::before {
-    /* glass.js hangs the filter it built to the bar's size on the bar */
-    backdrop-filter: var(--glass-filter, blur(4px)) saturate(1.6) brightness(.82);
+    backdrop-filter: blur(var(--glass-blur)) var(--glass-filter,) saturate(1.4) brightness(var(--glass-brightness));
 }
-/* An open menu is frosted in every mode: it is nearly opaque, so there is
-   little to see bend, and it changes height on every frame as it opens. */
+/* An open menu frosts in every mode, over the cards' denser sheet: it lies
+   over the hero's lettering, where its links have to read at a glance, and
+   it changes height on every frame as it opens, which is no time to bend. */
 html[data-glass] .navbar[data-nav-open] .nav-content::before {
-    -webkit-backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
-    backdrop-filter: blur(4px) saturate(1.25) brightness(.82);
-}
-/* A browser with no backdrop filter at all dims nothing behind the glass, so
-   the tint has to do all of it. */
-@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-    .navbar { --glass-tint: .8; }
+    --nav-tint: var(--glass-surface-dense);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
 /* The rim: a hairline that catches the light along the top edge and fades
    round the ends -- a masked gradient border, so it can vary along its
@@ -279,9 +275,6 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
         padding-block: .75rem;
         font-size: var(--type-small);
     }
-    /* An open menu sits over the hero's lettering, so its glass is nearly
-       opaque there: the links have to read at a glance. */
-    .navbar[data-nav-open] .nav-content::before { --glass-tint: .88; }
 }
 @media (max-width: 639px) {
     .navbar {

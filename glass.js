@@ -5,12 +5,12 @@
 
    The glass comes in two strengths:
 
-     bar      the navigation. Thick, clear toward its top and bottom edges,
-              and bent the most.
+     bar      the navigation: the thickest piece, bent the most at its rim.
      surface  the About, Skills and project cards, the hero, social and
-              contact buttons, and the carousel arrows. The same glass,
-              thinner and frosted (portfolio.css): the sky shows through
-              softly, bent at the edges.
+              contact buttons, and the carousel arrows: thinner, bent less.
+
+   Both are the same frosted glass (portfolio.css, navbar.css): the sky shows
+   through softly, and in High FX bends toward the edges.
 
    How much of it a browser can show is written to html[data-glass]:
 
@@ -27,7 +27,7 @@
               which this site paints itself -- on its own canvas: portfolio.js
               calls paintBackdrop() once a frame. Cards and buttons frost.
      frost    Low FX, everywhere, and for anyone whose system asks for less
-              transparency or more contrast: the bar blurs lightly, cards and
+              transparency or more contrast: the bar, the cards and the
               buttons frost, and nothing bends. (The stylesheets make all of
               it solid for the second group.) */
 (() => {
@@ -68,13 +68,13 @@
     // crossing the bar's rim were drawn out far longer than the letters beside
     // them.) Every point samples from further in than the point just outside
     // it, so the glass never folds what is behind it into mirrored slices.
-    // dispersion bends blue a trace further than red, as real glass does --
-    // on the bar only: the thinner glass is frosted, and a fringe that fine
-    // would not survive it. soften is the frost, in px -- none on the thinner
-    // glass, which portfolio.css frosts with a blur of its own before this
-    // filter bends what shows through. density is the map's resolution.
+    // dispersion bends blue a trace further than red, as real glass does, and
+    // soften is a frost of the filter's own, in px. Both are off: all of the
+    // glass, the bar included, is frosted by its stylesheet before this filter
+    // bends what shows through, and neither would survive that. density is
+    // the map's resolution.
     const GLASS = {
-        bar: { bevel: 26, stretch: 1.8, dispersion: .008, soften: 1, density: 2 },
+        bar: { bevel: 26, stretch: 1.8, dispersion: 0, soften: 0, density: 2 },
         surface: { bevel: 18, stretch: 1.7, dispersion: 0, soften: 0, density: 1 }
     };
     const CURVE = 1.5;
