@@ -114,24 +114,29 @@ document.addEventListener('DOMContentLoaded', () => {
         ? savedEffectsMode
         : (meetsHighEffectsBaseline ? 'high' : 'low');
     let effectsReason = savedEffectsMode ? 'manual' : 'hardware';
-    // The automatic downgrade is a safety net for hardware that genuinely
-    // cannot keep up -- not for the ordinary hitches every machine produces
-    // (first paint, font swap, a GC pause, the compositor waking up). All of
-    // the numbers below are deliberately conservative: a window only counts as
-    // slow when the page is visibly bad, and it takes several of those in a row
-    // before Low FX takes over.
-    const PERFORMANCE_WINDOW_MS = 5000;
-    const PERFORMANCE_WARMUP_MS = 8000;
+    // Low FX takes over as soon as High FX turns clunky: two seconds in a row
+    // where the typical frame runs at 30fps or worse, or where a quarter of
+    // the frames stutter. A lone spike -- a GC pause, a collection opening --
+    // is neither, so it never costs anyone High FX. Seconds are only measured
+    // while the page is visible, focused and settled, so the hitches every
+    // machine produces at first paint, when a tab comes back or when a window
+    // is resized are never scored either.
+    const PERFORMANCE_WINDOW_MS = 1000;
+    const PERFORMANCE_WARMUP_MS = 4000;
     const PERFORMANCE_RESUME_DELAY_MS = 2000;
-    const SLOW_WINDOWS_BEFORE_DOWNGRADE = 3;
-    const MIN_ACCEPTABLE_FPS = 24;
+    const MIN_SMOOTH_FPS = 33;
+    const CLUNKY_WINDOWS_BEFORE_DOWNGRADE = 2;
     let performanceMonitorFrame = 0;
     let performanceMonitorStartedAt = 0;
     let performanceMonitorLastFrame = 0;
     const performanceMonitorFrameTimes = [];
     let performanceSamplingResumesAt = 0;
-    let consecutiveSlowWindows = 0;
+    let clunkyWindows = 0;
     let automaticDowngradeComplete = false;
+    // Set when the visitor turns High FX back on after it was switched off
+    // for them: they have overruled the monitor, so it stands down for the
+    // rest of the visit.
+    let highKeptDespiteLag = false;
     let backgroundIdleTimer = 0;
     let backgroundFadeTimer = 0;
 
@@ -172,14 +177,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // page load, tab switches, window resizes. The catch-up frames afterwards
     // look exactly like jank but say nothing about how the page really runs.
     const deferPerformanceSampling = (delay, timestamp = performance.now()) => {
-        consecutiveSlowWindows = 0;
+        clunkyWindows = 0;
         performanceSamplingResumesAt = Math.max(performanceSamplingResumesAt, timestamp + delay);
         resetPerformanceWindow(timestamp);
     };
 
-    const medianFrameTime = samples => {
+    // The frame time a given share of the samples come in under: .5 is the
+    // median, .25 the quickest quarter.
+    const frameTimeAt = (samples, share) => {
         const sorted = [...samples].sort((a, b) => a - b);
-        return sorted[Math.floor(sorted.length / 2)] || 16.7;
+        return sorted[Math.floor(sorted.length * share)] || 16.7;
     };
 
     const monitorPerformance = timestamp => {
@@ -191,8 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
             || document.hidden
             || !document.hasFocus()
             || automaticDowngradeComplete
-            // High FX the visitor picked themselves is theirs to reverse.
-            || effectsReason === 'manual'
+            || highKeptDespiteLag
             || timestamp < performanceSamplingResumesAt) {
             resetPerformanceWindow(timestamp);
             return;
@@ -214,32 +220,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (windowLength < PERFORMANCE_WINDOW_MS) return;
 
         const frames = performanceMonitorFrameTimes.length;
-        // The median frame time is this display's real cadence: 16.7ms at 60Hz,
-        // 6.9ms at 144Hz, 33ms on a battery-saver panel capped at 30fps that is
-        // still perfectly smooth. Measuring hitches against that instead of an
-        // assumed 60Hz is what stops healthy-but-throttled machines from being
-        // called slow -- the old fixed 45ms/160ms limits flagged them
-        // constantly, which is why High FX kept switching itself off.
-        const displayFrameTime = medianFrameTime(performanceMonitorFrameTimes);
-        const longFrameLimit = Math.max(displayFrameTime * 3, 60);
-        const severeFrameLimit = Math.max(displayFrameTime * 10, 260);
+        // Judged by the quicker frames, not the average: if even the quickest
+        // quarter of a second's frames take longer than a 30fps frame, the
+        // page itself is slow, while a lone spike that drags an average down
+        // never touches them. Stutter is measured against the display's own
+        // cadence, the median frame (16.7ms at 60Hz, 6.9ms at 144Hz): a frame
+        // counts as long when it takes three of those or more.
+        const quickFrameTime = frameTimeAt(performanceMonitorFrameTimes, .25);
+        const longFrameLimit = Math.max(frameTimeAt(performanceMonitorFrameTimes, .5) * 3, 50);
         let longFrames = 0;
-        let severeFrames = 0;
         for (const sample of performanceMonitorFrameTimes) {
             if (sample > longFrameLimit) longFrames += 1;
-            if (sample > severeFrameLimit) severeFrames += 1;
         }
-        const averageFps = frames / (windowLength / 1000);
-        const longFrameRatio = longFrames / Math.max(frames, 1);
-        // Either the page is slow outright, or it stutters through a third of
-        // the window, or it locks up several times inside five seconds.
-        const slowWindow = averageFps < MIN_ACCEPTABLE_FPS
-            || longFrameRatio > .35
-            || severeFrames >= 5;
-        consecutiveSlowWindows = slowWindow ? consecutiveSlowWindows + 1 : 0;
+        const clunky = quickFrameTime > 1000 / MIN_SMOOTH_FPS
+            || longFrames / Math.max(frames, 1) > .25;
+        clunkyWindows = clunky ? clunkyWindows + 1 : 0;
         resetPerformanceWindow(timestamp);
 
-        if (consecutiveSlowWindows >= SLOW_WINDOWS_BEFORE_DOWNGRADE) {
+        if (clunkyWindows >= CLUNKY_WINDOWS_BEFORE_DOWNGRADE) {
             automaticDowngradeComplete = true;
             applyEffectsMode('low', false, 'lag');
         }
@@ -273,6 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     performanceToggle.addEventListener('click', () => {
+        // Turning High FX back on after the monitor switched it off is the
+        // visitor overruling it, and that stands for the rest of the visit.
+        if (effectsMode === 'low' && effectsReason === 'lag') highKeptDespiteLag = true;
         automaticDowngradeComplete = false;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true, 'manual');
