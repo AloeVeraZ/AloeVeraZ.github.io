@@ -55,7 +55,7 @@ Run `build-icons.py` again after using a new `fa-` icon, or it will show up as a
 
 ## Caching
 
-After changing a CSS or JS file or `portfolio-data.json`, bump its `?v=` suffix in the HTML (the data file's is on its `fetch` in `portfolio.js`) so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed.
+After changing a CSS or JS file, bump its `?v=` suffix in the HTML so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed. `portfolio-data.json` needs no bump: it is fetched with `cache: 'no-cache'`, so the browser checks for a newer copy on every visit.
 
 ## Spacing and type
 
