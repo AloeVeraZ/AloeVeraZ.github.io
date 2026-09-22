@@ -2,29 +2,39 @@
     --bg: #080808;
     --surface: #111111;
     --surface-raised: #1a1a1a;
-    /* The cards' and buttons' liquid glass (glass.js): a thin surface grey that
-       the sky shows through, frosted. The project cards keep a denser sheet.
-       Solid again for anyone who asks their system for less transparency or
-       more contrast -- see "Glass surfaces" below. */
+    /* The one liquid glass the site is cut from, the navigation bar included
+       (glass.js): a thin surface grey that the sky shows through, frosted.
+       The denser sheet is for the two places with no frost to lean on -- see
+       "Glass surfaces" below, which also makes both solid again for anyone
+       who asks their system for less transparency or more contrast. */
     --glass-surface: rgba(26, 27, 30, .45);
     --glass-surface-dense: rgba(26, 27, 30, .84);
     /* The rim every sheet of glass wears, the navigation's included: a faint
-       ring all the way round, and over it a hairline of light that is
-       brightest along the top-left edge and fades round the sides. A card's
-       edge runs far longer between its corners than a button's, and in the
-       same light it read as a plain grey line, so cards take a brighter one. */
+       ring all the way round, over it a hairline of light that is brightest
+       along the top-left edge and fades round the sides, and inside that two
+       more hairlines lighting the glass at its top and foot. Cards used to
+       draw themselves a brighter rim of their own, on the grounds that a
+       card's edge runs far longer between its corners than a button's; a
+       sheet that outlines itself more brightly than the sheet above it reads
+       as a different material, which is the one thing this rim is for. */
     --glass-edge-ring: rgba(255, 255, 255, .08);
     --glass-edge: linear-gradient(170deg,
         rgba(255, 255, 255, .5),
         rgba(255, 255, 255, .12) 26%,
         rgba(255, 255, 255, .03) 60%,
         rgba(255, 255, 255, .16));
-    --glass-edge-card-ring: rgba(255, 255, 255, .12);
-    --glass-edge-card: linear-gradient(170deg,
-        rgba(255, 255, 255, .62),
-        rgba(255, 255, 255, .23) 26%,
-        rgba(255, 255, 255, .1) 60%,
-        rgba(255, 255, 255, .28));
+    --glass-edge-lights:
+        inset 0 1px 1px rgba(255, 255, 255, .14),
+        inset 0 -1px 1px rgba(255, 255, 255, .04);
+    /* The light the glass catches on its face: a band running down from the
+       top edge, and over it a glint the bar carries under the cursor
+       (glass.js) and the rest of the glass holds where the bar rests it. Both
+       are measured in rem rather than as a share of the surface, so a card
+       four hundred pixels tall catches the same band of light as a bar
+       fifty-six pixels tall rather than a proportionally deeper one. */
+    --glass-sheen:
+        radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
+        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 1rem);
     /* A glass button lit by the cursor: the site's blue as a sheet of tinted
        glass rather than paint -- half see-through, with a highlight where the
        light comes in at its top, glowing faintly on the page beneath it. In
@@ -528,7 +538,7 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .library-heading h3 { --lh: .8; font-size: var(--type-subsection); letter-spacing: var(--tracking-display); line-height: var(--lh); }
 .project-collections { border-top: 1px solid var(--line); }
 .project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: var(--scroll-clearance); }
-.collection-toggle { width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--space-6); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
+.collection-toggle { --collection-arrow-size: 2.5rem; width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--collection-arrow-size); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
 .collection-toggle:hover { color: #dfe4ea; }
 .collection-index { color: var(--blue-light); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); }
 .collection-copy { display: grid; min-width: 0; gap: var(--rhythm-heading); }
@@ -723,7 +733,7 @@ main { padding-top: 0; }
 .skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
 .projects-grid { gap: var(--gutter); border: 0; }
-.project-card { background: var(--glass-surface-dense); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
+.project-card { background: var(--glass-surface); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
 .project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
 .project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
 .project-card:hover .project-image { transform: scale(1.035); }
@@ -849,13 +859,22 @@ footer { background: transparent; }
 /* --------------------------------------------------------------------------
    Glass surfaces
 
-   The About and Skills cards, the hero, social and contact buttons and the
-   carousel arrows are the navigation's glass, thinner: a faint surface grey
-   (--glass-surface, at the top of this file) that the sky shows through,
-   frosted so every word on them keeps its contrast over the brightest cluster
-   that can drift behind. The project cards are the same glass, denser: their
-   copy runs longest, and on the archive ring they stand in front of one
-   another.
+   The project, About and Skills cards, the hero, social and contact buttons
+   and the carousel arrows are all the navigation's glass, down to the last
+   layer: the same faint surface grey (--glass-surface, at the top of this
+   file) that the sky shows through, the same frost over it, the same light on
+   its face (--glass-sheen), the same rim (--glass-edge, --glass-edge-lights)
+   and the same bend at that rim. One sheet of glass, cut to different shapes.
+   Anything a card keeps to itself -- a denser tint, a brighter outline, a
+   shallower bend -- reads as a second material rather than the same glass in
+   another shape, and each of those was a card's own until now.
+
+   What the bar still keeps for itself is the shadow it throws: it floats over
+   the page, and the cards lie in it.
+
+   The denser sheet is still there (--glass-surface-dense) for the two places
+   that have no frost to lean on: the open navigation menu, which lies over
+   the hero's lettering, and a browser that cannot frost a backdrop at all.
 
    In High FX, Chromium also bends what shows through at the edges: glass.js
    builds each surface a displacement filter to its size, and the bend keeps
@@ -867,7 +886,8 @@ footer { background: transparent; }
    glass, not so much that the brightest cluster drifting behind a card washes
    its grey text below 5:1. */
 :root { --glass-blur: 8px; --glass-brightness: .88; }
-html[data-glass] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+html[data-glass] :is(.about-highlight, .skill-group, .project-card,
+    .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
@@ -876,21 +896,42 @@ html[data-glass] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
 /* The frost goes on first and the bend after it, so the rim magnifies the
    frosted sky rather than smearing a sharp one. A surface frosts without
    bending until glass.js has hung its filter on it. */
-html[data-glass="refract"] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+html[data-glass="refract"] :is(.about-highlight, .skill-group, .project-card,
+    .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
     backdrop-filter: blur(var(--glass-blur)) var(--glass-filter,) saturate(1.4) brightness(var(--glass-brightness));
 }
-html[data-glass="refract"] .project-card {
-    backdrop-filter: var(--glass-filter, none) saturate(1.3) brightness(.9);
+/* Glass nobody is looking at. A sheet costs the browser a copy of everything
+   behind it, filtered again every time the sky moves -- which is every frame
+   -- whether or not it is on screen, and with every collection open this page
+   carries ninety of them for the two dozen a reader can see. glass.js marks
+   the ones scrolled away and they cost nothing until they come back, far
+   enough ahead of the edge of the screen that none is ever seen arriving.
+   It marks two more the same way: the cards a ring has turned round the
+   back, and every sheet under an open project, whose overlay leaves a
+   twentieth of it to see. The frost goes with the bend, so this is a
+   saving in all three modes. */
+html[data-glass] .glass-offscreen {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* The light on the face of the glass, as the bar catches it. It goes on as
+   background layers over the tint, which is the one place the surfaces can
+   take it: their glass is drawn by the element itself, where the bar's is
+   drawn by a pseudo-element of its own. */
+html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    background-image: var(--glass-sheen);
 }
 
 /* Every sheet of glass wears the navigation's rim in place of a border. It is
    drawn the way navbar.css draws the bar's -- a masked gradient ring, so it
    can catch the light along its length -- and over everything on the
    surface: a card's picture, its spotlight, a press ripple. With the border
-   gone, the glass runs right out to the edge beneath it. Cards take the
-   brighter rim (--glass-edge-card, at the top of this file). */
+   gone, the glass runs right out to the edge beneath it. */
 html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
@@ -906,10 +947,11 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     padding: 1px;
     border-radius: inherit;
     background: var(--glass-edge), linear-gradient(var(--glass-edge-ring), var(--glass-edge-ring));
-    /* A card's blue is a shadow laid over the rim rather than a gradient in
-       its place: a shadow's colour can fade in, where a gradient can only
-       swap. */
-    box-shadow: inset 0 0 0 1px rgba(123, 168, 216, 0);
+    /* The bar's two inner hairlines ride along with the ring. A card's blue is
+       a shadow laid over the rim rather than a gradient in its place: a
+       shadow's colour can fade in, where a gradient can only swap, so the
+       blue leads the list and the hairlines follow it through every state. */
+    box-shadow: inset 0 0 0 1px rgba(123, 168, 216, 0), var(--glass-edge-lights);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -917,21 +959,18 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     pointer-events: none;
     transition: box-shadow .2s ease;
 }
-:is(.about-highlight, .skill-group, .project-card)::before {
-    background: var(--glass-edge-card), linear-gradient(var(--glass-edge-card-ring), var(--glass-edge-card-ring));
-}
 
 /* A card answers the cursor at its rim alone: the rim turns blue and the
    glass inside stays as it is. Only where there is a cursor -- a phone keeps
    the last thing it touched hovered, and would leave that card outlined. */
 @media (hover: hover) {
     :is(.about-highlight, .skill-group, .project-card):hover::before {
-        box-shadow: inset 0 0 0 1px var(--blue);
+        box-shadow: inset 0 0 0 1px var(--blue), var(--glass-edge-lights);
     }
 }
 :is(.about-highlight, .skill-group, .project-card):focus-visible::before,
 :is(.about-highlight, .skill-group):focus-within::before {
-    box-shadow: inset 0 0 0 1px var(--blue);
+    box-shadow: inset 0 0 0 1px var(--blue), var(--glass-edge-lights);
 }
 
 /* A button fills with blue glass instead (--glass-lit). In High FX that is
@@ -1039,9 +1078,15 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a, .social-l
     :root {
         --glass-surface: var(--surface);
         --glass-surface-dense: var(--surface);
+        /* Nothing is showing through, so there is no light on the face to
+           catch: the bar drops its own here too (navbar.css). The rim stays,
+           as the bar's does -- it is the edge of the panel now, not a
+           reflection off it. */
+        --glass-sheen: none;
     }
     /* Solid, so there is nothing behind them to frost. */
-    html[data-glass] :is(.about-highlight, .skill-group, .hero-buttons > .btn,
+    html[data-glass] :is(.about-highlight, .skill-group, .project-card,
+        .hero-buttons > .btn,
         .social-links > a, .social-links > .resume-icon-unavailable,
         .contact-links > .btn, .carousel-arrow) {
         -webkit-backdrop-filter: none;
@@ -1278,7 +1323,9 @@ html[data-effects="high"] .circular-project-carousel .project-info {
 .carousel-controls .carousel-arrow:disabled {
     opacity: .38;
     color: var(--muted);
-    background: var(--arrow-fill);
+    /* The tint only: as a shorthand this put out the light on the arrow's
+       face (--glass-sheen, Glass surfaces) along with everything else. */
+    background-color: var(--arrow-fill);
     cursor: not-allowed;
     transform: none;
 }
@@ -1431,6 +1478,32 @@ html[data-effects="low"] .cursor-ripple {
 html[data-effects="high"] .background-grid {
     display: none;
 }
+/* And it paints the veil and the page's background into that canvas too, as
+   one opaque layer (see setupGalaxyField). Laid over the sky as an element of
+   its own, the veil -- and the canvas at 94% over the background -- were two
+   more full-screen layers the browser blended into every frame the sky drew. */
+html[data-effects="high"] .galaxy-nebula {
+    display: none;
+}
+html[data-effects="high"] .galaxy-field {
+    opacity: 1;
+}
+/* A shooting star crosses on a small canvas of its own, carried along under
+   it, and a black hole that is feeding eats on one; neither needs the sky
+   redrawn to move (see drawStreaks and drawHoleLayers). */
+.galaxy-streak {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 0;
+    display: none;
+    pointer-events: none;
+    will-change: transform;
+    transition: opacity 1.4s ease;
+}
+html[data-effects="low"] .galaxy-streak {
+    display: none !important;
+}
 @media (max-width: 900px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
@@ -1462,14 +1535,16 @@ html[data-effects="low"] .background-grid {
    single view that is settling. */
 html.effects-background-idle .background-grid,
 html.effects-background-idle .galaxy-field,
-html.effects-background-idle .galaxy-nebula {
+html.effects-background-idle .galaxy-nebula,
+html.effects-background-idle .galaxy-streak {
     opacity: 0;
     transition-duration: 1.4s;
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 html.effects-background-click-fading .background-grid,
 html.effects-background-click-fading .galaxy-field,
-html.effects-background-click-fading .galaxy-nebula {
+html.effects-background-click-fading .galaxy-nebula,
+html.effects-background-click-fading .galaxy-streak {
     opacity: 0;
     transition-duration: 3.5s;
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
@@ -1554,7 +1629,8 @@ html.effects-background-click-fading .galaxy-nebula {
    broke onto a second line for want of that room. */
 @media (max-width: 639px) {
     .collection-toggle {
-        grid-template-columns: var(--space-6) minmax(0, 1fr) var(--space-5);
+        --collection-arrow-size: 2.25rem;
+        grid-template-columns: var(--space-6) minmax(0, 1fr) var(--collection-arrow-size);
         gap: var(--space-3);
     }
 }
@@ -2368,6 +2444,7 @@ html[data-effects="high"] .circular-project-carousel {
 .about-highlight h3,
 .skill-group-title,
 .collection-copy strong,
+.collection-cue,
 .modal-overview-item > span,
 .modal-overview-item h4,
 .about-highlight-role h4,
@@ -2413,6 +2490,7 @@ html[data-effects="high"] .circular-project-carousel {
 .skill-group-title::before,
 .collection-copy strong::before,
 .collection-copy small::before,
+.collection-cue::before,
 .modal-overview-item > span::before,
 .modal-overview-item h4::before,
 .about-highlight-role h4::before,
@@ -2442,6 +2520,7 @@ html[data-effects="high"] .circular-project-carousel {
 .skill-group-title::after,
 .collection-copy strong::after,
 .collection-copy small::after,
+.collection-cue::after,
 .modal-overview-item > span::after,
 .modal-overview-item h4::after,
 .about-highlight-role h4::after,
@@ -2627,4 +2706,99 @@ html[data-effects="high"] .circular-project-carousel {
     display: flex;
     align-items: center;
     height: calc(var(--collection-name-size) * var(--face-display-cap));
+}
+
+/* ==========================================================================
+   An archive row answers the cursor
+
+   The five category rows are the way into everything the featured strip does
+   not show, and at rest they read as a table of contents rather than as five
+   controls: a number, a name, a line of description, a small arrow off at the
+   right margin. Nothing in that says a row opens, and nothing says what is
+   waiting behind it, so the whole archive was easy to read straight past.
+
+   Three things say it now. Each row carries its own count as a standing
+   invitation -- "View 8 projects", which is the instruction and the reason to
+   follow it in one phrase, and which turns over to "Hide" once the row is
+   open. The arrow is drawn as a control rather than set as a glyph, and fills
+   with the site's blue the moment the row is live. And hover, keyboard focus
+   and the open state all light the row end to end -- a tint across the band
+   and a rule drawn along its foot -- so what answers the cursor is plainly
+   the whole row rather than the few characters under the pointer.
+
+   All of it is colour, a 2px rule and one horizontal scale. Nothing here
+   frosts a backdrop, casts a shadow or asks for a compositor layer, so Low FX
+   runs it exactly as High FX does, and reduced motion drops the timing and
+   keeps every state. */
+.collection-toggle {
+    position: relative;
+    transition: color .2s, background-color .25s var(--ease);
+}
+/* The tint fills the row between its two dividers rather than boxing in the
+   text, so the target the cursor is being shown is the target it can hit. */
+.collection-toggle:hover,
+.collection-toggle:focus-visible,
+.collection-toggle[aria-expanded="true"] {
+    background-color: rgba(123, 168, 216, .07);
+}
+/* The rule along the foot, over the hairline already there. It is scaled from
+   the left rather than grown in width, so it costs one transform and starts
+   from the end of the row the eye reads from. On an open row it stays drawn:
+   the same mark that answers the cursor also says which row is the open one. */
+.collection-toggle::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--blue);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .3s var(--ease);
+}
+.collection-toggle:hover::after,
+.collection-toggle:focus-visible::after,
+.collection-toggle[aria-expanded="true"]::after {
+    transform: scaleX(1);
+}
+/* The arrow becomes the row's button: the outline, the corner and the blue
+   fill under the cursor that every other control on the page wears. */
+.collection-toggle > i {
+    justify-content: center;
+    width: var(--collection-arrow-size);
+    height: var(--collection-arrow-size);
+    /* The control stands taller than the cap line it answers to, so it comes
+       back up by half the difference and keeps the centring on the name's
+       capitals that the number on the other side of the row has. */
+    margin-block-start: calc((var(--collection-name-size) * var(--face-display-cap) - var(--collection-arrow-size)) / 2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    color: var(--blue-light);
+    transition:
+        transform .3s var(--ease),
+        background-color .25s var(--ease),
+        border-color .25s var(--ease),
+        color .25s var(--ease);
+}
+.collection-toggle:hover > i,
+.collection-toggle:focus-visible > i,
+.collection-toggle[aria-expanded="true"] > i {
+    background-color: var(--blue);
+    border-color: var(--blue);
+    color: #080808;
+}
+/* The cue is the section's eyebrow one step down: the same face, the same
+   capitals, the same blue that names things elsewhere on the page. It holds
+   its colour while the row lights, because the band, the rule and the arrow
+   are already saying it -- a fourth thing changing at once reads as flicker. */
+.collection-cue {
+    --lh: 1.55;
+    justify-self: start;
+    line-height: var(--lh);
+    color: var(--blue-light);
+    font-family: var(--font-display);
+    font-size: var(--type-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
 }

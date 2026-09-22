@@ -124,6 +124,7 @@
         {
             "name": "Awards & Research",
             "description": "My research, training programs, certificates, and other projects I worked on outside of class.",
+            "itemNoun": "award",
             "carousel": true,
             "categories": [
                 "Awards & Certificates"
@@ -133,6 +134,8 @@
             "id": "classes",
             "name": "Classes",
             "description": "Some of my work from classes at City Tech, with links to the files on GitHub.",
+            "itemNoun": "class",
+            "itemNounPlural": "classes",
             "carousel": true,
             "categories": [
                 "Coursework"

@@ -43,12 +43,15 @@
 }
 /* ---- Liquid glass ---------------------------------------------------------
    The bar that appears on scroll is the same glass as the cards and buttons
-   below it (portfolio.css): the same thin surface grey (--glass-surface) and
-   the same frost (--glass-blur, --glass-brightness), so it reads as one more
-   piece of the page's glass rather than a clearer sheet laid over it. It is
-   the thickest piece, so in High FX it bends the most at its rim. glass.js
-   decides how much of the effect this browser can show and writes it to
-   html[data-glass]:
+   below it, layer for layer: the thin surface grey (--glass-surface), the
+   frost over it (--glass-blur, --glass-brightness), the light on its face
+   (--glass-sheen), the rim (--glass-edge, --glass-edge-ring,
+   --glass-edge-lights) and, in High FX, the same bend at that rim. Every one
+   of those is written down once, in portfolio.css, and both ends of the page
+   read it from there; the bar's own is the shadow it throws, which is what
+   sets a sheet floating over the page apart from the ones lying in it.
+   glass.js decides how much of the effect this browser can show and writes it
+   to html[data-glass]:
 
      refract  High FX, Chromium: the frosted backdrop bends through an SVG
               filter
@@ -62,14 +65,8 @@
 .navbar { --nav-tint: var(--glass-surface); }
 .navbar .nav-content::before {
     border-color: var(--glass-edge-ring);
-    background:
-        radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
-        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 30%),
-        var(--nav-tint);
-    box-shadow:
-        0 12px 32px rgba(0, 0, 0, .3),
-        inset 0 1px 1px rgba(255, 255, 255, .14),
-        inset 0 -1px 1px rgba(255, 255, 255, .04);
+    background: var(--glass-sheen), var(--nav-tint);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .3), var(--glass-edge-lights);
     opacity: 0;
     transition: opacity .28s;
 }
