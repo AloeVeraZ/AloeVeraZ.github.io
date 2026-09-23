@@ -99,8 +99,11 @@
     // bend moves pixels by up to 53-66/255, and the coarser maps land within
     // 4/255 of the fine ones, on 0.01% of pixels.
     const GLASS = {
-        bar: { bevel: 26, stretch: 1.8, dispersion: 0, soften: 0, density: .5 },
-        surface: { bevel: 26, stretch: 1.8, dispersion: 0, soften: 0, density: .25 }
+        // A steeper curve in a narrower rim makes the clearer High FX lens
+        // legible without enlarging the filtered area. Keep a single colour
+        // pass and the existing map resolution/cache; Low FX uses no lens.
+        bar: { bevel: 22, stretch: 2.6, dispersion: 0, soften: 0, density: .5 },
+        surface: { bevel: 22, stretch: 2.6, dispersion: 0, soften: 0, density: .25 }
     };
     const CURVE = 1.5;
     const LENS_BANDS = 12;     // slices per rim when the sky is bent on canvas

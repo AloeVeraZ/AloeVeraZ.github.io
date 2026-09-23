@@ -70,6 +70,15 @@
     opacity: 0;
     transition: opacity .28s;
 }
+/* The navigation crosses photos and large white type, so its clear High FX
+   lens keeps a darker tint for text contrast. The reflective bevel is shared
+   with the cards; Low FX continues to use the original rule above. */
+html[data-effects="high"] .navbar {
+    --nav-tint: rgba(16, 20, 27, .60);
+}
+html[data-effects="high"] .navbar .nav-content::before {
+    box-shadow: var(--glass-volume), 0 12px 32px rgba(0, 0, 0, .3);
+}
 /* The backdrop filter only runs while the glass is showing: at the top of the
    page there is no bar, and nothing behind it should be paying for one. In
    lens mode the frost falls on the sky glass.js has already bent, as it does

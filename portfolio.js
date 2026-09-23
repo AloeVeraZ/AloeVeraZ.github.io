@@ -1753,7 +1753,13 @@ function setupGalaxyField(canvas, reducedMotion) {
             // directly. Animated frames only visit stars not already in tiles.
             tier.liveObjects = tier === tiers.stars
                 ? tier.objects.filter(object => !object.staticField) : tier.objects;
+            // Conservative bounds for finding only the stars in a live patch
+            // of a cached tier. Include drift, orbit and the original overlap
+            // margin; the exact position/overlap check still runs afterwards.
+            tier.liveReach = 0;
             for (const object of tier.objects) {
+                object.liveReach = Math.abs(object.drift) + Math.abs(object.orbit) + object.radius * 3 + 2;
+                tier.liveReach = Math.max(tier.liveReach, object.liveReach);
                 object.fillColor = `rgb(${object.color})`;
                 // A body's angle is dealt once, where it is placed, and never
                 // turns again -- the tilt is the object's, not the frame's. So
@@ -2270,6 +2276,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         const at = time + baked.rebake / 2;
         const orbitSin = Math.sin(at * .055), orbitCos = Math.cos(at * .055);
         let lastFill = null;
+        let inkLeft = columns, inkTop = capacity, inkRight = 0, inkBottom = 0;
         for (let i = first; i < objects.length && objects[i].documentY < to; i++) {
             const object = objects[i];
             // Exactly as the tier loop places and lights an undisturbed point,
@@ -2279,8 +2286,19 @@ function setupGalaxyField(canvas, reducedMotion) {
             const alpha = object.alpha * (1 - object.pulse + Math.sin(at * object.speed * 3 + object.phase) * object.pulse);
             bandContext.globalAlpha = clamp(alpha, 0, 1);
             if (object.fillColor !== lastFill) bandContext.fillStyle = lastFill = object.fillColor;
-            baked.drawPoint(bandContext, object.x + motion + orbit, object.documentY * f + motion * .6, object.radius, 1);
+            const x = object.x + motion + orbit, y = object.documentY * f + motion * .6;
+            baked.drawPoint(bandContext, x, y, object.radius, 1);
+            // Cluster bands are mostly transparent. Keep the exact device
+            // pixel bounds (with antialiasing room) so compositing need not
+            // blend the empty remainder of a full-width strip every frame.
+            const reach = object.radius + 2;
+            inkLeft = Math.min(inkLeft, Math.floor((x - reach) * pixelRatio));
+            inkRight = Math.max(inkRight, Math.ceil((x + reach) * pixelRatio));
+            inkTop = Math.min(inkTop, Math.floor((y - reach) * pixelRatio + shift - top));
+            inkBottom = Math.max(inkBottom, Math.ceil((y + reach) * pixelRatio + shift - top));
         }
+        held.inkLeft = Math.max(0, inkLeft); held.inkRight = Math.min(columns, inkRight);
+        held.inkTop = Math.max(0, inkTop); held.inkBottom = Math.min(rows, inkBottom);
         held.bakedAt = time;
         return held;
     };
@@ -2424,7 +2442,16 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
             if (!held.canvas) continue;
             const bandTop = held.top + Math.round(exact - held.shift), bandBottom = bandTop + held.rows;
-            const copy = (x, y, w, h) => context.drawImage(held.canvas, x, y - bandTop, w, h, x, y, w, h);
+            const copy = (x, y, w, h) => {
+                const right = Math.min(x + w, held.inkRight);
+                const bottom = Math.min(y + h, bandTop + held.inkBottom);
+                x = Math.max(x, held.inkLeft);
+                y = Math.max(y, bandTop + held.inkTop);
+                if (right > x && bottom > y) {
+                    context.drawImage(held.canvas, x, y - bandTop, right - x, bottom - y,
+                        x, y, right - x, bottom - y);
+                }
+            };
             // Slabs no cut crosses, run together and copied whole.
             let runTop = -1;
             for (let e = 0; e < edges.length - 1; e++) {
@@ -2731,8 +2758,8 @@ function setupGalaxyField(canvas, reducedMotion) {
         sheetContext.lineWidth = 1;
         for (const [spacing, color] of gridLayers()) {
             const path = new Path2D();
-            for (let x = 0; x <= width; x += spacing) traceGridLine(path, x, 0, x, height, 'y');
-            for (let y = 0; y <= height; y += spacing) traceGridLine(path, 0, y, width, y, 'x');
+            for (let x = 0; x <= width; x += spacing) { path.moveTo(x, 0); path.lineTo(x, height); }
+            for (let y = 0; y <= height; y += spacing) { path.moveTo(0, y); path.lineTo(width, y); }
             sheetContext.strokeStyle = color;
             sheetContext.stroke(path);
         }
@@ -2743,10 +2770,9 @@ function setupGalaxyField(canvas, reducedMotion) {
     // The page's background with the lattice on it, as the first thing in a
     // frame of the sky.
     const drawSkyGround = () => {
-        if (!gridSpacing || touchWells.length) {
+        if (!gridSpacing) {
             paintSkyGround();
             context.globalCompositeOperation = 'lighter';
-            drawBackgroundGrid();
             return;
         }
         context.setTransform(1, 0, 0, 1, 0, 0);
@@ -2755,6 +2781,35 @@ function setupGalaxyField(canvas, reducedMotion) {
         context.drawImage(gridSheetFor(), 0, 0);
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         context.globalCompositeOperation = 'lighter';
+        if (touchWells.length) {
+            // Only the dents differ from the cached grid. Restore the ground
+            // and stroke the original paths inside their union, avoiding a
+            // viewport-sized path raster on every press/drag frame. Round the
+            // clip out to device pixels so its edge cannot leave a seam.
+            // Include the maximum displacement from every well: overlapping
+            // wells and a fast drag can carry a line beyond a well's rim.
+            // A traced segment spans at most 11px, plus stroke/AA coverage.
+            let travel = 14;
+            for (const well of touchWells) {
+                travel += Math.abs(well.depth) * (well.reach * WELL_PULL * .93
+                    + Math.max(Math.abs(well.vx), Math.abs(well.vy)) * .085);
+            }
+            context.save();
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.beginPath();
+            for (const well of touchWells) {
+                const reach = well.reach + travel;
+                const left = Math.max(0, Math.floor((well.x - reach) * pixelRatio));
+                const top = Math.max(0, Math.floor((well.y - reach) * pixelRatio));
+                const right = Math.min(canvas.width, Math.ceil((well.x + reach) * pixelRatio));
+                const bottom = Math.min(canvas.height, Math.ceil((well.y + reach) * pixelRatio));
+                if (right > left && bottom > top) context.rect(left, top, right - left, bottom - top);
+            }
+            context.clip();
+            paintSkyGround();
+            drawBackgroundGrid();
+            context.restore();
+        }
     };
     // The lattice alone, for a sheet a finger is pressing into: traced
     // through the dents and stroked live, over the ground already painted.
@@ -4260,8 +4315,20 @@ function setupGalaxyField(canvas, reducedMotion) {
             // draws; see drawBakedTier.
             const baked = animated && bakedTiers.find(item => item.tier === tier);
             const fromBands = !!baked && drawBakedTier(baked, time, lightDisturbed);
-            const minY = scrollPosition + halfHeight - (halfHeight + tier.margin) / factor;
-            const maxY = scrollPosition + halfHeight + (halfHeight + tier.margin) / factor;
+            // A complete band already contains every point in this tier.
+            // With no live patches, there is no per-star work left to do.
+            if (fromBands && !bakedCutCount) continue;
+            let minY = scrollPosition + halfHeight - (halfHeight + tier.margin) / factor;
+            let maxY = scrollPosition + halfHeight + (halfHeight + tier.margin) / factor;
+            if (fromBands) {
+                let top = height, bottom = 0;
+                for (let i = 0; i < bakedCutCount; i++) {
+                    top = Math.min(top, bakedCuts[i].y0);
+                    bottom = Math.max(bottom, bakedCuts[i].y1);
+                }
+                minY = Math.max(minY, scrollPosition + halfHeight + (top - tier.liveReach - halfHeight) / factor);
+                maxY = Math.min(maxY, scrollPosition + halfHeight + (bottom + tier.liveReach - halfHeight) / factor);
+            }
             const cameraOffsetX = cameraX * factor * factor * 10;
             const cameraOffsetY = cameraY * factor * factor * 7;
             const objects = animated ? tier.liveObjects : tier.objects;
@@ -4279,6 +4346,10 @@ function setupGalaxyField(canvas, reducedMotion) {
             const lensing = width >= 700 && animated && factor < .9 && projectedHoles.length > 0;
             for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
                 const object = objects[i];
+                const baseY = (object.documentY - scrollPosition - halfHeight) * factor + halfHeight;
+                // Most cached stars are nowhere near a disturbance. Reject
+                // those before taking sines and projecting their motion.
+                if (fromBands && !bakedLive(object.x, baseY, object.liveReach)) continue;
                 // The seeded anchor stays fixed; a bounded spring offset carries
                 // cursor impulses and gravity independently of camera parallax.
                 const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
@@ -4287,8 +4358,7 @@ function setupGalaxyField(canvas, reducedMotion) {
                 const orbit = animated && object.orbit
                     ? (orbitSin * object.phaseCos + orbitCos * object.phaseSin) * object.orbit : 0;
                 let x = object.x + motion + orbit - cameraOffsetX;
-                let y = (object.documentY - scrollPosition - halfHeight) * factor + halfHeight
-                    + motion * .6 - cameraOffsetY;
+                let y = baseY + motion * .6 - cameraOffsetY;
                 if (fromBands && !bakedLive(x, y, object.radius * 3 + 2)) continue;
                 const physics = animated && object.interactive
                     ? interactBody(object, x, y, delta, time, cameraX, cameraY) : null;
