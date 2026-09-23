@@ -944,9 +944,10 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     position: absolute;
     inset: 0;
     z-index: 5;
-    padding: 1px;
+    padding: var(--glass-edge-width, 1px);
     border-radius: inherit;
-    background: var(--glass-edge), linear-gradient(var(--glass-edge-ring), var(--glass-edge-ring));
+    background: var(--glass-edge-paint, var(--glass-edge), linear-gradient(var(--glass-edge-ring), var(--glass-edge-ring)));
+    mix-blend-mode: var(--glass-edge-blend, normal);
     /* The bar's two inner hairlines ride along with the ring. A card's blue is
        a shadow laid over the rim rather than a gradient in its place: a
        shadow's colour can fade in, where a gradient can only swap, so the
@@ -976,17 +977,15 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
 /* A button fills with blue glass instead (--glass-lit). In High FX that is
    the site's blue half see-through, so the sky still shows through it -- all
    but solid, it read as a flat blue shape laid over the glass -- and the label
-   stays light, as it is on the glass. Low FX keeps the solid blue it had, with
-   dark writing on it. Either way the rim keeps catching the light round the
+   stays light, as it is on the glass. Low FX shares the transparent blue but
+   keeps its highlight still. Either way the rim catches light round the
    edge. The fill is a layer of its own, under the label, so it can fade in,
    which a gradient cannot. On a phone, which keeps the last button it touched
    hovered, the blue shows only while a finger is on the button. */
 :root { --glass-lit-ink: var(--ink); }
 html[data-effects="low"] {
-    --glass-lit-body: linear-gradient(180deg, rgba(123, 168, 216, .86), rgba(96, 144, 198, .92));
-    --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
+    --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
     --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .55);
-    --glass-lit-ink: #080808;
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
@@ -1067,15 +1066,21 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a, .social-l
     --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
 }
 
-/* High FX: a clear lens with a rounded, reflective edge. These overrides are
-   deliberately scoped to High FX; Low FX keeps the original material above.
-   The smaller blur reveals the existing rim refraction and reduces its
-   sampling footprint. Reflections reuse the existing hover coordinates and
-   pseudo-elements: no extra backdrop pass or animation loop. */
-html[data-effects="high"] {
+/* Both modes share the same clear tint and light frost. Low FX keeps the
+   static rim and sheen, without refraction or pointer-driven reflections. */
+html[data-effects] {
     --glass-surface: rgba(19, 24, 33, .22);
     --glass-blur: 4px;
     --glass-brightness: 1.06;
+    --glass-lit-body: rgba(91, 157, 226, .42);
+}
+/* High FX blends the existing masked rim with the actual filtered backdrop.
+   Highlights inherit its colour and brighten with passing content instead
+   of painting an opaque white outline. No second backdrop filter, pixel
+   readback, or animation loop is needed. */
+html[data-effects="high"] {
+    --glass-edge-blend: overlay;
+    --glass-edge-width: 1.5px;
     --glass-edge-ring: rgba(225, 237, 255, .12);
     --glass-edge: linear-gradient(135deg,
         rgba(255, 255, 255, .76),
@@ -1094,8 +1099,22 @@ html[data-effects="high"] {
         inset 2px 3px 7px rgba(255, 255, 255, .12),
         inset -2px -3px 7px rgba(183, 216, 255, .09);
     --glass-shadow: var(--glass-volume), 0 8px 24px rgba(0, 0, 0, .20);
-    --glass-lit-body: rgba(91, 157, 226, .42);
     --glass-lit-glow: var(--glass-volume), 0 10px 26px -8px rgba(123, 168, 216, .45);
+}
+/* Interaction always wins over the backdrop-dependent edge, so blue stays
+   blue even over a bright photograph. Apply the same cue to every control. */
+@media (hover: hover) {
+    :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
+        .social-links > a, .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
+        --glass-edge-paint: var(--blue);
+        --glass-edge-blend: normal;
+    }
+}
+:is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
+    .social-links > a, .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed),
+:is(.about-highlight, .skill-group):focus-within {
+    --glass-edge-paint: var(--blue);
+    --glass-edge-blend: normal;
 }
 html[data-effects="high"] :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
@@ -1134,9 +1153,10 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
            reflection off it. */
         --glass-sheen: none;
     }
-    html[data-effects="high"] {
+    html[data-effects] {
         --glass-surface: var(--surface);
         --glass-sheen: none;
+        --glass-edge-blend: normal;
         --glass-volume: inset 0 0 0 0 transparent;
         --glass-shadow: none;
     }
@@ -1153,7 +1173,7 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
    contrast on its own, as the denser sheet does. */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
     :root { --glass-surface: var(--glass-surface-dense); }
-    html[data-effects="high"] { --glass-surface: var(--glass-surface-dense); }
+    html[data-effects] { --glass-surface: var(--glass-surface-dense); }
 }
 
 :root {

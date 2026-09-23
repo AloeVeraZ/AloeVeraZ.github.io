@@ -30,6 +30,7 @@
     min-height: 3.5rem;
     margin-inline: auto;
     padding: 0 var(--nav-pad);
+    border-radius: var(--radius-surface);
 }
 .navbar .nav-content::before {
     content: "";
@@ -70,10 +71,9 @@
     opacity: 0;
     transition: opacity .28s;
 }
-/* The navigation crosses photos and large white type, so its clear High FX
-   lens keeps a darker tint for text contrast. The reflective bevel is shared
-   with the cards; Low FX continues to use the original rule above. */
-html[data-effects="high"] .navbar {
+/* Both modes use the same tint. The navigation crosses photos and white type,
+   so it needs more contrast than the cards against the dark sky. */
+html[data-effects] .navbar {
     --nav-tint: rgba(16, 20, 27, .60);
 }
 html[data-effects="high"] .navbar .nav-content::before {
@@ -87,12 +87,18 @@ html[data-effects="high"] .navbar .nav-content::before {
 .has-scrolled .navbar .nav-content::before,
 .navbar[data-nav-open] .nav-content::before {
     opacity: 1;
+}
+/* Filter the glass container, as the cards do. A blended sibling of a
+   filtering pseudo-element can suppress its backdrop in Chromium. Keeping
+   the filter on the container also lets the rim see that filtered image. */
+.has-scrolled .navbar .nav-content,
+.navbar[data-nav-open] .nav-content {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
 /* The frost goes on first and the bend after it, as on the cards. Until
    glass.js has hung its filter on the bar, the bar frosts without bending. */
-html[data-glass="refract"] .has-scrolled .navbar .nav-content::before {
+html[data-glass="refract"] .has-scrolled .navbar .nav-content {
     backdrop-filter: blur(var(--glass-blur)) var(--glass-filter,) saturate(1.4) brightness(var(--glass-brightness));
 }
 /* An open menu frosts in every mode, over the cards' denser sheet: it lies
@@ -100,6 +106,8 @@ html[data-glass="refract"] .has-scrolled .navbar .nav-content::before {
    it changes height on every frame as it opens, which is no time to bend. */
 html[data-glass] .navbar[data-nav-open] .nav-content::before {
     --nav-tint: var(--glass-surface-dense);
+}
+html[data-glass] .navbar[data-nav-open] .nav-content {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
@@ -112,9 +120,10 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
     position: absolute;
     inset: 0;
     z-index: -1;
-    padding: 1px;
+    padding: var(--glass-edge-width, 1px);
     border-radius: var(--radius-surface);
     background: var(--glass-edge);
+    mix-blend-mode: var(--glass-edge-blend, normal);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -125,6 +134,16 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
 }
 .has-scrolled .navbar .nav-content::after,
 .navbar[data-nav-open] .nav-content::after { opacity: 1; }
+@media (hover: hover) {
+    .navbar .nav-content:hover::after {
+        background: var(--blue);
+        mix-blend-mode: normal;
+    }
+}
+.navbar .nav-content:focus-within::after {
+    background: var(--blue);
+    mix-blend-mode: normal;
+}
 /* On glass the links are set near white, with a shadow that keeps each word
    legible whatever scrolls behind it. */
 .has-scrolled .navbar { --nav-muted: rgba(247, 244, 237, .92); }
@@ -138,6 +157,8 @@ html[data-glass] .navbar[data-nav-open] .nav-content::before {
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
     .navbar .nav-content::before {
         background: #101113 !important;
+    }
+    .navbar .nav-content {
         -webkit-backdrop-filter: none !important;
         backdrop-filter: none !important;
     }
