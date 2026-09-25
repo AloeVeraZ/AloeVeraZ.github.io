@@ -1424,10 +1424,10 @@ html[data-effects="high"] .circular-project-carousel .project-info {
     margin-left: auto;
 }
 /* An open collection's arrows sat right on the blue rule under its row,
-   touching it. They stand off it by the same gap they keep from the cards
-   below. */
+   touching it. They stand a block's gap clear of it, in both modes and at
+   every width. */
 .collection-content > .carousel-controls {
-    padding-top: var(--rhythm-heading);
+    padding-top: var(--rhythm-block);
 }
 /* The dots close the row they sit under, so what follows them is the next
    section's own gap -- not that gap plus another 24px. */
