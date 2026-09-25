@@ -136,7 +136,10 @@
         const canvas = document.createElement('canvas');
         canvas.width = cw;
         canvas.height = ch;
-        const context = canvas.getContext('2d');
+        // Kept in memory rather than on the graphics card: the map is only
+        // ever written here and read back as a PNG, and reading a picture
+        // back off the card stalls the page until the card catches up.
+        const context = canvas.getContext('2d', { willReadFrequently: true });
         const image = context.createImageData(cw, ch);
         const data = image.data;
         const halfW = width / 2, halfH = height / 2;
@@ -206,7 +209,7 @@
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
-        canvas.getContext('2d').drawImage(map.canvas, x, y, w, h, 0, 0, w, h);
+        canvas.getContext('2d', { willReadFrequently: true }).drawImage(map.canvas, x, y, w, h, 0, 0, w, h);
         return canvas.toDataURL('image/png');
     };
 

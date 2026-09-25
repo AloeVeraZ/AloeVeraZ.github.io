@@ -126,17 +126,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const PERFORMANCE_RESUME_DELAY_MS = 2000;
     const MIN_SMOOTH_FPS = 33;
     const CLUNKY_WINDOWS_BEFORE_DOWNGRADE = 2;
-    // The steps before that, each taken after three strained seconds running:
+    // The steps before that, each taken after two strained seconds running:
     // first the sky is slowed rather than switched off, then the glass stops
-    // bending the light at its rim and keeps only its frost -- the rim is a
-    // third of what the glass costs, and the frost is most of what it looks
-    // like. A page is strained when it runs steadily under fifty frames a
+    // bending the light at its rim and keeps only its frost -- the frost is
+    // most of what it looks like -- and the sky is drawn at CSS-pixel
+    // resolution rather than 1.25x. A page is strained when it runs steadily under fifty frames a
     // second, or when it keeps missing frames: one in ten late by a display
     // frame or more is a page that visibly hitches while it scrolls, however
     // good its average. That is what a laptop with other work on it looks
     // like, and it used to pass as smooth.
     const MIN_STEADY_FPS = 50;
-    const STRAINED_WINDOWS_BEFORE_EASING = 3;
+    const STRAINED_WINDOWS_BEFORE_EASING = 2;
     const MISSED_FRAME_SHARE = .1;
     // The monitor measures by asking for every display frame, and a page that
     // asks for every frame keeps the machine awake whether or not it draws
@@ -315,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.documentElement.dataset.effectsPace = 'eased';
                 } else {
                     glassEased = true;
+                    galaxy.lighten();
                     document.documentElement.dataset.effectsPace = 'lighter';
                 }
                 deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
@@ -428,6 +429,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // for a machine that cannot keep up to have its sky eased straight away.
     deferPerformanceSampling(PERFORMANCE_WARMUP_MS);
     watchPerformance(PERFORMANCE_WARMUP_MS + 3 * PERFORMANCE_WINDOW_MS + 500);
+
+    // A laptop drawing on the graphics built into an Intel processor -- the
+    // UHD and Iris chips in most thin laptops -- is the machine that cannot
+    // hold the sky at sixty behind a screen of glass, and it was left to find
+    // that out the hard way: seconds of stutter before the monitor stepped
+    // in. It starts with the sky eased instead, which it would have ended up
+    // at anyway: every effect kept, the sky only drawn less often. Asked once
+    // the page is idle, because opening a graphics context to ask is not
+    // free, and it is thrown away at once.
+    const easeForIntegratedGraphics = () => {
+        if (effectsMode !== 'high' || skyEased) return;
+        let renderer = '';
+        try {
+            const gl = document.createElement('canvas').getContext('webgl', { powerPreference: 'low-power' });
+            if (gl) {
+                const info = gl.getExtension('WEBGL_debug_renderer_info');
+                renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+                gl.getExtension('WEBGL_lose_context')?.loseContext();
+            }
+        } catch (error) {
+            renderer = '';
+        }
+        document.documentElement.dataset.effectsRenderer = /intel/i.test(renderer) ? 'intel' : 'other';
+        // Intel's own graphics cards (Arc) are not built in and keep up.
+        if (!/intel/i.test(renderer) || /\barc\b/i.test(renderer)) return;
+        skyEased = true;
+        galaxy.ease();
+        document.documentElement.dataset.effectsPace = 'eased';
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(easeForIntegratedGraphics, { timeout: 2000 });
+    else window.setTimeout(easeForIntegratedGraphics, 1200);
 
     let pointerFrame = 0;
     let latestPointerEvent;
@@ -673,7 +705,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // rest of the sky, into a small canvas of its own -- see drawStreaks.
     const skyContext = canvas.getContext('2d', { alpha: false });
     let context = skyContext;
-    if (!context) return { move() {}, release() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {}, ease() {} };
+    if (!context) return { move() {}, release() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {}, ease() {}, lighten() {} };
 
     // Keep the existing tiered, seeded canvas architecture. Regions now own
     // their lights and haze, so a system has a shared composition at every scale.
@@ -713,6 +745,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     // and, before it gives up on High FX, asks the sky to run slower instead:
     // every effect kept, only drawn less often. Once eased, it stays eased.
     let eased = false;
+    // And whether it has been asked to draw at CSS-pixel resolution; see lighten.
+    let lightened = false;
     // The rates the sky runs at; see the pacing note above drawSky. A phone
     // is a step lower throughout, as it always was, and an eased machine a
     // step lower again.
@@ -745,6 +779,11 @@ function setupGalaxyField(canvas, reducedMotion) {
     // reach, and each one costs less to cut when the reader arrives at it.
     const staticStarTileHeight = 400;
     const staticStarTiles = new Map();    // band index -> { canvas, start, end }
+    // Bumped whenever the deep field is cut again; see drawSkyBase.
+    let starFieldVersion = 0;
+    // The broad, faint haze -- galaxies, the glow round each group of
+    // worlds, the clusters' own light -- nothing the cursor can push.
+    const inBase = object => !!object.haze && !object.interactive;
     let staticStarField = null;           // the baked stars, in page order
     // 3rem, matching the lattice the stylesheet used to paint. Measured in the
     // layout pass so a root font-size change carries through.
@@ -787,7 +826,14 @@ function setupGalaxyField(canvas, reducedMotion) {
     const cardSelector = `${CARD_SURFACE_SELECTOR}, .modal-card, `
         + '.modal, .modal-overlay, .navbar, .project-carousel, '
         + 'input, textarea, select, [contenteditable]';
-    const openSpaceAt = (target, clientY) => !document.querySelector('.modal-overlay.active')
+    // The one overlay in the page, found once: asked for by selector, it was
+    // a search of the whole document on every pointer move.
+    const modalOverlays = document.getElementsByClassName('modal-overlay');
+    const modalOpen = () => {
+        for (const overlay of modalOverlays) if (overlay.classList.contains('active')) return true;
+        return false;
+    };
+    const openSpaceAt = (target, clientY) => !modalOpen()
         && !(target instanceof Element && target.closest(cardSelector))
         && clientY > navigationBottom + 8;
     const openSpace = event => openSpaceAt(event.target, event.clientY);
@@ -1745,6 +1791,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // Run after any change to what a tier contains -- a full build, or a single
     // band of sky grown or removed under a collection opening and closing.
     const finalizeTiers = () => {
+        starFieldVersion++;
         for (const tier of tierList) {
             tier.objects.sort((a, b) => a.documentY - b.documentY);
             tier.margin = tier.objects.reduce((max, item) => Math.max(max, item.radius * 1.3 + 28), 20);
@@ -1753,6 +1800,11 @@ function setupGalaxyField(canvas, reducedMotion) {
             // directly. Animated frames only visit stars not already in tiles.
             tier.liveObjects = tier === tiers.stars
                 ? tier.objects.filter(object => !object.staticField) : tier.objects;
+            // The haze, split out to be drawn into the sky's resting base
+            // while the page is still (see drawSkyBase), and what is left.
+            tier.baseObjects = tier.objects.filter(inBase);
+            tier.restObjects = tier.baseObjects.length
+                ? tier.liveObjects.filter(object => !inBase(object)) : tier.liveObjects;
             // Conservative bounds for finding only the stars in a live patch
             // of a cached tier. Include drift, orbit and the original overlap
             // margin; the exact position/overlap check still runs afterwards.
@@ -2155,6 +2207,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // The scene was rerolled, or there is nothing left to show it on: every
     // band cut from the old sky is now a picture of somewhere else.
     const resetStaticStarTiles = () => {
+        starFieldVersion++;
         galaxySweepAt = NaN;
         staticStarTiles.clear();
         spareStarTiles.length = 0;
@@ -2165,6 +2218,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // already cut are untouched -- new sky only ever arrives below them -- so
     // only the list they are cut from has to be taken again.
     const restackStaticStarField = () => {
+        starFieldVersion++;
         galaxySweepAt = NaN;
         staticStarField = null;
         forgetBakedBands();
@@ -4051,6 +4105,58 @@ function setupGalaxyField(canvas, reducedMotion) {
             }
         }
     };
+    // ---- The resting base of the sky ----------------------------------------
+    //
+    // Every frame used to start with two full-screen passes that came out
+    // the same frame after frame: the ground and its lattice, then the deep
+    // star field laid over it from its tiles. Neither moves unless the page
+    // scrolls (or a fingertip dents the sheet), and everything drawn over
+    // them is added light, which lands the same whichever order it arrives
+    // in. So the two are drawn once into a sheet of their own while the page
+    // is still, and each frame starts by copying that sheet: one pass
+    // instead of two, the same pixels. While the page is being scrolled the
+    // base changes every frame anyway, and it is painted straight onto the
+    // sky as before, so a scroll never pays for the sheet as well.
+    let baseSheet = null, baseSignature = '', baseBuiltAt = -Infinity;
+    // The haze is drawn into the base with the rest of it, as of the moment
+    // the base is drawn, and the base is drawn again every BASE_REDRAW
+    // seconds: the haze drifts a pixel or so a second and breathes over ten,
+    // so between one drawing and the next it moves by a fraction of a pixel
+    // and a fraction of a level -- on shapes hundreds of pixels across that
+    // fade to nothing at their edges. Drawn live, it was a screen and a half
+    // of blending in every frame of the sky.
+    const BASE_REDRAW = .5;
+    const drawSkyBase = (time, paintHaze) => {
+        if (touchWells.length || !gridSpacing) { drawSkyGround(); return false; }
+        gridSheetFor();
+        const signature = `${scrollPosition}:${canvas.width}:${canvas.height}:${pixelRatio}:${gridSheetSignature}:${starFieldVersion}`;
+        if (!baseSheet || baseSignature !== signature || Math.abs(time - baseBuiltAt) > BASE_REDRAW) {
+            if (performance.now() - lastScrollAt < 200) { drawSkyGround(); return false; }
+            const sheet = baseSheet || document.createElement('canvas');
+            if (sheet.width !== canvas.width || sheet.height !== canvas.height) {
+                sheet.width = canvas.width;
+                sheet.height = canvas.height;
+            }
+            const sheetContext = sheet.getContext('2d', { alpha: false });
+            if (!sheetContext) { drawSkyGround(); return false; }
+            const sky = context;
+            context = sheetContext;
+            drawSkyGround();
+            drawStaticStarField(0, 0);
+            paintHaze();
+            context = sky;
+            baseSheet = sheet;
+            baseSignature = signature;
+            baseBuiltAt = time;
+        }
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.globalCompositeOperation = 'copy';
+        context.globalAlpha = 1;
+        context.drawImage(baseSheet, 0, 0);
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.globalCompositeOperation = 'lighter';
+        return true;
+    };
     // ---- Pacing -----------------------------------------------------------
     //
     // What a frame of this sky costs is not what it draws. Measured on a 3x
@@ -4297,7 +4403,6 @@ function setupGalaxyField(canvas, reducedMotion) {
         // was bending it -- which is the resting state of the page.
         let lightDisturbed = pusherCount > 0;
         if (!lightDisturbed) for (const ripple of ripples) if (ripple.active) { lightDisturbed = true; break; }
-        drawSkyGround(); // Furthest back: the sheet everything else sits on.
         prepareBlackHoles(time, cameraX, cameraY);
         // Which feeding holes get layers of their own this frame, before
         // anything they are swallowing is drawn.
@@ -4307,204 +4412,218 @@ function setupGalaxyField(canvas, reducedMotion) {
         // one star and the next, so they are settled once for the whole sky
         // rather than re-derived a couple of thousand times inside it.
         const halfHeight = height / 2;
-        for (const tier of tierList) {
-            const factor = animated ? tier.factor : 1;
-            if (tier === tiers.stars) drawStaticStarField(cameraX, cameraY);
-            // The dust and the cluster stars, copied from their bands but for
-            // the patches where they are bending, whose points the loop below
-            // draws; see drawBakedTier.
-            const baked = animated && bakedTiers.find(item => item.tier === tier);
-            const fromBands = !!baked && drawBakedTier(baked, time, lightDisturbed);
-            // A complete band already contains every point in this tier.
-            // With no live patches, there is no per-star work left to do.
-            if (fromBands && !bakedCutCount) continue;
-            let minY = scrollPosition + halfHeight - (halfHeight + tier.margin) / factor;
-            let maxY = scrollPosition + halfHeight + (halfHeight + tier.margin) / factor;
-            if (fromBands) {
-                let top = height, bottom = 0;
-                for (let i = 0; i < bakedCutCount; i++) {
-                    top = Math.min(top, bakedCuts[i].y0);
-                    bottom = Math.max(bottom, bakedCuts[i].y1);
-                }
-                minY = Math.max(minY, scrollPosition + halfHeight + (top - tier.liveReach - halfHeight) / factor);
-                maxY = Math.min(maxY, scrollPosition + halfHeight + (bottom + tier.liveReach - halfHeight) / factor);
-            }
-            const cameraOffsetX = cameraX * factor * factor * 10;
-            const cameraOffsetY = cameraY * factor * factor * 7;
-            const objects = animated ? tier.liveObjects : tier.objects;
-            // Every body on a tier shares one orbit clock; only its phase
-            // differs. Taking the clock's sine and cosine here lets each body
-            // turn its own phase with two multiplies instead of its own call.
-            const orbitSin = animated ? Math.sin(time * .055) : 0;
-            const orbitCos = animated ? Math.cos(time * .055) : 0;
-            // Set only when it actually changes. Handing the canvas a colour
-            // is a CSS string it has to parse; a run of stars cut from the
-            // same palette entry can share the one it has already read.
-            let lastFill = null;
-            // Whether anything on this tier can be lensed at all is settled by
-            // the tier's own depth and the sky's black holes, not by the star.
-            const lensing = width >= 700 && animated && factor < .9 && projectedHoles.length > 0;
-            for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
-                const object = objects[i];
-                const baseY = (object.documentY - scrollPosition - halfHeight) * factor + halfHeight;
-                // Most cached stars are nowhere near a disturbance. Reject
-                // those before taking sines and projecting their motion.
-                if (fromBands && !bakedLive(object.x, baseY, object.liveReach)) continue;
-                // The seeded anchor stays fixed; a bounded spring offset carries
-                // cursor impulses and gravity independently of camera parallax.
-                const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
-                // Over half the sky was dealt no orbit at all, and multiplying
-                // a sine by zero is still a sine taken.
-                const orbit = animated && object.orbit
-                    ? (orbitSin * object.phaseCos + orbitCos * object.phaseSin) * object.orbit : 0;
-                let x = object.x + motion + orbit - cameraOffsetX;
-                let y = baseY + motion * .6 - cameraOffsetY;
-                if (fromBands && !bakedLive(x, y, object.radius * 3 + 2)) continue;
-                const physics = animated && object.interactive
-                    ? interactBody(object, x, y, delta, time, cameraX, cameraY) : null;
-                if (physics) { x = physics.x; y = physics.y; }
-                let lightBoost = 1;
-                // Left alone, the routine returns the light exactly where it
-                // found it, so skipping it when nothing is pushing leaves the
-                // same star in the same place at the same brightness.
-                if (animated && lightDisturbed && !object.haze && (tier.points || object.glint || tier === tiers.mediumStars)) {
-                    disturbLight(object, x, y, factor, time);
-                    x = warped.x; y = warped.y; lightBoost = warped.sink;
-                }
-                // Only background light bends. A few cheap local mass checks,
-                // without touching page pixels or allocating per-star objects.
-                let lensStretch = lightBoost > 1 ? warped.stretch : 1;
-                if (lensing) for (const hole of projectedHoles) {
-                    if (factor >= hole.parallaxFactor) continue;
-                    const dx = x - hole.screenX, dy = y - hole.screenY;
-                    const reach = hole.radius * 1.35;
-                    const distanceSquared = dx * dx + dy * dy;
-                    if (distanceSquared < reach * reach && distanceSquared > 1) {
-                        const distance = Math.sqrt(distanceSquared);
-                        const influence = (1 - distance / reach) ** 2;
-                        const shift = Math.min(9, hole.radius * .055) * influence * (1 + (hole.disturbance || 0));
-                        x += dx / distance * shift; y += dy / distance * shift;
-                        lensStretch = 1 + influence * .45;
-                    }
-                }
-                // Everything on the sheet slides toward the dent, and sinks
-                // away from the viewer as it does -- smaller and dimmer at the
-                // bottom of the well is what turns an inward slide into depth.
-                let sink = 1;
-                if (touchWells.length && animated) {
-                    warped.x = x; warped.y = y;
-                    warpPoint(warped, factor);
-                    x = warped.x; y = warped.y;
-                    sink = warped.sink;
-                    lensStretch *= warped.stretch;
-                }
-                const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
-                const radius = object.radius * scale * (physics ? physics.scale : 1) * clamp(sink, .3, 1.3);
-                if (x + radius < 0 || x - radius > width || y + radius < 0 || y - radius > height) continue;
-                let alpha = object.alpha * lightBoost * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
-                // Partial, not proportional: light falling into the well dims
-                // but never blinks out, or the dent would read as a hole
-                // punched through the field.
-                if (sink !== 1) alpha *= clamp(.58 + .42 * sink, .2, 1.2);
-                if (!tier.points) {
-                    // Frozen at placement -- see finalizeTiers. A dim remnant
-                    // remains behind the text an object was placed under, and it
-                    // stays exactly that dim for the life of the visit.
-                    const clearance = object.clearance ?? 1;
-                    alpha *= object.haze ? .5 + clearance * .5 : .07 + clearance * .93;
-                    alpha *= .1 + .9 * smoothstep(clamp((y - navigationBottom + radius * .1) / Math.max(24, radius * .5), 0, 1));
-                    // Nothing here lifts with the cursor. A body near the pointer
-                    // moves out of its way; it does not also light up.
-                }
-                // A body a feeding hole is pulling in, or has caught, is drawn
-                // on that hole's layer, at the layer's pace -- see
-                // drawHoleLayers. What it hands over is everything but the
-                // motion itself: the layer carries a body that is being pulled
-                // on along the way it is going, and works out where a caught
-                // one has spiralled to, how small and how faint, each time it
-                // draws.
-                if (physics) {
-                    const hole = physics.capture ? physics.capture.hole : physics.near;
-                    if (hole && hole.layer && liftable(hole, object.radius)) {
-                        if (physics.capture) hole.captives.push({ object, radius: radius / physics.scale, alpha });
-                        else hole.approachers.push({ object, x, y, vx: physics.vx, vy: physics.vy, time, radius, alpha: alpha * physics.alpha });
-                        continue;
-                    }
-                }
-                if (physics) alpha *= physics.alpha;
-                // A point in a patch cut out of its tier's bands, held to be
-                // drawn inside the patch once the tier is done.
+        // The tiers, in one of three passes: 'all' of them, as the sky has
+        // always been drawn; only the haze that goes into the resting base
+        // ('base'); or everything but that haze ('rest'), over a base that
+        // already holds it. See drawSkyBase.
+        let baseCached = false;
+        const paintTiers = pass => {
+            for (const tier of tierList) {
+                const factor = animated ? tier.factor : 1;
+                if (pass === 'base' && !tier.baseObjects.length) continue;
+                if (pass !== 'base' && tier === tiers.stars && !baseCached) drawStaticStarField(cameraX, cameraY);
+                // The dust and the cluster stars, copied from their bands but for
+                // the patches where they are bending, whose points the loop below
+                // draws; see drawBakedTier.
+                const baked = pass !== 'base' && animated && bakedTiers.find(item => item.tier === tier);
+                const fromBands = !!baked && drawBakedTier(baked, time, lightDisturbed);
+                // A complete band already contains every point in this tier.
+                // With no live patches, there is no per-star work left to do.
+                if (fromBands && !bakedCutCount) continue;
+                let minY = scrollPosition + halfHeight - (halfHeight + tier.margin) / factor;
+                let maxY = scrollPosition + halfHeight + (halfHeight + tier.margin) / factor;
                 if (fromBands) {
-                    const held = bakedPoints.length;
-                    const point = bakedPointPool[held] || (bakedPointPool[held] = {});
-                    bakedPoints.push(point);
-                    point.x = x; point.y = y; point.radius = radius; point.stretch = lensStretch;
-                    point.alpha = clamp(alpha, 0, 1); point.color = object.fillColor;
-                    continue;
+                    let top = height, bottom = 0;
+                    for (let i = 0; i < bakedCutCount; i++) {
+                        top = Math.min(top, bakedCuts[i].y0);
+                        bottom = Math.max(bottom, bakedCuts[i].y1);
+                    }
+                    minY = Math.max(minY, scrollPosition + halfHeight + (top - tier.liveReach - halfHeight) / factor);
+                    maxY = Math.min(maxY, scrollPosition + halfHeight + (bottom + tier.liveReach - halfHeight) / factor);
                 }
-                context.globalAlpha = clamp(alpha, 0, 1);
-                if (tier.points) {
-                    if (object.fillColor !== lastFill) context.fillStyle = lastFill = object.fillColor;
-                    if (tier === dustTier) {
-                        // Dust is smaller than a pixel -- a fifth to three
-                        // fifths of one on a 1.25x canvas -- and at that size
-                        // a disc and a square light the same pixel by the
-                        // same amount. It is drawn as the square. An ellipse
-                        // is a path, and the graphics library takes a path
-                        // one at a time on the processor; eight hundred of
-                        // them was half of what a frame of the sky cost it,
-                        // for a veil at three to fifteen per cent. A square
-                        // is a rectangle, which it draws in one batch.
-                        // DUST_SIDE is the side that gives back the light
-                        // the rasteriser actually put into the disc: measured
-                        // over 2400 motes, total light within a few per cent,
-                        // and all but a few dozen pixels within 3/255.
-                        const side = radius * DUST_SIDE;
-                        context.fillRect(x - side * lensStretch / 2, y - side / 2, side * lensStretch, side);
+                const cameraOffsetX = cameraX * factor * factor * 10;
+                const cameraOffsetY = cameraY * factor * factor * 7;
+                const objects = pass === 'base' ? tier.baseObjects
+                    : !animated ? tier.objects : pass === 'rest' ? tier.restObjects : tier.liveObjects;
+                // Every body on a tier shares one orbit clock; only its phase
+                // differs. Taking the clock's sine and cosine here lets each body
+                // turn its own phase with two multiplies instead of its own call.
+                const orbitSin = animated ? Math.sin(time * .055) : 0;
+                const orbitCos = animated ? Math.cos(time * .055) : 0;
+                // Set only when it actually changes. Handing the canvas a colour
+                // is a CSS string it has to parse; a run of stars cut from the
+                // same palette entry can share the one it has already read.
+                let lastFill = null;
+                // Whether anything on this tier can be lensed at all is settled by
+                // the tier's own depth and the sky's black holes, not by the star.
+                const lensing = width >= 700 && animated && factor < .9 && projectedHoles.length > 0;
+                for (let i = lowerBound(objects, minY); i < objects.length && objects[i].documentY < maxY; i++) {
+                    const object = objects[i];
+                    const baseY = (object.documentY - scrollPosition - halfHeight) * factor + halfHeight;
+                    // Most cached stars are nowhere near a disturbance. Reject
+                    // those before taking sines and projecting their motion.
+                    if (fromBands && !bakedLive(object.x, baseY, object.liveReach)) continue;
+                    // The seeded anchor stays fixed; a bounded spring offset carries
+                    // cursor impulses and gravity independently of camera parallax.
+                    const motion = animated ? Math.sin(time * object.speed + object.phase) * object.drift : 0;
+                    // Over half the sky was dealt no orbit at all, and multiplying
+                    // a sine by zero is still a sine taken.
+                    const orbit = animated && object.orbit
+                        ? (orbitSin * object.phaseCos + orbitCos * object.phaseSin) * object.orbit : 0;
+                    let x = object.x + motion + orbit - cameraOffsetX;
+                    let y = baseY + motion * .6 - cameraOffsetY;
+                    if (fromBands && !bakedLive(x, y, object.radius * 3 + 2)) continue;
+                    const physics = animated && object.interactive
+                        ? interactBody(object, x, y, delta, time, cameraX, cameraY) : null;
+                    if (physics) { x = physics.x; y = physics.y; }
+                    let lightBoost = 1;
+                    // Left alone, the routine returns the light exactly where it
+                    // found it, so skipping it when nothing is pushing leaves the
+                    // same star in the same place at the same brightness.
+                    if (animated && lightDisturbed && !object.haze && (tier.points || object.glint || tier === tiers.mediumStars)) {
+                        disturbLight(object, x, y, factor, time);
+                        x = warped.x; y = warped.y; lightBoost = warped.sink;
+                    }
+                    // Only background light bends. A few cheap local mass checks,
+                    // without touching page pixels or allocating per-star objects.
+                    let lensStretch = lightBoost > 1 ? warped.stretch : 1;
+                    if (lensing) for (const hole of projectedHoles) {
+                        if (factor >= hole.parallaxFactor) continue;
+                        const dx = x - hole.screenX, dy = y - hole.screenY;
+                        const reach = hole.radius * 1.35;
+                        const distanceSquared = dx * dx + dy * dy;
+                        if (distanceSquared < reach * reach && distanceSquared > 1) {
+                            const distance = Math.sqrt(distanceSquared);
+                            const influence = (1 - distance / reach) ** 2;
+                            const shift = Math.min(9, hole.radius * .055) * influence * (1 + (hole.disturbance || 0));
+                            x += dx / distance * shift; y += dy / distance * shift;
+                            lensStretch = 1 + influence * .45;
+                        }
+                    }
+                    // Everything on the sheet slides toward the dent, and sinks
+                    // away from the viewer as it does -- smaller and dimmer at the
+                    // bottom of the well is what turns an inward slide into depth.
+                    let sink = 1;
+                    if (touchWells.length && animated) {
+                        warped.x = x; warped.y = y;
+                        warpPoint(warped, factor);
+                        x = warped.x; y = warped.y;
+                        sink = warped.sink;
+                        lensStretch *= warped.stretch;
+                    }
+                    const scale = 1 + (factor > 1 ? clamp((height / 2 - y) / height, -.5, .5) * .09 : 0);
+                    const radius = object.radius * scale * (physics ? physics.scale : 1) * clamp(sink, .3, 1.3);
+                    if (x + radius < 0 || x - radius > width || y + radius < 0 || y - radius > height) continue;
+                    let alpha = object.alpha * lightBoost * (1 - object.pulse + Math.sin(time * object.speed * 3 + object.phase) * object.pulse);
+                    // Partial, not proportional: light falling into the well dims
+                    // but never blinks out, or the dent would read as a hole
+                    // punched through the field.
+                    if (sink !== 1) alpha *= clamp(.58 + .42 * sink, .2, 1.2);
+                    if (!tier.points) {
+                        // Frozen at placement -- see finalizeTiers. A dim remnant
+                        // remains behind the text an object was placed under, and it
+                        // stays exactly that dim for the life of the visit.
+                        const clearance = object.clearance ?? 1;
+                        alpha *= object.haze ? .5 + clearance * .5 : .07 + clearance * .93;
+                        alpha *= .1 + .9 * smoothstep(clamp((y - navigationBottom + radius * .1) / Math.max(24, radius * .5), 0, 1));
+                        // Nothing here lifts with the cursor. A body near the pointer
+                        // moves out of its way; it does not also light up.
+                    }
+                    // A body a feeding hole is pulling in, or has caught, is drawn
+                    // on that hole's layer, at the layer's pace -- see
+                    // drawHoleLayers. What it hands over is everything but the
+                    // motion itself: the layer carries a body that is being pulled
+                    // on along the way it is going, and works out where a caught
+                    // one has spiralled to, how small and how faint, each time it
+                    // draws.
+                    if (physics) {
+                        const hole = physics.capture ? physics.capture.hole : physics.near;
+                        if (hole && hole.layer && liftable(hole, object.radius)) {
+                            if (physics.capture) hole.captives.push({ object, radius: radius / physics.scale, alpha });
+                            else hole.approachers.push({ object, x, y, vx: physics.vx, vy: physics.vy, time, radius, alpha: alpha * physics.alpha });
+                            continue;
+                        }
+                    }
+                    if (physics) alpha *= physics.alpha;
+                    // A point in a patch cut out of its tier's bands, held to be
+                    // drawn inside the patch once the tier is done.
+                    if (fromBands) {
+                        const held = bakedPoints.length;
+                        const point = bakedPointPool[held] || (bakedPointPool[held] = {});
+                        bakedPoints.push(point);
+                        point.x = x; point.y = y; point.radius = radius; point.stretch = lensStretch;
+                        point.alpha = clamp(alpha, 0, 1); point.color = object.fillColor;
                         continue;
                     }
-                    context.beginPath();
-                    // Stays an ellipse even when nothing is stretching it. An
-                    // arc of equal radii is the same circle and a cheaper one
-                    // to ask for, but Chromium does not rasterise the two the
-                    // same: a third of the stars came out with different edge
-                    // pixels, by up to a quarter of a channel. That is a
-                    // different sky, which is not what was asked for.
-                    context.ellipse(x, y, radius * lensStretch, radius, 0, 0, TAU);
-                    context.fill();
-                    if (object.glint && radius > .8) {
-                        context.save();
-                        context.globalAlpha *= .42;
-                        context.strokeStyle = object.fillColor;
-                        context.lineWidth = Math.max(.35, radius * .22);
+                    context.globalAlpha = clamp(alpha, 0, 1);
+                    if (tier.points) {
+                        if (object.fillColor !== lastFill) context.fillStyle = lastFill = object.fillColor;
+                        if (tier === dustTier) {
+                            // Dust is smaller than a pixel -- a fifth to three
+                            // fifths of one on a 1.25x canvas -- and at that size
+                            // a disc and a square light the same pixel by the
+                            // same amount. It is drawn as the square. An ellipse
+                            // is a path, and the graphics library takes a path
+                            // one at a time on the processor; eight hundred of
+                            // them was half of what a frame of the sky cost it,
+                            // for a veil at three to fifteen per cent. A square
+                            // is a rectangle, which it draws in one batch.
+                            // DUST_SIDE is the side that gives back the light
+                            // the rasteriser actually put into the disc: measured
+                            // over 2400 motes, total light within a few per cent,
+                            // and all but a few dozen pixels within 3/255.
+                            const side = radius * DUST_SIDE;
+                            context.fillRect(x - side * lensStretch / 2, y - side / 2, side * lensStretch, side);
+                            continue;
+                        }
                         context.beginPath();
-                        context.moveTo(x - radius * 2.8, y);
-                        context.lineTo(x + radius * 2.8, y);
-                        context.moveTo(x, y - radius * 2.8);
-                        context.lineTo(x, y + radius * 2.8);
-                        context.stroke();
-                        context.restore();
+                        // Stays an ellipse even when nothing is stretching it. An
+                        // arc of equal radii is the same circle and a cheaper one
+                        // to ask for, but Chromium does not rasterise the two the
+                        // same: a third of the stars came out with different edge
+                        // pixels, by up to a quarter of a channel. That is a
+                        // different sky, which is not what was asked for.
+                        context.ellipse(x, y, radius * lensStretch, radius, 0, 0, TAU);
+                        context.fill();
+                        if (object.glint && radius > .8) {
+                            context.save();
+                            context.globalAlpha *= .42;
+                            context.strokeStyle = object.fillColor;
+                            context.lineWidth = Math.max(.35, radius * .22);
+                            context.beginPath();
+                            context.moveTo(x - radius * 2.8, y);
+                            context.lineTo(x + radius * 2.8, y);
+                            context.moveTo(x, y - radius * 2.8);
+                            context.lineTo(x, y + radius * 2.8);
+                            context.stroke();
+                            context.restore();
+                        }
+                    } else {
+                        // Only the transform changes for these sprites. Reset it
+                        // without copying/restoring the entire canvas state.
+                        // Scale, shift and turn are one matrix, so they are handed
+                        // over as one. Asked for separately, the canvas multiplied
+                        // the three together itself -- once per body per frame,
+                        // taking the same sine and cosine each time. The angle's
+                        // pair comes with the object now; see finalizeTiers.
+                        const scaledCos = object.angleCos * pixelRatio;
+                        const scaledSin = object.angleSin * pixelRatio;
+                        context.setTransform(scaledCos, scaledSin, -scaledSin, scaledCos,
+                            x * pixelRatio, y * pixelRatio);
+                        // Bodies that carry dead margin hand over only the part of
+                        // the sprite that can still show; see drawBodySprite.
+                        drawBodySprite(object, radius);
                     }
-                } else {
-                    // Only the transform changes for these sprites. Reset it
-                    // without copying/restoring the entire canvas state.
-                    // Scale, shift and turn are one matrix, so they are handed
-                    // over as one. Asked for separately, the canvas multiplied
-                    // the three together itself -- once per body per frame,
-                    // taking the same sine and cosine each time. The angle's
-                    // pair comes with the object now; see finalizeTiers.
-                    const scaledCos = object.angleCos * pixelRatio;
-                    const scaledSin = object.angleSin * pixelRatio;
-                    context.setTransform(scaledCos, scaledSin, -scaledSin, scaledCos,
-                        x * pixelRatio, y * pixelRatio);
-                    // Bodies that carry dead margin hand over only the part of
-                    // the sprite that can still show; see drawBodySprite.
-                    drawBodySprite(object, radius);
                 }
+                if (!tier.points) context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                if (fromBands) drawBakedPoints(baked);
             }
-            if (!tier.points) context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-            if (fromBands) drawBakedPoints(baked);
-        }
+        };
+        // Furthest back: the sheet everything else sits on, with the deep
+        // star field and the haze already on it when the page is still.
+        baseCached = animated && drawSkyBase(time, () => paintTiers('base'));
+        if (!animated) drawSkyGround();
+        paintTiers(baseCached ? 'rest' : 'all');
         sweepGalaxies();
         drawOrbitingBodies(delta, time, animated, cameraX, cameraY);
         drawPulsars(time, cameraX, cameraY);
@@ -4617,7 +4736,9 @@ function setupGalaxyField(canvas, reducedMotion) {
             // Keep the animated canvas close to CSS-pixel resolution. The
             // background is intentionally soft, so 1.25x is visually enough
             // while avoiding a large fill-rate cost on laptop GPUs.
-            const ratio = Math.min(window.devicePixelRatio || 1, quality === 'high' && width >= 700 ? 1.25 : 1);
+            // A machine still struggling once the sky is eased draws it at
+            // CSS-pixel resolution (see lighten).
+            const ratio = Math.min(window.devicePixelRatio || 1, quality === 'high' && width >= 700 && !lightened ? 1.25 : 1);
             if (resize || ratio !== pixelRatio) {
                 pixelRatio = ratio;
                 canvas.width = Math.round(width * pixelRatio);
@@ -4995,7 +5116,16 @@ function setupGalaxyField(canvas, reducedMotion) {
         eased = true;
         applyRates();
     };
-    return { move, release, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd, ease };
+    // The step after easing, for a machine that still cannot keep up: the
+    // sky is drawn at one canvas pixel per CSS pixel rather than 1.25, a
+    // third fewer pixels in every pass. The sky is soft light on black, and
+    // it is the last thing given up before Low FX takes it away altogether.
+    const lighten = () => {
+        if (lightened) return;
+        lightened = true;
+        refreshLayout();
+    };
+    return { move, release, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd, ease, lighten };
 }
 
 
