@@ -138,6 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const MIN_STEADY_FPS = 50;
     const STRAINED_WINDOWS_BEFORE_EASING = 2;
     const MISSED_FRAME_SHARE = .1;
+    // And a floor under all of it: a page crawling along at ten frames a
+    // second or worse for five seconds running goes straight to Low FX,
+    // whatever step it has reached. Those seconds count across the steps --
+    // easing the sky does not start them over -- so nobody sits through a
+    // slideshow while the page tries its gentler options one by one.
+    const CRAWLING_FPS = 12;
+    const CRAWLING_MS = 5000;
     // The monitor measures by asking for every display frame, and a page that
     // asks for every frame keeps the machine awake whether or not it draws
     // anything in them. So it watches while the page is in use -- a cursor
@@ -156,6 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const performanceMonitorFrameTimes = [];
     let performanceSamplingResumesAt = 0;
     let clunkyWindows = 0;
+    // When the current run of crawling seconds began, by the clock.
+    let crawlingSince = 0;
+    let crawlingWindows = 0;
     let strainedWindows = 0;
     let skyEased = false;
     let glassEased = false;
@@ -269,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (performanceWindowSampled < PERFORMANCE_WINDOW_MS) return;
 
         const frames = performanceMonitorFrameTimes.length;
+        const sampledTime = performanceWindowSampled;
         // Judged by the quicker frames, not the average: if even the quickest
         // quarter of a second's frames take longer than a 30fps frame, the
         // page itself is slow, while a lone spike that drags an average down
@@ -299,6 +310,24 @@ document.addEventListener('DOMContentLoaded', () => {
             || longFrames / Math.max(frames, 1) > .12
             || missedFrames / Math.max(frames, 1) > MISSED_FRAME_SHARE;
         resetPerformanceWindow(timestamp);
+
+        // Seconds actually sampled, so a window filled from short looks is
+        // judged by the frames in it, not by the time between the looks.
+        // The five seconds are counted by the clock, so the pauses the page
+        // takes to settle after each gentler step count toward them too.
+        const crawling = frames / Math.max(sampledTime, 1) * 1000 <= CRAWLING_FPS;
+        // At least three of those seconds actually measured, so two brief
+        // looks eight seconds apart cannot make the call on their own.
+        if (!crawling) { crawlingSince = 0; crawlingWindows = 0; }
+        else {
+            if (!crawlingSince) crawlingSince = timestamp - sampledTime;
+            crawlingWindows += 1;
+        }
+        if (crawlingWindows >= 3 && timestamp - crawlingSince >= CRAWLING_MS) {
+            automaticDowngradeComplete = true;
+            applyEffectsMode('low', false, 'lag');
+            return;
+        }
 
         // Before High FX is given up, the page is asked for less, a step at a
         // time: the sky runs slower, every effect kept and only drawn less
@@ -5174,8 +5203,13 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         // Dropping the class and zeroing the angles in the same frame lets the
         // card's own transform transition carry it back to flat.
         activeCard.classList.remove('is-tilting');
-        ['--card-glow', '--card-glow-x', '--card-glow-y', '--card-tilt-x', '--card-tilt-y', '--lean-width']
-            .forEach(property => activeCard.style.removeProperty(property));
+        // A card's light fades out where the cursor left it: it is slid into
+        // place rather than drawn there (portfolio.css), and without its
+        // position it would slide off to the corner as it faded. A button's
+        // highlight goes back to where it rests.
+        const properties = ['--card-glow', '--card-tilt-x', '--card-tilt-y', '--lean-width'];
+        if (activeCard.matches(GLASS_BUTTON_SELECTOR)) properties.push('--card-glow-x', '--card-glow-y');
+        properties.forEach(property => activeCard.style.removeProperty(property));
         activeCard = null;
         activeRect = null;
     };

@@ -2321,13 +2321,20 @@ html[data-effects="high"] .about-highlight::after,
 html[data-effects="high"] .skill-group::after {
     content: "";
     position: absolute;
-    inset: 0;
+    left: 0;
+    top: 0;
     z-index: 3;
     pointer-events: none;
     opacity: var(--card-glow, 0);
+    /* The light is an ellipse of its own size, slid to the cursor. Drawn as
+       a gradient across the whole card and moved by its centre, it had the
+       card painted again -- picture, text and all -- on every move of the
+       mouse; slid, it is only moved. */
+    width: calc(var(--card-glow-size, 15rem) * 2);
+    height: calc(var(--card-glow-size, 15rem) * 1.3);
+    transform: translate(calc(var(--card-glow-x, 50%) - 50%), calc(var(--card-glow-y, 50%) - 50%));
     background: radial-gradient(
-        var(--card-glow-size, 15rem) calc(var(--card-glow-size, 15rem) * .65)
-        at var(--card-glow-x, 50%) var(--card-glow-y, 50%),
+        var(--card-glow-size, 15rem) calc(var(--card-glow-size, 15rem) * .65) at 50% 50%,
         rgba(255, 255, 255, .18),
         rgba(200, 226, 255, .09) 20%,
         rgba(123, 168, 216, .065) 45%,
@@ -2335,6 +2342,12 @@ html[data-effects="high"] .skill-group::after {
     /* A translucent reflection needs no separate screen-blend surface. */
     mix-blend-mode: normal;
     transition: opacity .2s ease;
+}
+/* Its own layer while the cursor is on the card, so a move is a move. */
+@media (hover: hover) {
+    html[data-effects="high"] :is(.project-card, .about-highlight, .skill-group):hover::after {
+        will-change: transform;
+    }
 }
 /* A card is only as wide as its column, so the light is sized to the smaller
    surfaces rather than washing the whole card at once. */
