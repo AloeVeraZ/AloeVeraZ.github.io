@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+  A bench for the glass alone: a background redrawn every display frame (so
+  every sheet over it has to be filtered again every frame, as on the real
+  page while it scrolls) under a fixed set of sheets, with the backdrop filter
+  picked from the address:
+
+    glass-lab.html?filter=strips&sheets=cards
+
+  filter  none | frost | strips | full | noop | nomerge   (see FILTERS below)
+  sheets  cards (three project-card-sized sheets and a navigation bar) | bar | buttons
+
+  The filter maps are built by the same code as glass.js (copied, so this
+  page needs nothing else). bench.ps1 measures it with -Site.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glass lab</title>
+<style>
+    html, body { margin: 0; height: 100%; background: #080808; overflow: hidden; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+    .sheet { position: fixed; border-radius: 20px; background: rgba(19, 24, 33, .22); }
+    .project-card { color: #f7f4ed; font: 15px/1.5 sans-serif; padding: 24px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div id="sheets"></div>
+<script>
+(() => {
+    const params = new URLSearchParams(location.search);
+    const filter = params.get('filter') || 'strips';
+    const sheetsKind = params.get('sheets') || 'cards';
+
+    // ---- A background that changes everywhere, every frame ----------------
+    const sky = document.getElementById('sky');
+    const ctx = sky.getContext('2d', { alpha: false });
+    const resize = () => { sky.width = innerWidth; sky.height = innerHeight; };
+    resize();
+    const dots = Array.from({ length: 300 }, (_, i) => ({ x: (i * 977) % innerWidth, y: (i * 613) % innerHeight, r: 1 + (i % 4) }));
+    const frame = t => {
+        ctx.fillStyle = '#080808';
+        ctx.fillRect(0, 0, sky.width, sky.height);
+        ctx.strokeStyle = 'rgba(145,200,255,.25)';
+        ctx.beginPath();
+        const shift = (t / 20) % 24;
+        for (let x = -24 + shift; x < sky.width; x += 24) { ctx.moveTo(x, 0); ctx.lineTo(x, sky.height); }
+        ctx.stroke();
+        ctx.fillStyle = '#dde9ff';
+        for (const d of dots) { ctx.beginPath(); ctx.arc((d.x + t / 30) % sky.width, d.y, d.r, 0, Math.PI * 2); ctx.fill(); }
+        requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
+    // ---- The sheets -------------------------------------------------------------
+    const W = innerWidth, H = innerHeight;
+    const layouts = {
+        cards: [[24, 140, (W - 96) / 3, H - 180], [48 + (W - 96) / 3, 140, (W - 96) / 3, H - 180], [72 + 2 * (W - 96) / 3, 140, (W - 96) / 3, H - 180], [16, 16, W - 32, 56]],
+        bar: [[16, 16, W - 32, 56]],
+        buttons: Array.from({ length: 12 }, (_, i) => [40 + (i % 6) * 120, 200 + Math.floor(i / 6) * 120, 44, 44])
+    };
+    const holder = document.getElementById('sheets');
+    const sheets = layouts[sheetsKind].map(([x, y, w, h]) => {
+        const el = document.createElement('div');
+        el.className = 'sheet project-card';
+        el.style.cssText += `left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${Math.min(20, h / 2)}px`;
+        el.textContent = h > 100 ? 'Glass sheet. Text rides on top, as on the real cards.' : '';
+        holder.appendChild(el);
+        return el;
+    });
+
+    // ---- The filter maps, as glass.js builds them -------------------------------------
+    const GLASS = { bar: { bevel: 22, stretch: 2.6, density: .5 }, surface: { bevel: 22, stretch: 2.6, density: .25 } };
+    const CURVE = 1.5;
+    const rimBevel = (kind, w, h) => Math.max(1, Math.min(GLASS[kind].bevel, Math.min(w, h) / 2 - 2));
+    const rimReach = (kind, bevel) => (1 - 1 / GLASS[kind].stretch) * bevel / CURVE;
+    const buildMap = (width, height, radius, bevel, density) => {
+        const cw = Math.max(1, Math.round(width * density)), ch = Math.max(1, Math.round(height * density));
+        const canvas = document.createElement('canvas'); canvas.width = cw; canvas.height = ch;
+        const c = canvas.getContext('2d', { willReadFrequently: true });
+        const image = c.createImageData(cw, ch), data = image.data;
+        const halfW = width / 2, halfH = height / 2, r = Math.min(radius, halfW, halfH);
+        for (let i = 0; i < data.length; i += 4) { data[i] = data[i + 1] = data[i + 2] = 128; data[i + 3] = 255; }
+        for (let py = 0; py < ch; py++) for (let px = 0; px < cw; px++) {
+            const x = (px + .5) / density - halfW, y = (py + .5) / density - halfH;
+            const qx = Math.abs(x) - (halfW - r), qy = Math.abs(y) - (halfH - r);
+            let depth, nx, ny;
+            if (qx > 0 && qy > 0) { const l = Math.hypot(qx, qy); depth = r - l; nx = Math.sign(x) * qx / l; ny = Math.sign(y) * qy / l; }
+            else if (qx > qy) { depth = r - qx; nx = Math.sign(x); ny = 0; } else { depth = r - qy; nx = 0; ny = Math.sign(y); }
+            if (depth < 0 || depth >= bevel) continue;
+            const pull = Math.pow(1 - depth / bevel, CURVE), i = (py * cw + px) * 4;
+            data[i] = 128 - nx * pull * 127; data[i + 1] = 128 - ny * pull * 127;
+        }
+        c.putImageData(image, 0, 0);
+        const band = Math.ceil((bevel + r) * density);
+        return { canvas, cw, ch, bandX: Math.min(band, cw), bandY: Math.min(band, ch) };
+    };
+    const crop = (map, x, y, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(map.canvas, x, y, w, h, 0, 0, w, h); return c.toDataURL('image/png'); };
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    document.body.appendChild(svg);
+    const FILTERS = {
+        // The bend over the four rim strips, merged over the frost: glass.js.
+        strips: (id, w, h, kind, map, scale) => {
+            const sx = w / map.cw, sy = h / map.ch, { cw, ch, bandX, bandY } = map;
+            const strip = (n, x, y, sw, sh) => `<feImage x="${x * sx}" y="${y * sy}" width="${sw * sx}" height="${sh * sy}" preserveAspectRatio="none" href="${crop(map, x, y, sw, sh)}" result="map-${n}"/>
+                <feDisplacementMap x="${x * sx}" y="${y * sy}" width="${sw * sx}" height="${sh * sy}" in="SourceGraphic" in2="map-${n}" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="rim-${n}"/>`;
+            return `${strip('l', 0, 0, bandX, ch)}${strip('r', cw - bandX, 0, bandX, ch)}${strip('t', bandX, 0, cw - 2 * bandX, bandY)}${strip('b', bandX, ch - bandY, cw - 2 * bandX, bandY)}
+                <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="rim-l"/><feMergeNode in="rim-r"/><feMergeNode in="rim-t"/><feMergeNode in="rim-b"/></feMerge>`;
+        },
+        // One map over the whole sheet and one displacement: no merge.
+        full: (id, w, h, kind, map, scale) => `<feImage x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" href="${map.canvas.toDataURL('image/png')}" result="map"/>
+            <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>`,
+        // A reference filter that does nothing: what referencing one costs.
+        noop: () => `<feMerge><feMergeNode in="SourceGraphic"/></feMerge>`,
+        // The strips without the merge (the middle comes out empty).
+        nomerge: (id, w, h, kind, map, scale) => FILTERS.strips(id, w, h, kind, map, scale).replace(/<feMerge>[\s\S]*<\/feMerge>/, '<feMerge><feMergeNode in="rim-l"/><feMergeNode in="rim-r"/><feMergeNode in="rim-t"/><feMergeNode in="rim-b"/></feMerge>')
+    };
+    sheets.forEach((el, n) => {
+        const w = el.offsetWidth, h = el.offsetHeight;
+        if (filter === 'none') return;
+        if (filter === 'frost') { el.style.backdropFilter = 'blur(4px) saturate(1.4) brightness(1.06)'; return; }
+        const kind = h <= 60 && w > 300 ? 'bar' : 'surface';
+        const radius = Math.min(20, h / 2), bevel = rimBevel(kind, w, h);
+        const scale = (rimReach(kind, bevel) * 255 / 127).toFixed(2);
+        const map = buildMap(w, h, radius, bevel, GLASS[kind].density);
+        const id = `lab-glass-${n}`;
+        const holderSvg = document.createElementNS(svgNS, 'svg');
+        let body = FILTERS[filter](id, w, h, kind, map, scale);
+        // As in glass.js: a sheet too short for strips is bent whole.
+        if (filter === 'strips' && !(map.cw > map.bandX * 2 && map.ch > map.bandY * 2)) body = FILTERS.full(id, w, h, kind, map, scale);
+        holderSvg.innerHTML = `<filter id="${id}" x="0" y="0" width="${w}" height="${h}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">${body}</filter>`;
+        svg.appendChild(holderSvg.firstElementChild);
+        el.style.backdropFilter = `blur(4px) url(#${id}) saturate(1.4) brightness(1.06)`;
+    });
+    // Ready for bench.ps1's page check.
+    document.body.insertAdjacentHTML('beforeend', '<i class="project-card" style="display:none"></i>');
+})();
+</script>
+</body>
+</html>

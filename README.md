@@ -15,6 +15,7 @@ Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), 
 | `project-example.json` | Template for a new project |
 | `assets/` | Photos, GIFs, graphics and self-hosted fonts |
 | `tools/` | Scripts that rebuild images, icons and fonts |
+| `tools/perf/` | Windows scripts that serve the site locally and measure it in Chrome (see its README) |
 
 Also: `privacy.html`, `terms.html`, `updates.html` (the site's major versions) and `404.html` (styled by `page.css`, with `page.js` setting the zoom-aware font size), `fonts.css`, `icons.css`, `robots.txt`, `sitemap.xml` and `site.webmanifest`.
 
@@ -26,7 +27,9 @@ The page loads its data with `fetch`, so it needs a local server:
 python -m http.server 8000
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000>. On Windows without Python, `powershell -NoProfile -ExecutionPolicy Bypass -File tools/perf/serve.ps1` serves it at <http://localhost:8862>.
+
+`PERFORMANCE_BASELINE.md`, `OPTIMIZATION_LOG.md` and `PERFORMANCE_REPORT.md` record what the site costs to run and what was changed to make it cheaper; `tools/perf/smoke.ps1` clicks through the page and checks it still works.
 
 ## Add a project
 
