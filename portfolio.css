@@ -446,6 +446,18 @@ html.effects-background-click-fading body {
 .hero-name { --lh: .87; max-width: 56.25rem; margin: 0 auto; font-size: clamp(3.8rem, 10.2vw, 8.5rem); font-weight: 700; letter-spacing: -.085em; line-height: var(--lh); }
 .hero-tagline { --lh: 1.55; line-height: var(--lh); max-width: 40.625rem; margin: var(--rhythm-heading) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
 .social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--rhythm-block) 0; }
+/* The icons arrive with portfolio-data.json. Their row stands at its full
+   height from the first paint, so the hero's buttons do not drop by it when
+   they do. */
+.social-links { min-height: var(--control-size); }
+/* And everything below About waits for the data, hidden but laid out. On a
+   phone the About cards arriving used to push the Skills heading -- already on
+   screen -- half a screen down, a layout shift of 0.34. Nothing a visitor can
+   see now moves: the sections appear in the frame the data is rendered in
+   (portfolio.js clears the class, or shows the error that took its place).
+   The class is only ever set by script, so without one nothing is hidden. */
+html.awaiting-data main > .section:not(#about),
+html.awaiting-data footer { visibility: hidden; }
 .social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
 .resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: inherit; }
 .hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }

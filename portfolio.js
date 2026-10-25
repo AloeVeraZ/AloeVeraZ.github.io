@@ -110,10 +110,23 @@ document.addEventListener('DOMContentLoaded', () => {
         && (!deviceMemory || deviceMemory >= 4)
         && !dataSaverEnabled
         && !reducedMotion.matches;
+    // A page that had to drop to Low FX because it was running slowly keeps
+    // it for the rest of the visit -- this tab, until it is closed. A reload,
+    // or a trip to the policy pages and back, used to start High FX all over
+    // again on the machine that had just shown it could not keep up, and the
+    // reader sat through the same seconds of stutter before the monitor
+    // below stepped in again. A fresh visit tries High FX again.
+    const lagStorageKey = 'portfolio-effects-lag';
+    let slowThisVisit = false;
+    try {
+        slowThisVisit = sessionStorage.getItem(lagStorageKey) === '1';
+    } catch (error) {
+        slowThisVisit = false;
+    }
     let effectsMode = ['low', 'high'].includes(savedEffectsMode)
         ? savedEffectsMode
-        : (meetsHighEffectsBaseline ? 'high' : 'low');
-    let effectsReason = savedEffectsMode ? 'manual' : 'hardware';
+        : (meetsHighEffectsBaseline && !slowThisVisit ? 'high' : 'low');
+    let effectsReason = savedEffectsMode ? 'manual' : slowThisVisit ? 'lag' : 'hardware';
     // Low FX takes over as soon as High FX turns clunky: two seconds in a row
     // where the typical frame runs at 30fps or worse, or where a quarter of
     // the frames stutter. A lone spike -- a GC pause, a collection opening --
@@ -411,6 +424,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Private browsing can block storage, but the visual mode should still work.
             }
         }
+        // See slowThisVisit. A choice made by hand outranks it either way.
+        try {
+            if (reason === 'lag') sessionStorage.setItem(lagStorageKey, '1');
+            else if (remember) sessionStorage.removeItem(lagStorageKey);
+        } catch (error) {
+            // Storage can be blocked; the page only forgets sooner.
+        }
     };
 
     performanceToggle.addEventListener('click', () => {
@@ -467,18 +487,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // at anyway: every effect kept, the sky only drawn less often. Asked once
     // the page is idle, because opening a graphics context to ask is not
     // free, and it is thrown away at once.
+    //
+    // The same question finds a machine with no graphics to draw with at all
+    // -- none fitted, its driver on the browser's blocklist, a remote desktop,
+    // a virtual machine. Asked to refuse a context that would come with a
+    // major performance caveat, WebGL refuses exactly there, where the
+    // browser would draw in software or not at all. On such a machine every
+    // sheet of glass and every frame of the sky is drawn by the processor,
+    // and High FX was a slideshow for the ten seconds or more the frame
+    // monitor takes to give up on it, on every visit. It starts in Low FX
+    // instead, unless its visitor has chosen High FX themselves.
     const easeForIntegratedGraphics = () => {
         if (effectsMode !== 'high' || skyEased) return;
         let renderer = '';
+        let software = false;
         try {
-            const gl = document.createElement('canvas').getContext('webgl', { powerPreference: 'low-power' });
+            const gl = document.createElement('canvas').getContext('webgl', { powerPreference: 'low-power', failIfMajorPerformanceCaveat: true });
             if (gl) {
                 const info = gl.getExtension('WEBGL_debug_renderer_info');
                 renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
                 gl.getExtension('WEBGL_lose_context')?.loseContext();
-            }
+            } else software = true;
         } catch (error) {
             renderer = '';
+        }
+        if (software && effectsReason !== 'manual') {
+            document.documentElement.dataset.effectsRenderer = 'software';
+            automaticDowngradeComplete = true;
+            applyEffectsMode('low', false, 'hardware');
+            return;
         }
         document.documentElement.dataset.effectsRenderer = /intel/i.test(renderer) ? 'intel' : 'other';
         // Intel's own graphics cards (Arc) are not built in and keep up.
@@ -487,8 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
         galaxy.ease();
         document.documentElement.dataset.effectsPace = 'eased';
     };
-    if ('requestIdleCallback' in window) window.requestIdleCallback(easeForIntegratedGraphics, { timeout: 2000 });
-    else window.setTimeout(easeForIntegratedGraphics, 1200);
+    // Half a second at most: a machine drawing in software is never idle,
+    // and it used to wait out a two-second timeout in High FX.
+    if ('requestIdleCallback' in window) window.requestIdleCallback(easeForIntegratedGraphics, { timeout: 500 });
+    else window.setTimeout(easeForIntegratedGraphics, 500);
 
     let pointerFrame = 0;
     let latestPointerEvent;
@@ -606,12 +645,16 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFeaturedProjects(data.projects);
             renderProjectCollections(data.projectCollections, data.projects);
             setupModal();
+            // The sections that waited for the data appear in this frame,
+            // already at their full size (see .awaiting-data, index.html).
+            document.documentElement.classList.remove('awaiting-data');
             updateScrollMotion();
             window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
         })
         .catch(error => {
             console.error('Error loading portfolio data:', error);
             showDataLoadFailure();
+            document.documentElement.classList.remove('awaiting-data');
         });
 });
 
@@ -5988,20 +6031,42 @@ function buildProjectCardSummary(project) {
     return String(summary).trim();
 }
 
-function createProjectCard(project) {
+// A card in a collection nobody has opened yet holds its picture's address
+// aside (data-src, data-srcset) until the collection is opened. Lazy loading
+// alone did not hold it back: every card picture in every collection was
+// fetched within a moment of the page loading -- twenty-five pictures, a
+// megabyte and a half or more of a first visit -- for cards that sat in
+// closed rows, and the card's picture box keeps its height either way.
+function showDeferredPictures(root) {
+    root.querySelectorAll('img[data-src]').forEach(image => {
+        // All at once, as they always arrived: a ring turns its cards in from
+        // places the browser never sees coming, and a lazy picture there
+        // would be seen loading as it came round.
+        image.loading = 'eager';
+        // srcset first, so the browser picks one file rather than two.
+        if (image.dataset.srcset) image.srcset = image.dataset.srcset;
+        image.src = image.dataset.src;
+        image.removeAttribute('data-src');
+        image.removeAttribute('data-srcset');
+    });
+}
+
+function createProjectCard(project, options = {}) {
     const card = document.createElement('article');
     card.className = 'project-card';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `View ${project.title} details`);
     const isCertificate = project.imagePresentation === 'certificate';
+    // See showDeferredPictures.
+    const sourceAttribute = options.deferImage ? 'data-src' : 'src';
     // A card draws into roughly 440 CSS px, so most screens want the 900px
     // variant rather than the full-size file the modal uses.
     const cardSrcset = project.imageSrcset
-        ? ` srcset="${project.imageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
+        ? ` ${options.deferImage ? 'data-srcset' : 'srcset'}="${project.imageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
         : '';
     const cardMedia = project.image
-        ? `<img src="${project.image}"${cardSrcset} alt="${escapeAttribute(describeImage(project))}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}" data-motion-alt="${escapeAttribute(describeImage(project, 'motion'))}" data-still-alt="${escapeAttribute(describeImage(project))}" data-still-srcset="${project.imageSrcset || ''}"` : ''}>`
+        ? `<img ${sourceAttribute}="${project.image}"${cardSrcset} alt="${escapeAttribute(describeImage(project))}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}" data-motion-alt="${escapeAttribute(describeImage(project, 'motion'))}" data-still-alt="${escapeAttribute(describeImage(project))}" data-still-srcset="${project.imageSrcset || ''}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Preview coming soon</span></div>`;
     const projectPeriod = project.period
         ? `<div class="project-period"><i class="fa-regular fa-calendar" aria-hidden="true"></i>${project.period}</div>`
@@ -6073,7 +6138,7 @@ function renderProjectCollections(collections, projects) {
         const gallery = document.createElement('div');
         const useCarousel = collection.carousel !== false && collectionProjects.length > 3;
         gallery.className = useCarousel ? 'project-carousel circular-project-carousel' : 'project-grid compact-project-grid';
-        collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project)));
+        collectionProjects.forEach(project => gallery.appendChild(createProjectCard(project, { deferImage: true })));
         content.appendChild(gallery);
         let initializeCarousel = () => {};
         if (useCarousel) {
@@ -6090,6 +6155,7 @@ function renderProjectCollections(collections, projects) {
             toggle.setAttribute('aria-expanded', String(opening));
             if (cue) cue.textContent = `${opening ? 'Hide' : 'View'} ${countLabel}`;
             content.hidden = !opening;
+            if (opening) showDeferredPictures(content);
             // The backdrop is placed in page coordinates and stays there, so it
             // needs nothing from this beyond a nudge that the document is now a
             // different height -- the star tiles are cut to that height, and a

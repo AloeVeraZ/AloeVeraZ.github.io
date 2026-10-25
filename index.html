@@ -45,8 +45,13 @@
     <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20260925-arrow-gap2">
-    <link rel="stylesheet" href="navbar.css?v=20260922-adaptive-glass">
+    <link rel="stylesheet" href="portfolio.css?v=20261024-200329">
+    <link rel="stylesheet" href="navbar.css?v=20261024-touch-name">
+    <!-- Set before the first paint, cleared once portfolio-data.json has been
+         rendered: the sections below About wait for it (portfolio.css), so
+         the cards arriving cannot push what a phone is already showing. Four
+         seconds at most, whatever happens to the data or the scripts. -->
+    <script>document.documentElement.classList.add('awaiting-data'); setTimeout(function () { document.documentElement.classList.remove('awaiting-data'); }, 4000);</script>
 
     <script type="application/ld+json">
     {
@@ -96,7 +101,7 @@
         <div class="hero-content">
             <span class="badge hero-badge"><i class="fa-solid fa-gear" aria-hidden="true"></i> Mechanical Engineering &amp; Robotics</span>
             <h1 id="hero-name" class="hero-name">Angelo Demetroulakos</h1>
-            <p id="hero-tagline" class="hero-tagline">Robotics • CAD Design • Prototyping • Autonomous Systems</p>
+            <p id="hero-tagline" class="hero-tagline">Robotics • CAD • 3D Printing • Programming</p>
             <div class="social-links" id="hero-social">
             </div>
             <div class="hero-buttons">
@@ -208,7 +213,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20260925-lighter-sky2"></script>
+    <script src="portfolio.js?v=20261024-200329"></script>
     <script src="glass.js?v=20260925-liquid-glass"></script>
 </body>
 </html>

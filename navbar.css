@@ -185,6 +185,14 @@ html[data-glass] .navbar[data-nav-open] .nav-content {
     background: none;
     filter: none;
 }
+/* On a touch screen the name is pressed like every other control on the
+   page, so it stands the same 44px tall. It is centred on its line, as the
+   text was, so nothing moves; the target only grows to meet the thumb. */
+html[data-primary-input="touch"] .navbar .logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
 .navbar .nav-links {
     display: flex;
     align-items: center;
