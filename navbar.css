@@ -163,6 +163,16 @@ html[data-glass] .navbar[data-nav-open] .nav-content {
         backdrop-filter: none !important;
     }
 }
+/* Low FX on a computer drawing without graphics acceleration: the cards' denser
+   sheet in place of the frost, as there (portfolio.css). An open menu still
+   frosts, for the hero's lettering under it. */
+html[data-effects="low"][data-effects-renderer="software"] .navbar {
+    --nav-tint: var(--glass-surface-dense);
+}
+html[data-effects="low"][data-effects-renderer="software"] .has-scrolled .navbar:not([data-nav-open]) .nav-content {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
 .navbar .logo {
     position: relative;
     z-index: 1;
@@ -276,6 +286,16 @@ html[data-primary-input="touch"] .navbar .logo {
 @media (min-width: 901px) and (max-width: 1100px) {
     .navbar { --nav-pad: 1rem; }
     .navbar .nav-links { gap: 1.5rem; }
+}
+/* On a touch screen the section links stand 44px tall, as every control
+   there does, but a short name is narrower than that: "Skills" is 34px wide
+   on an iPad in landscape. Five pixels more on each side, lent back by the
+   margin, so the target meets the thumb and no letter moves. */
+@media (min-width: 901px) {
+    html[data-primary-input="touch"] .navbar .nav-links > li > a {
+        padding-inline: 5px;
+        margin-inline: -5px;
+    }
 }
 @media (max-width: 900px) {
     /* As much padding as the page's gutter can lend while the bar keeps half

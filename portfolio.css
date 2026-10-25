@@ -1187,6 +1187,22 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
     :root { --glass-surface: var(--glass-surface-dense); }
     html[data-effects] { --glass-surface: var(--glass-surface-dense); }
 }
+/* A computer drawing the page without graphics acceleration starts in Low FX
+   (portfolio.js), and even there each sheet of frost was a blur its
+   processor worked out again for every frame that moved: a scroll dropped one
+   frame in twelve and the cursor crossing the cards one in three. There the
+   glass gets the same denser sheet as a browser that cannot frost at all, and
+   the bar does too (navbar.css): nothing behind them is blurred, and the text
+   reads off the tint. High FX, switched on by hand, frosts as it does
+   everywhere else. */
+html[data-effects="low"][data-effects-renderer="software"] { --glass-surface: var(--glass-surface-dense); }
+html[data-effects="low"][data-effects-renderer="software"] :is(.about-highlight, .skill-group, .project-card,
+    .hero-buttons > .btn,
+    .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
 
 :root {
     --radius-card: .875rem;

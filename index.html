@@ -45,13 +45,14 @@
     <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261024-200329">
-    <link rel="stylesheet" href="navbar.css?v=20261024-touch-name">
+    <link rel="stylesheet" href="portfolio.css?v=20261024-220839">
+    <link rel="stylesheet" href="navbar.css?v=20261024-software-sheet">
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
-         seconds at most, whatever happens to the data or the scripts. -->
-    <script>document.documentElement.classList.add('awaiting-data'); setTimeout(function () { document.documentElement.classList.remove('awaiting-data'); }, 4000);</script>
+         seconds at most if the scripts never run, ten while portfolio.js is
+         still waiting on a slow connection. -->
+    <script>document.documentElement.classList.add('awaiting-data'); setTimeout(function release(waited) { if (window.portfolioDataPending && waited < 10000) return setTimeout(release, 1000, waited + 1000); document.documentElement.classList.remove('awaiting-data'); }, 4000, 4000);</script>
 
     <script type="application/ld+json">
     {
@@ -213,7 +214,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261024-200329"></script>
+    <script src="portfolio.js?v=20261024-220839"></script>
     <script src="glass.js?v=20260925-liquid-glass"></script>
 </body>
 </html>

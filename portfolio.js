@@ -496,9 +496,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // sheet of glass and every frame of the sky is drawn by the processor,
     // and High FX was a slideshow for the ten seconds or more the frame
     // monitor takes to give up on it, on every visit. It starts in Low FX
-    // instead, unless its visitor has chosen High FX themselves.
+    // instead, unless its visitor has chosen High FX themselves. It is asked
+    // in Low FX too: a machine that starts there for another reason (little
+    // memory, Data Saver, a choice made earlier) is as likely to have no
+    // graphics, and its Low FX drops the frost there (portfolio.css).
     const easeForIntegratedGraphics = () => {
-        if (effectsMode !== 'high' || skyEased) return;
+        if (skyEased) return;
         let renderer = '';
         let software = false;
         try {
@@ -511,15 +514,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             renderer = '';
         }
-        if (software && effectsReason !== 'manual') {
+        if (software) {
             document.documentElement.dataset.effectsRenderer = 'software';
-            automaticDowngradeComplete = true;
-            applyEffectsMode('low', false, 'hardware');
+            if (effectsMode === 'high' && effectsReason !== 'manual') {
+                automaticDowngradeComplete = true;
+                applyEffectsMode('low', false, 'hardware');
+            }
             return;
         }
         document.documentElement.dataset.effectsRenderer = /intel/i.test(renderer) ? 'intel' : 'other';
         // Intel's own graphics cards (Arc) are not built in and keep up.
-        if (!/intel/i.test(renderer) || /\barc\b/i.test(renderer)) return;
+        if (effectsMode !== 'high' || !/intel/i.test(renderer) || /\barc\b/i.test(renderer)) return;
         skyEased = true;
         galaxy.ease();
         document.documentElement.dataset.effectsPace = 'eased';
@@ -637,6 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // `no-cache` revalidates rather than trusting the cached copy: a stale data
     // file naming images that have since been renamed is the one way a correct
     // deploy can still render a grid full of broken pictures.
+    // While it is on its way the sections below About stay waiting for it
+    // past index.html's four seconds, up to ten: on a slow connection they
+    // would otherwise show up empty and be pushed down when it lands.
+    window.portfolioDataPending = true;
     fetch('portfolio-data.json', { cache: 'no-cache' })
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
@@ -647,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupModal();
             // The sections that waited for the data appear in this frame,
             // already at their full size (see .awaiting-data, index.html).
+            window.portfolioDataPending = false;
             document.documentElement.classList.remove('awaiting-data');
             updateScrollMotion();
             window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
@@ -654,6 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
             console.error('Error loading portfolio data:', error);
             showDataLoadFailure();
+            window.portfolioDataPending = false;
             document.documentElement.classList.remove('awaiting-data');
         });
 });
@@ -831,6 +842,8 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
     let animationFrame = 0, layoutFrame = 0, layoutTimer = 0;
     let sleeping = false, sleepTimer = 0;
+    // Whether a project is open in front of the sky; see where it is set.
+    let underProject = false;
     let lastFrame = 0, sceneTime = 0;
     let protectedRects = [], visibleRects = [], regions = [], orbitingBodies = [], blackHoles = [], pulsars = [], layoutSignature = '';
     // Every sheet of glass on the page, in page coordinates, and the ones near
@@ -4335,7 +4348,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // a frame. Anything that needs the sky sooner calls requestDraw, which
     // cuts the sleep short.
     const scheduleFrame = dueAt => {
-        if (animationFrame || wakeTimer || sleeping || document.hidden || quality !== 'high') return;
+        if (animationFrame || wakeTimer || sleeping || underProject || document.hidden || quality !== 'high') return;
         const wait = dueAt - pace.lead - performance.now();
         if (wait > 1) {
             wakeTimer = window.setTimeout(() => {
@@ -4783,7 +4796,7 @@ function setupGalaxyField(canvas, reducedMotion) {
         if (sleeping && !document.documentElement.classList.contains('effects-background-idle')) {
             sleeping = false; lastFrame = 0; lastTick = 0;
         }
-        if (animationFrame || sleeping || document.hidden || quality !== 'high') return;
+        if (animationFrame || sleeping || underProject || document.hidden || quality !== 'high') return;
         // Now, rather than whenever the loop's timer would have woken it.
         if (wakeTimer) { clearTimeout(wakeTimer); wakeTimer = 0; }
         animationFrame = requestAnimationFrame(draw);
@@ -5180,6 +5193,28 @@ function setupGalaxyField(canvas, reducedMotion) {
     };
     new MutationObserver(syncIdleSleep).observe(document.documentElement, { attributeFilter: ['class'] });
     syncIdleSleep();
+    // A project open in front of the page hides the sky behind an overlay
+    // ninety-four per cent opaque, and glass.js takes the glass off under it.
+    // The sky went on drawing itself all the same, fifteen to thirty frames a
+    // second, each one composited to the screen, for as long as the reader
+    // stayed in the project: up to a fifth of the graphics process and a
+    // tenth of the page's main thread, for a sixteenth of the sky's light.
+    // Once the overlay has faded in (in step with glass.js) the loop is
+    // parked, its last frame left in place, and the moment the project closes
+    // it is woken where it stopped, moving again before the overlay has faded
+    // out.
+    let underProjectTimer = 0;
+    document.addEventListener('portfolio:modal-open', () => {
+        clearTimeout(underProjectTimer);
+        underProjectTimer = window.setTimeout(() => { underProject = true; stopLoop(); }, 260);
+    });
+    document.addEventListener('portfolio:modal-close', () => {
+        clearTimeout(underProjectTimer);
+        if (!underProject) return;
+        underProject = false;
+        lastFrame = 0; lastTick = 0;
+        requestDraw();
+    });
     refreshLayout();
     // Run every rate a step lower from now on. Called by the page's frame
     // monitor when the machine cannot keep the full rates; see applyRates.
@@ -5541,6 +5576,21 @@ function buildVideoEmbed(src, title, options = {}) {
     return `<iframe src="${escapeAttribute(hardened)}" title="${escapeAttribute(title || 'Project video')}"`
         + (options.lazy ? ' loading="lazy"' : '')
         + ' allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+}
+
+// Every YouTube player runs a Google anti-abuse script that asks WebGPU for
+// the graphics adapter, only to read its name. On Windows, Chrome answers by
+// building a Direct3D 12 device from scratch, which holds the thread that
+// draws every frame for ~400 ms, and once the player's page closes it throws
+// that device away again: every project opened with a video froze the screen.
+// While the page itself holds an adapter the device stays built, and the
+// players are answered at once, so only the first video of a visit pays. It
+// is asked for as that first player loads, so the one freeze comes when it
+// would have anyway.
+let graphicsAdapter = null;
+function holdGraphicsAdapter() {
+    if (graphicsAdapter || !navigator.gpu) return;
+    graphicsAdapter = navigator.gpu.requestAdapter({ powerPreference: 'low-power' }).catch(() => null);
 }
 
 // Alt text for a project's lead image. `imageAlt` and `motionImageAlt` in the
@@ -6978,6 +7028,12 @@ function openModal(project) {
         ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${escapeAttribute(item.alt || item.label)}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
         : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}" aria-hidden="true"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
     ).join('');
+    // Only a player that loaded while the project is still open: one closed
+    // first is sent to about:blank, which loads too, and offline the frame
+    // loads the browser's error page, where no player will ever ask.
+    modal.querySelectorAll('iframe').forEach(video => video.addEventListener('load', () => {
+        if (modal.classList.contains('active') && navigator.onLine !== false) holdGraphicsAdapter();
+    }, { once: true }));
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
     document.dispatchEvent(new CustomEvent('portfolio:modal-open'));
 }
