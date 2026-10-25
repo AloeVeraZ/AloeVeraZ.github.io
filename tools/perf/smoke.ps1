@@ -6,9 +6,10 @@
 
   Checks: no script errors or failed requests (YouTube aside), every project
   rendered from portfolio-data.json, the nav links land on their sections, a
-  project opens and closes, a collection opens and its ring turns, the High
-  FX switch works and is remembered, a slow visit's Low FX is kept for the
-  tab and dropped by the switch, and the High FX sky and glass are running.
+  project opens and closes (and the sky rests behind it and moves again
+  after), a collection opens and its ring turns, the High FX switch works
+  and is remembered, a slow visit's Low FX is kept for the tab and dropped
+  by the switch, and the High FX sky and glass are running.
 #>
 param([int]$Port = 9345, [string]$Site = 'http://localhost:8862/', [switch]$Software)
 $ErrorActionPreference = 'Stop'
@@ -83,6 +84,19 @@ try {
     & $click '#featured-projects-container .project-card' 1
     & $click '#modal-close'
     Check 'the close button closes it' (-not (& $js "document.getElementById('project-modal').classList.contains('active')"))
+    if (-not $Software) {
+        # The sky is parked behind an open project and has to wake once it
+        # closes. A checksum of what the sky's canvas holds, a moment apart.
+        $sky = "(() => { const d = document.querySelector('.galaxy-field').toDataURL(); let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0; return h; })()"
+        & $click '#featured-projects-container .project-card' 2
+        Start-Sleep -Milliseconds 600
+        $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
+        Check 'the sky rests behind an open project' ($a -eq $b)
+        Send-Key $page 'Escape' 'Escape' 27
+        Start-Sleep -Milliseconds 600
+        $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
+        Check 'and moves again once it closes' ($a -ne $b)
+    }
 
     & $click '.collection-toggle' 0
     $opened = & $js "document.querySelector('.collection-toggle').getAttribute('aria-expanded') === 'true' && !document.querySelector('.collection-content').hidden"

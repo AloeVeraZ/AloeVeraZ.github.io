@@ -95,9 +95,13 @@ $audit = @'
     }
   }
   // Words overflowing their parents horizontally (long unbreakable words).
+  // Measured by the text itself, not the element's box: a link can lend its
+  // padding back through its margins to reach a thumb without its words moving.
+  const textRange = document.createRange();
   for (const e of textual) {
     const p = e.parentElement; if (!p) continue;
-    const r = e.getBoundingClientRect(), pr = p.getBoundingClientRect();
+    textRange.selectNodeContents(e);
+    const r = textRange.getBoundingClientRect(), pr = p.getBoundingClientRect();
     if (r.right > pr.right + 2 && getComputedStyle(p).overflowX === 'visible' && !clipped(e) && getComputedStyle(e).position !== 'absolute') {
       problems.push(`text past its box: ${describe(e)} ends at ${Math.round(r.right)}, box at ${Math.round(pr.right)}`);
     }

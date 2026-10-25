@@ -40,9 +40,11 @@ is named after: they are this machine (an Intel Iris Xe laptop with a
 and at the projects. `scroll`: one steady wheel scroll from the top to the
 foot of the page at 1800 px/s. `hover`: the cursor travelling across the
 three featured cards for five seconds. `ring`: an archive ring turned six
-times. `modal`: two projects opened, scrolled and closed. `fx-toggle`: High FX
-to Low FX and back. `collections`: every collection opened, then a scroll to
-the foot of the page.
+times. `modal`: two projects opened, scrolled and closed. `modal-idle`: a
+project left open for eight seconds. `modal-scroll`: an open project scrolled
+from top to bottom, timed from two seconds after it opened. `fx-toggle`: High
+FX to Low FX and back.
+`collections`: every collection opened, then a scroll to the foot of the page.
 
 Every scenario starts from a freshly loaded page, nine seconds after load so
 the page's frame monitor has finished its warm-up. `Math.random` is seeded,

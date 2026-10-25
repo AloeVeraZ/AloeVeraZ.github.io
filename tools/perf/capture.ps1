@@ -37,6 +37,8 @@ $screens = @{
     native = @{ W = 1280; H = 720; Scale = 3; Mobile = $false }
     wide = @{ W = 1920; H = 1080; Scale = 1; Mobile = $false }
     tablet = @{ W = 820; H = 1180; Scale = 2; Mobile = $true }
+    # An iPad turned sideways: a touch screen wide enough for the desktop bar.
+    'tablet-landscape' = @{ W = 1180; H = 820; Scale = 2; Mobile = $true }
     phone = @{ W = 390; H = 844; Scale = 3; Mobile = $true }
 }
 $pattern = @'

@@ -40,7 +40,7 @@ for ($round = 1; $round -le $Rounds; $round++) {
     }
 }
 $median = { param($values) $v = @($values | Where-Object { $null -ne $_ } | ForEach-Object { [double]$_ } | Sort-Object); if ($v.Count -eq 0) { return $null }; if ($v.Count % 2) { $v[[int][math]::Floor($v.Count / 2)] } else { ($v[$v.Count / 2 - 1] + $v[$v.Count / 2]) / 2 } }
-$metrics = 'droppedPct', 'presentedFrames', 'mainFramesPerSec', 'mainFrameGapP90Ms', 'mainFrameGapMaxMs', 'missingContentFrames', 'fps', 'frameP95Ms', 'frameP99Ms', 'mainTaskMsPerSec', 'styleMsPerSec', 'longTasks', 'cpu_page', 'cpu_GPU', 'gpu3d', 'busyPct_gpu:CrGpuMain', 'gpuMsPerSec_composite', 'gpuMsPerSec_canvas', 'gpuMsPerSec_tiles', 'gpuMsPerSec_swap'
+$metrics = 'droppedPct', 'droppedFrames', 'presentedFrames', 'mainFramesPerSec', 'mainFrameGapP90Ms', 'mainFrameGapMaxMs', 'missingContentFrames', 'fps', 'frameP95Ms', 'frameP99Ms', 'frameMaxMs', 'mainTaskMsPerSec', 'styleMsPerSec', 'longTasks', 'cpu_page', 'cpu_GPU', 'gpu3d', 'busyPct_gpu:CrGpuMain', 'gpuMsPerSec_composite', 'gpuMsPerSec_canvas', 'gpuMsPerSec_tiles', 'gpuMsPerSec_swap'
 $table = New-Object System.Collections.Generic.List[string]
 foreach ($scenario in $Scenarios) {
     $table.Add("### $scenario ($Config, median of $Rounds)")

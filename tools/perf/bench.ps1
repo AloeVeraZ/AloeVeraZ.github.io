@@ -325,6 +325,32 @@ try {
                         }
                     }
                 }
+                'modal-idle' {
+                    # A project open and being read: eight seconds untouched,
+                    # from two seconds after it opened. The third featured
+                    # project, which has no video to load.
+                    Scroll-To $page "document.getElementById('featured-projects-container').getBoundingClientRect().top + scrollY - 90"
+                    Start-Sleep -Seconds 1
+                    $card = Get-Rect $page '#featured-projects-container .project-card' 2
+                    Send-Click $page $card[0] $card[1]
+                    Start-Sleep -Seconds 2
+                    $row = Measure-Scenario $page $chrome $scenario { Start-Sleep -Seconds 8 }
+                    Send-Key $page 'Escape' 'Escape' 27
+                }
+                'modal-scroll' {
+                    # The same project read down its length: only the scroll,
+                    # from two seconds after it opened, so the opening is over.
+                    Scroll-To $page "document.getElementById('featured-projects-container').getBoundingClientRect().top + scrollY - 90"
+                    Start-Sleep -Seconds 1
+                    $card = Get-Rect $page '#featured-projects-container .project-card' 2
+                    Send-Click $page $card[0] $card[1]
+                    Start-Sleep -Seconds 2
+                    $distance = [int](Invoke-PageJs $page "(() => { const c = document.querySelector('#project-modal .modal-card'); return c.scrollHeight - c.clientHeight; })()")
+                    $row = Measure-Scenario $page $chrome $scenario {
+                        Send-ScrollGesture $page ($settings.Width / 2) ($settings.Height / 2) $distance 1800
+                    }
+                    Send-Key $page 'Escape' 'Escape' 27
+                }
                 'fx-toggle' {
                     Scroll-To $page "document.getElementById('projects').offsetTop"
                     Start-Sleep -Seconds 1

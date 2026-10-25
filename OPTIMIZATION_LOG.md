@@ -307,18 +307,214 @@ rems apart, which meets WCAG 2.5.8.
 
 ---
 
+## Cycle 10: only the first video of a visit freezes the screen (adopted)
+
+**Identified bottleneck:** every project opened with a YouTube video froze
+the screen once, 1.0-1.4 s after the click: 452, 404 and 421 ms of the GPU
+process's main thread (45-56 ms of it on the CPU) for three opens in a row,
+the same project the second time as much as the first. A project without a
+video opened with no freeze.
+
+**Root-cause hypothesis (measured):** a DevTools probe attached to the
+players' frames found the caller: every player loads Google's anti-abuse
+script (`google.com/js/th/...`), which calls
+`navigator.gpu.requestAdapter({ powerPreference: 'low-power' })` and reads the
+adapter's name, and nothing more. Chrome answers by building a Direct3D 12
+device on the thread that draws every frame. When the sheet closes, the
+players' process goes, nothing holds the device, and the next player builds
+it again. Two players in one sheet freeze once, not twice (their requests
+wait on the same build). With the page itself holding an adapter from the
+start, no open froze: four in a row 2 s apart, or three 15 s apart.
+
+**Proposed modification:** when the first YouTube player of a visit loads
+while its project is open, the page asks for an adapter itself, with the same
+low-power preference, and keeps it. The first video still pays, at the moment
+it paid before; every one after it is answered at once.
+
+**Implementation:** `portfolio.js` (`holdGraphicsAdapter`, called from each
+sheet iframe's `load`).
+
+**Before / after:** three projects with videos and one without, opened in a
+row (native): three freezes -> one, 383 ms, on the first open. Two projects
+opened, scrolled and closed (`modal`, three rounds, every run with the change
+better than every run without):
+
+| | native before | native after | mac before | mac after |
+| --- | --- | --- | --- | --- |
+| Dropped frames | 32.5% | 24.8% | 19.7% | 15.8% |
+| Frames presented | 260 | 337 | 322 | 337 |
+| Frame time, 99th percentile | 413 ms | 133 ms | 109 ms | 103 ms |
+| GPU main thread busy | 70.7% | 66.7% | 60.5% | 53.6% |
+
+The page still comes back whole from the back/forward cache with the adapter
+held (checked by going to the privacy page and back).
+
+**Visual regression:** Pass (nothing drawn changes).
+**Functional regression:** Pass.
+
+**Result:** Improved. The first video of each visit still freezes once (see
+the open findings).
+
+---
+
+## Cycle 11: the sky rests behind an open project (adopted)
+
+**Identified bottleneck:** with a project open and nobody touching anything
+(the new `modal-idle` scenario), the page still put 14-28 frames a second on
+the screen, with the GPU's 3D engine 9-24% busy and the page's main thread
+70-115 ms a second, for as long as the reader stayed.
+
+**Root-cause hypothesis:** the sky went on drawing itself under the overlay.
+The overlay is 94% opaque, and glass.js already takes the glass off under it
+once it has faded in, so each of those frames composited the whole screen
+for a sixteenth of the sky's light.
+
+**Proposed modification:** once the overlay has faded in (260 ms, the same
+moment glass.js uses), park the sky's loop with its last frame in place, and
+wake it the moment the project closes, so it is moving again, from where it
+stopped, before the overlay has faded out.
+
+**Implementation:** `portfolio.js` (`underProject` in the sky).
+
+**Before / after (three or four rounds, against the page with cycle 10
+only):**
+
+| | native before | native after | mac before | mac after |
+| --- | --- | --- | --- | --- |
+| Project left open: frames drawn | 25.5/s | 0 | 22.7/s | 0 |
+| Project left open: GPU 3D engine | 15.7% | 0% | 15.9% | 0% |
+| Project left open: GPU process CPU | 17.1% | 1.8% | 19.3% | 0.4% |
+| Project left open: page main thread | 106 ms/s | 7 ms/s | 96 ms/s | 9 ms/s |
+| Project scrolled: dropped frames | 0 | 0 | 0 | 0 |
+| Project scrolled: GPU main thread busy | 30.5% | 15.7% | 27.0% | 14.8% |
+| Project scrolled: page main thread | 182 ms/s | 64 ms/s | 154 ms/s | 70 ms/s |
+
+The open-scroll-close scenario (`modal`) reads worse as a percentage (36.5%
+-> 50.3% native, 24.0% -> 29.6% mac) because the screen is no longer redrawn
+while nothing changes: the frames that were dropped are the same ones (a
+median of 169 vs 193 native, 106 vs 106 mac, inside run-to-run spreads of
+117-284), out of fewer frames drawn. Both versions burst the same way at the
+open and the close (below).
+
+**Visual regression:** Pass, with one difference that has to be looked for.
+Any single frame is unchanged; what stops is the sky's motion seen through
+the overlay. Two screenshots of an open project a second apart (mac screen)
+differed before in 0.6% of the pixels, by at most 7/255 (twinkling stars, a
+shooting star's trail, the edge of a nebula, all outside the sheet), and
+after by at most 1/255.
+**Functional regression:** Pass. `smoke.ps1` now checks that the sky's canvas
+is still behind an open project and changes again once it closes (22/22).
+
+**Result:** Improved.
+
+---
+
+## Cycle 12: star tiles cut on a software canvas (rejected)
+
+**Identified bottleneck:** cutting a band of deep-field stars hands the GPU
+process a thousand separate fills, on the thread a scroll is waiting on
+(cycle 4).
+
+**Root-cause hypothesis:** cut on a canvas the browser keeps in memory
+(`willReadFrequently`), the fills would be drawn by the page's own process
+and the GPU process would only receive the finished band.
+
+**Before / after (scroll, four rounds):** mac dropped 21.5% -> 27.4% (31 ->
+39.5 frames), native 22.3% -> 21.8%. The GPU process's canvas time fell as
+expected (121 -> 86 ms/s mac, 96 -> 66 native), but its tile raster rose by
+about as much and the page's own main thread by 10-15 ms/s.
+
+**Result:** Rejected; not applied.
+
+---
+
+## Cycle 13: Low FX without frost where nothing can draw it (adopted)
+
+**Identified bottleneck:** on a computer with no graphics acceleration, which
+since cycle 6 starts in Low FX, a scroll still dropped one frame in twelve
+and the cursor crossing the cards one in three, with the GPU process (doing
+its work on the processor) at 70% of a core while scrolling.
+
+**Root-cause hypothesis:** Low FX still frosts every sheet of glass, and a
+software compositor works out each blur again on every frame that moves.
+
+**Proposed modification:** there, and only in Low FX, give the glass the
+denser sheet the site already gives a browser that cannot frost at all
+(`--glass-surface-dense`, 84% opaque), with no backdrop filter, and the bar
+the same sheet the open menu uses. High FX switched on by hand frosts as
+before, and no machine with working graphics acceleration is affected.
+
+**Implementation:** `portfolio.css`, `navbar.css`
+(`html[data-effects="low"][data-effects-renderer="software"]`).
+
+**Before / after (lowend, three rounds; the same rules laid over the page as
+a stylesheet):**
+
+| | Before | After |
+| --- | --- | --- |
+| Scroll: dropped | 8.5% (17 frames) | 0.5% (1) |
+| Scroll: GPU process CPU | 71.7% | 35.8% |
+| Cursor across cards: dropped | 29.0% (36) | 7.9% (9) |
+
+**Visual regression:** a change, by design, in Low FX on those machines only:
+the cards become the denser dark sheet instead of frosted glass, and what
+scrolls under the bar shows through faintly instead of blurred (the look
+such a browser always had). High FX, and Low FX anywhere with graphics
+acceleration, unchanged.
+**Functional regression:** Pass (`smoke.ps1 -Software`, 20/20).
+
+**Result:** Improved.
+
+---
+
+## Final checks and review
+
+- **The iPad nav links (cycle 9's leftover).** On touch screens wide enough
+  for the desktop bar the section links now take five pixels more on each
+  side, lent back by their margins (`navbar.css`). The 24-screen audit passes
+  everywhere (0 of 24 with problems), and captures of a sideways iPad match
+  the version before to the pixel. The audit's text-overflow check now
+  measures the words themselves, not the element's box, which the borrowed
+  margin had tripped.
+- **Look.** Every High FX shot (test pattern, mac, tablet and phone) and
+  every Low FX shot matches the original commit, re-captured the same day,
+  to within 2/255, except the open project's animated picture. Single
+  captures do vary: two captures of the unchanged original differed by up
+  to 22/255 inside one photo, and one hover shot taken while the machine was
+  busy caught the card mid-lean, so a difference is re-taken before it is
+  believed. The 30 x 2 px sliver noted in cycle 8 was one of those.
+- **Independent review** (a separate high-effort pass over everything since
+  `47e16a0`) found three things, fixed: the no-graphics check only ran on
+  machines that started in High FX, so one that started in Low FX for
+  another reason kept its frost (it is asked in Low FX too now); a video's
+  frame loading the browser's offline error page held an adapter for no
+  player (skipped while offline); and the four-second cap on the hidden
+  sections let a slow connection's layout shift back (it now waits up to ten
+  seconds while the data is on its way). Left as they are: an adapter held
+  across a GPU process crash is not renewed (rare, and the cost is only the
+  old behaviour), and the glass selector list now appears four times in
+  `portfolio.css` (folding them together would rewrite the High FX rules).
+
+---
+
 ## Open findings, not yet acted on
 
-- **YouTube player stalls the GPU thread for ~400 ms on every project open
-  with a video.** As it starts, the player creates a WebGPU device; on this
-  laptop's Direct3D 12 that holds Chrome's GPU main thread (402 ms wall, 29.5
-  ms of CPU), and the page drops every frame meanwhile. Without the iframe the
-  open/scroll/close drops 4-5% instead of 16-20%. Chrome has no
-  permissions-policy switch for WebGPU (79 features, none for it). The feature
-  videos autoplay muted on open, so a click-to-play stand-in would change the
-  behaviour. Best fix: host those short silent clips as MP4/WebM files on the
-  site (also removes the third-party request); next best: keep one player and
-  switch videos in it, so the stall is paid once a visit.
+- **The first project with a video, in each visit, still freezes the screen
+  for ~400 ms** (cycle 10). Chrome has no permissions-policy switch for WebGPU
+  (79 features, none for it), so the players cannot be kept from asking.
+  Removing the last freeze needs players that are not YouTube's: the three
+  short silent clips that autoplay could be served from the site as MP4/WebM
+  (which also removes a third-party request), but the other embedded videos
+  would still be YouTube players unless they loaded only when pressed, which
+  changes how they behave (and on iPhones takes a second tap).
+- **Opening or closing a project drops frames for about three quarters of a
+  second** at 3x on this laptop (20-40 at the open, 10-16 at the close, with
+  or without a video). The GPU process's main thread spends 380-700 ms a
+  second rasterizing tiles (the sheet's own content as it opens, the page
+  under it as it closes) on top of compositing the fade. Leaving the glass on
+  under the sheet, so glass.js toggles nothing, made no measurable difference
+  in two runs each, so the toggling is not the cost; the raster is of content
+  the page shows. Not acted on.
 - **Glass re-filtered by small layers at rest.** A feeding black hole under the
   bar (which the open-sky test does not count as glass) and a passing shooting
   star made the compositor redraw nearly the whole screen ~24 times a second.
