@@ -14,6 +14,10 @@ param(
     [string]$Label = 'reference',
     [string[]]$Devices = @('mac', 'phone', 'tablet'),
     [switch]$TestPattern,
+    # The effects level every load starts at, as if chosen on the slider;
+    # -LowFx is short for -Level low. Neither: the page picks, as for a first
+    # visit.
+    [ValidateSet('', 'low', 'medium', 'high')][string]$Level = '',
     [switch]$LowFx,
     [string]$CompareWith = '',
     # file name as the page requests it -> path of the copy to serve instead
@@ -26,6 +30,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 Import-Module (Join-Path $here 'Cdp.psm1') -Force
+if ($LowFx -and -not $Level) { $Level = 'low' }
 if (-not ('ImageDiff' -as [type])) { Add-Type -Path (Join-Path $here 'ImageDiff.cs') -ReferencedAssemblies System.Drawing }
 $repo = (Resolve-Path (Join-Path $here '..\..')).Path
 $root = Join-Path $repo 'tools\.cache\perf\visual'
@@ -52,7 +57,7 @@ $init = @"
   Math.random = () => { state = (state + 0x6D2B79F5) | 0; let t = Math.imul(state ^ (state >>> 15), 1 | state); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const css = $(if ($TestPattern) { ConvertTo-Json $pattern } else { "''" });
   if (css) document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); });
-  $(if ($LowFx) { "try { localStorage.setItem('portfolio-effects-override-v3', 'low'); } catch (e) {}" } else { "try { localStorage.removeItem('portfolio-effects-override-v3'); } catch (e) {}" })
+  $(Get-EffectsLevelScript $Level)
 })();
 "@
 

@@ -6,7 +6,141 @@ point is in [PERFORMANCE_BASELINE.md](PERFORMANCE_BASELINE.md), every
 experiment with its numbers in [OPTIMIZATION_LOG.md](OPTIMIZATION_LOG.md), and
 the tools that took the measurements in [tools/perf/](tools/perf/README.md).
 
-## In short
+## Medium as the default (25 October 2026, later)
+
+Medium no longer frosts or bends anything: its glass is painted as the flat
+sheet a blur of the still lattice comes out as, with the rim, sheen, lean,
+light and rings kept, and the blue and warm washes behind it removed. New
+visitors start there, including computers without graphics acceleration;
+High is only chosen on the slider. Below High the glass rims are drawn
+without a mask, the scroll indicator no longer repaints on every scrolled
+frame, and nothing of a higher level is left running or held after a
+switch (cycles 21-24 in the optimization log). The Medium numbers in the
+tables further down are from before this change.
+
+| | Medium before | Medium now | Low now |
+| --- | --- | --- | --- |
+| This laptop (3x), scroll: frames dropped | 27.6% | 6.0% | 5.9% |
+| This laptop (3x), cursor over the cards: dropped | 18.6% | 1.8% | 1.5% |
+| No graphics acceleration, scroll: dropped | 26.3% | 1.0% | 0.5% |
+| No graphics acceleration, cursor over the cards: dropped | 48.5% | 0.7% | 7.5% |
+| At rest after leaving High: frames asked for | - | 0 | 0 |
+
+## Three effects levels (25 October 2026)
+
+The High/Low FX switch became a slider with three stops: Low on the left,
+Medium in the middle, High on the right. Cycles 14-19 in the optimization log
+have the detail; the summary is here.
+
+- **High is unchanged.** With a fixed test pattern in place of the sky,
+  every High FX screenshot on a MacBook-sized screen, a tablet and a phone
+  equals the original's, apart from the slider's own 188 x 56 px and the open
+  project's animated picture (which differs between two captures of the
+  original too). Its costs match the original's, or come in under them, in
+  every measured scenario (tables below); the one clear difference, less of
+  the page's main thread at rest at MacBook size, held in both rounds and
+  was not looked into further.
+- **Medium is the glass without the sky.** Frost, rim, the bend at the rim,
+  the cards leaning and the rings turning, over a still backdrop: the
+  lattice, soft light in the sky's colours, a few faint stars and the veil.
+  Nothing is drawn while nothing moves.
+- **Low is the page at its plainest.** The lattice, the glass as a denser
+  sheet with no frost, a solid bar, no lean and no rings. It is the cheapest
+  level everywhere it was measured, and the only one that scrolls at 60 fps
+  on this laptop.
+- **The level is picked before the first paint** by a short script in the
+  head of `index.html`, so a saved Low or Medium never sets the sky up.
+  New visitors: High, or Medium if they ask for reduced motion, or Low on
+  under four threads, under 4 GB or Data Saver, and Low once the page finds
+  no graphics acceleration. A choice on the slider is saved and never
+  changed for the visitor. When the page picked the level, the frame monitor
+  eases the sky, then the glass, then steps High to Medium to Low, and says
+  so under the slider.
+- **Leaving High stops the sky at once** (no frame asked for, nothing
+  composited) and hands its memory back 15 seconds later: 78 MB of canvases
+  at 2x down to 0.2 MB, and the page's heap from 12 to 2 MB. Coming back
+  within those 15 seconds costs no dropped frames; after them, one rebuild of
+  about a tenth of a second while the sky is still invisible. Twenty round
+  trips left heap, canvases, nodes and listeners where they were.
+- **No Mac or phone was measured.** As before, "mac" is this Intel laptop at
+  a MacBook's size and scale and "phone" a phone-sized window with the
+  processor slowed; neither says what the real hardware does, and nothing
+  here claims 60 fps on it.
+
+What was measured, as medians of interleaved rounds (three on this laptop's
+own screen, two elsewhere). The machine was carrying other work through
+most of these, so compare columns within a table, not across tables:
+
+**This laptop as it is** (1280 x 720 at 3x, Intel Iris Xe; High's sky runs
+eased here):
+
+| | Original | High | Medium | Low |
+| --- | --- | --- | --- | --- |
+| At rest, top of page: page's main thread | 110 ms/s | 106 ms/s | 0.2 ms/s | 0.2 ms/s |
+| At rest, top of page: GPU 3D engine | 14% | 13% | 0% | 0% |
+| At rest, projects: GPU 3D engine | 29.5% | 29.5% | 0% | 0% |
+| Scroll: frames dropped | 19.4% | 15.1% | 20.3% | 0% |
+| Scroll: frames shown a second | 45.5 | 48.3 | 43.9 | 59.4 |
+| Scroll: graphics process, share of a core | 169% | 160% | 173% | 38% |
+| Cursor over the cards: frames dropped | 8.6% | 8.4% | 16.0% | 10.7% |
+| Cursor over the cards: GPU 3D engine | 90% | 91% | 96% | 17% |
+
+Low's cursor row is a few frames out of a dozen a second: nothing leans or
+lights up there, so there is little to draw. Medium's cursor row is the one
+result that runs the wrong way; see "What is left" below.
+
+**MacBook-sized** (1470 x 860 at 2x, the page told it has Apple graphics, so
+High's sky runs at its full rate):
+
+| | Original | High | Medium | Low |
+| --- | --- | --- | --- | --- |
+| At rest, projects: page's main thread | 187 ms/s | 127 ms/s | 5.5 ms/s | 2.8 ms/s |
+| At rest, top of page: graphics process | 34% | 31% | 0.1% | 0.1% |
+| Scroll: frames dropped | 17.0% | 29.9%* | 24.4% | 0% |
+| Scroll: frames shown a second | 48.0 | 39.8* | 42.0 | 59.2 |
+| Cursor over the cards: frames dropped | 24.7% | 26.5% | 22.6% | 5.9% |
+| Cursor over the cards: frames shown a second | 36.4 | 34.9 | 38.0 | 13.0 |
+
+\* One round of 18.1% and one of 41.7%, with four long tasks on the page's
+main thread. Three more rounds of High against the original alone, on a
+machine busy with other work, came out level: High dropped 30.0, 44.3 and
+41.4% where the original dropped 33.6, 46.5 and 33.8%.
+
+**No graphics acceleration** (software compositing, processor slowed 4x).
+The original and the new page both start in Low here, so what matters is
+what a visitor gets by choosing Medium by hand:
+
+| | Original (starts Low) | New (starts Low) | Medium, chosen |
+| --- | --- | --- | --- |
+| Scroll: frames dropped | 2.2% | 4.3% | 34.5% |
+| Cursor over the cards: frames dropped | 12.4% | 12.5% | 65% |
+
+**Phone-sized** (390 x 844 at 3x, processor slowed 4x). The harness's frame
+counts for Low and Medium here are not usable (it saw under one frame a
+second presented while the page drew fifty), so only the page's main thread
+is given:
+
+| | Original | High | Medium | Low |
+| --- | --- | --- | --- | --- |
+| At rest: page's main thread | 446 ms/s | 444 ms/s | 2.3 ms/s | 2.4 ms/s |
+| Scroll: page's main thread | 960 ms/s | 971 ms/s | 713 ms/s | 688 ms/s |
+
+**What is left**
+
+- **Medium under the cursor on this laptop's own screen** drops about twice
+  High's share of frames, though it draws no sky. At MacBook size it does
+  not (it is level with High or ahead). Twelve experiments and a trace did
+  not find the cause (cycle 19): the same layers, passes and damage, with
+  Medium's root pass taking about 1.5 ms longer a frame. Frost-only glass
+  would make Medium the lightest of the three under the cursor (51 frames a
+  second against High's 40 at MacBook size) at the cost of the bend.
+- **Medium chosen by hand on a computer with no graphics acceleration** is
+  slow (a third of frames dropped scrolling). Such computers start in Low
+  and are only in Medium if their visitor puts them there.
+- **The first return to High** after 15 seconds below it rebuilds the sky:
+  one or two frames of about 100 ms, while the sky is still faded out.
+
+## In short (the earlier performance work)
 
 - **The look is unchanged.** Glass, the bend at its rim, the sky and its
   motion, type and layout are what they were. Screenshots of the main states on
@@ -133,24 +267,36 @@ a trade the look does not allow, a decision for the owner, or a rewrite.
 - `tools/perf/layout-audit.ps1` loads the page on 24 screens, from folding
   phones to 4K: no sideways scrolling, clipped text, type below 13 px or tap
   target under 44 x 44 px on any of them (0 of 24 with problems, after the
-  name in the bar and the iPad section links were given room).
+  name in the bar and the iPad section links were given room). Run again at
+  each of the three effects levels: 0 of 24 at each, the slider included
+  (the audit now skips text meant only for screen readers).
 - A separate high-effort review of everything changed found three problems,
   fixed before the last runs (see the end of the optimization log).
 - `tools/perf/smoke.ps1` clicks through the page as a visitor would, with and
-  without graphics acceleration: 22 of 22 checks pass with it and 20 of 20
+  without graphics acceleration: 24 of 24 checks pass with it and 22 of 22
   without (the two that watch the sky rest behind a project and wake after
-  need it). No script errors, console errors or failed requests.
+  need it), each of the slider's three levels among them. No script errors,
+  console errors or failed requests.
+- The three levels were checked further with scratch scripts against a
+  private Chrome (cycles 14-19 in the optimization log): what each level
+  draws and allocates, the sky fading out and in, its memory released, 20
+  round trips with no growth, a dozen switches in a row, the level kept
+  across reloads and pages, corrupted and blocked storage, the old switch's
+  saved choice, reduced motion, and the frame monitor's step-downs under a
+  slowed processor. 32 of 32 pass.
 
 ## Checking on a Mac
 
 The scripts in `tools/perf/` are Windows-only, so a MacBook has to be checked
 by hand, in Chrome:
 
-1. Open the site, wait 15 seconds, and look at the `<html>` element in
-   DevTools (Elements). `data-effects="high"` with no `data-effects-pace`
-   means the page's own frame monitor is satisfied; `eased` or `lighter`
-   means it has stepped the sky or the glass down, and `data-effects="low"`
-   with `data-effects-reason="lag"` that it gave up on High FX.
+1. Open the site in a fresh private window, wait 15 seconds, and look at the
+   `<html>` element in DevTools (Elements). `data-effects="high"` with no
+   `data-effects-pace` means the page's own frame monitor is satisfied;
+   `eased` or `lighter` means it has slowed the sky or taken the bend off the
+   glass, and `data-effects="medium"` or `"low"` with
+   `data-effects-reason="lag"` that it stepped a level down. A level chosen on
+   the slider shows `data-effects-reason="manual"` and is never changed.
 2. In DevTools, Rendering, turn on Frame Rendering Stats, then scroll the
    page, hover the featured cards, open a project and turn an archive ring.
    The overlay's dropped-frame count is Chrome's own.
@@ -162,7 +308,13 @@ by hand, in Chrome:
 - Whether to serve the three short autoplaying clips from the site (MP4 or
   WebM) instead of YouTube, which removes the first freeze for those projects
   and one third-party request.
-- Whether to keep the denser sheet in Low FX on computers with no graphics
-  acceleration (cycle 13). It is two short rules, one in `portfolio.css` and
-  one in `navbar.css`, if you would rather they frost as before.
+- Low FX now frosts nothing on any computer, and its bar is solid (cycles 14
+  and 18), as the brief for the three levels asked. It is two short rules in
+  `portfolio.css` and two in `navbar.css` if you would rather Low kept the
+  frost on computers that can draw it.
+- Whether Medium should keep the bend at the rim of its glass. It does now,
+  as the brief for the levels asked. Frost alone made it the lightest level
+  under the cursor (cycle 19) and is one line in `glass.js` (`pickMode`).
+- Whether the slider is worth a line on the Updates page (V1.1 there
+  announced the High/Low FX switch it replaces).
 - The commits are local: pushing them publishes the site.

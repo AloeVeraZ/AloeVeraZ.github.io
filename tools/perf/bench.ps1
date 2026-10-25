@@ -38,7 +38,10 @@ param(
     [string]$InjectJs = '',
     # URL patterns the browser refuses to load (Network.setBlockedURLs), for
     # telling the page's own cost from an embed's.
-    [string[]]$BlockUrls = @()
+    [string[]]$BlockUrls = @(),
+    # The effects level every load starts at, as if chosen on the slider.
+    # Empty: a first visit, which the page decides for itself.
+    [ValidateSet('', 'low', 'medium', 'high')][string]$Level = ''
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
@@ -73,6 +76,7 @@ $init = @"
   }
   const css = $(ConvertTo-Json $InjectCss);
   if (css) document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); });
+  $(Get-EffectsLevelScript $Level)
   $InjectJs
   window.__bench = { lcp: 0, cls: 0, longTasks: [] };
   try { new PerformanceObserver(list => { for (const e of list.getEntries()) window.__bench.lcp = e.startTime; }).observe({ type: 'largest-contentful-paint', buffered: true }); } catch (e) {}
@@ -252,9 +256,10 @@ try {
                             Start-Sleep -Milliseconds 500
                             Send-Key $page 'Escape' 'Escape' 27
                             Start-Sleep -Milliseconds 300
-                            Invoke-PageJs $page "document.getElementById('performance-toggle').click()" | Out-Null
+                            $from = Invoke-PageJs $page 'document.documentElement.dataset.effects'
+                            Set-EffectsLevel $page $(if ($from -eq 'low') { 'high' } else { 'low' }) | Out-Null
                             Start-Sleep -Milliseconds 400
-                            Invoke-PageJs $page "document.getElementById('performance-toggle').click()" | Out-Null
+                            Set-EffectsLevel $page $from | Out-Null
                             Start-Sleep -Milliseconds 400
                             Invoke-PageJs $page "document.querySelectorAll('.collection-toggle').forEach(t => t.click())" | Out-Null
                             Start-Sleep -Milliseconds 600
@@ -352,11 +357,13 @@ try {
                     Send-Key $page 'Escape' 'Escape' 27
                 }
                 'fx-toggle' {
-                    Scroll-To $page "document.getElementById('projects').offsetTop"
+                    # The slider walked down a stop at a time and back up,
+                    # each level given a second and a half.
+                    Scroll-To $page "document.getElementById('projects').getBoundingClientRect().top + scrollY"
                     Start-Sleep -Seconds 1
                     $row = Measure-Scenario $page $chrome $scenario {
-                        for ($i = 0; $i -lt 2; $i++) {
-                            Invoke-PageJs $page "document.getElementById('performance-toggle').click()" | Out-Null
+                        foreach ($to in 'medium', 'low', 'medium', 'high') {
+                            Set-EffectsLevel $page $to | Out-Null
                             Start-Sleep -Milliseconds 1500
                         }
                     }

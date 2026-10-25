@@ -91,6 +91,24 @@ Text blocks are leading-trimmed, so these are the gaps you actually see between 
 
 Barlow Condensed, in capitals, is for names; Inter is for sentences. Letter spacing uses `--tracking-display`, `--tracking-title`, `--tracking-eyebrow` and `--tracking-caps`, and text color uses `--ink`, `--muted`, `--blue-light` (labels) and `--blue-soft` (dates and tags). A few pieces keep their own sizes: the hero name and tagline, the bio, project card titles and summaries, the category chip, archive row names, and the sheet's summary and numbered parts. Nothing a visitor has to read is smaller than 13px, or 14px in the condensed face, and text keeps at least 7:1 contrast.
 
+## Visual effects
+
+A slider at the right of the navigation bar sets one of three levels. On a phone it is the last row of the menu. A word under it names the level while it is hovered, focused or just moved. It has no permanent label.
+
+Every level wears the same clear glass, modelled on Apple's Liquid Glass at its Clear setting: the cards and buttons all but invisible, so the backdrop shows straight through, told apart by a bright specular edge along the top and left, a fainter one along the foot and right, a soft glow inside the rim and a band of light down the face. In Medium and High the bar has a light frost of its own, so headings scrolling under it do not cross its links; in Low it is shaded instead, which keeps Low as quick as it was.
+
+| Level | What draws |
+| --- | --- |
+| Low (left) | The clear glass over the still lattice. No sky, no card tilt, no cursor light and no 3D rings. Nothing animates at rest. |
+| Medium (middle, the default) | Low plus a still starry sky under the lattice, the cards leaning toward the cursor, the light that follows it, and the 3D rings. The sky is drawn once into a picture on the lattice's own layer, so scrolling never redraws it, and the cards are still neither frosted nor bent, so the browser never re-blurs what is behind them. |
+| High (right) | Everything: the sky set moving behind the glass, lightly frosted and bent at the rim, the custom cursor and touch effects. |
+
+- **Where it lives.** A small script in `index.html`'s head picks the level before anything is drawn and writes it to `html[data-effects]`. `portfolio.js` drives the slider, the sky and the frame monitor, `glass.js` decides how the glass is drawn, and the stylesheets key off `data-effects`.
+- **Remembered.** A level chosen on the slider is saved in `localStorage` as `portfolio-effects-level` and always wins. The old High/Low switch's saved choice carries over.
+- **Picked for new visitors.** Fewer than four threads, under 4 GB of memory or Data Saver starts Low. Everything else starts Medium, including computers without graphics acceleration, where Medium now keeps up. High is only ever chosen on the slider.
+- **Stepped down when slow.** On a level the page picked, a monitor eases the sky, then the glass. If the page is still clunky it steps High to Medium, then Medium to Low, and says so under the slider. A level chosen by hand is never changed.
+- **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out.
+
 ## Privacy
 
 Fonts, icons and images are all served from this domain, and the site sets no cookies and runs no analytics. The only outside request is YouTube: the player loads from `youtube-nocookie.com` when someone opens a project with a video. If that changes, update `privacy.html` to match.

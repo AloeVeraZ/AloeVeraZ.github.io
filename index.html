@@ -43,10 +43,52 @@
     <!-- Fonts and icons are served from this origin, so the page makes no
          third-party request before a visitor asks for one. -->
     <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- The visual effects level, decided before anything is drawn so the
+         stylesheets paint the right backdrop and glass from the first frame
+         and the sky is never set up for a visitor who will not see it.
+         Written to html[data-effects] (low, medium or high) with the reason
+         in data-effects-reason; portfolio.js takes it from there.
+
+         A level the visitor chose on the slider is kept in localStorage and
+         always wins. Otherwise: a device with under four threads or under
+         4 GB of memory, or with Data Saver on, starts Low; the rest start
+         Medium, the glass over a still backdrop. High, with the moving sky,
+         is only ever chosen on the slider. A visit the page had to step
+         down for being slow (portfolio.js) starts this tab no higher than
+         where it ended up. Anything unreadable or unexpected in storage is
+         ignored. -->
+    <script>
+    (function () {
+        var root = document.documentElement, levels = ['low', 'medium', 'high'];
+        var read = function (area, key) { try { return window[area].getItem(key) || ''; } catch (error) { return ''; } };
+        var forget = function (area, key) { try { window[area].removeItem(key); } catch (error) {} };
+        var chosen = read('localStorage', 'portfolio-effects-level');
+        if (chosen && levels.indexOf(chosen) < 0) { forget('localStorage', 'portfolio-effects-level'); chosen = ''; }
+        // The two-position switch this slider replaced saved 'low' or 'high'.
+        var earlier = read('localStorage', 'portfolio-effects-override-v3');
+        if (earlier) {
+            if (!chosen && (earlier === 'low' || earlier === 'high')) {
+                chosen = earlier;
+                try { localStorage.setItem('portfolio-effects-level', chosen); } catch (error) {}
+            }
+            forget('localStorage', 'portfolio-effects-override-v3');
+        }
+        var memory = navigator.deviceMemory || 0;
+        var level = (navigator.hardwareConcurrency || 4) < 4 || (memory && memory < 4)
+            || (navigator.connection && navigator.connection.saveData) ? 'low' : 'medium';
+        var reason = 'hardware';
+        var slow = read('sessionStorage', 'portfolio-effects-lag');
+        if (slow === '1') slow = 'low';
+        if (levels.indexOf(slow) > -1 && levels.indexOf(slow) < levels.indexOf(level)) { level = slow; reason = 'lag'; }
+        if (chosen) { level = chosen; reason = 'manual'; }
+        root.setAttribute('data-effects', level);
+        root.setAttribute('data-effects-reason', reason);
+    })();
+    </script>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261024-220839">
-    <link rel="stylesheet" href="navbar.css?v=20261024-software-sheet">
+    <link rel="stylesheet" href="portfolio.css?v=20261025-173917">
+    <link rel="stylesheet" href="navbar.css?v=20261025-clear-glass2">
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
@@ -89,10 +131,20 @@
                 <li><a href="#projects">Projects</a></li>
                 <li><a href="#contact">Contact</a></li>
                 <li class="performance-control">
-                    <button class="performance-toggle" id="performance-toggle" type="button" role="switch" aria-checked="true" aria-label="Use low performance visual effects">
-                        <span class="performance-toggle-track" aria-hidden="true"><i></i></span>
-                        <span id="performance-toggle-label">High FX</span>
-                    </button>
+                    <!-- The effects slider: Low on the left, Medium in the
+                         middle, High on the right (portfolio.js). The range
+                         input carries the keyboard and the screen reader; the
+                         track drawn after it is what shows, and takes the
+                         pointer. Where the thumb sits comes from
+                         html[data-effects], so it is right from the first
+                         paint. -->
+                    <div class="fx-slider" id="fx-slider">
+                        <svg class="fx-slider-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 .75Q9.1 6.9 15.25 8 9.1 9.1 8 15.25 6.9 9.1.75 8 6.9 6.9 8 .75Z"/></svg>
+                        <input class="fx-slider-input" id="fx-level" type="range" min="0" max="2" step="1" value="1" autocomplete="off" aria-label="Visual effects" aria-valuetext="Medium" aria-describedby="fx-slider-hint">
+                        <span class="fx-slider-track" aria-hidden="true"><span class="fx-slider-rail"><i class="fx-slider-fill"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i></span><b class="fx-slider-thumb"></b></span>
+                        <span class="fx-slider-tip" aria-hidden="true"></span>
+                        <span class="visually-hidden" id="fx-slider-hint">Low keeps the page still and quick, Medium adds a still starry sky, cards that lean toward the cursor and rings that turn, and High sets the sky moving and frosts the glass.</span>
+                    </div>
                 </li>
             </ul>
         </div>
@@ -163,7 +215,7 @@
         </section>
     </main>
 
-    <div id="project-modal" class="modal-overlay" aria-hidden="true">
+    <div id="project-modal" class="modal-overlay" aria-hidden="true" inert>
         <div class="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <button class="modal-close" id="modal-close" aria-label="Close project details"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             <div class="modal-header">
@@ -214,7 +266,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261024-220839"></script>
-    <script src="glass.js?v=20260925-liquid-glass"></script>
+    <script src="portfolio.js?v=20261025-173917"></script>
+    <script src="glass.js?v=20261025-clear-glass2"></script>
 </body>
 </html>

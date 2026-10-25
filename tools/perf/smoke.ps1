@@ -7,9 +7,10 @@
   Checks: no script errors or failed requests (YouTube aside), every project
   rendered from portfolio-data.json, the nav links land on their sections, a
   project opens and closes (and the sky rests behind it and moves again
-  after), a collection opens and its ring turns, the High FX switch works
-  and is remembered, a slow visit's Low FX is kept for the tab and dropped
-  by the switch, and the High FX sky and glass are running.
+  after), a collection opens and its ring turns, the effects slider sets
+  each of its three levels and is remembered, a slow visit's lower level is
+  kept for the tab and dropped by a choice on the slider, and the High FX
+  sky and glass are running.
 #>
 param([int]$Port = 9345, [string]$Site = 'http://localhost:8862/', [switch]$Software)
 $ErrorActionPreference = 'Stop'
@@ -47,11 +48,7 @@ try {
     Check 'featured row' ((& $js "document.querySelectorAll('#featured-projects-container .project-card').length") -eq [Math]::Min(3, $data.featured))
     Check 'one row per collection' ((& $js "document.querySelectorAll('.project-collection').length") -eq $data.collections)
     $mode = & $js "JSON.stringify({ effects: document.documentElement.dataset.effects, glass: document.documentElement.dataset.glass, canvas: document.querySelector('.galaxy-field').width > 0 && !document.querySelector('.galaxy-field').hidden })" | ConvertFrom-Json
-    if ($Software) {
-        Check 'no graphics card: starts in Low FX' ($mode.effects -eq 'low') "effects=$($mode.effects)"
-    } else {
-        Check 'High FX on a capable machine, with the sky drawing' ($mode.effects -eq 'high' -and $mode.canvas) "effects=$($mode.effects) glass=$($mode.glass)"
-    }
+    Check 'starts in Medium FX, with no sky drawing' ($mode.effects -eq 'medium' -and -not $mode.canvas) "effects=$($mode.effects) glass=$($mode.glass)"
 
     foreach ($target in 'about', 'skills', 'projects', 'contact') {
         # From the top of a fresh load, with a real click on the link.
@@ -87,7 +84,11 @@ try {
     if (-not $Software) {
         # The sky is parked behind an open project and has to wake once it
         # closes. A checksum of what the sky's canvas holds, a moment apart.
-        $sky = "(() => { const d = document.querySelector('.galaxy-field').toDataURL(); let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0; return h; })()"
+        # The page starts in Medium, which draws no sky, so High is chosen
+        # for this and forgotten again after.
+        Set-EffectsLevel $page 'high' | Out-Null
+        Start-Sleep -Milliseconds 1500
+        $sky ="(() => { const d = document.querySelector('.galaxy-field').toDataURL(); let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0; return h; })()"
         & $click '#featured-projects-container .project-card' 2
         Start-Sleep -Milliseconds 600
         $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
@@ -96,6 +97,7 @@ try {
         Start-Sleep -Milliseconds 600
         $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
         Check 'and moves again once it closes' ($a -ne $b)
+        & $js "(() => { localStorage.removeItem('portfolio-effects-level'); return 1; })()" | Out-Null
     }
 
     & $click '.collection-toggle' 0
@@ -107,26 +109,35 @@ try {
     $after = & $js "document.querySelector('.project-collection .project-carousel').scrollLeft"
     Check 'its ring turns' ($after -ne $before) "scrollLeft $before -> $after"
 
-    $was = & $js "document.documentElement.dataset.effects"
-    & $js "document.getElementById('performance-toggle').click()" | Out-Null
-    Start-Sleep -Milliseconds 500
-    $now = & $js "document.documentElement.dataset.effects"
-    Check 'the FX switch changes mode' ($now -ne $was) "$was -> $now"
+    # The effects slider: each level, what it draws, and that it is kept.
+    $level = "JSON.stringify({ effects: document.documentElement.dataset.effects, reason: document.documentElement.dataset.effectsReason, glass: document.documentElement.dataset.glass, sky: !document.querySelector('.galaxy-field').hidden, look: document.querySelector('.background-grid').dataset.look || '', value: document.getElementById('fx-level').value })"
+    Set-EffectsLevel $page 'medium' | Out-Null
+    Start-Sleep -Milliseconds 900
+    $m = & $js $level | ConvertFrom-Json
+    Check 'the slider sets Medium: glass, no sky' ($m.effects -eq 'medium' -and -not $m.sky -and $m.look -eq 'medium' -and $m.value -eq '1') "$($m.effects) glass=$($m.glass) sky=$($m.sky)"
+    Set-EffectsLevel $page 'low' | Out-Null
+    Start-Sleep -Milliseconds 900
+    $l = & $js $level | ConvertFrom-Json
+    Check 'the slider sets Low: no sky, no frost' ($l.effects -eq 'low' -and -not $l.sky -and $l.glass -eq 'frost' -and $l.look -eq 'low' -and $l.value -eq '0') "$($l.effects) glass=$($l.glass)"
     Invoke-Page $page 'Page.reload' | Out-Null
     Wait-PageReady $page
-    Check 'the choice is remembered' ((& $js "document.documentElement.dataset.effects") -eq $now)
-    & $js "document.getElementById('performance-toggle').click()" | Out-Null
-    Start-Sleep -Milliseconds 300
+    $kept = & $js $level | ConvertFrom-Json
+    Check 'the choice is remembered' ($kept.effects -eq 'low' -and $kept.reason -eq 'manual' -and $kept.value -eq '0') "$($kept.effects)/$($kept.reason)"
+    Set-EffectsLevel $page 'high' | Out-Null
+    Start-Sleep -Milliseconds 1500
+    $h = & $js $level | ConvertFrom-Json
+    Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -and $h.look -eq '' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
 
-    # A visit the frame monitor had to drop to Low FX stays there for the tab.
-    & $js "(() => { localStorage.removeItem('portfolio-effects-override-v3'); sessionStorage.setItem('portfolio-effects-lag', '1'); return 1; })()" | Out-Null
+    # A visit the frame monitor had to step down stays there for the tab.
+    & $js "(() => { localStorage.removeItem('portfolio-effects-level'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
     Invoke-Page $page 'Page.reload' | Out-Null
     Wait-PageReady $page
-    $slow = & $js "JSON.stringify({ effects: document.documentElement.dataset.effects, reason: document.documentElement.dataset.effectsReason })" | ConvertFrom-Json
-    Check 'a slow visit reloads in Low FX' ($slow.effects -eq 'low' -and $slow.reason -eq 'lag') "$($slow.effects)/$($slow.reason)"
-    & $js "document.getElementById('performance-toggle').click()" | Out-Null
+    $slow = & $js $level | ConvertFrom-Json
+    Check 'a slow visit reloads at the level it was stepped down to' ($slow.effects -eq 'low' -and $slow.reason -eq 'lag') "$($slow.effects)/$($slow.reason)"
+    Set-EffectsLevel $page 'high' | Out-Null
     Start-Sleep -Milliseconds 300
-    Check 'switching back on by hand forgets it' ((& $js "sessionStorage.getItem('portfolio-effects-lag')") -eq $null -and (& $js "document.documentElement.dataset.effects") -eq 'high')
+    Check 'choosing a level by hand forgets it' ((& $js "sessionStorage.getItem('portfolio-effects-lag')") -eq $null -and (& $js "document.documentElement.dataset.effects") -eq 'high')
+    & $js "(() => { localStorage.removeItem('portfolio-effects-level'); return 1; })()" | Out-Null
 
     # Everything the page logged or failed to load along the way.
     Clear-CdpEvents $page.Session -Keep '*'

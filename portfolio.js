@@ -85,55 +85,60 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(cursorDot);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const galaxy = setupGalaxyField(galaxyField, reducedMotion);
+    const stillSky = setupStillSky(backgroundGrid);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     setupPointerReactiveSurfaces(reducedMotion);
-    const performanceToggle = document.getElementById('performance-toggle');
-    const performanceToggleLabel = document.getElementById('performance-toggle-label');
-    // v3 intentionally resets the old Low FX override once. The previous
-    // hardware gate was too strict for capable laptops, so an earlier manual
-    // or stale Low FX choice should not keep overriding the new baseline.
-    const performanceStorageKey = 'portfolio-effects-override-v3';
-    let savedEffectsMode = '';
-    try {
-        savedEffectsMode = localStorage.getItem(performanceStorageKey) || '';
-    } catch (error) {
-        savedEffectsMode = '';
-    }
+    setupSteadyLift();
+    // ---- Effects levels -------------------------------------------------
+    // Three, chosen on the slider in the bar, left to right:
+    //
+    //   low     the lattice on its own under clear glass, and nothing moves
+    //           that need not
+    //   medium  a still sky under the lattice (setupStillSky), painted once,
+    //           and the cards leaning toward the cursor, its light on them
+    //           and the rings turning
+    //   high    the sky alive behind glass that frosts and bends what is
+    //           behind it, and the cursor's own light
+    //
+    // The level is decided before the first paint by the script in
+    // index.html's head and written to html[data-effects], with the reason
+    // in data-effects-reason: 'manual' for a level the visitor chose,
+    // 'hardware' for one picked for this device, 'lag' for one the page had
+    // to step down to. It is read back from there.
+    const EFFECT_LEVELS = ['low', 'medium', 'high'];
+    const EFFECT_NAMES = { low: 'Low', medium: 'Medium', high: 'High' };
+    const levelStorageKey = 'portfolio-effects-level';
+    // A visit that had to step down for being slow keeps the lower level for
+    // the rest of the tab's life (the head script reads this). A reload, or a
+    // trip to the policy pages and back, used to start High FX all over again
+    // on the machine that had just shown it could not keep up, and the reader
+    // sat through the same seconds of stutter before the monitor below
+    // stepped in again. A fresh visit tries again.
+    const lagStorageKey = 'portfolio-effects-lag';
+    const storeEffects = (area, key, value) => {
+        try {
+            if (value) window[area].setItem(key, value);
+            else window[area].removeItem(key);
+        } catch (error) {
+            // Storage can be blocked (private windows, strict settings). The
+            // level still applies; it is only forgotten sooner.
+        }
+    };
+    const root = document.documentElement;
+    let effectsMode = EFFECT_LEVELS.includes(root.dataset.effects) ? root.dataset.effects : 'medium';
+    let effectsReason = ['manual', 'lag', 'hardware'].includes(root.dataset.effectsReason)
+        ? root.dataset.effectsReason : 'hardware';
     const logicalCores = navigator.hardwareConcurrency || 4;
     const deviceMemory = navigator.deviceMemory || 0;
-    const dataSaverEnabled = Boolean(navigator.connection?.saveData);
-    // Start High FX for a normal modern laptop and let the sustained frame
-    // monitor below make the final call. Truly low-end devices still begin in
-    // Low FX, while capable machines are not penalized by an arbitrary
-    // desktop-class requirement.
-    const meetsHighEffectsBaseline = logicalCores >= 4
-        && (!deviceMemory || deviceMemory >= 4)
-        && !dataSaverEnabled
-        && !reducedMotion.matches;
-    // A page that had to drop to Low FX because it was running slowly keeps
-    // it for the rest of the visit -- this tab, until it is closed. A reload,
-    // or a trip to the policy pages and back, used to start High FX all over
-    // again on the machine that had just shown it could not keep up, and the
-    // reader sat through the same seconds of stutter before the monitor
-    // below stepped in again. A fresh visit tries High FX again.
-    const lagStorageKey = 'portfolio-effects-lag';
-    let slowThisVisit = false;
-    try {
-        slowThisVisit = sessionStorage.getItem(lagStorageKey) === '1';
-    } catch (error) {
-        slowThisVisit = false;
-    }
-    let effectsMode = ['low', 'high'].includes(savedEffectsMode)
-        ? savedEffectsMode
-        : (meetsHighEffectsBaseline && !slowThisVisit ? 'high' : 'low');
-    let effectsReason = savedEffectsMode ? 'manual' : slowThisVisit ? 'lag' : 'hardware';
-    // Low FX takes over as soon as High FX turns clunky: two seconds in a row
-    // where the typical frame runs at 30fps or worse, or where a quarter of
-    // the frames stutter. A lone spike -- a GC pause, a collection opening --
-    // is neither, so it never costs anyone High FX. Seconds are only measured
-    // while the page is visible, focused and settled, so the hitches every
-    // machine produces at first paint, when a tab comes back or when a window
-    // is resized are never scored either.
+    // A level the page picked for itself is stepped down as soon as it turns
+    // clunky: two seconds in a row where the typical frame runs at 30fps or
+    // worse, or where a quarter of the frames stutter -- High to Medium, which
+    // puts the sky away and keeps the glass, and Medium to Low. A lone spike
+    // -- a GC pause, a collection opening -- is neither, so it never costs
+    // anyone a level. Seconds are only measured while the page is visible,
+    // focused and settled, so the hitches every machine produces at first
+    // paint, when a tab comes back or when a window is resized are never
+    // scored either. A level the visitor chose is never changed for them.
     const PERFORMANCE_WINDOW_MS = 1000;
     const PERFORMANCE_WARMUP_MS = 4000;
     const PERFORMANCE_RESUME_DELAY_MS = 2000;
@@ -143,11 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // first the sky is slowed rather than switched off, then the glass stops
     // bending the light at its rim and keeps only its frost -- the frost is
     // most of what it looks like -- and the sky is drawn at CSS-pixel
-    // resolution rather than 1.25x. A page is strained when it runs steadily under fifty frames a
-    // second, or when it keeps missing frames: one in ten late by a display
-    // frame or more is a page that visibly hitches while it scrolls, however
-    // good its average. That is what a laptop with other work on it looks
-    // like, and it used to pass as smooth.
+    // resolution rather than 1.25x. A page is strained when it runs steadily
+    // under fifty frames a second, or when it keeps missing frames: one in
+    // ten late by a display frame or more is a page that visibly hitches
+    // while it scrolls, however good its average. That is what a laptop with
+    // other work on it looks like, and it used to pass as smooth. Slowing the
+    // sky changes how often it is drawn and nothing in it, so it is the one
+    // step taken under a High FX the visitor chose for themselves too.
     const MIN_STEADY_FPS = 50;
     const STRAINED_WINDOWS_BEFORE_EASING = 2;
     const MISSED_FRAME_SHARE = .1;
@@ -182,11 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let strainedWindows = 0;
     let skyEased = false;
     let glassEased = false;
-    let automaticDowngradeComplete = false;
-    // Set when the visitor turns High FX back on after it was switched off
-    // for them: they have overruled the monitor, so it stands down for the
-    // rest of the visit.
-    let highKeptDespiteLag = false;
+    // Set once the page is as low as the monitor will take it.
+    let monitorDone = false;
     let backgroundIdleTimer = 0;
     let backgroundFadeTimer = 0;
 
@@ -240,13 +244,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return sorted[Math.floor(sorted.length * share)] || 16.7;
     };
 
-    // Nothing left to decide: High FX is off, or the call has already been
-    // made and will not be made again. The loop below asks for a frame every
-    // frame for as long as it runs, which in Low FX is the only thing left on
-    // the page still asking -- the field has stopped drawing by then -- and a
-    // page that asks for a frame it does nothing with keeps the machine awake
-    // for no one. It is started again by whatever could change the answer.
-    const monitorIdle = () => effectsMode !== 'high' || automaticDowngradeComplete || highKeptDespiteLag;
+    // Nothing left to decide: the page is in Low FX, the call has already
+    // been made, or the level is the visitor's own and there is nothing left
+    // the monitor may do under it (slowing a High FX sky they chose, once).
+    // The loop below asks for a frame every frame for as long as it runs,
+    // which in Low and Medium FX would be the only thing left on the page
+    // still asking -- no sky is drawn there -- and a page that asks for a
+    // frame it does nothing with keeps the machine awake for no one. It is
+    // started again by whatever could change the answer.
+    const monitorIdle = () => monitorDone || effectsMode === 'low'
+        || (effectsReason === 'manual' && (effectsMode !== 'high' || skyEased));
     // Frames are timed by when they actually run, not by the time the browser
     // stamps on them. A frame held up by the page is stamped with the time it
     // was due, and the one after it with the next -- measured by the stamps,
@@ -336,38 +343,48 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!crawlingSince) crawlingSince = timestamp - sampledTime;
             crawlingWindows += 1;
         }
-        if (crawlingWindows >= 3 && timestamp - crawlingSince >= CRAWLING_MS) {
-            automaticDowngradeComplete = true;
+        // A level the visitor chose is theirs, crawling or not: they can see
+        // the page, and the slider, as well as the monitor can.
+        const automatic = effectsReason !== 'manual';
+        if (automatic && crawlingWindows >= 3 && timestamp - crawlingSince >= CRAWLING_MS) {
+            monitorDone = true;
             applyEffectsMode('low', false, 'lag');
             return;
         }
 
-        // Before High FX is given up, the page is asked for less, a step at a
-        // time: the sky runs slower, every effect kept and only drawn less
-        // often; then the glass keeps its frost and lets go of the bend at its
-        // rim (glass.js). Only once both have been tried, and the page is
-        // still clunky, does it fall back to Low FX. Each step gets a clean
+        // Before a level is given up, the page is asked for less, a step at a
+        // time: in High FX the sky runs slower, every effect kept and only
+        // drawn less often; then the glass keeps its frost and lets go of the
+        // bend at its rim (glass.js). Only once those have been tried, and the
+        // page is still clunky, does it step down a level -- High to Medium,
+        // which puts the sky away, then Medium to Low. Each step gets a clean
         // look of its own before the page is judged again.
-        if (!skyEased || !glassEased) {
+        const canEaseSky = effectsMode === 'high' && !skyEased;
+        // Medium FX draws neither the sky nor the frost and bend, so there is
+        // nothing to ease there before stepping down.
+        const canEaseGlass = automatic && !glassEased && effectsMode === 'high';
+        if (canEaseSky || canEaseGlass) {
             strainedWindows = strained ? strainedWindows + 1 : 0;
             if (strainedWindows >= STRAINED_WINDOWS_BEFORE_EASING) {
-                if (!skyEased) {
+                if (canEaseSky) {
                     skyEased = true;
                     galaxy.ease();
-                    document.documentElement.dataset.effectsPace = 'eased';
                 } else {
                     glassEased = true;
                     galaxy.lighten();
-                    document.documentElement.dataset.effectsPace = 'lighter';
                 }
+                syncEffectsPace();
                 deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
             }
             return;
         }
+        if (!automatic) return;
         clunkyWindows = clunky ? clunkyWindows + 1 : 0;
         if (clunkyWindows >= CLUNKY_WINDOWS_BEFORE_DOWNGRADE) {
-            automaticDowngradeComplete = true;
-            applyEffectsMode('low', false, 'lag');
+            const lower = effectsMode === 'high' ? 'medium' : 'low';
+            if (lower === 'low') monitorDone = true;
+            applyEffectsMode(lower, false, 'lag');
+            deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
         }
     };
     const startPerformanceMonitor = () => {
@@ -382,8 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
         performanceWatchUntil = Math.max(performanceWatchUntil, performance.now() + duration);
         startPerformanceMonitor();
     };
+    // The looks in every few seconds are for the sky, which moves whether
+    // or not anyone is using the page; below High FX nothing does.
     const schedulePerformanceSpot = () => {
-        if (performanceSpotTimer || monitorIdle()) return;
+        if (performanceSpotTimer || monitorIdle() || effectsMode !== 'high') return;
         performanceSpotTimer = window.setTimeout(() => {
             performanceSpotTimer = 0;
             watchPerformance(PERFORMANCE_SPOT_MS);
@@ -396,50 +415,248 @@ document.addEventListener('DOMContentLoaded', () => {
     // Captured, so a panel or a list scrolling inside the page counts too.
     window.addEventListener('scroll', watchPerformanceAfterInput, { passive: true, capture: true });
 
-    const applyEffectsMode = (mode, remember = false, reason = 'manual') => {
-        effectsMode = mode;
-        effectsReason = reason;
-        const useHighEffects = mode === 'high';
-        // High FX is the only mode with anything to measure, and turning it
-        // back on is one of the things that gives the monitor its job again.
-        startPerformanceMonitor();
-        document.documentElement.dataset.effects = mode;
-        document.documentElement.dataset.effectsReason = reason;
-        galaxy.setQuality(mode);
-        cursor.setEnabled(useHighEffects);
-        wakeEffectsBackground();
-        performanceToggle.setAttribute('aria-checked', String(useHighEffects));
-        performanceToggle.setAttribute('aria-label', `Use ${useHighEffects ? 'low' : 'high'} performance visual effects`);
-        performanceToggle.title = reason === 'lag'
-            ? 'Low FX turned on because the page was running slowly'
-            : `${useHighEffects ? 'High' : 'Low'} FX selected ${reason === 'hardware' ? 'for this device' : 'manually'}`;
-        performanceToggleLabel.textContent = useHighEffects ? 'High FX' : 'Low FX';
-        if (!useHighEffects) {
-            document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
-        }
-        if (remember) {
-            try {
-                localStorage.setItem(performanceStorageKey, mode);
-            } catch (error) {
-                // Private browsing can block storage, but the visual mode should still work.
-            }
-        }
-        // See slowThisVisit. A choice made by hand outranks it either way.
-        try {
-            if (reason === 'lag') sessionStorage.setItem(lagStorageKey, '1');
-            else if (remember) sessionStorage.removeItem(lagStorageKey);
-        } catch (error) {
-            // Storage can be blocked; the page only forgets sooner.
-        }
+    // How far the page has eased itself, for the stylesheets, glass.js and
+    // the perf tools: 'eased' once the sky is drawn less often, 'lighter'
+    // once the glass has let go of its bend as well.
+    const syncEffectsPace = () => {
+        if (glassEased) root.dataset.effectsPace = 'lighter';
+        else if (skyEased) root.dataset.effectsPace = 'eased';
+        else delete root.dataset.effectsPace;
+    };
+    // Set once the page has found it is drawing on the graphics built into
+    // an Intel processor (askAboutGraphics, below): High FX there runs its
+    // sky eased from the start, whenever it is turned on.
+    let builtInGraphics = false;
+    const easeForBuiltInGraphics = () => {
+        if (!builtInGraphics || skyEased || effectsMode !== 'high') return;
+        skyEased = true;
+        galaxy.ease();
+        syncEffectsPace();
     };
 
-    performanceToggle.addEventListener('click', () => {
-        // Turning High FX back on after the monitor switched it off is the
-        // visitor overruling it, and that stands for the rest of the visit.
-        if (effectsMode === 'low' && effectsReason === 'lag') highKeptDespiteLag = true;
-        automaticDowngradeComplete = false;
+    // What lies behind the glass when no sky is drawn (portfolio.css): the
+    // lattice, and in Medium the still sky with it. Going down
+    // to Low or Medium it is put up at once, under the sky as the sky fades
+    // out; going up to High it stays until the sky has faded in over it, so
+    // a change of level crossfades rather than passing through black.
+    let backdropTimer = 0;
+    const settleBackdrop = () => {
+        window.clearTimeout(backdropTimer);
+        backdropTimer = 0;
+        if (effectsMode !== 'high') return;
+        delete backgroundGrid.dataset.look;
+        stillSky.hide();
+    };
+    const setBackdropLook = (mode, animate) => {
+        window.clearTimeout(backdropTimer);
+        backdropTimer = 0;
+        if (mode !== 'high') backgroundGrid.dataset.look = mode;
+        else if (!animate || !backgroundGrid.dataset.look) delete backgroundGrid.dataset.look;
+        // Taken down when the sky reports that it is in (below), or after a
+        // few seconds if it never does -- a hidden tab draws nothing.
+        else backdropTimer = window.setTimeout(settleBackdrop, 4000);
+        if (mode === 'medium') stillSky.show();
+        else if (mode === 'low' || !backgroundGrid.dataset.look) stillSky.hide();
+    };
+    galaxyField.addEventListener('skyshown', settleBackdrop);
+
+    // ---- The slider ------------------------------------------------------
+    // Three stops on a short track in the bar; in the phone menu, the last
+    // row. A native range input underneath carries the keyboard (arrows,
+    // Home, End, Page Up and Down) and what a screen reader announces; the
+    // track takes the pointer itself, so a press anywhere on it lands on the
+    // nearest stop in every browser -- iOS Safari only moves a range input
+    // by its thumb -- and a drag carries the thumb under the finger before
+    // it settles on a stop. The thumb's place comes from html[data-effects]
+    // (navbar.css), so it is right before any of this runs.
+    const fxSlider = document.getElementById('fx-slider');
+    const fxInput = document.getElementById('fx-level');
+    const fxTrack = fxSlider?.querySelector('.fx-slider-track');
+    const fxTip = fxSlider?.querySelector('.fx-slider-tip');
+    // A level the page steps down to by itself is read out from here; one the
+    // visitor chose, the slider reads out itself. Outside the menu, which on
+    // a phone hides everything in it until it is opened.
+    const fxStatus = document.createElement('p');
+    fxStatus.className = 'visually-hidden';
+    fxStatus.setAttribute('role', 'status');
+    document.body.appendChild(fxStatus);
+    const levelLabel = level => `${EFFECT_NAMES[level]} effects`;
+    let tipTimer = 0;
+    const hideTip = () => {
+        window.clearTimeout(tipTimer);
+        tipTimer = 0;
+        fxSlider?.classList.remove('is-telling');
+    };
+    // A brief word under the slider: which level it is on. Held while the
+    // cursor is over it or it has the keyboard's focus, and otherwise gone
+    // again after a moment.
+    const showTip = (text, duration = 1600) => {
+        if (!fxSlider) return;
+        fxTip.textContent = text;
+        fxSlider.classList.add('is-telling');
+        window.clearTimeout(tipTimer);
+        tipTimer = duration ? window.setTimeout(hideTip, duration) : 0;
+    };
+    const syncSlider = () => {
+        if (!fxInput) return;
+        const index = EFFECT_LEVELS.indexOf(effectsMode);
+        if (Number(fxInput.value) !== index) fxInput.value = String(index);
+        fxInput.setAttribute('aria-valuetext', EFFECT_NAMES[effectsMode]);
+    };
+
+    const applyEffectsMode = (mode, remember = false, reason = 'manual', animate = true) => {
+        const stepped = reason === 'lag' && mode !== effectsMode;
+        effectsMode = mode;
+        effectsReason = reason;
+        root.dataset.effects = mode;
+        root.dataset.effectsReason = reason;
+        easeForBuiltInGraphics();
+        syncEffectsPace();
+        setBackdropLook(mode, animate);
+        galaxy.setQuality(mode, animate);
+        cursor.setEnabled(mode === 'high');
+        if (mode !== 'high') {
+            document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
+        }
+        wakeEffectsBackground();
+        syncSlider();
+        if (stepped) {
+            fxStatus.textContent = `Visual effects lowered to ${EFFECT_NAMES[mode]} because the page was running slowly.`;
+            showTip(`${levelLabel(mode)} · eased for speed`, 3200);
+        }
+        if (remember) storeEffects('localStorage', levelStorageKey, mode);
+        // See lagStorageKey. A choice made by hand outranks it either way.
+        if (reason === 'lag') storeEffects('sessionStorage', lagStorageKey, mode);
+        else if (remember) storeEffects('sessionStorage', lagStorageKey, '');
+        // Turning a level on is one of the things that gives the monitor its
+        // job again.
+        startPerformanceMonitor();
+    };
+
+    // A level chosen on the slider. It is the visitor's from then on: saved
+    // for their next visit, and never changed for them by the monitor.
+    const chooseLevel = level => {
+        if (!EFFECT_LEVELS.includes(level)) return;
+        if (level === effectsMode && effectsReason === 'manual') {
+            syncSlider();
+            return;
+        }
+        // The page took the bend off the glass, not the visitor: a level
+        // chosen by hand gets it back. The sky keeps its pace, which only
+        // changes how often it is drawn.
+        if (glassEased) {
+            glassEased = false;
+            galaxy.sharpen();
+        }
+        monitorDone = false;
+        crawlingSince = 0;
+        crawlingWindows = 0;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
-        applyEffectsMode(effectsMode === 'high' ? 'low' : 'high', true, 'manual');
+        applyEffectsMode(level, true, 'manual');
+    };
+
+    if (fxSlider && fxInput && fxTrack) {
+        // The pointer that is pressing the track, while it is down.
+        let drag = null;
+        // Keys and assistive technology move the input itself.
+        const fromInput = () => {
+            const level = EFFECT_LEVELS[Number(fxInput.value)];
+            if (!level) return;
+            const changed = level !== effectsMode || effectsReason !== 'manual';
+            chooseLevel(level);
+            if (changed) showTip(levelLabel(level), fxInput.matches(':focus-visible') ? 0 : 1600);
+        };
+        fxInput.addEventListener('input', fromInput);
+        fxInput.addEventListener('change', fromInput);
+        fxInput.addEventListener('focus', () => {
+            if (fxInput.matches(':focus-visible')) showTip(levelLabel(effectsMode), 0);
+        });
+        fxInput.addEventListener('blur', () => { if (!drag) hideTip(); });
+
+        // The centres of the three stops, where the thumb's centre comes to
+        // rest, measured fresh for each press: the bar changes size with the
+        // window, and the stop is in a different place in the phone menu.
+        const stopCentres = () => [...fxTrack.querySelectorAll('.fx-slider-stop')].map(stop => {
+            const box = stop.getBoundingClientRect();
+            return box.left + box.width / 2;
+        });
+        const nearestStop = (stops, x) => {
+            let best = 0;
+            stops.forEach((centre, index) => {
+                if (Math.abs(x - centre) < Math.abs(x - stops[best])) best = index;
+            });
+            return best;
+        };
+        const endDrag = () => {
+            if (!drag) return;
+            try { fxSlider.releasePointerCapture(drag.id); } catch (error) { /* already released */ }
+            drag = null;
+            fxSlider.classList.remove('is-dragging');
+            fxSlider.style.removeProperty('--fx-drag');
+        };
+        fxSlider.addEventListener('pointerdown', event => {
+            if (!event.isPrimary || event.button !== 0) return;
+            const stops = stopCentres();
+            const box = fxTrack.getBoundingClientRect();
+            // The sparkle beside the track only says what the track is for.
+            if (event.clientX < box.left - 8) return;
+            event.preventDefault();
+            // So the arrow keys carry on from a click, without a focus ring
+            // for it (:focus-visible). A finger has no keys to carry on with.
+            if (event.pointerType === 'mouse') fxInput.focus({ preventScroll: true });
+            drag = { id: event.pointerId, x: event.clientX, moved: false, stops };
+            try { fxSlider.setPointerCapture(event.pointerId); } catch (error) { /* pointer already gone */ }
+            showTip(levelLabel(effectsMode), 0);
+        });
+        fxSlider.addEventListener('pointermove', event => {
+            if (!drag || event.pointerId !== drag.id) return;
+            if (!drag.moved && Math.abs(event.clientX - drag.x) < 4) return;
+            drag.moved = true;
+            const { stops } = drag;
+            const offset = Math.min(Math.max(event.clientX - stops[0], 0), stops[2] - stops[0]);
+            fxSlider.classList.add('is-dragging');
+            fxSlider.style.setProperty('--fx-drag', `${offset.toFixed(1)}px`);
+            const level = EFFECT_LEVELS[nearestStop(stops, event.clientX)];
+            if (fxTip.textContent !== levelLabel(level)) fxTip.textContent = levelLabel(level);
+        });
+        fxSlider.addEventListener('pointerup', event => {
+            if (!drag || event.pointerId !== drag.id) return;
+            const level = EFFECT_LEVELS[nearestStop(drag.stops, event.clientX)];
+            endDrag();
+            chooseLevel(level);
+            showTip(levelLabel(level), event.pointerType === 'mouse' && fxSlider.matches(':hover') ? 0 : 1400);
+        });
+        // A vertical swipe that started on the slider is the page scrolling
+        // (touch-action: pan-y): the thumb goes back where it was.
+        fxSlider.addEventListener('pointercancel', event => {
+            if (!drag || event.pointerId !== drag.id) return;
+            endDrag();
+            hideTip();
+        });
+        fxSlider.addEventListener('pointerenter', event => {
+            if (event.pointerType === 'mouse' && !drag) showTip(levelLabel(effectsMode), 0);
+        });
+        fxSlider.addEventListener('pointerleave', event => {
+            if (event.pointerType === 'mouse' && !drag && !fxInput.matches(':focus-visible')) hideTip();
+        });
+    }
+    // The site open in another tab, or this page brought back by the back
+    // button from the browser's cache, may have been left at another level
+    // since this one was chosen: the choice saved last is the visitor's.
+    const adoptSavedLevel = () => {
+        let saved = '';
+        try {
+            saved = localStorage.getItem(levelStorageKey) || '';
+        } catch (error) {
+            saved = '';
+        }
+        if (EFFECT_LEVELS.includes(saved)) chooseLevel(saved);
+    };
+    window.addEventListener('storage', event => {
+        if (event.key === levelStorageKey) adoptSavedLevel();
+    });
+    window.addEventListener('pageshow', event => {
+        if (event.persisted) adoptSavedLevel();
     });
     document.addEventListener('visibilitychange', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
@@ -461,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
     }, { passive: true });
-    applyEffectsMode(effectsMode, false, effectsReason);
+    applyEffectsMode(effectsMode, false, effectsReason, false);
     // Measure nothing until the page has had time to load, decode images and
     // settle -- startup jank on its own used to be enough to drop a perfectly
     // capable machine to Low FX.
@@ -476,8 +693,10 @@ document.addEventListener('DOMContentLoaded', () => {
     //
     // The first look runs past the warm-up for three whole windows, enough
     // for a machine that cannot keep up to have its sky eased straight away.
+    // Only High FX has a sky moving at rest to look at: below it the page
+    // is still until it is used, and is watched only then.
     deferPerformanceSampling(PERFORMANCE_WARMUP_MS);
-    watchPerformance(PERFORMANCE_WARMUP_MS + 3 * PERFORMANCE_WINDOW_MS + 500);
+    if (effectsMode === 'high') watchPerformance(PERFORMANCE_WARMUP_MS + 3 * PERFORMANCE_WINDOW_MS + 500);
 
     // A laptop drawing on the graphics built into an Intel processor -- the
     // UHD and Iris chips in most thin laptops -- is the machine that cannot
@@ -492,16 +711,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // -- none fitted, its driver on the browser's blocklist, a remote desktop,
     // a virtual machine. Asked to refuse a context that would come with a
     // major performance caveat, WebGL refuses exactly there, where the
-    // browser would draw in software or not at all. On such a machine every
-    // sheet of glass and every frame of the sky is drawn by the processor,
-    // and High FX was a slideshow for the ten seconds or more the frame
-    // monitor takes to give up on it, on every visit. It starts in Low FX
-    // instead, unless its visitor has chosen High FX themselves. It is asked
-    // in Low FX too: a machine that starts there for another reason (little
-    // memory, Data Saver, a choice made earlier) is as likely to have no
-    // graphics, and its Low FX drops the frost there (portfolio.css).
-    const easeForIntegratedGraphics = () => {
-        if (skyEased) return;
+    // browser would draw in software or not at all. Such a machine used to
+    // be put in Low FX here, when the page started in High and Medium still
+    // frosted its glass. Neither is true now: Medium draws nothing the
+    // processor cannot keep up with (scrolling and the cursor over the cards
+    // both under one frame in a hundred dropped, cycle 24), so it keeps the
+    // level it started at and the frame monitor steps it down if it has to.
+    // It is asked in every level: a visitor can move the slider up at any
+    // moment, and the answer is kept for when they do (easeForBuiltInGraphics).
+    const askAboutGraphics = () => {
         let renderer = '';
         let software = false;
         try {
@@ -515,24 +733,18 @@ document.addEventListener('DOMContentLoaded', () => {
             renderer = '';
         }
         if (software) {
-            document.documentElement.dataset.effectsRenderer = 'software';
-            if (effectsMode === 'high' && effectsReason !== 'manual') {
-                automaticDowngradeComplete = true;
-                applyEffectsMode('low', false, 'hardware');
-            }
+            root.dataset.effectsRenderer = 'software';
             return;
         }
-        document.documentElement.dataset.effectsRenderer = /intel/i.test(renderer) ? 'intel' : 'other';
+        root.dataset.effectsRenderer = /intel/i.test(renderer) ? 'intel' : 'other';
         // Intel's own graphics cards (Arc) are not built in and keep up.
-        if (effectsMode !== 'high' || !/intel/i.test(renderer) || /\barc\b/i.test(renderer)) return;
-        skyEased = true;
-        galaxy.ease();
-        document.documentElement.dataset.effectsPace = 'eased';
+        builtInGraphics = /intel/i.test(renderer) && !/\barc\b/i.test(renderer);
+        easeForBuiltInGraphics();
     };
     // Half a second at most: a machine drawing in software is never idle,
     // and it used to wait out a two-second timeout in High FX.
-    if ('requestIdleCallback' in window) window.requestIdleCallback(easeForIntegratedGraphics, { timeout: 500 });
-    else window.setTimeout(easeForIntegratedGraphics, 500);
+    if ('requestIdleCallback' in window) window.requestIdleCallback(askAboutGraphics, { timeout: 500 });
+    else window.setTimeout(askAboutGraphics, 500);
 
     let pointerFrame = 0;
     let latestPointerEvent;
@@ -658,6 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // already at their full size (see .awaiting-data, index.html).
             window.portfolioDataPending = false;
             document.documentElement.classList.remove('awaiting-data');
+            revealLinkedSection();
             updateScrollMotion();
             window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
         })
@@ -668,6 +881,30 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.classList.remove('awaiting-data');
         });
 });
+
+// Arriving by a link to a section, such as the 404 page's "Browse projects" or
+// a shared #contact: the browser went looking for it before the data had
+// filled the page above it, and a collection did not exist at all yet. Go
+// there now, opening a collection on the way. Every section is drawn for the
+// jump, so it is measured against their real heights rather than
+// content-visibility's 800px guess (portfolio.css); they keep those heights
+// once they go back to being skipped off screen.
+function revealLinkedSection() {
+    let target = null;
+    try { target = document.getElementById(decodeURIComponent(window.location.hash.slice(1))); } catch (error) { return; }
+    if (!target || !target.closest('main')) return;
+    const toggle = target.matches('.project-collection') ? target.querySelector('.collection-toggle') : null;
+    if (toggle?.getAttribute('aria-expanded') === 'false') toggle.click();
+    const root = document.documentElement;
+    const sections = [...document.querySelectorAll('main .section')];
+    sections.forEach(section => { section.style.contentVisibility = 'visible'; });
+    root.style.scrollBehavior = 'auto';
+    target.scrollIntoView({ block: 'start' });
+    root.style.removeProperty('scroll-behavior');
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        sections.forEach(section => section.style.removeProperty('content-visibility'));
+    }));
+}
 
 // If the project data cannot be fetched the page would otherwise sit there with
 // four empty sections and no explanation. Say what happened and give a way out.
@@ -771,6 +1008,204 @@ function createSeededRandom(seed) {
     };
 }
 
+// ---- The still sky (Medium FX) ------------------------------------------------
+// Low lays the bare lattice on one fixed layer that is painted once; High
+// draws a living sky on a canvas of its own, frame after frame. Medium sits
+// between them: a sky of the same kind -- stars in High's colours, a faint
+// band where they crowd, a couple of tight clusters and a few soft clouds --
+// drawn once into a picture and laid on the lattice's own layer
+// (.background-grid::before, portfolio.css). Nothing in it moves, so a scroll
+// still slides the page over a single layer without drawing anything, which
+// is all Low costs; it is drawn again only when the window changes shape.
+// One seed a visit, so it is the same sky every time it comes back.
+const STILL_SKY_COLORS = ['224,237,255', '174,206,237', '246,221,190', '207,199,227',
+    '235,240,247', '214,226,255', '205,168,156', '255,194,142'];
+function setupStillSky(layer) {
+    const TAU = Math.PI * 2;
+    const seed = Math.floor(Math.random() * 4294967296);
+    const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 1));
+    let wanted = false, url = '', job = 0, resizeTimer = 0, releaseTimer = 0;
+    let drawnWidth = 0, drawnHeight = 0, drawnRatio = 0;
+
+    const paint = (width, height, ratio) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        const context = canvas.getContext('2d');
+        if (!context) return null;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        let state = seed;
+        const random = () => {
+            state = (state + 0x6D2B79F5) | 0;
+            let t = Math.imul(state ^ (state >>> 15), 1 | state);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        // Three draws averaged: a bell between -1 and 1, for anything that
+        // gathers toward a line or a point.
+        const bell = () => (random() + random() + random() - 1.5) / 1.5;
+        const span = Math.max(width, height);
+        const cloud = (x, y, radius, squash, angle, rgb, alpha) => {
+            context.save();
+            context.translate(x, y);
+            context.rotate(angle);
+            context.scale(1, squash);
+            const light = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+            light.addColorStop(0, `rgba(${rgb},${alpha})`);
+            light.addColorStop(.42, `rgba(${rgb},${alpha * .42})`);
+            light.addColorStop(1, `rgba(${rgb},0)`);
+            context.fillStyle = light;
+            context.fillRect(-radius, -radius, radius * 2, radius * 2);
+            context.restore();
+        };
+        const star = (x, y, radius, alpha, rgb) => {
+            if (radius > .85) {
+                const reach = radius * 6;
+                const halo = context.createRadialGradient(x, y, 0, x, y, reach);
+                halo.addColorStop(0, `rgba(${rgb},${alpha * .38})`);
+                halo.addColorStop(.35, `rgba(${rgb},${alpha * .1})`);
+                halo.addColorStop(1, `rgba(${rgb},0)`);
+                context.fillStyle = halo;
+                context.fillRect(x - reach, y - reach, reach * 2, reach * 2);
+            }
+            context.fillStyle = `rgba(${rgb},${alpha})`;
+            context.beginPath();
+            context.arc(x, y, radius, 0, TAU);
+            context.fill();
+            // The brightest few catch the light in a cross, as High's do.
+            if (radius > 1.45) {
+                context.strokeStyle = `rgba(${rgb},${alpha * .4})`;
+                context.lineWidth = Math.max(.35, radius * .22);
+                context.beginPath();
+                context.moveTo(x - radius * 3, y);
+                context.lineTo(x + radius * 3, y);
+                context.moveTo(x, y - radius * 3);
+                context.lineTo(x, y + radius * 3);
+                context.stroke();
+            }
+        };
+        const colour = () => STILL_SKY_COLORS[Math.floor(random() ** 1.6 * STILL_SKY_COLORS.length)];
+
+        // The clouds: blue behind the hero, violet high on the right, warm low
+        // on the right, a breath of teal at the foot -- each a little off
+        // where the last visit had it -- and between them the grey haze High's
+        // clusters sit in.
+        const off = amount => (random() - .5) * amount;
+        cloud(width * (.18 + off(.08)), height * (.24 + off(.1)), span * .5, .55, -.3, '112,148,210', .2);
+        cloud(width * (.84 + off(.08)), height * (.16 + off(.1)), span * .36, .6, .4, '150,136,198', .13);
+        cloud(width * (.8 + off(.1)), height * (.78 + off(.1)), span * .42, .5, -.2, '196,166,138', .11);
+        cloud(width * (.1 + off(.08)), height * (.9 + off(.06)), span * .3, .6, .2, '112,164,184', .08);
+        for (let i = 0; i < 5; i++) {
+            cloud(width * random(), height * random(), 90 + random() * 120, .45 + random() * .4, random() * TAU,
+                '200,210,226', .05 + random() * .04);
+        }
+
+        // The band: a long, faint glow corner to corner, and a third of the
+        // stars gathered along it.
+        const bandAngle = -.42 + off(.12);
+        const bandX = width * (.5 + off(.1)), bandY = height * (.55 + off(.1));
+        const bandWidth = Math.min(width, height) * .17;
+        const bandCos = Math.cos(bandAngle), bandSin = Math.sin(bandAngle);
+        cloud(bandX, bandY, span * .78, .16, bandAngle, '196,212,255', .085);
+        const count = Math.round(width * height / 1250);
+        for (let i = 0; i < count; i++) {
+            let x = random() * width, y = random() * height;
+            if (random() < .32) {
+                const along = (random() - .5) * span * 1.5, across = bell() * bandWidth;
+                x = bandX + along * bandCos - across * bandSin;
+                y = bandY + along * bandSin + across * bandCos;
+                if (x < 0 || x > width || y < 0 || y > height) continue;
+            }
+            star(x, y, .3 + random() ** 3.4 * 1.65, .22 + random() ** 1.5 * .7, colour());
+        }
+
+        // Two clusters, each a haze with a knot of faint stars in it.
+        for (let c = 0; c < 2; c++) {
+            const cx = width * (.12 + random() * .76), cy = height * (.12 + random() * .76);
+            cloud(cx, cy, 64, 1, 0, '220,230,255', .06);
+            const stars = 30 + Math.floor(random() * 18);
+            for (let i = 0; i < stars; i++) {
+                star(cx + bell() * 46, cy + bell() * 46, .26 + random() ** 3 * .6, .22 + random() * .5, colour());
+            }
+        }
+
+        // Fading out toward the edges, as High's veil darkens its sky there.
+        context.globalCompositeOperation = 'destination-out';
+        const edge = context.createRadialGradient(width / 2, height * .45, Math.min(width, height) * .3,
+            width / 2, height * .45, Math.hypot(width, height) * .62);
+        edge.addColorStop(0, 'rgba(0,0,0,0)');
+        edge.addColorStop(1, 'rgba(0,0,0,.5)');
+        context.fillStyle = edge;
+        context.fillRect(0, 0, width, height);
+        return canvas;
+    };
+
+    // Drawn, then handed to the stylesheet as a picture. The drawing takes a
+    // few milliseconds; turning it into a picture and decoding that again
+    // happens off the page's thread, and the sky fades in once it is ready.
+    const build = () => {
+        const width = window.innerWidth, height = window.innerHeight;
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+        const ticket = ++job;
+        const canvas = paint(width, height, ratio);
+        if (!canvas) return;
+        drawnWidth = width; drawnHeight = height; drawnRatio = ratio;
+        canvas.toBlob(blob => {
+            if (!blob || ticket !== job) return;
+            const next = URL.createObjectURL(blob);
+            const picture = new Image();
+            picture.src = next;
+            picture.decode().catch(() => {}).then(() => {
+                if (ticket !== job) {
+                    URL.revokeObjectURL(next);
+                    return;
+                }
+                const previous = url;
+                url = next;
+                layer.style.setProperty('--still-sky', `url("${next}")`);
+                layer.dataset.sky = '';
+                if (previous) window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
+            });
+        }, 'image/png');
+    };
+    // Sized to cover the window, so a phone's address bar sliding away only
+    // trims an edge; a new shape or a new zoom draws it again.
+    const reshaped = () => window.innerWidth !== drawnWidth
+        || Math.abs(window.innerHeight / drawnHeight - 1) > .2
+        || Math.min(window.devicePixelRatio || 1, 1.5) !== drawnRatio;
+    window.addEventListener('resize', () => {
+        if (!wanted) return;
+        clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(() => { if (wanted && reshaped()) build(); }, 250);
+    }, { passive: true });
+
+    const release = () => {
+        delete layer.dataset.sky;
+        layer.style.removeProperty('--still-sky');
+        if (url) URL.revokeObjectURL(url);
+        url = '';
+        drawnWidth = drawnHeight = drawnRatio = 0;
+    };
+    return {
+        show() {
+            clearTimeout(releaseTimer);
+            if (wanted) return;
+            wanted = true;
+            if (url && !reshaped()) layer.dataset.sky = '';
+            else idle(() => { if (wanted) build(); }, { timeout: 600 });
+        },
+        // Handed back once the lattice's fade has carried it out.
+        hide() {
+            if (!wanted) return;
+            wanted = false;
+            job++;
+            clearTimeout(resizeTimer);
+            clearTimeout(releaseTimer);
+            releaseTimer = window.setTimeout(release, 700);
+        }
+    };
+}
+
 function setupGalaxyField(canvas, reducedMotion) {
     // No desynchronized flag: the low-latency path presents this canvas outside
     // the normal compositing sync, which shows up as flicker/tearing against the
@@ -788,7 +1223,7 @@ function setupGalaxyField(canvas, reducedMotion) {
     // rest of the sky, into a small canvas of its own -- see drawStreaks.
     const skyContext = canvas.getContext('2d', { alpha: false });
     let context = skyContext;
-    if (!context) return { move() {}, release() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {}, ease() {}, lighten() {} };
+    if (!context) return { move() {}, release() {}, scroll() {}, setQuality() {}, refreshLayout() {}, touchStart() {}, touchMove() {}, touchEnd() {}, ease() {}, lighten() {}, sharpen() {} };
 
     // Keep the existing tiered, seeded canvas architecture. Regions now own
     // their lights and haze, so a system has a shared composition at every scale.
@@ -4765,7 +5200,10 @@ function setupGalaxyField(canvas, reducedMotion) {
             lastTick = frameTime;
             if (animated) sceneTime += step * .001;
             const time = animated ? sceneTime : 0;
-            if (skyDue) drawSky(frameTime, time, animated);
+            if (skyDue) {
+                drawSky(frameTime, time, animated);
+                if (showing) revealSky();
+            }
             // Asked again after the sky: it may have just lifted a hole onto a
             // layer or handed one back, and either has to show in this frame.
             if (layered()) {
@@ -4928,8 +5366,93 @@ function setupGalaxyField(canvas, reducedMotion) {
         clearTimeout(layoutTimer);
         layoutTimer = window.setTimeout(refreshLayout, 120);
     };
-    const setQuality = mode => {
+    // The sky is drawn in High FX only. When the level changes it fades
+    // rather than cutting: out over whatever the stylesheet puts up behind it,
+    // or in over what was there, once its first frame is drawn. The fade's
+    // length matches .galaxy-field.is-faded in portfolio.css.
+    const SKY_FADE_MS = 450;
+    // Put away, the sky draws nothing and is not composited, and what it is
+    // made of is handed back as soon as it has faded out (releaseSky): a
+    // lower level keeps nothing of High running or held. It used to be kept
+    // fifteen seconds so a quick return to High carried on where it was;
+    // coming back now builds it again, about a tenth of a second of the
+    // page's time while the sky is still faded out.
+    const SKY_KEEP_MS = 0;
+    let fadeTimer = 0, keepTimer = 0;
+    // Set until the first frame after the sky is turned on has been drawn;
+    // 'fade' when that frame should fade in over the backdrop.
+    let showing = '';
+    const putSkyAway = () => {
+        fadeTimer = 0;
+        canvas.hidden = true;
+        canvas.classList.remove('is-faded', 'is-arriving');
+        clearTimeout(keepTimer);
+        keepTimer = window.setTimeout(releaseSky, SKY_KEEP_MS);
+    };
+    // Everything the sky holds, handed back: the canvas it is drawn on, the
+    // scene, and every sprite, sheet and band cut for it -- some eighty
+    // megabytes of picture at 2x. Turning High FX back on builds the same
+    // sky again from the visit's seed.
+    const releaseSky = () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(keepTimer);
+        fadeTimer = keepTimer = 0;
+        canvas.hidden = true;
+        canvas.classList.remove('is-faded', 'is-arriving');
+        cancelAnimationFrame(layoutFrame);
+        layoutFrame = 0;
+        clearTimeout(layoutTimer);
+        layoutTimer = 0;
+        canvas.width = canvas.height = 0;
+        // So the next layout sizes the canvas again.
+        width = height = 0;
+        // The lists each tier draws from are cut from its objects
+        // (finalizeTiers), and hold them -- and every sprite they carry -- as
+        // firmly as the objects list does.
+        for (const tier of tierList) {
+            tier.objects = [];
+            tier.liveObjects = [];
+            tier.baseObjects = [];
+            tier.restObjects = [];
+        }
+        // The pools stay, emptied of whatever their last events, sparks and
+        // ripples pointed at.
+        for (let i = 0; i < eventPool.length; i++) eventPool[i] = { active: false };
+        for (let i = 0; i < particles.length; i++) particles[i] = { active: false };
+        for (let i = 0; i < ripples.length; i++) ripples[i] = { active: false };
+        bakedPoints.length = 0;
+        bakedPointPool.length = 0;
+        regions = []; orbitingBodies = []; blackHoles = []; pulsars = [];
+        protectedRects = []; visibleRects = []; glassRects = []; visibleGlass = [];
+        projectedHoles.length = 0;
+        builtSegments = 0;
+        layoutSignature = '';
+        spriteCache.clear();
+        staticStarTiles.clear();
+        spareStarTiles.length = 0;
+        staticStarField = null;
+        forgetBakedBands(false);
+        gridSheet = null; gridSheetSignature = '';
+        baseSheet = null; baseSignature = '';
+        shadeSheet = null; shadeSignature = '';
+        for (const layer of streakLayers) {
+            releaseStreak(layer);
+            layer.w = layer.h = 0;
+            layer.element.width = layer.element.height = 0;
+        }
+        for (const layer of holeLayers) {
+            releaseHoleLayer(layer);
+            layer.half = 0;
+            layer.element.width = layer.element.height = 0;
+        }
+    };
+    // 'high' draws the sky; 'medium' and 'low' put it away. `animate` fades it
+    // (a level chosen on the slider, or stepped down to); without it the sky
+    // goes at once and is handed back at once (the page's first call, or a
+    // machine found to have no graphics acceleration).
+    const setQuality = (mode, animate = false) => {
         const changed = quality !== mode;
+        const wasHigh = quality === 'high';
         quality = mode;
         pressedSpace = null; pointer.active = false;
         sleeping = false; clearTimeout(sleepTimer); sleepTimer = 0;
@@ -4938,11 +5461,60 @@ function setupGalaxyField(canvas, reducedMotion) {
         for (const particle of particles) particle.active = false;
         for (const ripple of ripples) ripple.active = false;
         if (changed) resetEvents();
-        canvas.hidden = mode !== 'high';
         stopLoop();
         lastFrame = 0;
-        if (mode === 'high') refreshLayout();
-        else { resetStaticStarTiles(); resetStreaks(); resetHoleLayers(); }
+        const fade = animate && !reducedMotion.matches;
+        if (mode === 'high') {
+            clearTimeout(fadeTimer);
+            clearTimeout(keepTimer);
+            fadeTimer = keepTimer = 0;
+            // Held back until its first frame is drawn; see draw. A sky still
+            // fading out keeps its last frame and fades back in from there.
+            showing = fade ? 'fade' : 'now';
+            canvas.classList.remove('is-arriving');
+            canvas.classList.toggle('is-faded', fade);
+            canvas.hidden = false;
+            refreshLayout();
+            return;
+        }
+        showing = '';
+        // Low to Medium and back: the sky is already away, and keeps the
+        // clock it was put away on. The page's first call has nothing built
+        // to keep.
+        if (!wasHigh) {
+            if (!animate) releaseSky();
+            return;
+        }
+        resetStaticStarTiles(); resetStreaks(); resetHoleLayers();
+        clearTimeout(fadeTimer);
+        fadeTimer = 0;
+        if (!animate) releaseSky();
+        else if (fade && !canvas.hidden && canvas.width) {
+            canvas.classList.remove('is-arriving');
+            canvas.classList.add('is-faded');
+            fadeTimer = window.setTimeout(putSkyAway, SKY_FADE_MS);
+        } else putSkyAway();
+    };
+    // The sky's first frame since it was turned on is on the canvas: let it
+    // be seen, and say so once it is all the way in (the page takes down the
+    // backdrop it faded in over).
+    const revealSky = () => {
+        const fade = showing === 'fade';
+        showing = '';
+        clearTimeout(fadeTimer);
+        fadeTimer = 0;
+        if (!fade) {
+            canvas.classList.remove('is-faded', 'is-arriving');
+            canvas.dispatchEvent(new Event('skyshown'));
+            return;
+        }
+        canvas.classList.add('is-arriving');
+        canvas.classList.remove('is-faded');
+        fadeTimer = window.setTimeout(() => {
+            fadeTimer = 0;
+            canvas.classList.remove('is-arriving');
+            canvas.dispatchEvent(new Event('skyshown'));
+        }, SKY_FADE_MS);
     };
     // Radius of the depression. Kept in step with the reach used by the body
     // physics and the tile warp so all three describe the same dent.
@@ -5226,13 +5798,20 @@ function setupGalaxyField(canvas, reducedMotion) {
     // The step after easing, for a machine that still cannot keep up: the
     // sky is drawn at one canvas pixel per CSS pixel rather than 1.25, a
     // third fewer pixels in every pass. The sky is soft light on black, and
-    // it is the last thing given up before Low FX takes it away altogether.
+    // it is the last thing given up before the sky is put away altogether.
     const lighten = () => {
         if (lightened) return;
         lightened = true;
         refreshLayout();
     };
-    return { move, release, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd, ease, lighten };
+    // Back to the full 1.25: the visitor has chosen a level by hand, and the
+    // page does not take detail from a level they chose.
+    const sharpen = () => {
+        if (!lightened) return;
+        lightened = false;
+        refreshLayout();
+    };
+    return { move, release, scroll, setQuality, refreshLayout, touchStart, touchMove, touchEnd, ease, lighten, sharpen };
 }
 
 
@@ -5258,6 +5837,116 @@ const BUTTON_TILT_DEGREES = 12;
 // captured one never arrives either.
 let retargetPointerSurfaces = () => {};
 const PRESS_RIPPLE_MAX_SIZE = 460;
+
+// The lift a card or a button takes under the cursor, held steady. Lifted by
+// :hover alone, a card met from below rose off the cursor: its foot climbed
+// past the pointer, the hover ended, the card dropped back onto it and rose
+// again, over and over, which read as ghosting along its bottom edge. Here a
+// card or control is raised (.is-raised, portfolio.css) when the cursor
+// reaches it and stays raised for as long as the cursor is anywhere over the
+// place it rests, however far it has risen. Cards and controls are tracked
+// apart, so a card stays up while the cursor is on a button inside it. Mice
+// only, at every effects level; a touch keeps the plain :hover lift.
+const LIFT_CARD_SELECTOR = CARD_SURFACE_SELECTOR;
+const LIFT_CONTROL_SELECTOR = '.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable';
+// How far a raised surface's resting place reaches below where it is now
+// drawn: at least its lift (6px for a card, 3px for a control).
+const LIFT_REACH = 8;
+// A raised surface rides its lift, and its lean, on a compositor layer of its
+// own (.is-steady, portfolio.css), taken as it rises and kept until a moment
+// after it has settled back. Left to itself the browser made a card a layer
+// for exactly as long as it was moving and folded it back into the page the
+// instant it landed, and on some screens the strip the card had just left was
+// never drawn again: a copy of its lit top edge hung over it after the cursor
+// had gone, one more for every pass. Folded back while it sits still, it
+// leaves nothing behind. Only the surfaces under the cursor are ever raised,
+// so this is a layer or two at a time, never one for each of the page's two
+// hundred.
+const LIFT_SETTLE_MS = 1000;
+function setupSteadyLift() {
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let x = 0, y = 0, lastTarget = null, frame = 0;
+    const track = selector => ({ selector, raised: null, rest: null });
+    const tracks = [track(LIFT_CARD_SELECTOR), track(LIFT_CONTROL_SELECTOR)];
+    const settling = new Map();
+    const hold = element => {
+        clearTimeout(settling.get(element));
+        settling.delete(element);
+        element.classList.add('is-steady');
+    };
+    const release = element => {
+        clearTimeout(settling.get(element));
+        settling.set(element, window.setTimeout(() => {
+            settling.delete(element);
+            element.classList.remove('is-steady');
+        }, LIFT_SETTLE_MS));
+    };
+    const lower = t => {
+        if (t.raised) {
+            t.raised.classList.remove('is-raised');
+            release(t.raised);
+        }
+        t.raised = t.rest = null;
+    };
+    const restOf = element => {
+        const box = element.getBoundingClientRect();
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom + LIFT_REACH };
+    };
+    const over = rest => rest && x >= rest.left && x <= rest.right && y >= rest.top && y <= rest.bottom;
+    const settle = (target, moved) => {
+        for (const t of tracks) {
+            const hit = target instanceof Element ? target.closest(t.selector) : null;
+            if (hit && hit === t.raised) {
+                if (moved) t.rest = restOf(hit);
+                continue;
+            }
+            // Off the surface but still over where it rests: the cursor is in
+            // the strip its lift uncovered.
+            if (!hit && over(t.rest)) continue;
+            lower(t);
+            if (hit) {
+                t.raised = hit;
+                t.rest = restOf(hit);
+                hold(hit);
+                hit.classList.add('is-raised');
+            }
+        }
+    };
+    const leave = () => {
+        lastTarget = null;
+        tracks.forEach(lower);
+    };
+    document.addEventListener('pointermove', event => {
+        if (event.pointerType !== 'mouse' || !finePointer.matches) return leave();
+        x = event.clientX;
+        y = event.clientY;
+        if (event.target !== lastTarget) {
+            lastTarget = event.target;
+            settle(event.target, false);
+        } else {
+            for (const t of tracks) if (t.raised && !t.raised.contains(event.target) && !over(t.rest)) lower(t);
+        }
+    }, { passive: true });
+    document.documentElement.addEventListener('pointerleave', leave);
+    window.addEventListener('blur', leave);
+    // A scroll or a carousel step moves the surfaces under a cursor that has
+    // not moved: ask once a frame what is under it now.
+    const relift = () => {
+        if (frame || !tracks.some(t => t.raised) && !lastTarget) return;
+        frame = window.requestAnimationFrame(() => {
+            frame = 0;
+            const under = document.elementFromPoint(x, y);
+            lastTarget = under;
+            settle(under, true);
+        });
+    };
+    window.addEventListener('scroll', relift, { passive: true });
+    const retargetOthers = retargetPointerSurfaces;
+    retargetPointerSurfaces = () => {
+        retargetOthers();
+        relift();
+    };
+}
 
 // Pointer-reactive cards. One listener for the whole page rather than a pair
 // per card: the archive can hold a hundred of them, and only one can be under
@@ -5340,6 +6029,13 @@ function setupPointerReactiveSurfaces(reducedMotion) {
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerInside = true;
+        // Low FX shows neither the light nor the lean, so nothing is worked
+        // out or written for them: every write restyles the card it lands on.
+        if (!highEffects()) {
+            clearActiveCard();
+            lastHitTarget = null;
+            return;
+        }
         // closest() only when the pointer actually crosses into a new element,
         // which is the same trick the cursor dot uses to stay cheap.
         if (event.target !== lastHitTarget) {
@@ -5382,7 +6078,7 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     // per frame -- which is what a real pointermove would have cost anyway.
     retargetPointerSurfaces = () => {
         activeRect = null;
-        if (!finePointer.matches || !pointerInside || retargetFrame) return;
+        if (!finePointer.matches || !pointerInside || retargetFrame || !highEffects()) return;
         retargetFrame = window.requestAnimationFrame(() => {
             retargetFrame = 0;
             const under = document.elementFromPoint(pointerX, pointerY);
@@ -5475,7 +6171,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
     const syncInteractive = target => {
         if (target === lastTarget) return;
         lastTarget = target;
-        const interactive = target instanceof Element && target.closest('a, button, .project-card');
+        const interactive = target instanceof Element && target.closest('a, button, .project-card, .fx-slider');
         cursorDot.classList.toggle('is-interactive', Boolean(interactive));
     };
 
@@ -6954,7 +7650,8 @@ function openModal(project) {
     if (quickLink) {
         const quickLinkUrl = project.quickLink?.url;
         quickLink.hidden = !quickLinkUrl;
-        quickLink.textContent = project.quickLink?.label || 'Full Project Breakdown';
+        // The label goes in beside the GitHub icon; setting textContent wiped it.
+        quickLink.replaceChildren(...quickLink.querySelectorAll('i'), project.quickLink?.label || 'Full Project Breakdown');
         if (quickLinkUrl) quickLink.href = quickLinkUrl;
         else quickLink.removeAttribute('href');
     }
@@ -7034,8 +7731,23 @@ function openModal(project) {
     modal.querySelectorAll('iframe').forEach(video => video.addEventListener('load', () => {
         if (modal.classList.contains('active') && navigator.onLine !== false) holdGraphicsAdapter();
     }, { once: true }));
+    // The keyboard goes into the project with the eye: the page behind is
+    // shut off while it is open, and whatever opened it (usually the card)
+    // gets the focus back when it closes (setupModal).
+    if (!modal.classList.contains('active')) modal._returnFocusTo = document.activeElement;
+    setPageBehindModalInert(true);
+    modal.inert = false;
     modal.classList.add('active'); modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('modal-close')?.focus({ preventScroll: true });
     document.dispatchEvent(new CustomEvent('portfolio:modal-open'));
+}
+
+// Everything under the project modal, the hero included (it sits outside
+// <main>). index.html starts the modal itself inert, so its invisible close
+// button and links are out of the tab order until a project opens.
+function setPageBehindModalInert(inert) {
+    document.querySelectorAll('body > :not(#project-modal, script)')
+        .forEach(element => { element.inert = inert; });
 }
 
 function setupModal() {
@@ -7047,6 +7759,11 @@ function setupModal() {
             video.src = 'about:blank';
             video.remove();
         });
+        const returnFocusTo = modal._returnFocusTo;
+        modal._returnFocusTo = null;
+        setPageBehindModalInert(false);
+        if (returnFocusTo?.isConnected && returnFocusTo !== document.body) returnFocusTo.focus({ preventScroll: true });
+        modal.inert = true;
         modal.classList.remove('active');
         modal.setAttribute('aria-hidden', 'true');
         modal.scrollTop = 0;

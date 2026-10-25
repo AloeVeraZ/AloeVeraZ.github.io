@@ -360,6 +360,25 @@ function Get-GpuProcessId {
     if ($gpu) { [int]$gpu.ProcessId } else { 0 }
 }
 
+# ---- Effects levels --------------------------------------------------------------
+# A script for Page.addScriptToEvaluateOnNewDocument that has every load start
+# at the given level, as a visitor who chose it on the slider would ('low',
+# 'medium' or 'high'); with none, it clears any choice so the page picks its
+# own, as for a first visit.
+function Get-EffectsLevelScript {
+    param([string]$Level = '')
+    if ($Level) { "try { localStorage.setItem('portfolio-effects-level', '$Level'); } catch (e) {}" }
+    else { "try { localStorage.removeItem('portfolio-effects-level'); localStorage.removeItem('portfolio-effects-override-v3'); } catch (e) {}" }
+}
+
+# Moves the slider to a level the way the keyboard does: the range input's
+# value, then the change event the page listens for.
+function Set-EffectsLevel {
+    param($Page, [ValidateSet('low', 'medium', 'high')][string]$Level)
+    $index = @{ low = 0; medium = 1; high = 2 }[$Level]
+    Invoke-PageJs $Page "(() => { const i = document.getElementById('fx-level'); i.value = '$index'; i.dispatchEvent(new Event('change', { bubbles: true })); return document.documentElement.dataset.effects; })()"
+}
+
 function Start-BenchTrace {
     param($Session, [string[]]$Categories)
     Invoke-Cdp $Session 'Tracing.start' @{

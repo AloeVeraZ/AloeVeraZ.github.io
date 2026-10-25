@@ -16,7 +16,10 @@ param(
     [ValidateSet('native', 'mac', 'lowend', 'phone')][string]$Config = 'native',
     [string[]]$Scenarios = @('scroll', 'idle-projects'),
     [int]$Rounds = 3,
-    [string]$Label = 'ab'
+    [string]$Label = 'ab',
+    # The page every arm loads. An arm that overrides index.html needs it
+    # named here, as the page asks for / rather than /index.html.
+    [string]$Site = 'http://localhost:8862/'
 )
 $ErrorActionPreference = 'Stop'
 $arms = Import-PowerShellDataFile $Variants
@@ -29,6 +32,7 @@ for ($round = 1; $round -le $Rounds; $round++) {
         $arm = $arms[$name]
         $overrides = if ($arm.Overrides) { $arm.Overrides } else { @{} }
         $output = & (Join-Path $PSScriptRoot 'bench.ps1') -Config $Config -Scenarios $Scenarios -Label "$Label-$name" `
+            -Site $Site `
             -InjectCss ([string]$arm.Css) -InjectJs ([string]$arm.Js) -Overrides $overrides 6>&1
         $output | Where-Object { "$_" -match '^\[' } | ForEach-Object { Write-Host "  r$round $name $_" }
         $dir = ($output | Where-Object { "$_" -match '^Results: ' } | Select-Object -Last 1) -replace '^Results: ', ''

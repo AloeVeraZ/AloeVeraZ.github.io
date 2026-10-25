@@ -42,13 +42,24 @@ foot of the page at 1800 px/s. `hover`: the cursor travelling across the
 three featured cards for five seconds. `ring`: an archive ring turned six
 times. `modal`: two projects opened, scrolled and closed. `modal-idle`: a
 project left open for eight seconds. `modal-scroll`: an open project scrolled
-from top to bottom, timed from two seconds after it opened. `fx-toggle`: High
-FX to Low FX and back.
+from top to bottom, timed from two seconds after it opened. `fx-toggle`: the
+effects slider walked from where the page starts down to Low a stop at a
+time and back up to High, a second and a half on each.
 `collections`: every collection opened, then a scroll to the foot of the page.
 
 Every scenario starts from a freshly loaded page, nine seconds after load so
 the page's frame monitor has finished its warm-up. `Math.random` is seeded,
 so every run draws the same sky.
+
+## Effects levels
+
+`bench.ps1`, `capture.ps1` and `layout-audit.ps1` take `-Level low`,
+`medium` or `high`, which starts every load at that level as if the visitor
+had chosen it on the slider (`-LowFx` still means `-Level low`). Without it
+each load is a first visit and the page picks its own level. In `ab.ps1` a
+level is an arm's `Js`, for example
+`@{ medium = @{ Js = "localStorage.setItem('portfolio-effects-level', 'medium');" } }`.
+`Set-EffectsLevel` in `Cdp.psm1` moves the slider during a run.
 
 ## Reading the numbers
 

@@ -14,6 +14,9 @@
 param(
     [string]$Label = 'now',
     [string[]]$Only = @(),
+    # The effects level every load starts at, as if chosen on the slider;
+    # -LowFx is short for -Level low.
+    [ValidateSet('', 'low', 'medium', 'high')][string]$Level = '',
     [switch]$LowFx,
     [hashtable]$Overrides = @{},
     [int]$Port = 9336,
@@ -74,7 +77,7 @@ $audit = @'
   };
   const docWidth = document.documentElement.scrollWidth;
   if (docWidth > vw + 1) problems.push(`page is ${docWidth}px wide in a ${vw}px window (sideways scroll)`);
-  const all = [...document.querySelectorAll('body *')].filter(e => !e.closest('#project-modal, .galaxy-field, .galaxy-streak, .cursor-dot, script, style, svg *, .skip-link'));
+  const all = [...document.querySelectorAll('body *')].filter(e => !e.closest('#project-modal, .galaxy-field, .galaxy-streak, .cursor-dot, script, style, svg *, .skip-link, .visually-hidden'));
   for (const e of all) {
     if (!visible(e)) continue;
     const r = e.getBoundingClientRect();
@@ -108,7 +111,7 @@ $audit = @'
   }
   // Controls: on a touch screen every one at least 44px (a 2px allowance).
   const touch = document.documentElement.dataset.primaryInput === 'touch';
-  const controls = [...document.querySelectorAll('a[href], button, [role="button"], [tabindex="0"]')]
+  const controls = [...document.querySelectorAll('a[href], button, [role="button"], [tabindex="0"], .fx-slider')]
     .filter(e => visible(e) && !e.closest('#project-modal, .carousel-clone, footer .footer-links, .skip-link') && !e.matches('.project-card, .about-highlight-link, .carousel-indicator'));
   if (touch) for (const e of controls) {
     const r = e.getBoundingClientRect();
@@ -134,8 +137,8 @@ $failures = 0
 try {
     $page = Open-BenchPage $chrome
     foreach ($domain in 'Page', 'Runtime') { Invoke-Page $page "$domain.enable" | Out-Null }
-    $lowFxScript = if ($LowFx) { "try { localStorage.setItem('portfolio-effects-override-v3', 'low'); } catch (e) {}" } else { "try { localStorage.removeItem('portfolio-effects-override-v3'); } catch (e) {}" }
-    Invoke-Page $page 'Page.addScriptToEvaluateOnNewDocument' @{ source = $lowFxScript } | Out-Null
+    if ($LowFx -and -not $Level) { $Level = 'low' }
+    Invoke-Page $page 'Page.addScriptToEvaluateOnNewDocument' @{ source = (Get-EffectsLevelScript $Level) } | Out-Null
     if ($Overrides.Count) { Set-BenchOverrides $page $Overrides }
     foreach ($d in $devices) {
         $name, $w, $h, $dpr, $mobile = $d

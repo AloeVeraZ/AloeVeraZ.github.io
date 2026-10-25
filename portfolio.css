@@ -362,6 +362,11 @@ html.effects-background-click-fading body {
     box-shadow: 0 0 8px rgba(123,168,216,.28);
     transform: scaleY(0);
     transform-origin: top;
+    /* Its own layer, so the transform set on every scrolled frame
+       (portfolio.js) only moves it. Without one, each frame of every scroll
+       painted the bar and its glow again and the graphics process drew
+       that layer anew, at every effects level. */
+    will-change: transform;
 }
 @media (max-width: 639px) {
     .galaxy-nebula {
@@ -393,49 +398,6 @@ html.effects-background-click-fading body {
 .nav-links a { transition: color .2s ease; }
 .nav-links a:hover { color: var(--blue); }
 .performance-control { display: flex; align-items: center; }
-.performance-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: inherit;
-    font-weight: inherit;
-    letter-spacing: inherit;
-    text-transform: inherit;
-}
-.performance-toggle:hover,
-.performance-toggle:focus-visible { color: var(--blue); }
-.performance-toggle-track {
-    position: relative;
-    width: 1.875rem;
-    height: 1rem;
-    border: 1px solid rgba(247,244,237,.28);
-    border-radius: 62.4375rem;
-    background: #151515;
-    transition: background .2s ease, border-color .2s ease;
-}
-.performance-toggle-track i {
-    position: absolute;
-    top: .1875rem;
-    left: .1875rem;
-    width: .5rem;
-    height: .5rem;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: transform .2s var(--ease), background .2s ease;
-}
-.performance-toggle[aria-checked="true"] .performance-toggle-track {
-    border-color: var(--blue);
-    background: rgba(123,168,216,.16);
-}
-.performance-toggle[aria-checked="true"] .performance-toggle-track i {
-    background: var(--blue);
-    transform: translateX(.875rem);
-}
 
 .hero-section { min-height: 92vh; min-height: 92svh; display: grid; place-items: center; overflow: hidden; isolation: isolate; padding: var(--space-9) var(--page-inline-end) var(--space-8) var(--page-inline-start); }
 .hero-section::before, .hero-section::after { content: ""; position: absolute; z-index: -1; transition: transform .5s var(--ease); }
@@ -1073,7 +1035,7 @@ html[data-effects="low"] {
 :is(.hero-buttons > .btn, .contact-links > .btn) {
     --lean-depth: calc(var(--lean-width, 12rem) * 3);
 }
-html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
     --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
 }
@@ -1090,7 +1052,7 @@ html[data-effects] {
    Highlights inherit its colour and brighten with passing content instead
    of painting an opaque white outline. No second backdrop filter, pixel
    readback, or animation loop is needed. */
-html[data-effects="high"] {
+html:is([data-effects="medium"], [data-effects="high"]) {
     --glass-edge-blend: overlay;
     --glass-edge-width: 1.5px;
     --glass-edge-ring: rgba(225, 237, 255, .12);
@@ -1128,22 +1090,22 @@ html[data-effects="high"] {
     --glass-edge-paint: var(--blue);
     --glass-edge-blend: normal;
 }
-html[data-effects="high"] :is(.about-highlight, .skill-group, .project-card,
+html:is([data-effects="medium"], [data-effects="high"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
     box-shadow: var(--glass-shadow);
 }
-html[data-effects="high"] .project-carousel .project-card.is-carousel-active {
+html:is([data-effects="medium"], [data-effects="high"]) .project-carousel .project-card.is-carousel-active {
     box-shadow: var(--glass-volume), 0 22px 52px rgba(0, 0, 0, .34);
 }
 /* Preserve the blue hover/focus response while keeping the curved face. */
 @media (hover: hover) {
-    html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
+    html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a,
         .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
         box-shadow: var(--glass-lit-glow);
     }
 }
-html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
+html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a,
     .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed) {
     box-shadow: var(--glass-lit-glow);
 }
@@ -1187,21 +1149,104 @@ html[data-effects="high"] :is(.hero-buttons > .btn, .social-links > a,
     :root { --glass-surface: var(--glass-surface-dense); }
     html[data-effects] { --glass-surface: var(--glass-surface-dense); }
 }
-/* A computer drawing the page without graphics acceleration starts in Low FX
-   (portfolio.js), and even there each sheet of frost was a blur its
-   processor worked out again for every frame that moved: a scroll dropped one
-   frame in twelve and the cursor crossing the cards one in three. There the
-   glass gets the same denser sheet as a browser that cannot frost at all, and
-   the bar does too (navbar.css): nothing behind them is blurred, and the text
-   reads off the tint. High FX, switched on by hand, frosts as it does
-   everywhere else. */
-html[data-effects="low"][data-effects-renderer="software"] { --glass-surface: var(--glass-surface-dense); }
-html[data-effects="low"][data-effects-renderer="software"] :is(.about-highlight, .skill-group, .project-card,
+/* Low FX frosts nothing. Each sheet of frost is a blur the browser works out
+   again for every frame anything behind it moves -- every frame of a scroll,
+   for every card on the screen -- and on a computer drawing without graphics
+   acceleration that was a scroll dropping one frame in twelve and the cursor
+   crossing the cards one in three. The glass is clear instead (Clear glass,
+   below): nothing behind it is blurred, and the rim and the light on its
+   face say glass. */
+html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow) {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+}
+/* Medium FX frosts nothing either. Its backdrop is the still lattice, and a
+   blur of a still lattice is a flat dark sheet -- so the glass is painted
+   that flat sheet instead of working it out. The frost and the bend were
+   nearly all of what Medium cost: every card re-blurring and re-bending
+   what lay behind it on every frame of a scroll, of a lean or of a ring
+   turning, which dropped a fifth of a scroll's frames on this laptop and
+   two in three of a hover's on a computer drawing without graphics
+   acceleration. The bar's rim keeps its light, but laid on plainly rather
+   than blended into the backdrop: a blend mode is another surface for the
+   browser to composite, and over a dark sheet the blend only ever
+   brightened it this much. The cards' rims are hairlines (below). */
+html[data-effects="medium"] {
+    --glass-edge-blend: normal;
+    --glass-edge-ring: rgba(225, 237, 255, .05);
+    --glass-edge: linear-gradient(135deg,
+        rgba(255, 255, 255, .26),
+        rgba(255, 255, 255, .08) 16%,
+        rgba(255, 255, 255, .012) 38%,
+        rgba(255, 255, 255, .008) 55%,
+        rgba(181, 215, 255, .11) 78%,
+        rgba(255, 255, 255, .21));
+}
+/* Below High FX the rim is drawn as hairlines rather than cut out of a
+   gradient. The cut-out is a mask, and a masked layer is among the slowest
+   things the browser paints: every card brought one, painted again each
+   time a section scrolled into view, and taking the rims away halved the
+   page's main-thread time through a scroll in Low FX (cycle 22). Hard-edged
+   inner shadows paint the same light -- brightest along the top and left,
+   faint along the foot and right, a faint ring all round -- with no mask
+   and no blur. Hover, focus and a press still turn the ring blue: it is
+   whatever --glass-edge-paint says, transparent at rest. */
+html:is([data-effects="low"], [data-effects="medium"]) {
+    --glass-edge-lights:
+        inset 1px 1px 0 rgba(255, 255, 255, .16),
+        inset -1px -1px 0 rgba(255, 255, 255, .05),
+        inset 0 0 0 1px rgba(225, 237, 255, .06);
+}
+html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .skill-group, .project-card,
+    .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
+    .contact-links > .btn, .carousel-arrow)::before {
+    padding: 0;
+    background: none;
+    mix-blend-mode: normal;
+    -webkit-mask: none;
+    mask: none;
+    box-shadow: inset 0 0 0 1px var(--glass-edge-paint, rgba(123, 168, 216, 0)), var(--glass-edge-lights);
+}
+/* ---- Clear glass --------------------------------------------------------
+   Every level wears the glass at its clearest, the way Apple's Liquid Glass
+   looks with its Clear setting: the sheet itself all but invisible, so what
+   lies behind shows straight through, and the glass told by its edges -- a
+   bright specular line where the light catches the top and left, a fainter
+   one where it comes back off the foot and right, a soft glow just inside
+   the rim that gives the sheet its thickness, and a band of light down
+   from the top of its face. High FX still frosts what is behind, now only
+   lightly, and still bends it at the rim; Low and Medium paint all of this
+   and work nothing out, so they cost what they did. */
+html[data-effects] {
+    --glass-surface: rgba(255, 255, 255, .025);
+    /* The glow inside the top and foot is part of the face, not of the rim:
+       the rim changes colour under the cursor, and a soft shadow in it was
+       painted again on every frame of that fade. */
+    --glass-sheen:
+        radial-gradient(12rem 2.5rem at var(--glass-glint, 24%) 0%, rgba(255, 255, 255, .14), transparent 72%),
+        linear-gradient(180deg, rgba(255, 255, 255, .055), transparent .75rem, transparent calc(100% - .75rem), rgba(255, 255, 255, .03)),
+        linear-gradient(160deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .02) 24%, transparent 46%, transparent 72%, rgba(255, 255, 255, .035));
+}
+html[data-effects="high"] {
+    /* A breath of shade under the frost, so grey text over the brightest
+       cluster the sky drifts behind a card still reads. */
+    --glass-surface: rgba(8, 10, 14, .1);
+    --glass-blur: 1.5px;
+    --glass-brightness: .97;
+}
+html:is([data-effects="low"], [data-effects="medium"]) {
+    --glass-edge-lights:
+        inset 1px 1px 0 rgba(255, 255, 255, .36),
+        inset -1px -1px 0 rgba(255, 255, 255, .15),
+        inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+/* Still solid for anyone who asks for less transparency or more contrast,
+   whichever level they are on. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    html[data-effects] { --glass-surface: var(--surface); --glass-sheen: none; }
 }
 
 :root {
@@ -1372,7 +1417,7 @@ main > #contact { padding-bottom: var(--rhythm-section); }
 .featured-project-carousel .project-card {
     border-radius: .875rem;
 }
-html[data-effects="high"] .circular-project-carousel {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
     /* Never taller than the card it turns and the padding round it, so a
        short window's shorter cards are not left standing over an empty foot. */
     min-height: min(clamp(var(--ring-height-min), 44vw, var(--ring-height-max)), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
@@ -1380,8 +1425,8 @@ html[data-effects="high"] .circular-project-carousel {
     padding-bottom: var(--rhythm-block);
     perspective: 87.5rem;
 }
-html[data-effects="high"] .circular-project-carousel .project-card,
-html[data-effects="high"] .circular-project-carousel .project-card:hover {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card,
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card:hover {
     position: relative;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
@@ -1403,13 +1448,13 @@ html[data-effects="high"] .circular-project-carousel .project-card:hover {
         scale(calc(var(--carousel-ring-scale, 1) * var(--card-press, 1)));
     transition: border-color .3s ease, box-shadow .3s ease, var(--card-answer-transition);
 }
-html[data-effects="high"] .circular-project-carousel .project-card.is-carousel-active {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card.is-carousel-active {
     box-shadow: 0 26px 64px rgba(0,0,0,.42);
 }
-html[data-effects="high"] .circular-project-carousel .project-image-wrapper {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper {
     height: var(--ring-image-height);
 }
-html[data-effects="high"] .circular-project-carousel .project-info {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-info {
     padding: var(--pad-card);
 }
 .project-carousel.is-dragging {
@@ -1498,18 +1543,18 @@ html[data-effects="low"] .featured-project-carousel .project-card {
 
 /* Promote only while a ring is actively moving. Keeping every card on its
    own compositor layer makes large collections expensive on laptop GPUs. */
-html[data-effects="high"] .project-carousel.is-dragging .project-card {
+html:is([data-effects="medium"], [data-effects="high"]) .project-carousel.is-dragging .project-card {
     will-change: transform, opacity;
 }
 
 @media (max-width: 639px) {
     .project-card { height: var(--project-card-height-mobile); }
-    html[data-effects="high"] .circular-project-carousel {
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
         min-height: min(var(--ring-height-min), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
         padding-top: var(--rhythm-block);
         padding-bottom: var(--rhythm-block);
     }
-    html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: var(--ring-image-height-compact); }
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper { height: var(--ring-image-height-compact); }
     .featured-carousel-controls,
     .carousel-controls {
         justify-content: flex-end;
@@ -1563,8 +1608,16 @@ html[data-effects="high"] .project-carousel.is-dragging .project-card {
     }
 }
 
-/* Low FX keeps the static grid and removes continuous animation. */
-html[data-effects="low"] .background-grid {
+/* ---- The backdrop without the sky -----------------------------------------
+   Low and Medium FX draw no sky. The lattice stands in for it, still, on one
+   fixed layer painted once: a scroll moves the page over it and never paints
+   it again. portfolio.js sets data-look on it to the level (and holds the
+   level's look under the sky while the sky fades in over it); with no
+   data-look -- High FX -- it is not drawn at all. The cursor's dot and
+   sparks, and the layers a shooting star or a feeding hole cross on, belong
+   to the sky and go with it. The sky's canvas is hidden by portfolio.js
+   once it has faded out, and its memory handed back. */
+.background-grid[data-look] {
     display: block;
     background-image:
         linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
@@ -1574,30 +1627,63 @@ html[data-effects="low"] .background-grid {
     background-size: 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
     opacity: .78;
 }
-html[data-effects="low"] .galaxy-field,
-html[data-effects="low"] .galaxy-nebula,
-html[data-effects="low"] .cursor-dot,
-html[data-effects="low"] .cursor-spark,
-html[data-effects="low"] .cursor-ripple {
+html:is([data-effects="low"], [data-effects="medium"]) :is(.galaxy-nebula, .galaxy-streak,
+    .cursor-dot, .cursor-spark, .cursor-ripple) {
     display: none !important;
+}
+/* Medium FX lays a still sky on the same layer as the lattice: stars in
+   High's colours, a band where they crowd, two clusters and a few soft
+   clouds, drawn once by setupStillSky (portfolio.js) and handed over as
+   --still-sky. It is part of the layer's one painting, so a scroll moves
+   it without drawing it again, and Medium costs what Low does at rest. It
+   fades in once the picture is ready (data-sky) and out on the way down
+   to Low; going up to High, the moving sky fades in over it. The washes
+   Medium used to wear were a tint across the page with nothing in them;
+   this is the sky itself, stopped. */
+.background-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--still-sky, none) center / cover no-repeat;
+    opacity: 0;
+    transition: opacity .6s ease;
+}
+.background-grid[data-look="medium"][data-sky]::before {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .background-grid::before { transition-duration: 0s; }
 }
 
 /* High FX paints the grid on the galaxy canvas instead, so it bends with the
    rest of the sheet when a touch presses into it. A CSS background cannot be
    warped locally, and a dead-straight lattice over a sagging field was the one
-   thing giving away that the backdrop was layers rather than a surface. */
-html[data-effects="high"] .background-grid {
-    display: none;
-}
-/* And it paints the veil and the page's background into that canvas too, as
-   one opaque layer (see setupGalaxyField). Laid over the sky as an element of
-   its own, the veil -- and the canvas at 94% over the background -- were two
-   more full-screen layers the browser blended into every frame the sky drew. */
+   thing giving away that the backdrop was layers rather than a surface. And it
+   paints the veil and the page's background into that canvas too, as one
+   opaque layer (see setupGalaxyField). Laid over the sky as an element of its
+   own, the veil -- and the canvas at 94% over the background -- were two more
+   full-screen layers the browser blended into every frame the sky drew. */
 html[data-effects="high"] .galaxy-nebula {
     display: none;
 }
 html[data-effects="high"] .galaxy-field {
     opacity: 1;
+}
+/* Fading out to a lower level, and back in over it (portfolio.js), in
+   step with SKY_FADE_MS there. The fade is the only time the sky is not
+   one opaque layer. */
+html[data-effects] .galaxy-field.is-faded {
+    opacity: 0;
+}
+.galaxy-field.is-faded,
+.galaxy-field.is-arriving {
+    transition-duration: .45s;
+}
+@media (prefers-reduced-motion: reduce) {
+    .galaxy-field.is-faded,
+    .galaxy-field.is-arriving {
+        transition-duration: 0s;
+    }
 }
 /* A shooting star crosses on a small canvas of its own, carried along under
    it, and a black hole that is feeding eats on one; neither needs the sky
@@ -1612,22 +1698,18 @@ html[data-effects="high"] .galaxy-field {
     will-change: transform;
     transition: opacity 1.4s ease;
 }
-html[data-effects="low"] .galaxy-streak {
-    display: none !important;
-}
 @media (max-width: 900px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
-    .performance-toggle { font-size: .72rem; }
 }
 
-/* Low FX draws the same lattice the canvas does in High FX -- the same two
-   densities, the same blue major and white minor -- so switching modes changes
-   how the backdrop moves, not what it is. This used to replace that lattice
-   outright with three fields of scattered dots, which read as a starfield with
-   no grid in it at all. The two soft clouds stay: they are the depth, and they
-   sit behind the lines rather than instead of them. */
-html[data-effects="low"] .background-grid {
+/* The lattice is the same one the canvas draws in High FX -- the same two
+   densities, the same blue major and white minor -- so switching levels
+   changes how the backdrop moves, not what it is. This used to replace that
+   lattice outright with three fields of scattered dots, which read as a
+   starfield with no grid in it at all. The two soft clouds stay: they are the
+   depth, and they sit behind the lines rather than instead of them. */
+.background-grid[data-look] {
     background-image:
         linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
         linear-gradient(90deg, rgba(145,200,255,.095) 1px, transparent 1px),
@@ -1860,9 +1942,9 @@ html.effects-background-click-fading .galaxy-streak {
 .project-image-wrapper { height: min(var(--project-image-height), var(--card-image-height)); }
 .project-carousel .project-image-wrapper,
 .compact-project-grid .project-image-wrapper { height: min(var(--carousel-image-height), var(--card-image-height)); }
-html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height), var(--card-image-height)); }
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height), var(--card-image-height)); }
 @media (max-width: 639px) {
-    html[data-effects="high"] .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height-compact), var(--card-image-height)); }
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper { height: min(var(--ring-image-height-compact), var(--card-image-height)); }
 }
 /* A card is a preview. Its links live in the project it opens, the way every
    carousel card already had them, so the featured row no longer carries an
@@ -2015,12 +2097,12 @@ html[data-primary-input="touch"] .nav-toggle {
     .modal-card {
         width: min(var(--modal-max-width), calc(env(viewport-segment-width 0 0) - var(--page-inline-start) - var(--space-4)));
     }
-    html[data-effects="high"] .circular-project-carousel {
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
         min-height: auto;
         perspective: none;
     }
-    html[data-effects="high"] .circular-project-carousel .project-card,
-    html[data-effects="high"] .circular-project-carousel .project-card:hover {
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card,
+    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card:hover {
         opacity: 1;
         transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     }
@@ -2065,6 +2147,20 @@ html[data-primary-input="touch"] .nav-toggle {
 .skip-link:focus {
     left: var(--space-4);
     top: var(--space-4);
+}
+/* Read by screen readers, never seen: the effects slider's description, and
+   the line that says when the page has lowered its own effects. */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* A visible focus ring on everything focusable, not just the few controls that
@@ -2170,8 +2266,7 @@ button:focus-visible,
     .navbar:not([data-nav-open]) .nav-links > li { visibility: hidden; }
     .navbar[data-nav-open] .nav-links { max-height: 20rem; }
     .navbar[data-nav-open] .nav-links > li { visibility: visible; }
-    .nav-links a,
-    .nav-links .performance-toggle {
+    .nav-links a {
         display: flex;
         align-items: center;
         gap: var(--space-2);
@@ -2270,6 +2365,33 @@ button:focus-visible,
 .resume-icon-unavailable {
     transform: translateY(var(--control-lift, 0px)) scale(var(--control-press, 1));
 }
+/* With a mouse, the lift follows .is-raised (setupSteadyLift) rather than
+   :hover, which let a card met from below rise off the cursor, drop back
+   onto it and rise again, flickering along its foot. A press still wins. */
+@media (hover: hover) and (pointer: fine) {
+    html :is(.project-card, .about-highlight, .skill-group):hover:not(.is-raised, .is-pressed) {
+        --card-lift: 0px;
+    }
+    html :is(.project-card, .about-highlight, .skill-group).is-raised:not(.is-pressed) {
+        --card-lift: var(--lift-card);
+    }
+    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable):hover:not(.is-raised, .is-pressed, :focus-visible) {
+        --control-lift: 0px;
+    }
+    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable).is-raised:not(:disabled, .is-pressed) {
+        --control-lift: var(--lift-control);
+    }
+    /* A raised surface moves on a layer of its own, from the moment it rises
+       until a second after it has landed (setupSteadyLift), so it is never
+       folded back into the page mid-move: that left a copy of a card's lit
+       top edge hanging above it once the cursor had gone. Specific enough to
+       outrank Low FX's flattened carousels, which take their cards off the
+       layers a turning ring keeps them on. */
+    html[data-effects] :is(.project-card, .about-highlight, .skill-group, .btn, .link-btn, .modal-quick-link,
+        .carousel-arrow, .social-links a, .resume-icon-unavailable).is-steady {
+        will-change: transform;
+    }
+}
 
 /* Scoped to a card standing in a plain grid. A carousel folds the same tilt
    into the placement it already owns, so this rule has to stay out of its way
@@ -2350,9 +2472,9 @@ button:focus-visible,
 
 /* High FX reflection, positioned by the existing pointer tracking. Normal
    alpha compositing avoids a separate screen-blend surface for each card. */
-html[data-effects="high"] .project-card::after,
-html[data-effects="high"] .about-highlight::after,
-html[data-effects="high"] .skill-group::after {
+html:is([data-effects="medium"], [data-effects="high"]) .project-card::after,
+html:is([data-effects="medium"], [data-effects="high"]) .about-highlight::after,
+html:is([data-effects="medium"], [data-effects="high"]) .skill-group::after {
     content: "";
     position: absolute;
     left: 0;
@@ -2379,7 +2501,7 @@ html[data-effects="high"] .skill-group::after {
 }
 /* Its own layer while the cursor is on the card, so a move is a move. */
 @media (hover: hover) {
-    html[data-effects="high"] :is(.project-card, .about-highlight, .skill-group):hover::after {
+    html:is([data-effects="medium"], [data-effects="high"]) :is(.project-card, .about-highlight, .skill-group):hover::after {
         will-change: transform;
     }
 }
@@ -2509,7 +2631,7 @@ html[data-effects="high"] .skill-group::after {
    transition, so gating the rotation on .is-tilting eased the lean in and then
    dropped it flat the moment the cursor left; the registered --card-tilt-*
    transitions carry it both ways instead. */
-html[data-effects="high"] .featured-project-carousel.is-responsive-carousel .project-card {
+html:is([data-effects="medium"], [data-effects="high"]) .featured-project-carousel.is-responsive-carousel .project-card {
     transform:
         perspective(62.5rem)
         rotateX(var(--card-tilt-x, 0deg))
@@ -2524,7 +2646,7 @@ html[data-effects="high"] .featured-project-carousel.is-responsive-carousel .pro
    out into the gutter and up into the empty foot of the arrow row above it,
    and its padding takes all of that straight back, so every card sits where it
    did and the ring's maths, measured from its own padding edge, is untouched. */
-html[data-effects="high"] .circular-project-carousel {
+html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
     --slider-bleed: min(var(--gutter), var(--page-inline-start), var(--page-inline-end));
     width: auto;
     margin-inline: calc(var(--slider-bleed) * -1);

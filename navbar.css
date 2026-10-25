@@ -3,7 +3,7 @@
 .navbar {
     --nav-muted: var(--muted);
     /* The bar's inner padding. Its text stands on the page column -- the name
-       over the hero's left edge, the High FX switch over the cards' right
+       over the hero's left edge, the effects slider over the cards' right
        edge -- and the surface that appears on scroll reaches this far past
        it, the way a card's padding sits outside the words inside it. A
        phone's gutter is too narrow to lend the bar that much room, so there
@@ -71,10 +71,11 @@
     opacity: 0;
     transition: opacity .28s;
 }
-/* Both modes use the same tint. The navigation crosses photos and white type,
-   so it needs more contrast than the cards against the dark sky. */
+/* Clear glass, as the cards are (portfolio.css), with a little more shade:
+   the navigation crosses photos and white type, and its links have to read
+   over them, with the shadow they carry once the page has scrolled. */
 html[data-effects] .navbar {
-    --nav-tint: rgba(16, 20, 27, .60);
+    --nav-tint: rgba(12, 14, 18, .32);
 }
 html[data-effects="high"] .navbar .nav-content::before {
     box-shadow: var(--glass-volume), 0 12px 32px rgba(0, 0, 0, .3);
@@ -148,8 +149,7 @@ html[data-glass] .navbar[data-nav-open] .nav-content {
    legible whatever scrolls behind it. */
 .has-scrolled .navbar { --nav-muted: rgba(247, 244, 237, .92); }
 .has-scrolled .navbar .logo,
-.has-scrolled .navbar .nav-links > li > a,
-.has-scrolled .navbar .performance-toggle {
+.has-scrolled .navbar .nav-links > li > a {
     text-shadow: 0 0 .75rem rgba(0, 0, 0, .55), 0 1px 2px rgba(0, 0, 0, .35);
 }
 /* Anyone who has asked their system for less transparency, or for more
@@ -163,13 +163,22 @@ html[data-glass] .navbar[data-nav-open] .nav-content {
         backdrop-filter: none !important;
     }
 }
-/* Low FX on a computer drawing without graphics acceleration: the cards' denser
-   sheet in place of the frost, as there (portfolio.css). An open menu still
-   frosts, for the hero's lettering under it. */
-html[data-effects="low"][data-effects-renderer="software"] .navbar {
-    --nav-tint: var(--glass-surface-dense);
+/* The bar is the one sheet that passes over the page's own lettering, so it
+   keeps a light frost of its own, as Apple's clear glass does: what slides
+   under it still shows through, colour and shape, but softened enough that
+   a heading behind the links does not cross them. The cards stay clear and
+   unfrosted below High (portfolio.css). */
+.navbar { --glass-blur: 5px; }
+/* Except in Low FX, and on a computer drawing without graphics acceleration
+   (data-effects-renderer, portfolio.js): the frost is blurred again on every
+   scrolled frame, and in Low FX at 3x it tripled what the graphics process
+   spent putting each frame together (cycle 27). More shade there instead. */
+html[data-effects="low"] .navbar,
+html[data-effects-renderer="software"]:not([data-effects="high"]) .navbar {
+    --nav-tint: rgba(12, 14, 18, .66);
 }
-html[data-effects="low"][data-effects-renderer="software"] .has-scrolled .navbar:not([data-nav-open]) .nav-content {
+html[data-effects="low"] .has-scrolled .navbar:not([data-nav-open]) .nav-content,
+html[data-effects-renderer="software"]:not([data-effects="high"]) .has-scrolled .navbar:not([data-nav-open]) .nav-content {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
@@ -216,7 +225,7 @@ html[data-primary-input="touch"] .navbar .logo {
     letter-spacing: normal;
     text-transform: none;
 }
-/* The links and the High FX switch are one row, so they are one size. */
+/* The links and the effects slider are one row, so they stand as tall. */
 .navbar .nav-links > li > a {
     display: inline-flex;
     align-items: center;
@@ -228,47 +237,193 @@ html[data-primary-input="touch"] .navbar .logo {
     transition: color .16s;
 }
 .navbar .nav-links > li > a:hover,
-.navbar .nav-links > li > a:focus-visible,
-.navbar .performance-toggle:hover,
-.navbar .performance-toggle:focus-visible { color: var(--blue); }
-.navbar .performance-toggle {
+.navbar .nav-links > li > a:focus-visible { color: var(--blue); }
+
+/* ---- The effects slider ---------------------------------------------------
+   The two-position switch it replaced, drawn out to three stops: the same
+   pill, the same dark track and hairline border, the same blue once it is
+   on. Left is Low FX, the middle Medium, the right High (portfolio.js). The
+   thumb is a bead of the glass the bar is made of, and the track fills with
+   blue behind it as the level rises, so where it stands reads at a glance
+   without a word beside it; the stops it can land on show as dots. A word
+   appears under it only while it is being used. The sparkle says what it is
+   for.
+
+   Its place comes from html[data-effects], so it is right from the first
+   paint; a drag sets --fx-drag while the finger is down. The range input
+   over it is unseen: it has the keyboard and the screen reader, and the
+   track draws its focus ring. */
+.navbar .fx-slider {
+    --fx-width: 48px;
+    --fx-height: 18px;
+    --fx-knob: 12px;
+    /* From the inside of the border to the thumb. */
+    --fx-pad: 2px;
+    --fx-step: calc((var(--fx-width) - 2px - var(--fx-pad) * 2 - var(--fx-knob)) / 2);
+    --fx-at: 2;
+    --fx-fill: rgba(123, 168, 216, .3);
+    --fx-edge: rgba(123, 168, 216, .55);
+    --fx-ground: rgba(123, 168, 216, .09);
+    --fx-bead: var(--blue-light);
+    --fx-glow: 0 0 9px rgba(157, 204, 255, .55);
+    position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: .5rem;
     min-height: 44px;
-    padding: 0;
-    border: 0;
-    background: transparent;
     color: var(--nav-muted);
-    font-size: var(--type-meta);
-    font-weight: 400;
-    white-space: nowrap;
+    cursor: pointer;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
     transition: color .16s;
 }
-.navbar .performance-toggle-track {
-    width: 28px;
-    height: 16px;
-    border: 1px solid rgba(255, 255, 255, .22);
-    border-radius: 20px;
-    background: #202124;
+html[data-effects="medium"] .navbar .fx-slider {
+    --fx-at: 1;
+    --fx-fill: rgba(123, 168, 216, .17);
+    --fx-edge: rgba(123, 168, 216, .38);
+    --fx-ground: rgba(123, 168, 216, .05);
+    --fx-bead: #e4edf8;
+    --fx-glow: 0 0 6px rgba(228, 237, 248, .3);
+}
+html[data-effects="low"] .navbar .fx-slider {
+    --fx-at: 0;
+    --fx-fill: rgba(123, 168, 216, 0);
+    --fx-edge: rgba(255, 255, 255, .22);
+    --fx-ground: #202124;
+    --fx-bead: var(--nav-muted);
+    --fx-glow: 0 0 0 transparent;
+}
+.navbar .fx-slider:hover { color: var(--blue); }
+/* On its own: a browser that cannot read :has() drops the whole rule. */
+.navbar .fx-slider:has(.fx-slider-input:focus-visible) { color: var(--blue); }
+.navbar .fx-slider-icon {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    pointer-events: none;
+}
+.has-scrolled .navbar .fx-slider-icon {
+    filter: drop-shadow(0 0 .375rem rgba(0, 0, 0, .55));
+}
+.navbar .fx-slider-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.navbar .fx-slider-track {
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    width: var(--fx-width);
+    height: var(--fx-height);
+    border: 1px solid var(--fx-edge);
+    border-radius: 999px;
+    background: var(--fx-ground);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35);
     transition: background .28s, border-color .28s;
 }
-.navbar .performance-toggle-track i {
-    top: 3px;
-    left: 3px;
-    width: 8px;
-    height: 8px;
-    background: var(--nav-muted);
-    transition: transform .28s var(--ease), background .28s;
+.navbar .fx-slider:hover .fx-slider-track {
+    border-color: rgba(123, 168, 216, .7);
 }
-.navbar .performance-toggle[aria-checked="true"] .performance-toggle-track {
-    background: rgba(123, 168, 216, .09);
-    border-color: rgba(123, 168, 216, .5);
+.navbar .fx-slider-input:focus-visible + .fx-slider-track {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
 }
-.navbar .performance-toggle[aria-checked="true"] .performance-toggle-track i {
-    transform: translateX(12px);
-    background: var(--blue);
+/* The inside of the track, which cuts the fill to its rounded ends. The
+   thumb sits outside it, so its glow is not cut too. */
+.navbar .fx-slider-rail {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+}
+/* The blue the track fills with: from its left end to just past the thumb.
+   A bar two stops longer than it needs to be, slid along with the thumb and
+   cut off by the rail, so it moves on the compositor as the thumb does and
+   neither stalls if the page is busy the moment a level is chosen. */
+.navbar .fx-slider-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--fx-step) * -2);
+    width: calc(var(--fx-pad) * 2 + var(--fx-knob) + var(--fx-step) * 2);
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(123, 168, 216, 0), var(--fx-fill) 70%);
+    transform: translateX(calc(var(--fx-at) * var(--fx-step)));
+    transition: transform .34s cubic-bezier(.3, 1.35, .6, 1), background .28s;
+}
+.navbar .fx-slider-stop {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--fx-pad) + var(--fx-knob) / 2 - 1.5px);
+    width: 3px;
+    height: 3px;
+    margin-top: -1.5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .3);
+}
+.navbar .fx-slider-stop:nth-of-type(3) { transform: translateX(var(--fx-step)); }
+.navbar .fx-slider-stop:nth-of-type(4) { transform: translateX(calc(var(--fx-step) * 2)); }
+.navbar .fx-slider-thumb {
+    position: absolute;
+    top: var(--fx-pad);
+    left: var(--fx-pad);
+    width: var(--fx-knob);
+    height: var(--fx-knob);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 58%),
+        var(--fx-bead);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .5), inset 0 0 0 .5px rgba(255, 255, 255, .4), var(--fx-glow);
+    transform: translateX(calc(var(--fx-at) * var(--fx-step)));
+    transition: transform .34s cubic-bezier(.3, 1.35, .6, 1), background-color .28s, box-shadow .28s;
+}
+/* Under the finger: the thumb follows it, a touch larger, and settles on the
+   nearest stop when it lets go. */
+.navbar .fx-slider.is-dragging .fx-slider-thumb {
+    transform: translateX(var(--fx-drag, 0px)) scale(1.15);
+    transition: background-color .28s, box-shadow .28s;
+}
+.navbar .fx-slider.is-dragging .fx-slider-fill {
+    transform: translateX(var(--fx-drag, 0px));
+    transition: background .28s;
+}
+.navbar .fx-slider-tip {
+    position: absolute;
+    top: calc(100% - .25rem);
+    right: 0;
+    padding: .3125rem .625rem;
+    border: 1px solid var(--glass-edge-ring);
+    border-radius: 999px;
+    background: rgba(16, 20, 27, .94);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+    color: var(--ink);
+    font-size: var(--type-label);
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-3px);
+    transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+html[data-effects="high"] .navbar .fx-slider-tip {
+    background: rgba(16, 20, 27, .76);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+}
+.navbar .fx-slider.is-telling .fx-slider-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
 }
 @media (min-width: 901px) {
     .navbar .nav-links {
@@ -322,14 +477,25 @@ html[data-primary-input="touch"] .navbar .logo {
     .navbar[data-nav-open] .nav-links { max-height: 20rem; }
     /* An open menu is read and tapped rather than skimmed, so its rows take
        the size of card copy instead of the bar's smaller text. */
-    .navbar .nav-links > li > a,
-    .navbar .nav-links .performance-toggle {
+    .navbar .nav-links > li > a {
         display: flex;
         justify-content: flex-start;
         width: 100%;
         padding-block: .75rem;
         font-size: var(--type-small);
     }
+    /* The slider is the last row, as tall as the others. The list clips
+       whatever spills out of it while it folds, so the word that names the
+       level stands beside the track here rather than under it. */
+    .navbar .nav-links .fx-slider { min-height: 48px; }
+    .navbar .nav-links .fx-slider-icon { width: 15px; height: 15px; }
+    .navbar .nav-links .fx-slider-tip {
+        top: 50%;
+        right: auto;
+        left: calc(100% + .75rem);
+        transform: translate(-3px, -50%);
+    }
+    .navbar .nav-links .fx-slider.is-telling .fx-slider-tip { transform: translateY(-50%); }
 }
 @media (max-width: 639px) {
     .navbar {
@@ -345,9 +511,11 @@ html[data-primary-input="touch"] .navbar .logo {
     .navbar .logo,
     .navbar .nav-links,
     .navbar .nav-links > li > a,
-    .navbar .performance-toggle,
-    .navbar .performance-toggle-track,
-    .navbar .performance-toggle-track i,
+    .navbar .fx-slider,
+    .navbar .fx-slider-track,
+    .navbar .fx-slider-fill,
+    .navbar .fx-slider-thumb,
+    .navbar .fx-slider-tip,
     .navbar .nav-content::before,
     .navbar .nav-content::after { transition: none; }
 }

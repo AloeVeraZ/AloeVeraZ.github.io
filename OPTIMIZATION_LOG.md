@@ -521,3 +521,508 @@ acceleration, unchanged.
   A correct fix splits the hole between its layer and the sky.
 - **Scroll parallax still steps** on this laptop: the GPU process stays the
   bottleneck while scrolling (glass ~340 ms/s, sky ~170, tiles ~170).
+
+---
+
+# Three effects levels (25 October 2026)
+
+The two-position High/Low FX switch became a three-stop slider: Low, Medium
+(the liquid glass over a still backdrop, no sky) and High. The cycles below
+are the build of it and what checking it turned up, in the order they ran.
+Tools: `tools/perf/` as before, plus scratch scripts that drove a private
+Chrome the same way (switching, memory, the frame monitor).
+
+---
+
+## Cycle 14: three levels, chosen before the first paint (adopted)
+
+**Identified bottleneck:** the switch had two settings, so a visitor who
+wanted the glass had to take the sky with it, and the sky is the continuous
+cost: it draws 15-60 times a second and every sheet of glass over it is
+filtered again each time it does.
+
+**Proposed modification:** a middle level that keeps the glass whole (frost,
+rim, the bend at the rim, card tilt, the 3D rings) over a still backdrop, and
+puts the sky away entirely rather than hiding it. The level is decided by a
+script in `index.html`'s head and written to `html[data-effects]` before
+anything is drawn, so a saved Low or Medium never sets the sky up at all.
+Every glass and ring rule that was `html[data-effects="high"]` became
+`html:is([data-effects="medium"], [data-effects="high"])` (the same
+specificity, so the cascade is unchanged); the sky, the cursor's dot and
+sparks and the touch physics stay High-only. Low lost its frost everywhere
+(it had already lost it on machines without graphics acceleration in cycle
+13) and the bar went solid. The frame monitor steps a level the page picked
+down High to Medium to Low; a level chosen on the slider is never changed,
+apart from the sky's pace on built-in graphics.
+
+**Implementation:** `index.html` (head script, slider markup), `portfolio.js`
+(level model, slider, monitor ladder, sky fade and release), `glass.js`
+(Medium refracts in Chromium and frosts elsewhere), `portfolio.css`
+(Medium backdrop, Low sheet), `navbar.css` (the slider, Low's bar).
+
+**Result:** see cycles 15-19 for what checking it found.
+
+---
+
+## Cycle 15: High's bar lost its bend (regression, fixed)
+
+**Identified bottleneck:** `capture.ps1 -TestPattern` against the original
+commit: every High FX shot matched except a band along the top and foot of
+the bar, up to 228/255 apart.
+
+**Root-cause hypothesis:** with the level set in the head, `glass.js` sees
+High the moment it runs and hangs the bar's filter before it has tracked the
+bar as on screen; the filter is only shown on something in view, and is not
+offered again until the bar changes size. Before, the page set the level
+later, so the bar was tracked first.
+
+**Proposed modification:** track the bar before the mode is first applied.
+
+**Before / after:** the bar's `backdrop-filter` read `blur(4px) saturate(1.4)
+brightness(1.06)` with no `url(#liquid-glass-1)`; after, the same filter and
+map (1430 x 56, scale 18.12) as the original. Re-captured: every mac, tablet
+and phone shot equals the original except the slider's own 188 x 56 px, and
+the open project's animated picture (the original differs from itself there
+by the same 15-16%).
+
+**Result:** Fixed.
+
+---
+
+## Cycle 16: Medium kept 17 MB of the sky (fixed)
+
+**Identified bottleneck:** after leaving High, 166 canvases holding 17.4 MB
+stayed alive (a `createElement` hook with weak references, read after a
+forced garbage collection): the sky's galaxy, light and black-hole sprites.
+
+**Root-cause hypothesis:** each tier keeps lists cut from its objects
+(`liveObjects`, `baseObjects`, `restObjects`), and the event and spark pools
+keep their last targets; emptying `tier.objects` freed none of them.
+
+**Proposed modification:** empty those lists and replace the pool entries
+when the sky is released.
+
+**Before / after (mac size, 2x):** canvases alive in Medium 166 / 17.4 MB to
+4 / 0.17 MB (the empty sky canvas and its two layers, and glass.js's spare
+300 x 150 buffer); JS heap 11.9 to 1.9 MB.
+
+**Result:** Fixed.
+
+---
+
+## Cycle 17: coming back to High rebuilt the sky (adopted)
+
+**Identified bottleneck:** with everything released on the way out, each
+return to High dropped two or three frames of 60-100 ms (in-page frame gaps
+and Long Animation Frames), where the original's switch dropped none.
+
+**Root-cause hypothesis:** a profile of the switch: `buildScene` 92 ms of
+script (segments 66, galaxy sprites 39), then the first frames re-cutting the
+full-screen sheets and star tiles.
+
+**Proposed modification:** put the sky away at once (no frame asked for, the
+canvas not composited) but keep what it is made of for 15 seconds, then
+release it all. The slider's fill moves by transform, like its thumb, so
+neither stalls if the page is busy as a level is chosen.
+
+**Before / after (in-page frame gaps, mac size):**
+
+| Switch | Released at once | Kept 15 s |
+| --- | --- | --- |
+| Medium to High, within 15 s | 67-83 ms, 2-3 late frames | 17 ms, none late |
+| Medium to High, after 15 s | 67-83 ms, 2-3 late frames | 100 ms and 67 ms (one rebuild, behind the fade-in) |
+| 20 High/Medium round trips | - | heap 12.5 to 12.3 MB, canvases 196 to 196, nodes and listeners unchanged |
+
+**Result:** Improved. The sky's memory (78 MB at 2x) is back 15 seconds after
+leaving High.
+
+---
+
+## Cycle 18: Low's bar showed what scrolled under it (fixed)
+
+**Identified bottleneck:** with no frost in Low, the cards' labels sliding
+under the bar showed through its 84% sheet and crossed the links.
+
+**Proposed modification:** the bar solid in Low (`#111317`), as it already is
+for visitors who ask for less transparency. The cards keep the 84% sheet:
+they only ever lie over the lattice.
+
+**Result:** Fixed.
+
+---
+
+## Cycle 19: Medium cost more than High under the cursor (investigated, not resolved)
+
+**Identified bottleneck:** on this laptop's own screen (3x, Intel Iris Xe),
+Medium dropped more frames than High with the cursor moving over the
+featured cards in every one of nine interleaved runs -- nearly twice
+High's share on a quiet machine, a fifth more on a loaded one -- though it
+draws no sky. Scrolling cost the same at both levels, and at rest Medium
+costs nothing.
+
+**What was tried** (hover, two interleaved rounds each; the High and Medium
+arms in each row ran beside it):
+
+| Change | Dropped | High / Medium alongside |
+| --- | --- | --- |
+| Medium's backdrop one opaque layer | 14.2% | 8.2 / 16.4 |
+| No backdrop at all | 13.6% | 8.4 / 15.9 |
+| The lattice without its light | 15.6% | 8.4 / 15.9 |
+| A still canvas behind the glass, as the sky is | 15.8% | 8.6 / 15.9 |
+| The backdrop forced onto a layer of its own | 14.7% | 8.6 / 15.9 |
+| High without its cursor dot | 10.3% | 9.3 / 17.0 |
+| High with its sky hidden (still running) | 12.0% | 9.3 / 17.0 |
+| Medium with the system cursor hidden | 16.6% | 9.6 / 16.5 |
+| High with the system cursor shown | 8.9% | 9.6 / 16.5 |
+| Medium asking for every frame (an empty loop) | 16.0% | 9.3 / 16.2 |
+| Medium with steady GPU work added* | 46.8% | 37.7 / 46.8 |
+| Medium without the card lean* | 41.7% | 37.2 / 45.0 |
+
+\* The machine was carrying heavy outside load for these two (every arm two
+to five times worse); only the comparison within the run counts.
+
+A trace of one hover at each level: the same five render passes a frame,
+the same full-screen damage, the same overlay handling and the same layer
+tree (the sky's canvas in High where Medium has its backdrop). Medium's
+root pass draws fewer quads (27 against 29) and takes longer (5.8 against
+4.3 ms a frame); every glass pass is identical.
+
+**At MacBook size** (2x, the page told it runs on Apple graphics, so High's
+sky runs at its full rate): Medium shows 42.3 frames a second under the
+cursor against High's 39.9, and drops 21.0% scrolling against 18.4%, inside
+the noise. Medium with frost and no bend (`window.__glassForce = 'frost'`)
+shows 51.1 frames a second and drops 15.5%.
+
+**Result:** not resolved. The gap belongs to this laptop's 3x screen, where
+High's sky is eased for Intel graphics; at MacBook size Medium matches or
+beats High. Medium keeps the bend the brief asks for. Frost alone is the
+lightest Medium measured, and is what the frame monitor already falls back
+to on a struggling machine whose level the page picked.
+
+---
+
+## Cycle 20: each level against the original (measured)
+
+**Before / after:** the original commit against the new page at each level,
+interleaved round by round (three rounds on this laptop's own screen, two on
+the other configs). The tables are in the performance report. In short:
+
+- **High** matches the original in every scenario, or comes in under it.
+  At MacBook size the page's main thread at rest on the projects came in
+  lower in both rounds (127 against 187 ms a second); not looked into.
+  One MacBook-size scroll round of 41.7% dropped (four long tasks) was
+  re-run as three more rounds of High against the original alone, which
+  came out level (30.0, 44.3, 41.4 against 33.6, 46.5, 33.8%).
+- **Medium** costs nothing at rest (0.2-5.5 ms a second of main thread, no
+  frames, the GPU idle, against 14-30% of the GPU for High), scrolls level
+  with High, and under the cursor is level with High at MacBook size and
+  behind it on this laptop's own screen (cycle 19).
+- **Low** scrolls at 59 frames a second with nothing dropped on this laptop
+  (High 15-20% dropped), with the graphics process at 38% of a core against
+  160-170%.
+- **No graphics acceleration:** both pages start in Low there, as before.
+  Medium chosen by hand drops a third of its frames scrolling.
+- **Phone-sized, processor slowed 4x:** Low and Medium take the page's main
+  thread at rest from 444 to 2.3 ms a second. The harness's frame counts for
+  them were unusable there (under one frame a second presented while the
+  page drew fifty), so only main-thread time is reported.
+
+**Result:** Low and Medium improved everywhere they were measured, except
+Medium under the cursor on this laptop's own screen; High unchanged.
+
+---
+
+## Final checks (three levels)
+
+- `smoke.ps1`: 24 of 24 with graphics acceleration, 22 of 22 without, the
+  slider's three levels, its saved choice and a slow visit's lower level
+  among them.
+- `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems
+  at each level, the slider measured as a control (the audit now skips text
+  meant only for screen readers).
+- `capture.ps1 -TestPattern` against the original: every High shot on a
+  MacBook-sized screen, a tablet and a phone equal apart from the slider's
+  188 x 56 px and the open project's animated picture.
+- A scratch script against a private Chrome, 42 of 42: what each level draws
+  and allocates, the sky fading out and in, its memory released after 15 s,
+  20 round trips with no growth, a dozen switches in a row, the level kept
+  across reloads, pages and tabs, corrupted and blocked storage, the old
+  switch's choice carried over, reduced motion, and the pointer itself (a
+  click on a stop, a drag that waits for the release, a tap that leaves
+  focus alone, a press on the sparkle that does nothing, the word under it
+  on hover). The frame monitor's step-downs were watched under a processor
+  slowed 4x to 12x: High eased, then lighter, then Medium (8x, 10x) or
+  straight to Low at the crawling floor (12x), each said under the slider
+  and kept for the tab; under High chosen by hand it only slowed the sky.
+- No script errors or console errors in any run. One console warning,
+  that the preloaded Inter font was not used within a few seconds of load,
+  appears with a phone-sized screen; the original commit gives the same
+  one there (checked side by side), so it is not from this change.
+
+---
+
+# Medium made light enough for any machine (25 October 2026)
+
+## Cycle 21: Medium frosts nothing, and is the default (adopted, not yet measured)
+
+**Identified bottleneck:** the site felt laggy on this laptop at its default
+(High), and Medium was no refuge: it dropped a fifth of a scroll's frames
+here (20.3%, more than High's 15.1%), 16% under the cursor, and on a
+computer without graphics acceleration a third of a scroll and two thirds
+of a hover (cycles 19-20). Every card, button and the bar still re-blurred
+and re-bent what lay behind it on every frame of a scroll, a lean or a ring
+turning -- over a backdrop that never moves.
+
+**Proposed modification:** Medium paints the glass instead of computing
+it. A blur of the still lattice is a flat dark sheet, so the glass gets
+that sheet (`rgba(11, 13, 16, .7)`: the colour the frosted glass came out as,
+laid on thicker so the lattice only just shows through), with no
+`backdrop-filter`, no SVG bend (`glass.js` gives Medium the `frost` mode and
+hangs no filters), the bar solid as in Low, and the rim laid on with normal
+blending at the brightness the overlay blend gave it. The rim, sheen, the
+cards' lean and light and the 3D rings stay. The soft washes behind Medium
+(a blue one behind the hero, a warm one low on the right), the faint stars
+and the darkened edge go: they were there for the frost to catch, and
+without it they only read as a blue tint over the page. New visitors start
+in Medium; High is only ever chosen on the slider. Low is unchanged.
+
+**Result:** measured in cycle 24, with what cycles 22 and 23 added.
+
+---
+
+## Cycle 22: a rim and a progress bar drawn again on every scroll (adopted)
+
+**Identified bottleneck:** with Medium fixed, Low and Medium still dropped
+frames scrolling at 3x. An A/B in Low with one suspect taken out per arm
+(pictures, the lattice, shadows, the glass rims, the whole page) was too
+noisy to rank them on a busy machine (an empty page dropped 11-29%), but
+taking the rims out cut the page's main thread through a scroll from 310
+to 110 ms a second. A trace of the paints and of the raster work, grouped
+by layer, then showed one layer drawn again on 91 of a scroll's 91 frames,
+on every arm, the empty page's included.
+
+**Root-cause hypothesis:** that layer is the scroll indicator's fill. Its
+transform is set on every scrolled frame, it had no layer of its own, so
+each frame painted it and its 8px glow again and the graphics process drew
+the layer anew, at every effects level. The rims were a mask on every
+card, painted again as each section came into view.
+
+**Proposed modification:** `will-change: transform` on `.page-scroll-fill`.
+Below High, each rim is drawn as hard-edged inner shadows (bright along the
+top and left, faint along the foot and right, a faint ring all round) with
+no mask, no blend and no blur; hover, focus and a press still turn it blue
+through `--glass-edge-paint`. High keeps the masked, blended rim.
+
+**Before / after (raster tasks over one full scroll in Low, from the
+trace):** 159 to 72, and no layer drawn more than 13 times.
+
+**Result:** Improved; see cycle 24.
+
+---
+
+## Cycle 23: nothing of a higher level left running below it (adopted)
+
+**Identified bottleneck:** asked to make sure a lower level stops what it
+does not use. A check in a private Chrome after each switch: the sky's
+canvas and filters were already put away, but its memory was kept for 15
+seconds; a fresh load in Medium asked for a frame on every display frame
+(121 in two seconds), the frame monitor's warm-up and its looks every eight
+seconds, though nothing below High moves at rest; Low still worked out and
+wrote the cursor's light and lean on every move of the mouse, though it
+shows neither; and glass.js still marked cards on and off screen for a
+frost only High has.
+
+**Proposed modification:** the sky is handed back as soon as it has faded
+out (`SKY_KEEP_MS` 0); the monitor's warm-up and its looks at rest run in
+High only (it still watches Low and Medium while they are being used);
+the pointer surfaces do nothing in Low; the off-screen marks are High only,
+and come off when the level drops.
+
+**Before / after (two seconds after each switch):** Medium at load asked
+for 121 frames in two seconds, now 0. After High: canvas 0 px, no bend
+filters, no custom cursor, no off-screen marks, heap 2.3 MB (13.6 in High),
+0 frames asked, in Medium and in Low alike.
+
+**Result:** Adopted. Going back up to High now always builds the sky again
+(about a tenth of a second, behind its fade-in).
+
+---
+
+## Cycle 24: each level against the uncommitted three-level build (measured)
+
+Medians of interleaved arms against the build before cycle 21 (served from
+copies of its files), on this laptop's own screen (3x, three rounds, the
+machine quieter than in cycle 22's runs) and with no graphics acceleration
+(software compositing, processor slowed 4x, two rounds):
+
+| | Low before | Low now | Medium before | Medium now |
+| --- | --- | --- | --- | --- |
+| 3x, scroll: frames dropped | 3.0% | 5.9% | 27.6% | 6.0% |
+| 3x, scroll: frames a second | 56.8 | 53.7 | 39.5 | 54.3 |
+| 3x, scroll: graphics process | 79% | 80% | 171% | 110% |
+| 3x, cursor over the cards: frames dropped | 5.2% | 1.5% | 18.6% | 1.8% |
+| 3x, cursor over the cards: GPU 3D engine | 17% | 10% | 96% | 32% |
+| No graphics, scroll: frames dropped | 0.5% | 0.5% | 26.3% | 1.0% |
+| No graphics, cursor over the cards: dropped | 8.8% | 7.5% | 48.5% | 0.7% |
+
+Low's two scroll figures are inside this laptop's noise (an earlier round
+had them the other way round). With Medium keeping up without graphics
+acceleration, such a machine no longer starts in Low: it starts in Medium
+like everyone else, and the frame monitor steps it down if it must.
+
+**Checks:** `smoke.ps1` 24 of 24 with graphics acceleration and 22 of 22
+without (the first check now expects Medium, and the sky checks choose
+High for themselves); no script or console errors.
+
+---
+
+# Clear glass at every level (25 October 2026)
+
+## Cycle 25: a card met from below flickered along its foot (fixed)
+
+**Identified bottleneck:** reported as ghosting along the bottom of a card
+when the cursor comes up onto it from below.
+
+**Root-cause hypothesis:** the lift was driven by `:hover`. A card met at
+its foot rose 6px, its foot climbed past the cursor, the hover ended, the
+card dropped back onto the cursor and rose again; every small movement of
+the hand started the cycle over. A button's 3px lift did the same.
+
+**Proposed modification:** with a mouse, the lift follows `.is-raised`,
+set by `setupSteadyLift` in `portfolio.js` when the cursor reaches a card
+or control and held for as long as the cursor is anywhere over the place it
+rests (8px below where it is drawn). Cards and controls are tracked apart,
+so a card stays up while the cursor is on a button inside it; a scroll or a
+carousel step asks once a frame what is now under the cursor. Touch keeps
+the `:hover` lift.
+
+**Before / after (Low, cursor held 3px inside a featured card's foot, the
+card's foot sampled every 33ms for a second):** before, up 6px and back
+down to 0 within a fifth of a second, waiting for the next movement to
+rise again; after, up 6px and held.
+
+**Result:** Fixed, at every level.
+
+---
+
+## Cycle 26: Apple's clear glass at every level (adopted)
+
+**Proposed modification:** asked for the glass to look like Apple's Liquid
+Glass at its clearest setting, on Low, Medium and High alike. The sheet is
+`rgba(255, 255, 255, .025)` at every level (High a breath of shade instead,
+over a frost of 1.5px rather than 4px, still bent at the rim), so what is
+behind shows straight through. Below High the rim is hard-edged inner
+shadows: a bright specular line along the top and left, a fainter one along
+the foot and right, a faint ring, and two soft glows just inside the top
+and foot for the sheet's thickness; the face carries a band of light down
+from the top and a faint diagonal sheen. The bar is the same clear glass
+with a third of its light shaded off and a 5px frost of its own at every
+level, so a heading scrolling under it is softened rather than crossing the
+links (Low keeps its bar unfrosted, cycle 27); Low and Medium had dropped
+the bar's frost for a solid bar, which no longer fits.
+
+**Result:** checked in screenshots at all three levels (About, the featured
+row, an open ring). Costs in cycle 27.
+
+---
+
+## Cycle 27: what the clear glass costs (measured, two fixes)
+
+**Identified bottleneck:** the first build of cycle 26, against the build
+before it, with no graphics acceleration: Medium scrolling 1.0% to 6.7%
+dropped, under the cursor 0.7% to 13.2%. On this laptop at 3x, Low's
+graphics process spent three times as long putting each scrolled frame
+together (about 50 to 150-185 ms a second) and dropped 13% where it had
+dropped 6%.
+
+**Root-cause hypothesis:** the two soft glows inside the rim were blurred
+shadows on the rim's layer, and the rim fades to blue under the cursor, so
+every frame of that fade painted them again; and the bar's new frost is
+blurred again on every scrolled frame, by the processor where there is no
+graphics acceleration.
+
+**Proposed modification:** the glows move into the face's gradients, which
+never change under the cursor, and the rim is hard lines only again. The
+bar keeps its frost in Medium and High; in Low, and on a computer drawing
+without graphics acceleration, it is unfrosted and shaded to 66% instead.
+
+**Before / after:**
+
+| | first build | now |
+| --- | --- | --- |
+| No graphics, Medium, scroll: dropped | 6.7% | 0% |
+| No graphics, Medium, cursor over the cards: dropped | 13.2% | 0.7% |
+| No graphics, Low, scroll: dropped | 3.5% | 0% |
+| 3x, Low, scroll: dropped (the build before cycle 26: 5.0%) | 13% | 3.9% |
+| 3x, Low, scroll: graphics process composite | 150-185 ms/s | 60 ms/s |
+| 3x, Medium, scroll: dropped | 8.2% | 7.3% |
+
+**Result:** Adopted. Medium on this laptop pays for its frosted bar (about
+175 ms a second of compositing against Low's 60) and drops a few more
+frames than Low; High drops a third of a scroll's frames here, as before.
+`smoke.ps1` 24 of 24 and 22 of 22.
+
+---
+
+## Cycle 28: a lit rim left hanging above a card (fix adopted, not reproduced here)
+
+**Identified bottleneck:** reported with a phone video of the About cards
+in Medium. The cursor slides off a card's top edge, the card settles back,
+and a copy of its lit (blue) top rim stays on screen about 8px above it,
+where the raised and leaning card's top had been, for as long as nothing
+else draws there. Each pass leaves another, so two or three lines stack up.
+The text and the rest of the card are clean: only the strip the card had
+just left is never drawn again.
+
+**Root-cause hypothesis:** below High a card is not a layer of its own. The
+browser makes it one for exactly as long as its lift and lean are moving
+and folds it back into the page the moment it lands, and on that screen the
+strip it left was not redrawn. (In High every card is a layer all the time,
+for its frost.) It did not reproduce in the bench Chrome, on screen or off,
+maximized or not, with the real cursor, with DevTools detached or with
+software compositing: screenshots and screen grabs were clean every time,
+so the cause is in that machine's own Chrome (its flags or field trials)
+rather than in the page's painting.
+
+**Proposed modification:** `setupSteadyLift` gives a surface a layer of its
+own (`.is-steady`, `will-change: transform`) as it rises and takes it away
+a second after it has landed, so it is never folded back mid-move. Only the
+surfaces under the cursor are ever raised, so it is a layer or two at a
+time, where a permanent layer for every lifting surface would be about two
+hundred with every collection open in Low.
+
+**Result:** Adopted, to be confirmed on the machine that showed it.
+
+---
+
+## Cycle 29: Medium looked the same as Low (adopted)
+
+**Identified bottleneck:** reported: Low and Medium could not be told apart.
+Since cycle 21 Medium frosts nothing and since cycle 26 both wear the same
+clear glass over the same lattice, so at rest the only differences were a
+faint shadow under the cards; the lean and the turning rings only show
+once the cursor is on something.
+
+**Proposed modification:** Medium gets a still sky (`setupStillSky` in
+`portfolio.js`): stars in High's colours, a band where they crowd, two
+clusters, a few soft clouds and the grey haze between them, faded toward
+the edges. It is drawn once, seeded once a visit, turned into a picture off
+the page's thread, and laid on the lattice's own fixed layer as
+`.background-grid::before`, so it adds no layer and a scroll never draws it
+again. It is drawn again only when the window changes shape or zoom, fades
+in once ready and out on the way down to Low, and High's moving sky fades
+in over it. Its memory is handed back 0.7s after leaving Medium.
+
+**Before / after (Medium, with the sky against the same build with it
+hidden, three alternating runs, medians):**
+
+| | with the sky | without |
+| --- | --- | --- |
+| 3x, scroll: dropped | 7.2% | 6.5% (runs 5.0 to 16.3%) |
+| 3x, scroll: graphics process tiles | 340 ms/s | 338 ms/s |
+| 3x, cursor over the cards: dropped | 2.1% | 2.3% |
+| No graphics, scroll: dropped | 0.5% (1 frame) | 0% |
+| No graphics, scroll: page CPU | 139% | 138% |
+
+**Result:** Adopted: the difference is inside the runs' own spread.
+`smoke.ps1` 24 of 24 and 22 of 22.

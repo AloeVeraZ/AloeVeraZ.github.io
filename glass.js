@@ -13,11 +13,12 @@
 
    How much of it a browser can show is written to html[data-glass]:
 
-     refract  High FX in Chromium browsers (Chrome, Edge, Brave, Opera, Arc,
-              Samsung Internet). An SVG displacement filter runs on the live
-              backdrop of the bar and of every card and button, so whatever is
-              behind them -- text, photos, the sky -- bends toward their edges.
-              The browser redraws it every frame, so it follows anything that
+     refract  High FX in Chromium browsers (Chrome, Edge, Brave, Opera,
+              Arc, Samsung Internet). An SVG displacement filter runs on the
+              live backdrop of the bar and of every card and button, so
+              whatever is behind them -- text, photos, the sky -- bends
+              toward their edges. The browser redraws it
+              whenever what is behind changes, so it follows anything that
               moves: the archive ring turning, a card leaning toward the
               cursor, a slider being swiped.
      lens     High FX in Safari, Firefox, and every browser on iOS (all of
@@ -25,10 +26,12 @@
               so the bar frosts the page behind it instead and bends the sky --
               which this site paints itself -- on its own canvas: portfolio.js
               calls paintBackdrop() once a frame. Cards and buttons frost.
-     frost    Low FX, everywhere, and for anyone whose system asks for less
-              transparency or more contrast: the bar, the cards and the
-              buttons frost, and nothing bends. (The stylesheets make all of
-              it solid for the second group.) */
+     frost    Low and Medium FX, where the stylesheets swap the frost for a
+              clear sheet over the still lattice (and Medium's still sky),
+              so nothing is blurred either;
+              a machine the page has found straining (data-effects-pace); and
+              anyone whose system asks for less transparency or more contrast
+              (the stylesheets make the glass solid for them). Nothing bends. */
 (() => {
     'use strict';
 
@@ -446,8 +449,9 @@
             && !element.hasAttribute('data-ring-hidden');
         if (seen) inView.add(element); else inView.delete(element);
         // The stylesheets drop the frost off-screen too, so a surface
-        // nobody can see costs nothing in any of the three modes.
-        element.classList.toggle('glass-offscreen', !seen);
+        // nobody can see costs nothing. Only High FX frosts at all: below it
+        // the mark would restyle a card for nothing each time it crossed.
+        element.classList.toggle('glass-offscreen', !seen && root.dataset.effects === 'high');
         if (mode === 'refract') reflect(element);
     };
     const seeAnchor = (anchor, seen) => {
@@ -617,13 +621,17 @@
     const pickMode = () => {
         // A testing hook: set window.__glassForce before this file runs.
         if (window.__glassForce) return window.__glassForce;
-        if (root.dataset.effects !== 'high' || (plainGlass && plainGlass.matches)) return 'frost';
+        const level = root.dataset.effects;
+        // Medium FX frosts nothing (portfolio.css), so there is nothing for
+        // a bend to bend.
+        if (level !== 'high' || (plainGlass && plainGlass.matches)) return 'frost';
         // A machine the page has found struggling (the frame monitor in
         // portfolio.js) keeps the frost and gives up the bend: the rim is a
         // third of what the glass costs to draw, and the frost is most of how
         // it looks.
         if (root.dataset.effectsPace === 'lighter') return 'frost';
-        return canRefractBackdrop ? 'refract' : 'lens';
+        if (canRefractBackdrop) return 'refract';
+        return 'lens';
     };
     const applyMode = () => {
         const next = pickMode();
@@ -639,8 +647,14 @@
                 [...worn.keys()].forEach(shed);
             }
         }
+        // Into or out of High FX, the off-screen marks go on or come off.
+        if (root.dataset.effects !== settledLevel) {
+            settledLevel = root.dataset.effects;
+            for (const element of tracked) if (element !== bar && element.isConnected) settle(element);
+        }
         measure();
     };
+    let settledLevel = root.dataset.effects;
 
     // A soft highlight tracks the cursor along the bar, the way light slides
     // across a curved surface as you move past it. Fine pointers only.
@@ -700,8 +714,13 @@
         }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
 
-    applyMode();
+    // The bar is tracked before the mode is first applied: it is in view from
+    // the moment it is tracked, and the filter put on it below is only shown
+    // on something in view. The level is now set before this file runs (the
+    // head of index.html), so the first call can already be refract; the
+    // other way round, the bar wore its filter unseen until it changed size.
     if (bar) track(bar);
+    applyMode();
     scan();
 
     window.portfolioNavGlass = { paintBackdrop };
