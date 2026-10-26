@@ -93,7 +93,7 @@ Barlow Condensed, in capitals, is for names; Inter is for sentences. Letter spac
 
 ## Visual effects
 
-A slider at the right of the navigation bar sets one of three levels. On a phone it is the last row of the menu. A word under it names the level while it is hovered, focused or just moved. It has no permanent label.
+A slider at the right of the navigation bar sets one of three levels. On a phone it is the last row of the menu. No word names the level on screen, even while it is moved: the thumb's place and the track's blue say it. Screen readers still hear Low, Medium or High.
 
 Every level wears the same clear glass, modelled on Apple's Liquid Glass at its Clear setting: the cards and buttons all but invisible, so the backdrop shows straight through, told apart by a bright specular edge along the top and left, a fainter one along the foot and right, a soft glow inside the rim and a band of light down the face. In Medium and High the bar has a light frost of its own, so headings scrolling under it do not cross its links; in Low it is shaded instead, which keeps Low as quick as it was.
 
@@ -104,9 +104,10 @@ Every level wears the same clear glass, modelled on Apple's Liquid Glass at its 
 | High (right) | Everything: the sky set moving behind the glass, lightly frosted and bent at the rim, the custom cursor and touch effects. |
 
 - **Where it lives.** A small script in `index.html`'s head picks the level before anything is drawn and writes it to `html[data-effects]`. `portfolio.js` drives the slider, the sky and the frame monitor, `glass.js` decides how the glass is drawn, and the stylesheets key off `data-effects`.
-- **Remembered.** A level chosen on the slider is saved in `localStorage` as `portfolio-effects-level` and always wins. The old High/Low switch's saved choice carries over.
-- **Picked for new visitors.** Fewer than four threads, under 4 GB of memory or Data Saver starts Low. Everything else starts Medium, including computers without graphics acceleration, where Medium now keeps up. High is only ever chosen on the slider.
-- **Stepped down when slow.** On a level the page picked, a monitor eases the sky, then the glass. If the page is still clunky it steps High to Medium, then Medium to Low, and says so under the slider. A level chosen by hand is never changed.
+- **Every visit starts Medium.** On every machine, whatever its hardware. High is only ever chosen on the slider.
+- **Remembered for the visit.** Within a tab (`sessionStorage`) a reload or a trip to the policy pages carries on at the level the visit was at: the one last chosen on the slider (`portfolio-effects-level`), or the one the page stepped down to after it (`portfolio-effects-lag`). A new visit starts Medium again. Levels saved across visits by older versions of the site are cleared.
+- **Stepped down when slow, one stop at a time.** A monitor eases the sky, then the glass. If the page still stutters it steps High to Medium, then Medium to Low, never two stops at once, and the thumb slides to show it. A page crawling at ten frames a second or less skips the easing but still drops only one stop.
+- **The visitor gets the last word.** A level chosen by hand is stepped down like any other. Each time the visitor puts it back up after the page lowered it is counted (`portfolio-effects-overrides`), and the third time the page stops stepping it down for the rest of the visit. Only the sky's pace is still eased after that, which changes how often it is drawn and nothing in it.
 - **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out.
 
 ## Privacy

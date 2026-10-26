@@ -103,18 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // The level is decided before the first paint by the script in
     // index.html's head and written to html[data-effects], with the reason
     // in data-effects-reason: 'manual' for a level the visitor chose,
-    // 'hardware' for one picked for this device, 'lag' for one the page had
-    // to step down to. It is read back from there.
+    // 'default' for the Medium every visit starts at, 'lag' for one the page
+    // had to step down to. It is read back from there.
     const EFFECT_LEVELS = ['low', 'medium', 'high'];
     const EFFECT_NAMES = { low: 'Low', medium: 'Medium', high: 'High' };
+    // A level chosen on the slider, for the rest of the tab's life (the head
+    // script reads this). A fresh visit starts at Medium again.
     const levelStorageKey = 'portfolio-effects-level';
     // A visit that had to step down for being slow keeps the lower level for
-    // the rest of the tab's life (the head script reads this). A reload, or a
-    // trip to the policy pages and back, used to start High FX all over again
-    // on the machine that had just shown it could not keep up, and the reader
-    // sat through the same seconds of stutter before the monitor below
-    // stepped in again. A fresh visit tries again.
+    // the rest of the tab's life too. A reload, or a trip to the policy pages
+    // and back, used to start High FX all over again on the machine that had
+    // just shown it could not keep up, and the reader sat through the same
+    // seconds of stutter before the monitor below stepped in again.
     const lagStorageKey = 'portfolio-effects-lag';
+    // How many times this visit the visitor has put the level back up after
+    // the page stepped it down. The third time, the page takes the hint and
+    // stops stepping it down for the rest of the visit.
+    const overrideStorageKey = 'portfolio-effects-overrides';
+    const OVERRIDES_BEFORE_HOLD = 3;
     const storeEffects = (area, key, value) => {
         try {
             if (value) window[area].setItem(key, value);
@@ -126,11 +132,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const root = document.documentElement;
     let effectsMode = EFFECT_LEVELS.includes(root.dataset.effects) ? root.dataset.effects : 'medium';
-    let effectsReason = ['manual', 'lag', 'hardware'].includes(root.dataset.effectsReason)
-        ? root.dataset.effectsReason : 'hardware';
+    let effectsReason = ['manual', 'lag', 'default'].includes(root.dataset.effectsReason)
+        ? root.dataset.effectsReason : 'default';
+    let overrides = 0;
+    try {
+        overrides = Math.min(Number(sessionStorage.getItem(overrideStorageKey)) || 0, OVERRIDES_BEFORE_HOLD);
+    } catch (error) {
+        overrides = 0;
+    }
+    // Whether the page has stepped the level down since the visitor last put
+    // it up; a reload after a step down still counts.
+    let pageLowered = effectsReason === 'lag';
     const logicalCores = navigator.hardwareConcurrency || 4;
     const deviceMemory = navigator.deviceMemory || 0;
-    // A level the page picked for itself is stepped down as soon as it turns
+    // The level is stepped down, one stop at a time, as soon as it turns
     // clunky: two seconds in a row where the typical frame runs at 30fps or
     // worse, or where a quarter of the frames stutter -- High to Medium, which
     // puts the sky away and keeps the glass, and Medium to Low. A lone spike
@@ -138,7 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // anyone a level. Seconds are only measured while the page is visible,
     // focused and settled, so the hitches every machine produces at first
     // paint, when a tab comes back or when a window is resized are never
-    // scored either. A level the visitor chose is never changed for them.
+    // scored either. A level the visitor chose is stepped down the same way,
+    // until they have put it back up three times (OVERRIDES_BEFORE_HOLD):
+    // from then on it is theirs for the rest of the visit.
     const PERFORMANCE_WINDOW_MS = 1000;
     const PERFORMANCE_WARMUP_MS = 4000;
     const PERFORMANCE_RESUME_DELAY_MS = 2000;
@@ -154,15 +171,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // while it scrolls, however good its average. That is what a laptop with
     // other work on it looks like, and it used to pass as smooth. Slowing the
     // sky changes how often it is drawn and nothing in it, so it is the one
-    // step taken under a High FX the visitor chose for themselves too.
+    // step still taken once the visitor has insisted on High.
     const MIN_STEADY_FPS = 50;
     const STRAINED_WINDOWS_BEFORE_EASING = 2;
     const MISSED_FRAME_SHARE = .1;
     // And a floor under all of it: a page crawling along at ten frames a
-    // second or worse for five seconds running goes straight to Low FX,
-    // whatever step it has reached. Those seconds count across the steps --
-    // easing the sky does not start them over -- so nobody sits through a
-    // slideshow while the page tries its gentler options one by one.
+    // second or worse for five seconds running steps down a level at once,
+    // whatever easing it has reached. Those seconds count across the easing
+    // -- easing the sky does not start them over -- so nobody sits through a
+    // slideshow while the page tries its gentler options one by one. A new
+    // level gets five seconds of its own before it is judged crawling too.
     const CRAWLING_FPS = 12;
     const CRAWLING_MS = 5000;
     // The monitor measures by asking for every display frame, and a page that
@@ -244,16 +262,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return sorted[Math.floor(sorted.length * share)] || 16.7;
     };
 
+    // Whether the page may still step the level down this visit.
+    const mayStepDown = () => overrides < OVERRIDES_BEFORE_HOLD;
     // Nothing left to decide: the page is in Low FX, the call has already
-    // been made, or the level is the visitor's own and there is nothing left
-    // the monitor may do under it (slowing a High FX sky they chose, once).
+    // been made, or the visitor has insisted on their level and there is
+    // nothing left the monitor may do under it (slowing a High FX sky, once).
     // The loop below asks for a frame every frame for as long as it runs,
     // which in Low and Medium FX would be the only thing left on the page
     // still asking -- no sky is drawn there -- and a page that asks for a
     // frame it does nothing with keeps the machine awake for no one. It is
     // started again by whatever could change the answer.
     const monitorIdle = () => monitorDone || effectsMode === 'low'
-        || (effectsReason === 'manual' && (effectsMode !== 'high' || skyEased));
+        || (!mayStepDown() && (effectsMode !== 'high' || skyEased));
+    // One stop down: High to Medium, Medium to Low. Each level gets a clean
+    // look of its own, crawling seconds included, before it is judged.
+    const stepDown = timestamp => {
+        const lower = effectsMode === 'high' ? 'medium' : 'low';
+        if (lower === 'low') monitorDone = true;
+        crawlingSince = 0;
+        crawlingWindows = 0;
+        applyEffectsMode(lower, false, 'lag');
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
+    };
     // Frames are timed by when they actually run, not by the time the browser
     // stamps on them. A frame held up by the page is stamped with the time it
     // was due, and the one after it with the next -- measured by the stamps,
@@ -343,12 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!crawlingSince) crawlingSince = timestamp - sampledTime;
             crawlingWindows += 1;
         }
-        // A level the visitor chose is theirs, crawling or not: they can see
-        // the page, and the slider, as well as the monitor can.
-        const automatic = effectsReason !== 'manual';
+        // Once the visitor has put the level back up three times it is
+        // theirs, crawling or not: they can see the page, and the slider, as
+        // well as the monitor can.
+        const automatic = mayStepDown();
         if (automatic && crawlingWindows >= 3 && timestamp - crawlingSince >= CRAWLING_MS) {
-            monitorDone = true;
-            applyEffectsMode('low', false, 'lag');
+            stepDown(timestamp);
             return;
         }
 
@@ -380,12 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!automatic) return;
         clunkyWindows = clunky ? clunkyWindows + 1 : 0;
-        if (clunkyWindows >= CLUNKY_WINDOWS_BEFORE_DOWNGRADE) {
-            const lower = effectsMode === 'high' ? 'medium' : 'low';
-            if (lower === 'low') monitorDone = true;
-            applyEffectsMode(lower, false, 'lag');
-            deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
-        }
+        if (clunkyWindows >= CLUNKY_WINDOWS_BEFORE_DOWNGRADE) stepDown(timestamp);
     };
     const startPerformanceMonitor = () => {
         if (performanceMonitorFrame || monitorIdle()) return;
@@ -468,11 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // nearest stop in every browser -- iOS Safari only moves a range input
     // by its thumb -- and a drag carries the thumb under the finger before
     // it settles on a stop. The thumb's place comes from html[data-effects]
-    // (navbar.css), so it is right before any of this runs.
+    // (navbar.css), so it is right before any of this runs. No word names
+    // the level on screen: the thumb's place and the track's blue say it.
     const fxSlider = document.getElementById('fx-slider');
     const fxInput = document.getElementById('fx-level');
     const fxTrack = fxSlider?.querySelector('.fx-slider-track');
-    const fxTip = fxSlider?.querySelector('.fx-slider-tip');
     // A level the page steps down to by itself is read out from here; one the
     // visitor chose, the slider reads out itself. Outside the menu, which on
     // a phone hides everything in it until it is opened.
@@ -480,23 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fxStatus.className = 'visually-hidden';
     fxStatus.setAttribute('role', 'status');
     document.body.appendChild(fxStatus);
-    const levelLabel = level => `${EFFECT_NAMES[level]} effects`;
-    let tipTimer = 0;
-    const hideTip = () => {
-        window.clearTimeout(tipTimer);
-        tipTimer = 0;
-        fxSlider?.classList.remove('is-telling');
-    };
-    // A brief word under the slider: which level it is on. Held while the
-    // cursor is over it or it has the keyboard's focus, and otherwise gone
-    // again after a moment.
-    const showTip = (text, duration = 1600) => {
-        if (!fxSlider) return;
-        fxTip.textContent = text;
-        fxSlider.classList.add('is-telling');
-        window.clearTimeout(tipTimer);
-        tipTimer = duration ? window.setTimeout(hideTip, duration) : 0;
-    };
     const syncSlider = () => {
         if (!fxInput) return;
         const index = EFFECT_LEVELS.indexOf(effectsMode);
@@ -521,11 +529,11 @@ document.addEventListener('DOMContentLoaded', () => {
         wakeEffectsBackground();
         syncSlider();
         if (stepped) {
+            pageLowered = true;
             fxStatus.textContent = `Visual effects lowered to ${EFFECT_NAMES[mode]} because the page was running slowly.`;
-            showTip(`${levelLabel(mode)} · eased for speed`, 3200);
         }
-        if (remember) storeEffects('localStorage', levelStorageKey, mode);
-        // See lagStorageKey. A choice made by hand outranks it either way.
+        if (remember) storeEffects('sessionStorage', levelStorageKey, mode);
+        // See lagStorageKey. Whichever came last wins on a reload.
         if (reason === 'lag') storeEffects('sessionStorage', lagStorageKey, mode);
         else if (remember) storeEffects('sessionStorage', lagStorageKey, '');
         // Turning a level on is one of the things that gives the monitor its
@@ -533,13 +541,19 @@ document.addEventListener('DOMContentLoaded', () => {
         startPerformanceMonitor();
     };
 
-    // A level chosen on the slider. It is the visitor's from then on: saved
-    // for their next visit, and never changed for them by the monitor.
+    // A level chosen on the slider, kept for the rest of the visit. The
+    // monitor may still step it down; putting it back up after it has is
+    // counted, and the third time the page stops stepping it down.
     const chooseLevel = level => {
         if (!EFFECT_LEVELS.includes(level)) return;
         if (level === effectsMode && effectsReason === 'manual') {
             syncSlider();
             return;
+        }
+        if (pageLowered && EFFECT_LEVELS.indexOf(level) > EFFECT_LEVELS.indexOf(effectsMode)) {
+            pageLowered = false;
+            overrides = Math.min(overrides + 1, OVERRIDES_BEFORE_HOLD);
+            storeEffects('sessionStorage', overrideStorageKey, String(overrides));
         }
         // The page took the bend off the glass, not the visitor: a level
         // chosen by hand gets it back. The sky keeps its pace, which only
@@ -561,17 +575,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Keys and assistive technology move the input itself.
         const fromInput = () => {
             const level = EFFECT_LEVELS[Number(fxInput.value)];
-            if (!level) return;
-            const changed = level !== effectsMode || effectsReason !== 'manual';
-            chooseLevel(level);
-            if (changed) showTip(levelLabel(level), fxInput.matches(':focus-visible') ? 0 : 1600);
+            if (level) chooseLevel(level);
         };
         fxInput.addEventListener('input', fromInput);
         fxInput.addEventListener('change', fromInput);
-        fxInput.addEventListener('focus', () => {
-            if (fxInput.matches(':focus-visible')) showTip(levelLabel(effectsMode), 0);
-        });
-        fxInput.addEventListener('blur', () => { if (!drag) hideTip(); });
 
         // The centres of the three stops, where the thumb's centre comes to
         // rest, measured fresh for each press: the bar changes size with the
@@ -606,7 +613,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.pointerType === 'mouse') fxInput.focus({ preventScroll: true });
             drag = { id: event.pointerId, x: event.clientX, moved: false, stops };
             try { fxSlider.setPointerCapture(event.pointerId); } catch (error) { /* pointer already gone */ }
-            showTip(levelLabel(effectsMode), 0);
         });
         fxSlider.addEventListener('pointermove', event => {
             if (!drag || event.pointerId !== drag.id) return;
@@ -616,48 +622,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const offset = Math.min(Math.max(event.clientX - stops[0], 0), stops[2] - stops[0]);
             fxSlider.classList.add('is-dragging');
             fxSlider.style.setProperty('--fx-drag', `${offset.toFixed(1)}px`);
-            const level = EFFECT_LEVELS[nearestStop(stops, event.clientX)];
-            if (fxTip.textContent !== levelLabel(level)) fxTip.textContent = levelLabel(level);
         });
         fxSlider.addEventListener('pointerup', event => {
             if (!drag || event.pointerId !== drag.id) return;
             const level = EFFECT_LEVELS[nearestStop(drag.stops, event.clientX)];
             endDrag();
             chooseLevel(level);
-            showTip(levelLabel(level), event.pointerType === 'mouse' && fxSlider.matches(':hover') ? 0 : 1400);
         });
         // A vertical swipe that started on the slider is the page scrolling
         // (touch-action: pan-y): the thumb goes back where it was.
         fxSlider.addEventListener('pointercancel', event => {
             if (!drag || event.pointerId !== drag.id) return;
             endDrag();
-            hideTip();
-        });
-        fxSlider.addEventListener('pointerenter', event => {
-            if (event.pointerType === 'mouse' && !drag) showTip(levelLabel(effectsMode), 0);
-        });
-        fxSlider.addEventListener('pointerleave', event => {
-            if (event.pointerType === 'mouse' && !drag && !fxInput.matches(':focus-visible')) hideTip();
         });
     }
-    // The site open in another tab, or this page brought back by the back
-    // button from the browser's cache, may have been left at another level
-    // since this one was chosen: the choice saved last is the visitor's.
-    const adoptSavedLevel = () => {
-        let saved = '';
-        try {
-            saved = localStorage.getItem(levelStorageKey) || '';
-        } catch (error) {
-            saved = '';
-        }
-        if (EFFECT_LEVELS.includes(saved)) chooseLevel(saved);
-    };
-    window.addEventListener('storage', event => {
-        if (event.key === levelStorageKey) adoptSavedLevel();
-    });
-    window.addEventListener('pageshow', event => {
-        if (event.persisted) adoptSavedLevel();
-    });
     document.addEventListener('visibilitychange', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         if (document.hidden) {

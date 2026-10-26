@@ -362,17 +362,20 @@ function Get-GpuProcessId {
 
 # ---- Effects levels --------------------------------------------------------------
 # A script for Page.addScriptToEvaluateOnNewDocument that has every load start
-# at the given level, as a visitor who chose it on the slider would ('low',
-# 'medium' or 'high'); with none, it clears any choice so the page picks its
-# own, as for a first visit.
+# at the given level ('low', 'medium' or 'high'), as a visitor who chose it on
+# the slider and has put it back up three times would: the frame monitor never
+# steps it down, so a run measures the level it asked for. With none, it
+# clears everything the visit kept, so every load is a first visit (Medium).
 function Get-EffectsLevelScript {
     param([string]$Level = '')
-    if ($Level) { "try { localStorage.setItem('portfolio-effects-level', '$Level'); } catch (e) {}" }
-    else { "try { localStorage.removeItem('portfolio-effects-level'); localStorage.removeItem('portfolio-effects-override-v3'); } catch (e) {}" }
+    if ($Level) { "try { sessionStorage.setItem('portfolio-effects-level', '$Level'); sessionStorage.setItem('portfolio-effects-overrides', '3'); sessionStorage.removeItem('portfolio-effects-lag'); } catch (e) {}" }
+    else { "try { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); } catch (e) {}" }
 }
 
 # Moves the slider to a level the way the keyboard does: the range input's
-# value, then the change event the page listens for.
+# value, then the change event the page listens for. Like a visitor's move it
+# can be stepped down again by the frame monitor, unless the load was pinned
+# with Get-EffectsLevelScript.
 function Set-EffectsLevel {
     param($Page, [ValidateSet('low', 'medium', 'high')][string]$Level)
     $index = @{ low = 0; medium = 1; high = 2 }[$Level]

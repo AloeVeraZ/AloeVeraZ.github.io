@@ -8,9 +8,11 @@
   rendered from portfolio-data.json, the nav links land on their sections, a
   project opens and closes (and the sky rests behind it and moves again
   after), a collection opens and its ring turns, the effects slider sets
-  each of its three levels and is remembered, a slow visit's lower level is
-  kept for the tab and dropped by a choice on the slider, and the High FX
-  sky and glass are running.
+  each of its three levels, shows no word and is remembered for the visit, a
+  slow visit's lower level is kept for the tab and dropped by a choice on the
+  slider, putting the level back up after a step down is counted and the
+  third time stops the stepping, a level saved by an older version is
+  forgotten, and the High FX sky and glass are running.
 #>
 param([int]$Port = 9345, [string]$Site = 'http://localhost:8862/', [switch]$Software)
 $ErrorActionPreference = 'Stop'
@@ -49,6 +51,11 @@ try {
     Check 'one row per collection' ((& $js "document.querySelectorAll('.project-collection').length") -eq $data.collections)
     $mode = & $js "JSON.stringify({ effects: document.documentElement.dataset.effects, glass: document.documentElement.dataset.glass, canvas: document.querySelector('.galaxy-field').width > 0 && !document.querySelector('.galaxy-field').hidden })" | ConvertFrom-Json
     Check 'starts in Medium FX, with no sky drawing' ($mode.effects -eq 'medium' -and -not $mode.canvas) "effects=$($mode.effects) glass=$($mode.glass)"
+    # The frame monitor steps a level down when this machine stutters, which
+    # would move the levels these checks set out from under them. Told the
+    # visitor has insisted three times, it leaves them be; the counting
+    # itself is checked at the end.
+    & $js "(() => { sessionStorage.setItem('portfolio-effects-overrides', '3'); return 1; })()" | Out-Null
 
     foreach ($target in 'about', 'skills', 'projects', 'contact') {
         # From the top of a fresh load, with a real click on the link.
@@ -97,7 +104,7 @@ try {
         Start-Sleep -Milliseconds 600
         $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
         Check 'and moves again once it closes' ($a -ne $b)
-        & $js "(() => { localStorage.removeItem('portfolio-effects-level'); return 1; })()" | Out-Null
+        & $js "(() => { sessionStorage.removeItem('portfolio-effects-level'); return 1; })()" | Out-Null
     }
 
     & $click '.collection-toggle' 0
@@ -119,17 +126,21 @@ try {
     Start-Sleep -Milliseconds 900
     $l = & $js $level | ConvertFrom-Json
     Check 'the slider sets Low: no sky, no frost' ($l.effects -eq 'low' -and -not $l.sky -and $l.glass -eq 'frost' -and $l.look -eq 'low' -and $l.value -eq '0') "$($l.effects) glass=$($l.glass)"
+    # The hint a screen reader hears stays; nothing else may hold words.
+    $words = & $js "(() => { const c = document.getElementById('fx-slider').cloneNode(true); c.querySelectorAll('.visually-hidden').forEach(e => e.remove()); return c.textContent.trim(); })()"
+    Check 'the slider shows no word for its level' (-not $words) $words
     Invoke-Page $page 'Page.reload' | Out-Null
     Wait-PageReady $page
     $kept = & $js $level | ConvertFrom-Json
-    Check 'the choice is remembered' ($kept.effects -eq 'low' -and $kept.reason -eq 'manual' -and $kept.value -eq '0') "$($kept.effects)/$($kept.reason)"
+    Check 'the choice is kept for the visit' ($kept.effects -eq 'low' -and $kept.reason -eq 'manual' -and $kept.value -eq '0') "$($kept.effects)/$($kept.reason)"
     Set-EffectsLevel $page 'high' | Out-Null
     Start-Sleep -Milliseconds 1500
     $h = & $js $level | ConvertFrom-Json
     Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -and $h.look -eq '' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
 
     # A visit the frame monitor had to step down stays there for the tab.
-    & $js "(() => { localStorage.removeItem('portfolio-effects-level'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
+    # Chosen first and stepped down after: the step down is the later word.
+    & $js "(() => { sessionStorage.setItem('portfolio-effects-level', 'high'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
     Invoke-Page $page 'Page.reload' | Out-Null
     Wait-PageReady $page
     $slow = & $js $level | ConvertFrom-Json
@@ -137,7 +148,34 @@ try {
     Set-EffectsLevel $page 'high' | Out-Null
     Start-Sleep -Milliseconds 300
     Check 'choosing a level by hand forgets it' ((& $js "sessionStorage.getItem('portfolio-effects-lag')") -eq $null -and (& $js "document.documentElement.dataset.effects") -eq 'high')
-    & $js "(() => { localStorage.removeItem('portfolio-effects-level'); return 1; })()" | Out-Null
+
+    # Putting the level back up after the page stepped it down is counted;
+    # moving it up when the page had not is not. The third time, the page
+    # stops stepping it down for the rest of the visit.
+    $overrides = { & $js "sessionStorage.getItem('portfolio-effects-overrides')" }
+    & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); return 1; })()" | Out-Null
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    $fresh = & $js $level | ConvertFrom-Json
+    Set-EffectsLevel $page 'high' | Out-Null
+    Check 'a fresh visit starts Medium, and moving up unprompted is not counted' ($fresh.effects -eq 'medium' -and $fresh.reason -eq 'default' -and $null -eq (& $overrides)) "$($fresh.effects)/$($fresh.reason) overrides=$(& $overrides)"
+    & $js "(() => { sessionStorage.setItem('portfolio-effects-lag', 'medium'); return 1; })()" | Out-Null
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    Set-EffectsLevel $page 'high' | Out-Null
+    Check 'moving it back up after a step down is counted' ((& $overrides) -eq '1') "overrides=$(& $overrides)"
+    & $js "(() => { sessionStorage.setItem('portfolio-effects-overrides', '2'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    Set-EffectsLevel $page 'medium' | Out-Null
+    Check 'the third time holds the level for the visit' ((& $overrides) -eq '3' -and (& $js "document.documentElement.dataset.effects") -eq 'medium') "overrides=$(& $overrides)"
+
+    # A level an older version of the site saved for every visit is cleared.
+    & $js "(() => { localStorage.setItem('portfolio-effects-level', 'high'); ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); return 1; })()" | Out-Null
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    $old = & $js $level | ConvertFrom-Json
+    Check 'a level saved across visits by an older version is forgotten' ($old.effects -eq 'medium' -and $null -eq (& $js "localStorage.getItem('portfolio-effects-level')")) "$($old.effects)/$($old.reason)"
 
     # Everything the page logged or failed to load along the way.
     Clear-CdpEvents $page.Session -Keep '*'

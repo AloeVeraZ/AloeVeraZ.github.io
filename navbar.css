@@ -245,8 +245,8 @@ html[data-primary-input="touch"] .navbar .logo {
    on. Left is Low FX, the middle Medium, the right High (portfolio.js). The
    thumb is a bead of the glass the bar is made of, and the track fills with
    blue behind it as the level rises, so where it stands reads at a glance
-   without a word beside it; the stops it can land on show as dots. A word
-   appears under it only while it is being used. The sparkle says what it is
+   without a word beside it; the stops it can land on show as dots. No word
+   names the level, even while it is being used. The sparkle says what it is
    for.
 
    Its place comes from html[data-effects], so it is right from the first
@@ -395,36 +395,6 @@ html[data-effects="low"] .navbar .fx-slider {
     transform: translateX(var(--fx-drag, 0px));
     transition: background .28s;
 }
-.navbar .fx-slider-tip {
-    position: absolute;
-    top: calc(100% - .25rem);
-    right: 0;
-    padding: .3125rem .625rem;
-    border: 1px solid var(--glass-edge-ring);
-    border-radius: 999px;
-    background: rgba(16, 20, 27, .94);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
-    color: var(--ink);
-    font-size: var(--type-label);
-    line-height: 1.2;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-3px);
-    transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
-}
-html[data-effects="high"] .navbar .fx-slider-tip {
-    background: rgba(16, 20, 27, .76);
-    -webkit-backdrop-filter: blur(10px) saturate(1.4);
-    backdrop-filter: blur(10px) saturate(1.4);
-}
-.navbar .fx-slider.is-telling .fx-slider-tip {
-    opacity: 1;
-    visibility: visible;
-    transform: none;
-    transition-delay: 0s;
-}
 @media (min-width: 901px) {
     .navbar .nav-links {
         position: absolute;
@@ -484,18 +454,9 @@ html[data-effects="high"] .navbar .fx-slider-tip {
         padding-block: .75rem;
         font-size: var(--type-small);
     }
-    /* The slider is the last row, as tall as the others. The list clips
-       whatever spills out of it while it folds, so the word that names the
-       level stands beside the track here rather than under it. */
+    /* The slider is the last row, as tall as the others. */
     .navbar .nav-links .fx-slider { min-height: 48px; }
     .navbar .nav-links .fx-slider-icon { width: 15px; height: 15px; }
-    .navbar .nav-links .fx-slider-tip {
-        top: 50%;
-        right: auto;
-        left: calc(100% + .75rem);
-        transform: translate(-3px, -50%);
-    }
-    .navbar .nav-links .fx-slider.is-telling .fx-slider-tip { transform: translateY(-50%); }
 }
 @media (max-width: 639px) {
     .navbar {
@@ -515,7 +476,6 @@ html[data-effects="high"] .navbar .fx-slider-tip {
     .navbar .fx-slider-track,
     .navbar .fx-slider-fill,
     .navbar .fx-slider-thumb,
-    .navbar .fx-slider-tip,
     .navbar .nav-content::before,
     .navbar .nav-content::after { transition: none; }
 }

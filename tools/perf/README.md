@@ -55,11 +55,13 @@ so every run draws the same sky.
 
 `bench.ps1`, `capture.ps1` and `layout-audit.ps1` take `-Level low`,
 `medium` or `high`, which starts every load at that level as if the visitor
-had chosen it on the slider (`-LowFx` still means `-Level low`). Without it
-each load is a first visit and the page picks its own level. In `ab.ps1` a
-level is an arm's `Js`, for example
-`@{ medium = @{ Js = "localStorage.setItem('portfolio-effects-level', 'medium');" } }`.
-`Set-EffectsLevel` in `Cdp.psm1` moves the slider during a run.
+had chosen it on the slider and insisted on it, so the frame monitor never
+steps it down (`-LowFx` still means `-Level low`). Without it each load is a
+first visit and starts Medium. In `ab.ps1` a level is an arm's `Js`, for
+example
+`@{ medium = @{ Js = "sessionStorage.setItem('portfolio-effects-level', 'medium'); sessionStorage.setItem('portfolio-effects-overrides', '3');" } }`.
+`Set-EffectsLevel` in `Cdp.psm1` moves the slider during a run; a level set
+that way can still be stepped down, as a visitor's can.
 
 ## Reading the numbers
 
