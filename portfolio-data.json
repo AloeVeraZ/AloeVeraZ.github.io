@@ -674,7 +674,7 @@
             "summary": "I built a small ESP32-S3 camera, then added a screen, a photo gallery, and a printed case so I could take and review pictures without another device.",
             "cardSummary": "My first camera took photos but had no screen. For V2, I used a Freenove ESP32-S3 Media Kit to add a live viewfinder, physical controls, and photo playback. I designed a printed case around the board and a 1500 mAh battery.",
             "details": "",
-            "image": "assets/digital-camera-v2.webp",
+            "image": "assets/digital-camera-enclosure.webp",
             "tags": [
                 "ESP32-S3",
                 "Embedded UI",
@@ -733,23 +733,8 @@
                     "label": "GitHub Project"
                 }
             },
-            "imageAlt": "The back of a black 3D-printed handheld camera, with a small colour display and physical navigation buttons.",
-            "imageSrcset": "assets/digital-camera-v2-900.webp 900w, assets/digital-camera-v2.webp 1255w",
+            "imageAlt": "The assembled aloeZ mini mini camera in its printed case.",
             "media": [
-                {
-                    "type": "image",
-                    "src": "assets/digital-camera-v1-v2.webp",
-                    "label": "Screenless V1 beside V2",
-                    "alt": "The first ESP32 camera beside the second version with a display.",
-                    "fit": "contain"
-                },
-                {
-                    "type": "image",
-                    "src": "assets/digital-camera-enclosure.webp",
-                    "label": "Printed enclosure",
-                    "alt": "The assembled aloeZ mini mini camera in its printed case.",
-                    "fit": "contain"
-                },
                 {
                     "type": "image",
                     "src": "assets/digital-camera-viewfinder.webp",
@@ -2052,6 +2037,7 @@
             "id": "glowlings",
             "title": "Glowlings",
             "category": "Electronics",
+            "period": "Started October 2, 2026",
             "collectionOrder": 17,
             "summary": "I made Star, a small electronic keychain with animated eyes that react to touch, tilt, shaking, and charging. It is the first character in my Glowlings project.",
             "cardSummary": "Star is a small ESP32-S3 keychain with a round touch display. I programmed its eyes to follow a finger, react when it is tilted or shaken, and change expression as the battery runs low. Everything runs on the device.",
