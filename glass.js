@@ -59,10 +59,10 @@
     const SURFACES = [
         '.about-highlight', '.skill-group', '.project-card',
         '.hero-buttons > .btn', '.social-links > a', '.social-links > .resume-icon-unavailable',
-        '.contact-links > .btn', '.carousel-arrow'
+        '.contact-links > .btn', '.carousel-arrow', '.icon-control'
     ].join(', ');
     const SURFACE_ROOTS = ['.hero-buttons', '#hero-social', '#about', '#skills', '#projects',
-        '#contact-links-container'];
+        '#contact-links-container', '.navbar', '#project-modal'];
 
     // The rim. bevel is how far in from the edge the glass curves; stretch is
     // the most it may magnify what is behind it, right at the edge; CURVE is
@@ -443,7 +443,7 @@
     // nothing behind it to show: portfolio.js marks those as it turns the
     // ring, because it is the only thing that knows where a card has got to.
     const settle = element => {
-        const seen = !covered
+        const seen = (!covered || !!element.closest('.modal-overlay.active'))
             && showing.get(anchorOf.get(element)) !== false
             && onRing.get(element) !== false
             && !element.hasAttribute('data-ring-hidden');

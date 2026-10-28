@@ -208,6 +208,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { min-width: 0; scroll-behavior: smooth; scrollbar-width: none; background-color: var(--bg); }
+/* Trackpad swipes belong to this page. Keep vertical scrolling native. */
+html, body { overscroll-behavior-x: none; }
 body { position: relative; min-width: 0; isolation: isolate; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; overflow-x: hidden; -ms-overflow-style: none; transition: background-color .65s ease; }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar { display: none; }
@@ -550,7 +552,6 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 .modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(calc(var(--visual-viewport-height) - max(var(--space-4), var(--safe-area-top)) - max(var(--space-4), var(--safe-area-bottom))), var(--modal-max-height)); overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); background: var(--surface); color: var(--ink); border-color: rgba(244,244,241,.2); box-shadow: none; }
 .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; width: 2.625rem; height: 2.625rem; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
-.modal-close:hover { background: #3a3c43; color: var(--ink); transform: rotate(90deg); }
 .modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
 /* The sheet's title is one step below a section title, and its headings one
    step below that. On a phone all three used to land on 29px together. */
@@ -726,9 +727,8 @@ main { padding-top: 0; }
 .collection-toggle:hover > .collection-index,
 .collection-toggle:hover > .collection-copy { transform: translateX(var(--space-3)); }
 .carousel-arrow { border-radius: 0; }
-.modal-card { border: 1px solid rgba(123,168,216,.5); box-shadow: 10px 10px 0 rgba(123,168,216,.2); }
+.modal-card { border: 1px solid rgba(244,244,241,.2); box-shadow: none; }
 .modal-close { border-radius: 0; }
-.modal-close:hover { background: var(--blue); color: #080808; }
 footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
 #contact .contact-desc { margin-top: var(--rhythm-heading); }
@@ -760,7 +760,7 @@ footer { background: transparent; }
         overflow-wrap: normal;
         word-break: normal;
     }
-    .modal-card { box-shadow: 5px 5px 0 rgba(123,168,216,.2); }
+    .modal-card { box-shadow: none; }
     .about-highlight + .about-highlight { margin-left: 0; margin-top: -1px; }
 }
 
@@ -863,7 +863,7 @@ footer { background: transparent; }
 html[data-glass] :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
     backdrop-filter: blur(var(--glass-blur)) saturate(1.4) brightness(var(--glass-brightness));
 }
@@ -873,7 +873,7 @@ html[data-glass] :is(.about-highlight, .skill-group, .project-card,
 html[data-glass="refract"] :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     backdrop-filter: blur(var(--glass-blur)) var(--glass-filter,) saturate(1.4) brightness(var(--glass-brightness));
 }
 /* Glass nobody is looking at. A sheet costs the browser a copy of everything
@@ -897,7 +897,7 @@ html[data-glass] .glass-offscreen {
    drawn by a pseudo-element of its own. */
 html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     background-image: var(--glass-sheen);
 }
 
@@ -908,12 +908,12 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
    gone, the glass runs right out to the edge beneath it. */
 html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     border-width: 0;
 }
 :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow)::before {
+    .contact-links > .btn, .carousel-arrow, .icon-control)::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -962,11 +962,11 @@ html[data-effects="low"] {
     --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .55);
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     transition: transform .25s var(--ease), color .25s ease, box-shadow .25s ease;
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow)::after {
+    .contact-links > .btn, .carousel-arrow, .icon-control)::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -980,35 +980,35 @@ html[data-effects="low"] {
 }
 @media (hover: hover) {
     :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-        .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
+        .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):hover {
         color: var(--glass-lit-ink);
         box-shadow: var(--glass-lit-glow);
     }
     :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-        .contact-links > .btn, .carousel-arrow):not(:disabled):hover::after {
+        .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):hover::after {
         opacity: 1;
     }
     /* A press gives way to the hover's lift, so it still reads as pushed in. */
     :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-        .contact-links > .btn, .carousel-arrow):not(:disabled, .is-pressed):hover {
+        .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled, .is-pressed):hover {
         --control-lift: var(--lift-control);
     }
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed) {
+    .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):is(:focus-visible, :active, .is-pressed) {
     color: var(--glass-lit-ink);
     box-shadow: var(--glass-lit-glow);
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed)::after {
+    .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):is(:focus-visible, :active, .is-pressed)::after {
     opacity: 1;
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow).is-pressed::after {
+    .contact-links > .btn, .carousel-arrow, .icon-control).is-pressed::after {
     transition-duration: .09s;
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow):not(:disabled, .is-pressed):focus-visible {
+    .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled, .is-pressed):focus-visible {
     --control-lift: var(--lift-control);
 }
 /* In High FX a glass button leans toward the cursor the way the cards do
@@ -1021,7 +1021,7 @@ html[data-effects="low"] {
    wide as the hero's, turn just as gently: at one fixed depth, their end
    nearest the cursor swung two dozen pixels out past the button. */
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow):not(:disabled).is-tilting {
+    .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled).is-tilting {
     transform:
         perspective(var(--lean-depth, 18rem))
         rotateX(var(--card-tilt-x, 0deg))
@@ -1029,14 +1029,14 @@ html[data-effects="low"] {
         translateY(var(--control-lift, 0px))
         scale(var(--control-press, 1));
 }
-:is(.social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow) {
+:is(.social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow, .icon-control) {
     --lean-depth: 5rem;
 }
 :is(.hero-buttons > .btn, .contact-links > .btn) {
     --lean-depth: calc(var(--lean-width, 12rem) * 3);
 }
 html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
 }
 
@@ -1079,20 +1079,20 @@ html:is([data-effects="medium"], [data-effects="high"]) {
    blue even over a bright photograph. Apply the same cue to every control. */
 @media (hover: hover) {
     :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
-        .social-links > a, .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
+        .social-links > a, .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):hover {
         --glass-edge-paint: var(--blue);
         --glass-edge-blend: normal;
     }
 }
 :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
-    .social-links > a, .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed),
+    .social-links > a, .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):is(:focus-visible, :active, .is-pressed),
 :is(.about-highlight, .skill-group):focus-within {
     --glass-edge-paint: var(--blue);
     --glass-edge-blend: normal;
 }
 html:is([data-effects="medium"], [data-effects="high"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     box-shadow: var(--glass-shadow);
 }
 html:is([data-effects="medium"], [data-effects="high"]) .project-carousel .project-card.is-carousel-active {
@@ -1101,12 +1101,12 @@ html:is([data-effects="medium"], [data-effects="high"]) .project-carousel .proje
 /* Preserve the blue hover/focus response while keeping the curved face. */
 @media (hover: hover) {
     html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a,
-        .contact-links > .btn, .carousel-arrow):not(:disabled):hover {
+        .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):hover {
         box-shadow: var(--glass-lit-glow);
     }
 }
 html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn, .social-links > a,
-    .contact-links > .btn, .carousel-arrow):not(:disabled):is(:focus-visible, :active, .is-pressed) {
+    .contact-links > .btn, .carousel-arrow, .icon-control):not(:disabled):is(:focus-visible, :active, .is-pressed) {
     box-shadow: var(--glass-lit-glow);
 }
 /* The hero ends on its buttons, right at the edge its overflow clips to, so a
@@ -1138,7 +1138,7 @@ html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn
     html[data-glass] :is(.about-highlight, .skill-group, .project-card,
         .hero-buttons > .btn,
         .social-links > a, .social-links > .resume-icon-unavailable,
-        .contact-links > .btn, .carousel-arrow) {
+        .contact-links > .btn, .carousel-arrow, .icon-control) {
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
     }
@@ -1159,7 +1159,7 @@ html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn
 html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow) {
+    .contact-links > .btn, .carousel-arrow, .icon-control) {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
@@ -1202,7 +1202,7 @@ html:is([data-effects="low"], [data-effects="medium"]) {
 }
 html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
-    .contact-links > .btn, .carousel-arrow)::before {
+    .contact-links > .btn, .carousel-arrow, .icon-control)::before {
     padding: 0;
     background: none;
     mix-blend-mode: normal;
@@ -1482,7 +1482,8 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
 /* The chevron is drawn, not typeset: stroked in the button's own colour with
    rounded ends, and sized to the button so the larger touch arrows keep the
    same proportions. */
-.carousel-arrow svg {
+.carousel-arrow svg,
+.icon-control svg {
     width: 58%;
     height: 58%;
     fill: none;
@@ -2209,28 +2210,28 @@ button:focus-visible,
     color: var(--ink);
     cursor: pointer;
 }
-.nav-toggle > span,
-.nav-toggle > span::before,
-.nav-toggle > span::after {
+.nav-toggle > .nav-toggle-icon,
+.nav-toggle > .nav-toggle-icon::before,
+.nav-toggle > .nav-toggle-icon::after {
     position: absolute;
     width: 1.05rem;
     height: 2px;
     background: currentColor;
     transition: transform .28s var(--ease), background .18s linear;
 }
-.nav-toggle > span {
+.nav-toggle > .nav-toggle-icon {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
-.nav-toggle > span::before,
-.nav-toggle > span::after {
+.nav-toggle > .nav-toggle-icon::before,
+.nav-toggle > .nav-toggle-icon::after {
     content: "";
     left: 0;
     transform-origin: center;
 }
-.nav-toggle > span::before { transform: translateY(-6px); }
-.nav-toggle > span::after { transform: translateY(6px); }
+.nav-toggle > .nav-toggle-icon::before { transform: translateY(-6px); }
+.nav-toggle > .nav-toggle-icon::after { transform: translateY(6px); }
 .nav-toggle[aria-expanded="true"] > span { background: transparent; }
 .nav-toggle[aria-expanded="true"] > span::before { transform: rotate(45deg); }
 .nav-toggle[aria-expanded="true"] > span::after { transform: rotate(-45deg); }
@@ -2285,9 +2286,9 @@ button:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
     .nav-links { transition: none; }
-    .nav-toggle > span,
-    .nav-toggle > span::before,
-    .nav-toggle > span::after { transition: none; }
+    .nav-toggle > .nav-toggle-icon,
+    .nav-toggle > .nav-toggle-icon::before,
+    .nav-toggle > .nav-toggle-icon::after { transition: none; }
 }
 
 /* Shown in place of the project grid when portfolio-data.json cannot be read. */
@@ -2361,6 +2362,7 @@ button:focus-visible,
 .link-btn,
 .modal-quick-link,
 .carousel-arrow,
+.icon-control,
 .social-links a,
 .resume-icon-unavailable {
     transform: translateY(var(--control-lift, 0px)) scale(var(--control-press, 1));
@@ -2375,10 +2377,10 @@ button:focus-visible,
     html :is(.project-card, .about-highlight, .skill-group).is-raised:not(.is-pressed) {
         --card-lift: var(--lift-card);
     }
-    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable):hover:not(.is-raised, .is-pressed, :focus-visible) {
+    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .icon-control, .social-links a, .resume-icon-unavailable):hover:not(.is-raised, .is-pressed, :focus-visible) {
         --control-lift: 0px;
     }
-    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable).is-raised:not(:disabled, .is-pressed) {
+    html :is(.btn, .link-btn, .modal-quick-link, .carousel-arrow, .icon-control, .social-links a, .resume-icon-unavailable).is-raised:not(:disabled, .is-pressed) {
         --control-lift: var(--lift-control);
     }
     /* A raised surface moves on a layer of its own, from the moment it rises
@@ -2388,7 +2390,7 @@ button:focus-visible,
        outrank Low FX's flattened carousels, which take their cards off the
        layers a turning ring keeps them on. */
     html[data-effects] :is(.project-card, .about-highlight, .skill-group, .btn, .link-btn, .modal-quick-link,
-        .carousel-arrow, .social-links a, .resume-icon-unavailable).is-steady {
+        .carousel-arrow, .icon-control, .social-links a, .resume-icon-unavailable).is-steady {
         will-change: transform;
     }
 }
@@ -2423,6 +2425,7 @@ button:focus-visible,
 .btn.is-pressed,
 .link-btn.is-pressed,
 .carousel-arrow.is-pressed,
+.icon-control.is-pressed,
 .social-links a.is-pressed {
     --control-press: .965;
     --control-lift: -1px;
@@ -2437,6 +2440,7 @@ button:focus-visible,
 .btn.is-pressed,
 .link-btn.is-pressed,
 .carousel-arrow.is-pressed,
+.icon-control.is-pressed,
 .social-links a.is-pressed { transition-duration: .09s; }
 
 /* The ripple and the spotlight both need a clip and a containing block. */
@@ -2869,6 +2873,20 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
     bottom: var(--space-3);
 }
 
+/* Circular controls share the arrows' face, rim and pointer response. Keep
+   the close control anchored to the sheet while its contents scroll. */
+.icon-control {
+    padding: 0;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--glass-surface);
+    color: rgba(247, 244, 237, .82);
+}
+.icon-control:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 4px;
+}
+
 /* Every About and Skills card puts its name in the same place: one inset from
    the top-left corner. Skills used to centre their content in the card, so a
    card with fewer tags put its name lower than its neighbours did. The fullest
@@ -2921,8 +2939,12 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
 /* The sheet scrolls the way the page does, with no bar down its side. The bar
    cut a straight edge through the sheet's rounded corner and pushed the close
    button 32px from the side while it sat 16px from the top. */
-.modal-card { scrollbar-width: none; }
-.modal-card::-webkit-scrollbar { display: none; }
+.modal-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.modal-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); scrollbar-width: none; }
+.modal-scroll::-webkit-scrollbar { display: none; }
+.modal-card > .modal-close { position: absolute; display: grid; place-items: center; flex: none; }
+
+body:has(.modal-overlay.active) { overflow: hidden; }
 
 /* A heading in the sheet is built like one on the page: its label 12px above
    its title, both on the left edge. It used to put the label at the left and

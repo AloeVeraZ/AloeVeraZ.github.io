@@ -76,8 +76,8 @@
     </script>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261025-205242">
-    <link rel="stylesheet" href="navbar.css?v=20261025-fx-auto">
+    <link rel="stylesheet" href="portfolio.css?v=20261028-110413">
+    <link rel="stylesheet" href="navbar.css?v=20261027-icon-controls-swipe">
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
@@ -111,8 +111,8 @@
     <nav class="navbar" aria-label="Main navigation">
         <div class="nav-content">
             <a href="#" class="logo" id="nav-name">Angelo Demetroulakos</a>
-            <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu">
-                <span aria-hidden="true"></span>
+            <button class="nav-toggle icon-control" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu">
+                <span class="nav-toggle-icon" aria-hidden="true"></span>
             </button>
             <ul class="nav-links" id="nav-links">
                 <li><a href="#about">About</a></li>
@@ -205,7 +205,8 @@
 
     <div id="project-modal" class="modal-overlay" aria-hidden="true" inert>
         <div class="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <button class="modal-close" id="modal-close" aria-label="Close project details"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            <button class="modal-close icon-control" id="modal-close" type="button" aria-label="Close project details"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+            <div class="modal-scroll" tabindex="0" role="region" aria-label="Project content">
             <div class="modal-header">
                 <h3 id="modal-title" class="modal-title">Project Title</h3>
             </div>
@@ -239,6 +240,7 @@
             <div id="modal-media" class="modal-media" aria-label="Project media"></div>
             <div id="modal-tags" class="project-tags"></div>
             <div id="modal-links" class="project-action-links"></div>
+            </div>
         </div>
     </div>
 
@@ -254,7 +256,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261025-205242"></script>
-    <script src="glass.js?v=20261025-clear-glass2"></script>
+    <script src="portfolio.js?v=20261028-110413"></script>
+    <script src="glass.js?v=20261027-icon-controls-swipe"></script>
 </body>
 </html>

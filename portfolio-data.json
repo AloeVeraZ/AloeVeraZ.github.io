@@ -671,8 +671,8 @@
             "category": "Electronics",
             "period": "Started Summer 2026",
             "collectionOrder": 16,
-            "summary": "I built a compact digital camera around an ESP32 S3, then redesigned it into a more complete handheld device with a live viewfinder, physical controls, onboard storage, and battery power.",
-            "cardSummary": "My first ESP32 S3 camera could take photos, but without a screen I had to connect over Wi-Fi just to see what I captured. For V2, I rebuilt the project into a self contained handheld camera with a live viewfinder, physical controls, menus, a photo gallery, battery power, MicroSD storage, and a custom enclosure.",
+            "summary": "I built a small ESP32-S3 camera, then added a screen, a photo gallery, and a printed case so I could take and review pictures without another device.",
+            "cardSummary": "My first camera took photos but had no screen. For V2, I used a Freenove ESP32-S3 Media Kit to add a live viewfinder, physical controls, and photo playback. I designed a printed case around the board and a 1500 mAh battery.",
             "details": "",
             "image": "assets/digital-camera-v2.webp",
             "tags": [
@@ -682,9 +682,9 @@
                 "3D Printing"
             ],
             "overview": {
-                "problem": "I wanted to build more than a camera module inside a 3D printed case. The goal was to design the electronics, firmware, interface, and enclosure together so the final result worked and felt like an actual standalone camera.",
-                "method": "I started with a simple screenless ESP32 S3 camera and used what I learned from that version to build a much more complete second design. V2 uses a Freenove ESP32 S3 Media Kit with a color display, physical controls, MicroSD storage, a LiPo battery, and a custom enclosure. I also developed the firmware for the live preview, menus, image capture, and onboard gallery.",
-                "result": "The final version works as a self contained pocket camera. It has a live viewfinder, physical controls, menus, onboard photo review, battery power, and full resolution images saved directly to a MicroSD card.",
+                "problem": "V1 could take pictures, but I had to connect over Wi-Fi to see them. I wanted to frame a shot and check the result on the camera itself.",
+                "method": "I moved from a XIAO ESP32S3 Sense to a Freenove ESP32-S3 Media Kit with a 1.14 inch display and five way control. I wrote the camera interface and designed an enclosure for the board and battery.",
+                "result": "V2 has a live viewfinder, saves photos to MicroSD, and lets me browse them one at a time or in a thumbnail grid. It runs on its own battery, though the charge reading is still only an estimate.",
                 "headings": [
                     "Why I Made It",
                     "What I Did",
@@ -693,24 +693,20 @@
             },
             "sections": [
                 {
-                    "heading": "From V1 to V2",
-                    "body": "V1 used a Seeed Studio XIAO ESP32S3 Sense and was intentionally simple. I wired the battery through a physical power switch, added a dedicated shutter button, and used an LED as capture feedback. The shutter itself was made from a standard push button with a 3D printed piece on top so it felt more like an actual button. The biggest limitation was the lack of a screen. The camera could take photos, but I had to connect over Wi-Fi afterward to view or download them, and I had no way to preview the image before pressing the shutter. After building V1, I found the Freenove ESP32 S3 Media Kit. What made it useful was that it already included many of the same interface ideas I had prototyped manually: physical navigation controls, a power button, a status LED, a display, storage, and a camera. Instead of rebuilding those features again from separate components, I used the media kit as the foundation for V2 and focused on improving the actual camera experience."
+                    "heading": "First Camera",
+                    "body": "V1 used a Seeed Studio XIAO ESP32S3 Sense. I added a power switch, shutter button, and LED, with a printed piece over the shutter button. It saved photos and had a Wi-Fi download page, but without a screen I could not see what I was pointing it at."
                 },
                 {
-                    "heading": "Viewfinder and Controls",
-                    "body": "V2 uses the Media Kit's built in 1.14 inch color display as a live viewfinder and menu interface. Navigation is handled through the board's built in five way control, which provides up, down, left, right, and press inputs. The board also includes its own power button and front facing LED, so I no longer needed the separate controls I had wired manually in V1. The firmware uses LVGL and TFT_eSPI for the interface. The live camera image is scaled down for the display preview while the full resolution image is kept for the saved photo."
+                    "heading": "Adding a Screen",
+                    "body": "For V2, I used the Freenove Media Kit because it already had a camera, display, MicroSD slot, and physical controls on one board. The home screen opens either the viewfinder or playback. Pressing the center control takes a photo, and the directional inputs handle navigation."
                 },
                 {
-                    "heading": "Storage and Gallery",
-                    "body": "Captured photos are saved directly to a DCIM folder on the MicroSD card. I also built an onboard gallery so I can review saved photos directly from the camera. This fixed one of the biggest weaknesses of V1, where viewing an image required connecting over Wi-Fi or moving the files to another device."
+                    "heading": "Saving and Reviewing Photos",
+                    "body": "Photos save as BMP files in the /picture/ folder on the MicroSD card at the viewfinder resolution. Playback opens the newest photo first. I can step through the pictures or switch to an eight photo grid, so I no longer need to move the card to another device just to check a shot."
                 },
                 {
-                    "heading": "Case and Power",
-                    "body": "I designed a compact 3D printed enclosure around the camera board, display, buttons, controls, and a 1500 mAh LiPo battery. Because the enclosure and electronics were developed together, I was able to position the screen, controls, camera, and battery around how the device would actually be held and used rather than fitting everything into a generic box afterward. The complete enclosure is included as both a STEP file and an editable Fusion 360 archive so it can be modified or rebuilt."
-                },
-                {
-                    "heading": "Open Documentation",
-                    "body": "I documented the parts, wiring warning, board settings, exact display libraries, setup process, firmware, and CAD files in the repository. The current battery percentage is not reliable, so I also documented that limitation instead of presenting it as an accurate charge reading.Result The project evolved from a basic ESP32 camera experiment into a functional handheld device with its own interface, storage, controls, power system, and enclosure. The biggest improvement was making the camera completely self contained: I can frame a shot, capture it, save it, and review it without connecting to another device."
+                    "heading": "Case and Battery",
+                    "body": "I designed a printed case around the board, screen, controls, and a 1500 mAh LiPo battery. The STEP model and Fusion 360 project are in the repository. The display also shows storage use and an estimated battery percentage. That estimate comes from voltage and can change when USB power is connected."
                 }
             ],
             "links": {
@@ -737,8 +733,38 @@
                     "label": "GitHub Project"
                 }
             },
-            "imageAlt": "A 3D-printed handheld digital camera with a colour touchscreen showing its capture interface.",
-            "imageSrcset": "assets/digital-camera-v2-900.webp 900w, assets/digital-camera-v2.webp 1255w"
+            "imageAlt": "The back of a black 3D-printed handheld camera, with a small colour display and physical navigation buttons.",
+            "imageSrcset": "assets/digital-camera-v2-900.webp 900w, assets/digital-camera-v2.webp 1255w",
+            "media": [
+                {
+                    "type": "image",
+                    "src": "assets/digital-camera-v1-v2.webp",
+                    "label": "Screenless V1 beside V2",
+                    "alt": "The first ESP32 camera beside the second version with a display.",
+                    "fit": "contain"
+                },
+                {
+                    "type": "image",
+                    "src": "assets/digital-camera-enclosure.webp",
+                    "label": "Printed enclosure",
+                    "alt": "The assembled aloeZ mini mini camera in its printed case.",
+                    "fit": "contain"
+                },
+                {
+                    "type": "image",
+                    "src": "assets/digital-camera-viewfinder.webp",
+                    "label": "Live viewfinder",
+                    "alt": "The camera viewfinder interface with framing guides.",
+                    "fit": "contain"
+                },
+                {
+                    "type": "image",
+                    "src": "assets/digital-camera-playback.webp",
+                    "label": "Photo playback",
+                    "alt": "The camera playback interface with grid and home controls.",
+                    "fit": "contain"
+                }
+            ]
         },
         {
             "id": "trainui",
@@ -2021,6 +2047,67 @@
             },
             "imageAlt": "The first plywood A301 mecanum chassis prototype with its wheels fitted.",
             "imageSrcset": "assets/mecanum-chassis-prototype-900.webp 900w, assets/mecanum-chassis-prototype.webp 1200w"
+        },
+        {
+            "id": "glowlings",
+            "title": "Glowlings",
+            "category": "Electronics",
+            "collectionOrder": 17,
+            "summary": "I made Star, a small electronic keychain with animated eyes that react to touch, tilt, shaking, and charging. It is the first character in my Glowlings project.",
+            "cardSummary": "Star is a small ESP32-S3 keychain with a round touch display. I programmed its eyes to follow a finger, react when it is tilted or shaken, and change expression as the battery runs low. Everything runs on the device.",
+            "image": "assets/glowlings-star.webp",
+            "motionImage": "assets/glowlings-star-charging.webp",
+            "imageAlt": "Star, a small round electronic keychain, showing green animated eyes while connected to USB power.",
+            "motionImageAlt": "Star looking around and tilting its eyes while green charging bubbles rise through them.",
+            "tags": [
+                "ESP32-S3",
+                "Animation",
+                "Touch Input",
+                "Embedded Systems"
+            ],
+            "overview": {
+                "problem": "I wanted to make a small character that could react to being held and touched. The eyes needed to do more than repeat an animation.",
+                "method": "I built Star around a Waveshare ESP32-S3 board with a round touch display. I programmed the eye animations and connected them to touch gestures, motion, and battery readings.",
+                "result": "Star follows a finger, changes expression with swipes, and gets dizzy when shaken. Charging adds green bubbles to the eyes, while a low battery makes them red and tired.",
+                "headings": [
+                    "Why I Made It",
+                    "What I Did",
+                    "How It Turned Out"
+                ]
+            },
+            "sections": [
+                {
+                    "heading": "Starting with Star",
+                    "body": "Glowlings is my project for small electronic characters, starting with a keychain called Star. It uses the Waveshare ESP32-S3-Touch-LCD-1.28 board. The face is drawn on the device, so it works without Wi-Fi or a cloud connection. Star was inspired by CREATURE’s Starboy."
+                },
+                {
+                    "heading": "Touch and Movement",
+                    "body": "I gave the same face a few different ways to react. A finger can draw its gaze around the screen, swipes change its expression, and tilting the board moves the eyes. Shaking it brings up spiral pupils before it settles back down. A double tap resets the gaze at the position I am holding it."
+                },
+                {
+                    "heading": "Charging and Sleep",
+                    "body": "Green bubbles rise through the eyes while Star is charging. When the battery gets low, the eyes turn red and the lids droop. A gesture brings up the battery reading. It normally goes to sleep between interactions, but I added an always-on mode with falling stars in the pupils that dims when left alone."
+                },
+                {
+                    "heading": "What Still Needs Work",
+                    "body": "The battery percentage and charging state are estimated from voltage. That means Star can miss a change when it is plugged in at startup or unplugged near a full charge. I documented those limits along with the controls, firmware, and clips of the assembled keychain in the repository."
+                }
+            ],
+            "media": [
+                {
+                    "type": "image",
+                    "src": "assets/glowlings-star-low-battery.webp",
+                    "label": "Low battery expression",
+                    "alt": "Star showing red eyes with lowered lids when its battery is low.",
+                    "fit": "contain"
+                }
+            ],
+            "links": {
+                "projectUrl": {
+                    "url": "https://github.com/AloeVeraZ/Glowlings",
+                    "label": "GitHub Project"
+                }
+            }
         }
     ]
 }

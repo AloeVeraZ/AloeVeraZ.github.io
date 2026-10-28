@@ -435,8 +435,6 @@ html[data-effects="low"] .navbar .fx-slider {
         padding: 0;
         border: 0;
     }
-    .navbar .nav-toggle:hover,
-    .navbar .nav-toggle:focus-visible { color: var(--blue); }
     .navbar .nav-links {
         display: block;
         flex-basis: 100%;

@@ -5802,9 +5802,9 @@ const CARD_SURFACE_SELECTOR = '.project-card, .about-highlight, .skill-group';
 // -- but lean much further: a button a few dozen pixels across has to turn a
 // long way before the lean shows at all.
 const GLASS_BUTTON_SELECTOR = '.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable, '
-    + '.contact-links > .btn, .carousel-arrow';
+    + '.contact-links > .btn, .carousel-arrow, .icon-control';
 const REACTIVE_CARD_SELECTOR = `${CARD_SURFACE_SELECTOR}, ${GLASS_BUTTON_SELECTOR}`;
-const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-btn, .carousel-arrow, .social-links a';
+const PRESSABLE_SELECTOR = '.project-card, .about-highlight-link, .btn, .link-btn, .carousel-arrow, .icon-control, .social-links a';
 const CARD_TILT_DEGREES = 4;
 const BUTTON_TILT_DEGREES = 12;
 
@@ -5826,7 +5826,7 @@ const PRESS_RIPPLE_MAX_SIZE = 460;
 // apart, so a card stays up while the cursor is on a button inside it. Mice
 // only, at every effects level; a touch keeps the plain :hover lift.
 const LIFT_CARD_SELECTOR = CARD_SURFACE_SELECTOR;
-const LIFT_CONTROL_SELECTOR = '.btn, .link-btn, .modal-quick-link, .carousel-arrow, .social-links a, .resume-icon-unavailable';
+const LIFT_CONTROL_SELECTOR = '.btn, .link-btn, .modal-quick-link, .carousel-arrow, .icon-control, .social-links a, .resume-icon-unavailable';
 // How far a raised surface's resting place reaches below where it is now
 // drawn: at least its lift (6px for a card, 3px for a control).
 const LIFT_REACH = 8;
@@ -6399,6 +6399,8 @@ function setupResponsiveCardSlider(container, options) {
     let currentIndex = 0;
     let maxIndex = 0;
     let scrollFrame = 0;
+    let scrollTarget = null;
+    let settleTimer = 0;
 
     const getDistance = () => {
         const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
@@ -6434,10 +6436,24 @@ function setupResponsiveCardSlider(container, options) {
     const goTo = (index, animate = true) => {
         currentIndex = Math.max(0, Math.min(index, maxIndex));
         const distance = getDistance();
+        // Keep the requested destination through intermediate scroll events.
+        // Otherwise a second Next click starts from the first animation's
+        // halfway position and silently loses a step.
+        scrollTarget = currentIndex;
+        window.clearTimeout(settleTimer);
         container.scrollTo({
             left: currentIndex * distance,
             behavior: animate && !reducedMotion.matches ? 'smooth' : 'auto'
         });
+        updateControls();
+        settleTimer = window.setTimeout(settleScroll, 180);
+    };
+
+    const settleScroll = () => {
+        window.clearTimeout(settleTimer);
+        scrollTarget = null;
+        const distance = getDistance();
+        if (distance) currentIndex = Math.max(0, Math.min(Math.round(container.scrollLeft / distance), maxIndex));
         updateControls();
     };
 
@@ -6477,11 +6493,17 @@ function setupResponsiveCardSlider(container, options) {
             scrollFrame = 0;
             const distance = getDistance();
             if (!distance) return;
-            currentIndex = Math.max(0, Math.min(Math.round(container.scrollLeft / distance), maxIndex));
+            if (scrollTarget === null) currentIndex = Math.max(0, Math.min(Math.round(container.scrollLeft / distance), maxIndex));
             updateControls();
+            window.clearTimeout(settleTimer);
+            settleTimer = window.setTimeout(settleScroll, 180);
             retargetPointerSurfaces();
         });
     }, { passive: true });
+    container.addEventListener('scrollend', settleScroll);
+    // A new manual gesture takes over from any pending button animation.
+    container.addEventListener('pointerdown', settleScroll, { passive: true });
+    container.addEventListener('wheel', settleScroll, { passive: true });
 
     // A mouse drags the row the way it drags Featured, with the same landing
     // rules. Touch is left to the browser: its own swipe already carries
@@ -6557,6 +6579,12 @@ function setupResponsiveCardSlider(container, options) {
     }, { passive: true });
     container.addEventListener('pointerup', finishDrag, { passive: true });
     container.addEventListener('pointercancel', finishDrag, { passive: true });
+    window.addEventListener('pointerup', finishDrag, { passive: true });
+    window.addEventListener('pointercancel', finishDrag, { passive: true });
+    container.addEventListener('lostpointercapture', finishDrag);
+    window.addEventListener('blur', () => {
+        if (drag) finishDrag({ pointerId: drag.id });
+    });
     container.addEventListener('click', event => {
         if (!suppressClick) return;
         event.preventDefault();
@@ -7508,10 +7536,21 @@ function setupCarousel(carousel, controls, options = {}) {
     };
     carousel.addEventListener('pointerup', finishDrag, { passive: true });
     carousel.addEventListener('pointercancel', finishDrag, { passive: true });
+    // Vertical gestures never capture the pointer. Their release can land
+    // outside the track; without these fallbacks the ring stays dragging and
+    // autoplay and scroll snapping remain disabled until another click.
+    window.addEventListener('pointerup', finishDrag, { passive: true });
+    window.addEventListener('pointercancel', finishDrag, { passive: true });
+    carousel.addEventListener('lostpointercapture', finishDrag);
+    window.addEventListener('blur', () => finishDrag({}));
     carousel.addEventListener('wheel', event => {
         if (!isEnabled()) return;
-        if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) || Math.abs(event.deltaX) < 8) return;
+        // Cancel even the small momentum tail: letting it escape can start
+        // Chrome's back/forward swipe at the edge of a track. Pinch zoom and
+        // predominantly vertical scrolling remain native.
+        if (event.ctrlKey || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
         event.preventDefault();
+        if (Math.abs(event.deltaX) < 8) return;
         pauseAfterInteraction();
         if (wheelLocked) return;
         wheelLocked = true;
@@ -7618,7 +7657,7 @@ function buildLinkButtons(links = {}) {
 
 function openModal(project) {
     const modal = document.getElementById('project-modal');
-    const modalCard = modal.querySelector('.modal-card');
+    const modalCard = modal.querySelector('.modal-scroll');
     modal.scrollTop = 0;
     if (modalCard) modalCard.scrollTop = 0;
     const isCoursework = project.category === 'Coursework';
@@ -7730,8 +7769,9 @@ function setPageBehindModalInert(inert) {
 
 function setupModal() {
     const modal = document.getElementById('project-modal');
-    const modalCard = modal.querySelector('.modal-card');
+    const modalCard = modal.querySelector('.modal-scroll');
     const close = () => {
+        if (!modal.classList.contains('active')) return;
         modal.querySelectorAll('iframe').forEach(video => {
             video.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }), '*');
             video.src = 'about:blank';
@@ -7749,6 +7789,27 @@ function setupModal() {
         document.dispatchEvent(new CustomEvent('portfolio:modal-close'));
     };
     document.getElementById('modal-close').addEventListener('click', close);
-    modal.addEventListener('click', event => { if (event.target === modal) close(); });
-    document.addEventListener('keydown', event => { if (event.key === 'Escape' && modal.classList.contains('active')) close(); });
+    // A drag that starts in the sheet and ends on the backdrop is not a click
+    // outside. This also avoids closing while selecting project text.
+    let startedOnBackdrop = false;
+    modal.addEventListener('pointerdown', event => { startedOnBackdrop = event.target === modal; });
+    modal.addEventListener('pointercancel', () => { startedOnBackdrop = false; });
+    modal.addEventListener('click', event => {
+        if (event.target === modal && startedOnBackdrop) close();
+        startedOnBackdrop = false;
+    });
+    document.addEventListener('keydown', event => {
+        if (!modal.classList.contains('active')) return;
+        if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+        if (event.key !== 'Tab') return;
+        const controls = [...modal.querySelectorAll('button, a[href], iframe, [tabindex="0"]')]
+            .filter(element => !element.disabled && !element.closest('[hidden], [inert]') && element.getClientRects().length);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+            event.preventDefault(); last?.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+            event.preventDefault(); first?.focus({ preventScroll: true });
+        }
+    });
 }

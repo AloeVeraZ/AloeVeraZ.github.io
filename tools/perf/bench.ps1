@@ -350,7 +350,7 @@ try {
                     $card = Get-Rect $page '#featured-projects-container .project-card' 2
                     Send-Click $page $card[0] $card[1]
                     Start-Sleep -Seconds 2
-                    $distance = [int](Invoke-PageJs $page "(() => { const c = document.querySelector('#project-modal .modal-card'); return c.scrollHeight - c.clientHeight; })()")
+                    $distance = [int](Invoke-PageJs $page "(() => { const c = document.querySelector('#project-modal .modal-scroll'); return c.scrollHeight - c.clientHeight; })()")
                     $row = Measure-Scenario $page $chrome $scenario {
                         Send-ScrollGesture $page ($settings.Width / 2) ($settings.Height / 2) $distance 1800
                     }
