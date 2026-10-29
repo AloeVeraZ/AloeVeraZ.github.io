@@ -234,7 +234,7 @@
             "title": "AI Eye Animatronic Chatbot",
             "category": "Robotics",
             "period": "April 10 to 18, 2025",
-            "collectionOrder": 15,
+            "collectionOrder": 12,
             "summary": "I turned a four servo animatronic eye into an interactive voice assistant that can listen, respond, blink, and move naturally during a conversation.",
             "cardSummary": "The AI Eye Animatronic Chatbot combines an interactive AI assistant with a motorized animatronic eye that moves and reacts during conversations. It uses local AI driven responses and expressive eye movements to create a more engaging and lifelike human robot interaction.",
             "details": "",
@@ -813,7 +813,7 @@
             "title": "ZeroG Hydra 3D Printer",
             "category": "3D Printing",
             "period": "June 2024 to June 2025",
-            "collectionOrder": 12,
+            "collectionOrder": 15,
             "featured": true,
             "summary": "I am building Hydra as a large CoreXY printer that can handle most of its calibration and first layer setup automatically. I started building this when the X1C came out so at the time this machine was very advanced.",
             "cardSummary": "Hydra is a large custom CoreXY 3D printer I am building around the ZeroG Mercury One.1 motion system and Hydra three point bed. It uses automatic bed tramming, Beacon probing, a filament cutter, enclosure sensors, lighting, and a high flow toolhead.",
@@ -2080,6 +2080,13 @@
                 }
             ],
             "media": [
+                {
+                    "type": "image",
+                    "src": "assets/glowlings-star-neutral.webp",
+                    "label": "Neutral purple eyes",
+                    "alt": "Star in its black star-shaped keychain case with its regular purple eyes.",
+                    "fit": "contain"
+                },
                 {
                     "type": "image",
                     "src": "assets/glowlings-star-low-battery.webp",
