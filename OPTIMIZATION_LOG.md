@@ -1499,3 +1499,22 @@ each level is as it was. Opening a project too: most of that is raster of what t
 project shows. One thing that reads oddly: High's first paint on a machine with no
 graphics came at 356 ms against 200 in one five-round run, with single runs from 120
 to 560 in the two arms together, and at 84 ms in both at 3x; not looked into further.
+
+---
+
+## Final checks (every level on any machine)
+
+- `smoke.ps1`: 29 of 29 with graphics acceleration and 27 of 27 without.
+- `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each.
+- `capture.ps1 -TestPattern` at each level on a MacBook-sized screen and a phone,
+  against the base commit: within 2/255 apart from what two captures of the base
+  commit differ by as well (see cycle 38).
+- Scratch scripts against a private Chrome: the still sky and the graphics question by
+  the worker and by every way of falling back, with and without graphics; the glass in
+  High the same as the build before it, arriving, up from Medium and back; a ring
+  through the levels and under the pointer.
+- Not measured: a real slow laptop, a real phone, or any browser but Chrome. Safari
+  and Firefox take the same paths unless they lack `OffscreenCanvas`, WebGL in a
+  worker or a registered custom property, each of which has a fallback that was
+  exercised only by removing it in Chrome. `@property` without support leaves those
+  properties inherited, as they were.
