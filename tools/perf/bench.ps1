@@ -304,12 +304,13 @@ try {
                 }
                 'ring' {
                     $toggle = Get-Rect $page '.collection-toggle' 0
-                    Invoke-PageJs $page "document.querySelector('.collection-toggle').scrollIntoView({ block: 'start' })" | Out-Null
+                    # Clear of the bar, which would otherwise take the click.
+                    Scroll-To $page "document.querySelector('.collection-toggle').getBoundingClientRect().top + scrollY - 160"
                     Start-Sleep -Milliseconds 400
                     $toggle = Get-Rect $page '.collection-toggle' 0
                     Send-Click $page $toggle[0] $toggle[1]
                     Start-Sleep -Seconds 1
-                    Invoke-PageJs $page "document.querySelector('.project-collection .carousel-controls').scrollIntoView({ block: 'start' }); window.scrollBy(0, -100)" | Out-Null
+                    Scroll-To $page "document.querySelector('.project-collection .carousel-controls').getBoundingClientRect().top + scrollY - 140"
                     Start-Sleep -Seconds 1
                     $next = Get-Rect $page '.project-collection .carousel-next' 0
                     $row = Measure-Scenario $page $chrome $scenario {

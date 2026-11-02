@@ -7254,8 +7254,19 @@ function setupCarousel(carousel, controls, options = {}) {
         }
     };
 
+    // How much of a card is left as it goes round the edge of the ring.
+    const ringFade = position => {
+        const fadeStart = Math.max(0, visibleRingRadius - .05);
+        const fadeEnd = visibleRingRadius + .75;
+        const fadeProgress = Math.min(Math.max((Math.abs(position) - fadeStart) / (fadeEnd - fadeStart), 0), 1);
+        return 1 - (fadeProgress * fadeProgress * (3 - 2 * fadeProgress));
+    };
+    // The cards too far round for anything of them to show (updateCardDepth).
+    const RING_PARKED_FADE = .0125;
+    const ringParked = new WeakSet();
     const clearCardDepth = () => {
         cards.forEach(card => {
+            ringParked.delete(card);
             [
                 '--carousel-position',
                 '--carousel-depth',
@@ -7289,6 +7300,19 @@ function setupCarousel(carousel, controls, options = {}) {
         cardStates.forEach(state => {
             const { card, position } = state;
             const depth = Math.min(Math.abs(position), 1.65);
+            // A card round the back of the ring stays where it is until it
+            // comes round. A ring of sixteen wrote its cards' places on all
+            // twenty-two of them, clones included, on every frame of a turn,
+            // and each write has the browser work out that card's style afresh,
+            // for a place at no opacity at all. Once its opacity is written as
+            // none, nothing else about it can show. Not in High, measured:
+            // there the page gives up what it saves here, and more, on the
+            // graphics process (cycle 32).
+            if (settings.ring && document.documentElement.dataset.effects !== 'high'
+                && ringFade(position) <= RING_PARKED_FADE) {
+                if (ringParked.has(card)) return;
+                ringParked.add(card);
+            } else ringParked.delete(card);
             card.style.setProperty('--carousel-position', position.toFixed(3));
             card.style.setProperty('--carousel-depth', depth.toFixed(3));
             if (settings.ring) {
@@ -7327,11 +7351,7 @@ function setupCarousel(carousel, controls, options = {}) {
                 const visibleOpacity = absolutePosition <= 1
                     ? .98 - absolutePosition * .16
                     : Math.max(.4, .82 - (absolutePosition - 1) * .22);
-                const fadeStart = Math.max(0, visibleRingRadius - .05);
-                const fadeEnd = visibleRingRadius + .75;
-                const fadeProgress = Math.min(Math.max((rawAbsolutePosition - fadeStart) / (fadeEnd - fadeStart), 0), 1);
-                const edgeFade = 1 - (fadeProgress * fadeProgress * (3 - 2 * fadeProgress));
-                const circleOpacity = visibleOpacity * edgeFade;
+                const circleOpacity = ringParked.has(card) ? 0 : visibleOpacity * ringFade(position);
                 const visibleOnRing = circleOpacity > .01;
                 card.style.setProperty('--carousel-ring-x', `${(targetX - naturalX).toFixed(2)}px`);
                 card.style.setProperty('--carousel-ring-y', `${Math.min(absolutePosition * 18, 46).toFixed(2)}px`);

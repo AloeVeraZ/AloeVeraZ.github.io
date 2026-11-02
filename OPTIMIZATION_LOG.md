@@ -1118,3 +1118,65 @@ by the worker and by each way of falling back.
 
 **Result:** Improved: not a large saving on average, but the one stall of up to
 half a second that had nothing to do with what the page draws is gone.
+
+---
+
+## Cycle 32: a ring turning restyled every card it holds (adopted)
+
+**Identified bottleneck:** turning a ring in Medium: the page's main thread at
+370-445 ms a second, 255 of it style, 408 elements restyled on every frame. On a
+computer with no graphics acceleration that is 35 long tasks in four and a half
+seconds. (The `ring` scenario in `bench.ps1` had been measuring nothing: the bar
+took its click on the row, so no collection opened. Fixed. Its older numbers
+above are of an arrow press at most.)
+
+**Root-cause hypothesis:** `updateCardDepth` writes eight inherited custom
+properties on all of a ring's cards on every frame, twenty-two of them on a ring
+of sixteen with its clones, though about six show. Each card's own style is
+worked out from nothing after an inline write (about 400 microseconds apiece on
+this laptop, far more than its contents' restyle), and the contents go along for
+the inheritance.
+
+**Proposed modification:** two things. The properties are registered as not
+inherited, since only the card reads them. And below High a card too far round
+the ring for anything of it to show is parked: its opacity is written as none,
+and nothing more until it comes round (`ringFade`, `RING_PARKED_FADE`).
+
+**Implementation:** `portfolio.js` (`updateCardDepth`), `portfolio.css`.
+
+**Before / after (`ring`, three rounds, High five):**
+
+| | Before | After |
+| --- | --- | --- |
+| Medium, 3x: main thread | 366 ms/s | 237 ms/s |
+| Medium, 3x: style | 230 ms/s | 95 ms/s |
+| Medium, 3x: dropped | 1.0% | 0.5% |
+| Medium, no graphics: dropped | 13.7% | 5.3% |
+| Medium, no graphics: long tasks | 35 | 13 |
+| Low, no graphics: frames a second | 27.5 | 35.7 |
+| Low, no graphics: dropped | 36.7% | 19.4% |
+| Low, no graphics: long tasks | 32 | 3 |
+| Low, 3x: main thread | 454 ms/s | 268 ms/s |
+| Low, 3x: dropped (frames) | 8.7% (33) | 12.3% (38) |
+| High, 3x: main thread | 582 ms/s | 555 ms/s |
+| High, 3x: style | 298 ms/s | 270 ms/s |
+| High, 3x: dropped | 7.9% | 7.7% |
+
+**Tried and rejected:** parking in High as well. The page's main thread fell to
+438 ms a second, but over six rounds High dropped 13.9% against 6.8% and showed 44
+frames a second against 50, every round the same way; at MacBook size 8.8% against
+5.2%. The graphics process took 10-15% longer over the same frames. Not understood:
+at Medium, where the same rise is harmless, frames, render passes, screen damage
+and layers are all the same, and burning the saved time on the main thread does not
+bring it back. Taking the parked cards off with `visibility: hidden` did not either.
+So parking stops at High.
+
+**Visual regression:** Pass at rest: Low, Medium and High on a MacBook-sized screen
+and a phone match the commit before to within 2/255, apart from the animated
+picture in an open project and the 30 x 2 px sliver at the foot of the scroll
+indicator, each of which differs between two captures of the same commit too. One
+difference by design, too small to catch in a capture: a card reaching the edge of
+the ring goes from at most .75% opacity to none a few frames sooner.
+**Functional regression:** Pass (`smoke.ps1` at the end of this log).
+
+**Result:** Improved.

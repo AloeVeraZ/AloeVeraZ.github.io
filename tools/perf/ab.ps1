@@ -19,7 +19,9 @@ param(
     [string]$Label = 'ab',
     # The page every arm loads. An arm that overrides index.html needs it
     # named here, as the page asks for / rather than /index.html.
-    [string]$Site = 'http://localhost:8862/'
+    [string]$Site = 'http://localhost:8862/',
+    # The bench Chrome's debugging port: give each run going at once its own.
+    [int]$Port = 9334
 )
 $ErrorActionPreference = 'Stop'
 $arms = Import-PowerShellDataFile $Variants
@@ -32,7 +34,7 @@ for ($round = 1; $round -le $Rounds; $round++) {
         $arm = $arms[$name]
         $overrides = if ($arm.Overrides) { $arm.Overrides } else { @{} }
         $output = & (Join-Path $PSScriptRoot 'bench.ps1') -Config $Config -Scenarios $Scenarios -Label "$Label-$name" `
-            -Site $Site `
+            -Site $Site -Port $Port `
             -InjectCss ([string]$arm.Css) -InjectJs ([string]$arm.Js) -Overrides $overrides 6>&1
         $output | Where-Object { "$_" -match '^\[' } | ForEach-Object { Write-Host "  r$round $name $_" }
         $dir = ($output | Where-Object { "$_" -match '^Results: ' } | Select-Object -Last 1) -replace '^Results: ', ''

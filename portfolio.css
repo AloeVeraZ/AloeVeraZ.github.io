@@ -2329,6 +2329,18 @@ button:focus-visible,
 @property --card-tilt-y { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 @property --card-lift { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @property --card-press { syntax: "<number>"; inherits: false; initial-value: 1; }
+/* Where a turning ring has placed a card, written on all of its cards on every
+   frame of a turn. Only the card reads them. Left to inherit, each write restyled
+   everything inside every card as well, four hundred elements a frame for a ring
+   of sixteen, which was most of what turning one cost the page's main thread. */
+@property --carousel-position { syntax: "*"; inherits: false; }
+@property --carousel-depth { syntax: "*"; inherits: false; }
+@property --carousel-ring-x { syntax: "*"; inherits: false; }
+@property --carousel-ring-y { syntax: "*"; inherits: false; }
+@property --carousel-ring-z { syntax: "*"; inherits: false; }
+@property --carousel-ring-rotate { syntax: "*"; inherits: false; }
+@property --carousel-ring-scale { syntax: "*"; inherits: false; }
+@property --carousel-ring-opacity { syntax: "*"; inherits: false; }
 
 /* Carousel cards splice this into their own transition list. The lean follows
    the cursor with the same weight the grid cards get from their .2s transform
