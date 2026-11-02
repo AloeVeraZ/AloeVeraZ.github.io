@@ -1082,3 +1082,39 @@ goes on the way down to Low, comes back, and is drawn again for a new window
 shape.
 
 **Result:** Improved.
+
+---
+
+## Cycle 31: the graphics question asked off the page's thread (adopted)
+
+**Identified bottleneck:** every load asks WebGL what it is drawing on
+(`askAboutGraphics`), and opening the context holds the page's main thread until
+the graphics process has built it: 10-40 ms in Medium, and in High, with the sky
+being set up behind it, 85 and 217 ms in two of five reloads and 579 ms in one
+profile, the longest task of the load.
+
+**Proposed modification:** the same question in an inline worker, on an
+`OffscreenCanvas`. Its answer counts only when it gets a context: a refusal could
+mean no graphics, or only a browser that gives its workers no WebGL, so a refusal
+is asked again on the page's thread, where refusing costs nothing. No worker, or
+a worker that fails, asks there too. `window.__graphicsForce` tells the page what
+it is drawing on for the perf tools, whose patch of WebGL cannot reach a worker
+(`mac` still reads Apple graphics and keeps its sky at full rate).
+
+**Implementation:** `portfolio.js` (`askAboutGraphics`), `tools/perf/bench.ps1`.
+
+**Before / after (first load, five rounds, 3x):**
+
+| | Before | After |
+| --- | --- | --- |
+| High: longest task | 119 ms (runs 96-217) | 98 ms (runs 91-109) |
+| High: total blocking | 83 ms (runs 53-389) | 49 ms (runs 41-81) |
+| Medium: main thread busy | 215 ms | 197 ms |
+| Medium: long tasks | 1 | 0 |
+
+**Visual regression:** none possible: nothing drawn changes.
+**Functional regression:** Pass: Intel found with graphics and software without,
+by the worker and by each way of falling back.
+
+**Result:** Improved: not a large saving on average, but the one stall of up to
+half a second that had nothing to do with what the page draws is gone.

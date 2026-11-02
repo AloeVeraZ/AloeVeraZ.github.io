@@ -1,3 +1,7 @@
+// What the page asks WebGL for when it wants to know what it is drawing on (see
+// askAboutGraphics): a context that fails rather than run in software.
+const GRAPHICS_QUESTION = { powerPreference: 'low-power', failIfMajorPerformanceCaveat: true };
+
 function setupResponsiveEnvironment() {
     const root = document.documentElement;
     const media = {
@@ -697,19 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // level it started at and the frame monitor steps it down if it has to.
     // It is asked in every level: a visitor can move the slider up at any
     // moment, and the answer is kept for when they do (easeForBuiltInGraphics).
-    const askAboutGraphics = () => {
-        let renderer = '';
-        let software = false;
-        try {
-            const gl = document.createElement('canvas').getContext('webgl', { powerPreference: 'low-power', failIfMajorPerformanceCaveat: true });
-            if (gl) {
-                const info = gl.getExtension('WEBGL_debug_renderer_info');
-                renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
-                gl.getExtension('WEBGL_lose_context')?.loseContext();
-            } else software = true;
-        } catch (error) {
-            renderer = '';
-        }
+    const answerAboutGraphics = (renderer, software) => {
         if (software) {
             root.dataset.effectsRenderer = 'software';
             return;
@@ -718,6 +710,69 @@ document.addEventListener('DOMContentLoaded', () => {
         // Intel's own graphics cards (Arc) are not built in and keep up.
         builtInGraphics = /intel/i.test(renderer) && !/\barc\b/i.test(renderer);
         easeForBuiltInGraphics();
+    };
+    const askAboutGraphicsHere = () => {
+        let renderer = '';
+        let software = false;
+        try {
+            const gl = document.createElement('canvas').getContext('webgl', GRAPHICS_QUESTION);
+            if (gl) {
+                const info = gl.getExtension('WEBGL_debug_renderer_info');
+                renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+                gl.getExtension('WEBGL_lose_context')?.loseContext();
+            } else software = true;
+        } catch (error) {
+            renderer = '';
+        }
+        answerAboutGraphics(renderer, software);
+    };
+    // Opening that context holds the thread that asks until the graphics
+    // process has built it: 10 to 40 milliseconds on a quiet machine, more
+    // than half a second with High's sky being set up behind it. A worker can
+    // wait as long as it likes. It only answers for the machine when it gets a
+    // context: a refusal might mean no graphics, or only that this browser
+    // gives its workers no WebGL, so a refusal is asked again here, where a
+    // refusal costs nothing.
+    const askAboutGraphics = () => {
+        // A testing hook, as window.__glassForce is in glass.js: a worker is
+        // out of reach of what the perf tools lay over the page.
+        if (window.__graphicsForce) {
+            answerAboutGraphics(window.__graphicsForce, false);
+            return;
+        }
+        if (!('OffscreenCanvas' in window) || !('Worker' in window)) {
+            askAboutGraphicsHere();
+            return;
+        }
+        let worker = null, source = '', asked = false;
+        const finish = answer => {
+            if (asked) return;
+            asked = true;
+            worker?.terminate();
+            if (source) URL.revokeObjectURL(source);
+            if (answer) answerAboutGraphics(answer, false);
+            else askAboutGraphicsHere();
+        };
+        try {
+            source = URL.createObjectURL(new Blob([`
+                let renderer = '';
+                try {
+                    const gl = new OffscreenCanvas(1, 1).getContext('webgl', ${JSON.stringify(GRAPHICS_QUESTION)});
+                    if (gl) {
+                        const info = gl.getExtension('WEBGL_debug_renderer_info');
+                        renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || 'unnamed');
+                        gl.getExtension('WEBGL_lose_context')?.loseContext();
+                    }
+                } catch (error) {
+                    renderer = '';
+                }
+                postMessage(renderer);`], { type: 'text/javascript' }));
+            worker = new Worker(source);
+            worker.onmessage = ({ data }) => finish(data);
+            worker.onerror = () => finish('');
+        } catch (error) {
+            finish('');
+        }
     };
     // Half a second at most: a machine drawing in software is never idle,
     // and it used to wait out a two-second timeout in High FX.
