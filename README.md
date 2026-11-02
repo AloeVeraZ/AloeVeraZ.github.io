@@ -9,6 +9,7 @@ Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), 
 | `index.html` | Page structure and the project sheet |
 | `portfolio.css` | Layout, responsive rules and visual effects |
 | `portfolio.js` | Renders the profile, projects, carousels and project sheet |
+| `galaxy.js` | High's living sky, fetched the first time High is wanted |
 | `navbar.css` | The floating navigation bar |
 | `glass.js` | The liquid glass on the bar, cards and buttons (the modes are explained at the top of the file) |
 | `aero.js`, `aero.css` | High's hidden Frutiger Aero sky (see Visual effects). Fetched only when a visitor asks for it |
@@ -59,7 +60,7 @@ Run `build-icons.py` again after using a new `fa-` icon, or it will show up as a
 
 ## Caching
 
-After changing a CSS or JS file, bump its `?v=` suffix in the HTML so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed. `portfolio-data.json` needs no bump: it is fetched with `cache: 'no-cache'`, so the browser checks for a newer copy on every visit.
+After changing a CSS or JS file, bump its `?v=` suffix in the HTML so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed. `galaxy.js` has no `?v=` of its own: it is fetched with `portfolio.js`'s, so a change to it alone needs that one bumped. `portfolio-data.json` needs no bump: it is fetched with `cache: 'no-cache'`, so the browser checks for a newer copy on every visit.
 
 ## Spacing and type
 
@@ -104,12 +105,12 @@ Every level wears the same clear glass, modelled on Apple's Liquid Glass at its 
 | Medium (middle, the default) | Low plus a still starry sky under the lattice, the cards leaning toward the cursor, the light that follows it, and the 3D rings. The sky is drawn once into a picture on the lattice's own layer, so scrolling never redraws it, and the cards are still neither frosted nor bent, so the browser never re-blurs what is behind them. |
 | High (right) | Everything: the sky set moving behind the glass, lightly frosted and bent at the rim, the custom cursor and touch effects. |
 
-- **Where it lives.** A small script in `index.html`'s head picks the level before anything is drawn and writes it to `html[data-effects]`. `portfolio.js` drives the slider, the sky and the frame monitor, `glass.js` decides how the glass is drawn, and the stylesheets key off `data-effects`.
+- **Where it lives.** A small script in `index.html`'s head picks the level before anything is drawn and writes it to `html[data-effects]`. `portfolio.js` drives the slider, Medium's still sky and the frame monitor, `galaxy.js` is High's sky, `glass.js` decides how the glass is drawn, and the stylesheets key off `data-effects`.
 - **Every visit starts Medium.** On every machine, whatever its hardware. High is only ever chosen on the slider.
 - **Remembered for the visit.** Within a tab (`sessionStorage`) a reload or a trip to the policy pages carries on at the level the visit was at: the one last chosen on the slider (`portfolio-effects-level`), or the one the page stepped down to after it (`portfolio-effects-lag`). A new visit starts Medium again. Levels saved across visits by older versions of the site are cleared.
 - **Stepped down when slow, one stop at a time.** A monitor eases the sky, then the glass. If the page still stutters it steps High to Medium, then Medium to Low, never two stops at once, and the thumb slides to show it. A page crawling at ten frames a second or less skips the easing but still drops only one stop.
 - **The visitor gets the last word.** A level chosen by hand is stepped down like any other. Each time the visitor puts it back up after the page lowered it is counted (`portfolio-effects-overrides`), and the third time the page stops stepping it down for the rest of the visit. Only the sky's pace is still eased after that, which changes how often it is drawn and nothing in it.
-- **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out.
+- **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out. The sky's script is not even fetched until High is first wanted, and in Medium and Low `glass.js` watches nothing.
 
 ### The other sky
 

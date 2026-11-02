@@ -70,6 +70,7 @@ $init = @"
   Math.random = () => { state = (state + 0x6D2B79F5) | 0; let t = Math.imul(state ^ (state >>> 15), 1 | state); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const renderer = '$($settings.Renderer)';
   if (renderer) {
+    window.__graphicsForce = renderer;
     const patch = proto => { if (!proto) return; const get = proto.getParameter; proto.getParameter = function (p) { return p === 0x9246 || p === 0x1F01 ? renderer : get.call(this, p); }; };
     patch(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
     patch(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
@@ -303,12 +304,13 @@ try {
                 }
                 'ring' {
                     $toggle = Get-Rect $page '.collection-toggle' 0
-                    Invoke-PageJs $page "document.querySelector('.collection-toggle').scrollIntoView({ block: 'start' })" | Out-Null
+                    # Clear of the bar, which would otherwise take the click.
+                    Scroll-To $page "document.querySelector('.collection-toggle').getBoundingClientRect().top + scrollY - 160"
                     Start-Sleep -Milliseconds 400
                     $toggle = Get-Rect $page '.collection-toggle' 0
                     Send-Click $page $toggle[0] $toggle[1]
                     Start-Sleep -Seconds 1
-                    Invoke-PageJs $page "document.querySelector('.project-collection .carousel-controls').scrollIntoView({ block: 'start' }); window.scrollBy(0, -100)" | Out-Null
+                    Scroll-To $page "document.querySelector('.project-collection .carousel-controls').getBoundingClientRect().top + scrollY - 140"
                     Start-Sleep -Seconds 1
                     $next = Get-Rect $page '.project-collection .carousel-next' 0
                     $row = Measure-Scenario $page $chrome $scenario {

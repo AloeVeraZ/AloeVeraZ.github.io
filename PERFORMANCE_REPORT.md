@@ -6,6 +6,46 @@ point is in [PERFORMANCE_BASELINE.md](PERFORMANCE_BASELINE.md), every
 experiment with its numbers in [OPTIMIZATION_LOG.md](OPTIMIZATION_LOG.md), and
 the tools that took the measurements in [tools/perf/](tools/perf/README.md).
 
+## Every level on any machine (2 November 2026)
+
+Cycles 30-38 in the optimization log. A first load no longer spends the page's
+thread on what it does not need, and a turning ring no longer does the work of
+cards nobody can see. Nothing looks different: every shot at each level matches the
+commit before to within 2/255, apart from what two captures of one commit differ by
+as well.
+
+| | Before | Now |
+| --- | --- | --- |
+| Medium, slow machine*, first load: main thread busy | 1319 ms | 836 ms |
+| Medium, slow machine*, first load: long tasks | 5 | 2 |
+| Medium, slow machine*, first visit: still sky on screen | 1633 ms | 1170 ms |
+| Medium, first visit: bytes | 553 KB | 488 KB |
+| Low, slow machine*, first load: main thread busy | 887 ms | 705 ms |
+| High, 3x, reload: longest task | 100 ms | 70 ms (once up to 579 ms, the WebGL question) |
+| Low, slow machine*, ring turning: dropped | 32.5% | 11% |
+| Low, 3x, ring turning: main thread | 453 ms/s | 121 ms/s |
+| Low, 3x, ring turning: GPU 3D engine | 66% | 30% |
+| Medium, slow machine*, ring turning: dropped | 7.4% | 1.3% |
+| Medium, 3x, ring turning: main thread | 345 ms/s | 234 ms/s |
+
+\* No graphics acceleration and the processor slowed 4x.
+
+- **The still sky and the graphics question run in workers**, so nothing about
+  either holds the page's main thread. The sky comes out the same to the byte.
+- **The sky's script is its own file**, `galaxy.js`, fetched the first time High is
+  wanted, which is two thirds of the site's script a visit at Medium or Low never
+  fetches. The one thing that gets slower: the first move to High of a visit starts
+  the sky's fade-in later, on a slow connection 365 ms after the choice with the
+  slider reached first, where it was 170 ms.
+- **`glass.js` watches the glass only in High**, and the page is laid out once while
+  it is built where it used to be four times, and the cards measured once on a
+  return visit where it used to be twice.
+- **A ring only writes what shows.** Below High a card round the back of the ring is
+  left alone, in Low nothing about a card's place is written at all (it lies flat),
+  and in Low the front card's shadow fades in three steps, which is what spares the
+  graphics process: under 3/255 a step.
+- **Unchanged:** High at 3x on this laptop is still limited by the graphics process,
+  and hover, scrolling and a project opening are where they were at every level.
 ## Medium as the default (25 October 2026, later)
 
 Medium no longer frosts or bends anything: its glass is painted as the flat

@@ -396,8 +396,10 @@
         dueTimer = window.setTimeout(flush, 150);
     };
 
+    // The bar's box is only read by the lens and by the glint along the bar,
+    // neither of which frosted glass has.
     const measure = () => {
-        if (!bar) return;
+        if (!bar || mode === 'frost') return;
         const box = bar.getBoundingClientRect();
         rect = { x: box.left, y: box.top, w: box.width, h: box.height, r: cornerRadius(bar, box.width, box.height) };
     };
@@ -550,10 +552,46 @@
         clearTimeout(scanTimer);
         scanTimer = window.setTimeout(scan, 120);
     };
+    // All of this watching is for the glass High FX frosts and bends: which
+    // sheets are on screen, what size they are, and which a ring has turned
+    // round the back. Below High there is no frost to switch off and no filter
+    // to fit, and it was still being done for every card on the page, each
+    // sheet's size and place asked after on every frame anything moved. So it
+    // starts when High does and stops when High stops, and the marks it left
+    // go with it.
+    let watching = false;
+    let surfaceRootWatches = [];
+    const startWatching = () => {
+        if (watching) return;
+        watching = true;
+        // Cards arrive after the page's data loads, and a collection renders
+        // its cards when it is opened; each container is watched for them.
+        for (const selector of SURFACE_ROOTS) {
+            const container = document.querySelector(selector);
+            if (!container) continue;
+            const watch = new MutationObserver(scheduleScan);
+            watch.observe(container, { childList: true, subtree: true });
+            surfaceRootWatches.push(watch);
+        }
+        // The bar is tracked before anything else: it is in view from the
+        // moment it is tracked, and a filter is only shown on something in
+        // view. The level is set before this file runs (the head of
+        // index.html), so the first call can already be refract; the other
+        // way round, the bar wore its filter unseen until it changed size.
+        if (bar) track(bar);
+        scan();
+    };
+    const stopWatching = () => {
+        if (!watching) return;
+        watching = false;
+        clearTimeout(scanTimer);
+        surfaceRootWatches.forEach(watch => watch.disconnect());
+        surfaceRootWatches = [];
+        [...tracked].forEach(forget);
+    };
 
     /* ---- lens: the sky bends under the bar on its own canvas -------------- */
-    const buffer = document.createElement('canvas');
-    const bufferContext = buffer.getContext('2d');
+    let buffer = null, bufferContext = null;
 
     // Called by the galaxy at the end of every frame, in canvas pixels. Each
     // rim is redrawn in thin slices, and each slice is stretched from a strip
@@ -569,6 +607,10 @@
         const w = Math.min(canvas.width - x, Math.round(rect.w * ratio));
         const h = Math.min(canvas.height - y, Math.round(rect.h * ratio));
         if (w <= 4 || h <= 4) return;
+        if (!buffer) {
+            buffer = document.createElement('canvas');
+            bufferContext = buffer.getContext('2d');
+        }
         if (buffer.width !== w || buffer.height !== h) {
             buffer.width = w;
             buffer.height = h;
@@ -635,6 +677,8 @@
     };
     const applyMode = () => {
         const next = pickMode();
+        const high = root.dataset.effects === 'high';
+        if (high) startWatching();
         if (next !== mode) {
             mode = next;
             root.dataset.glass = mode;
@@ -647,14 +691,9 @@
                 [...worn.keys()].forEach(shed);
             }
         }
-        // Into or out of High FX, the off-screen marks go on or come off.
-        if (root.dataset.effects !== settledLevel) {
-            settledLevel = root.dataset.effects;
-            for (const element of tracked) if (element !== bar && element.isConnected) settle(element);
-        }
+        if (!high) stopWatching();
         measure();
     };
-    let settledLevel = root.dataset.effects;
 
     // A soft highlight tracks the cursor along the bar, the way light slides
     // across a curved surface as you move past it. Fine pointers only.
@@ -680,12 +719,6 @@
     if (plainGlass) {
         if (plainGlass.addEventListener) plainGlass.addEventListener('change', applyMode);
         else if (plainGlass.addListener) plainGlass.addListener(applyMode);
-    }
-    // Cards arrive after the page's data loads, and a collection renders its
-    // cards when it is opened; each container is watched for them.
-    for (const selector of SURFACE_ROOTS) {
-        const container = document.querySelector(selector);
-        if (container) new MutationObserver(scheduleScan).observe(container, { childList: true, subtree: true });
     }
     window.addEventListener('resize', measure, { passive: true });
     // A project open in front of the page. Its overlay is ninety-four per cent
@@ -714,14 +747,7 @@
         }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // The bar is tracked before the mode is first applied: it is in view from
-    // the moment it is tracked, and the filter put on it below is only shown
-    // on something in view. The level is now set before this file runs (the
-    // head of index.html), so the first call can already be refract; the
-    // other way round, the bar wore its filter unseen until it changed size.
-    if (bar) track(bar);
     applyMode();
-    scan();
 
     window.portfolioNavGlass = { paintBackdrop };
 })();

@@ -80,5 +80,7 @@ that way can still be stepped down, as a visitor's can.
   thread, split into drawing the screen (layers, glass filters), replaying
   the sky canvas, rasterising page tiles, and presenting.
 
+Every script takes `-Site` and `-Port` (the bench Chrome's), so a server and a run can sit beside others going at once.
+
 The machine's own load moves every number by 10 to 30 percent between runs.
 Compare arms of one `ab.ps1` run, never numbers from different days.

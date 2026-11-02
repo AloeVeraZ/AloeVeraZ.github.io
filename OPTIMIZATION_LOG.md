@@ -1026,3 +1026,495 @@ hidden, three alternating runs, medians):**
 
 **Result:** Adopted: the difference is inside the runs' own spread.
 `smoke.ps1` 24 of 24 and 22 of 22.
+
+---
+
+# Every level on any machine (1 November 2026)
+
+Medians of interleaved rounds as before. New in these: first loads compared
+from two local servers (the commit before against the working copy), the same
+Chrome and a warm cache, with the busy time and long tasks of the page's main
+thread read from a trace of the first six seconds. Two servers with the same
+files, as a check on the method, came out at 1178 and 1176 ms busy, with single
+runs from 998 to 1434 ms and total blocking time from 318 to 629 ms. No
+graphics here means software compositing and a main thread slowed 4x; the slowed
+thread is the page's alone, so a worker there is measured at full speed.
+
+## Cycle 30: the still sky drawn off the page's thread (adopted)
+
+**Identified bottleneck:** a first load in Medium asks the page's main thread
+for about twice what one in Low does. A trace of it by task, on this laptop at
+3x: drawing the still sky 35 ms, `toBlob` reading it back 38 ms, then four or
+more `IdleEncodeRows` tasks of 6-14 ms. The comment over it said the encoding
+happened off the page's thread; for a PNG, Chromium encodes on the main thread
+in idle time, a few rows at a go. With no graphics each step is 40-300 ms, and
+Medium is where every visit starts.
+
+**Root-cause hypothesis:** nothing about the sky needs the page's thread.
+
+**Proposed modification:** the same drawing, in a worker written out inline
+(`paintStillSky` stands alone and its source text is the worker's), on an
+`OffscreenCanvas`, with `convertToBlob`. The blob comes back and is laid on the
+lattice's layer as before. No `OffscreenCanvas` or no worker falls back to the
+old way on the page's thread (each path checked by breaking it).
+
+**Implementation:** `portfolio.js` (`paintStillSky`, `setupStillSky`).
+
+**Before / after (Medium, five rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| 3x: main thread busy in the first 6 s | 316 ms | 194 ms |
+| 3x: still sky on screen | 352 ms | 285 ms |
+| No graphics: main thread busy | 1441 ms | 1239 ms |
+| No graphics: still sky on screen | 1480 ms | 1075 ms |
+| No graphics: long tasks / total blocking | 5 / 427 ms | 5 / 511 ms (inside the spread) |
+
+**Visual regression:** Pass. One seed drawn by the page's canvas and by the
+worker's comes out the same to the byte (3x, 1470 x 860). Tried first with the
+worker's canvas kept in memory, which spares the graphics process the drawing
+but moves the faintest stars: mean 0.77/255, up to 79/255 on 202 pixels. Not
+visible beside a sky that is different on every visit, but not the same either,
+so the canvas stays on the graphics card.
+**Functional regression:** Pass: the sky arrives by the worker, with no
+`OffscreenCanvas`, with a worker that cannot be built and with one that fails,
+goes on the way down to Low, comes back, and is drawn again for a new window
+shape.
+
+**Result:** Improved.
+
+---
+
+## Cycle 31: the graphics question asked off the page's thread (adopted)
+
+**Identified bottleneck:** every load asks WebGL what it is drawing on
+(`askAboutGraphics`), and opening the context holds the page's main thread until
+the graphics process has built it: 10-40 ms in Medium, and in High, with the sky
+being set up behind it, 85 and 217 ms in two of five reloads and 579 ms in one
+profile, the longest task of the load.
+
+**Proposed modification:** the same question in an inline worker, on an
+`OffscreenCanvas`. Its answer counts only when it gets a context: a refusal could
+mean no graphics, or only a browser that gives its workers no WebGL, so a refusal
+is asked again on the page's thread, where refusing costs nothing. No worker, or
+a worker that fails, asks there too. `window.__graphicsForce` tells the page what
+it is drawing on for the perf tools, whose patch of WebGL cannot reach a worker
+(`mac` still reads Apple graphics and keeps its sky at full rate).
+
+**Implementation:** `portfolio.js` (`askAboutGraphics`), `tools/perf/bench.ps1`.
+
+**Before / after (first load, five rounds, 3x):**
+
+| | Before | After |
+| --- | --- | --- |
+| High: longest task | 119 ms (runs 96-217) | 98 ms (runs 91-109) |
+| High: total blocking | 83 ms (runs 53-389) | 49 ms (runs 41-81) |
+| Medium: main thread busy | 215 ms | 197 ms |
+| Medium: long tasks | 1 | 0 |
+
+**Visual regression:** none possible: nothing drawn changes.
+**Functional regression:** Pass: Intel found with graphics and software without,
+by the worker and by each way of falling back.
+
+**Result:** Improved: not a large saving on average, but the one stall of up to
+half a second that had nothing to do with what the page draws is gone.
+
+---
+
+## Cycle 32: a ring turning restyled every card it holds (adopted)
+
+**Identified bottleneck:** turning a ring in Medium: the page's main thread at
+370-445 ms a second, 255 of it style, 408 elements restyled on every frame. On a
+computer with no graphics acceleration that is 35 long tasks in four and a half
+seconds. (The `ring` scenario in `bench.ps1` had been measuring nothing: the bar
+took its click on the row, so no collection opened. Fixed. Its older numbers
+above are of an arrow press at most.)
+
+**Root-cause hypothesis:** `updateCardDepth` writes eight inherited custom
+properties on all of a ring's cards on every frame, twenty-two of them on a ring
+of sixteen with its clones, though about six show. Each card's own style is
+worked out from nothing after an inline write (about 400 microseconds apiece on
+this laptop, far more than its contents' restyle), and the contents go along for
+the inheritance.
+
+**Proposed modification:** two things. The properties are registered as not
+inherited, since only the card reads them. And below High a card too far round
+the ring for anything of it to show is parked: its opacity is written as none,
+and nothing more until it comes round (`ringFade`, `RING_PARKED_FADE`).
+
+**Implementation:** `portfolio.js` (`updateCardDepth`), `portfolio.css`.
+
+**Before / after (`ring`, three rounds, High five):**
+
+| | Before | After |
+| --- | --- | --- |
+| Medium, 3x: main thread | 366 ms/s | 237 ms/s |
+| Medium, 3x: style | 230 ms/s | 95 ms/s |
+| Medium, 3x: dropped | 1.0% | 0.5% |
+| Medium, no graphics: dropped | 13.7% | 5.3% |
+| Medium, no graphics: long tasks | 35 | 13 |
+| Low, no graphics: frames a second | 27.5 | 35.7 |
+| Low, no graphics: dropped | 36.7% | 19.4% |
+| Low, no graphics: long tasks | 32 | 3 |
+| Low, 3x: main thread | 454 ms/s | 268 ms/s |
+| Low, 3x: dropped (frames) | 8.7% (33) | 12.3% (38) |
+| High, 3x: main thread | 582 ms/s | 555 ms/s |
+| High, 3x: style | 298 ms/s | 270 ms/s |
+| High, 3x: dropped | 7.9% | 7.7% |
+
+**Tried and rejected:** parking in High as well. The page's main thread fell to
+438 ms a second, but over six rounds High dropped 13.9% against 6.8% and showed 44
+frames a second against 50, every round the same way; at MacBook size 8.8% against
+5.2%. The graphics process took 10-15% longer over the same frames. Not understood:
+at Medium, where the same rise is harmless, frames, render passes, screen damage
+and layers are all the same, and burning the saved time on the main thread does not
+bring it back. Taking the parked cards off with `visibility: hidden` did not either.
+So parking stops at High.
+
+**Visual regression:** Pass at rest: Low, Medium and High on a MacBook-sized screen
+and a phone match the commit before to within 2/255, apart from the animated
+picture in an open project and the 30 x 2 px sliver at the foot of the scroll
+indicator, each of which differs between two captures of the same commit too. One
+difference by design, too small to catch in a capture: a card reaching the edge of
+the ring goes from at most .75% opacity to none a few frames sooner.
+**Functional regression:** Pass (`smoke.ps1` at the end of this log).
+
+**Result:** Improved.
+
+---
+
+## Cycle 33: glass.js only watches the glass in High (adopted)
+
+**Identified bottleneck:** below High glass.js has nothing to frost or bend, but
+it still tracked every sheet on the page (a size observer on each, an intersection
+observer per ring and for the page, a mutation observer per ring and per section,
+all marks only High reads), and it read the bar's box as it ran, forcing the
+page's style and layout partway through loading, for a lens and a glint that frosted
+glass does not have.
+
+**Proposed modification:** the watching starts when High does and stops when High
+does (`startWatching`, `stopWatching`), and everything it left behind goes with it.
+The bar's box is only read outside frost, and the lens's spare canvas is only made
+for the lens.
+
+**Implementation:** `glass.js`.
+
+**Before / after (six rounds, three for the runtime rows):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics, Medium, load: DOMContentLoaded | 360 ms | 278 ms |
+| No graphics, Medium, load: main thread busy | 1235 ms | 1112 ms |
+| No graphics, Medium, load: total blocking | 505 ms | 431 ms |
+| 3x, Medium, scroll: main thread | 172 ms/s | 159 ms/s |
+| 3x, High, load: total blocking | 77 ms | 60 ms (inside the spread) |
+| 3x, level switches: dropped frames | 67 | 64 |
+
+With no graphics, scrolling and opening every collection came out level, inside
+their spreads.
+
+**Visual regression:** none possible below High; in High, a check of the page in a
+private Chrome gives the same numbers from this build and the one before: arriving
+in High, up from Medium, with a collection opened and back down and up again, the
+same sheets wear a filter and the same ones carry the off-screen mark.
+**Functional regression:** Pass (`smoke.ps1` at the end of this log).
+
+**Result:** Improved.
+
+---
+
+## Cycle 34: the cursor's light, not inherited (rejected again)
+
+**Identified bottleneck:** with the cursor on a card in Medium, style is 172-190 ms
+of the page's 390 ms a second: the card and the 24 elements in it, 3-4 ms a frame.
+
+**Root-cause hypothesis:** `--card-glow`, `-x` and `-y` are inherited, as cycle 2
+found. In High the sparks muddied that test; Medium has none.
+
+**Before / after (`hover`, three rounds):** with them registered as not inherited
+and the card's `::after` asking for them by name, style 172 -> 191 ms/s, main thread
+385 -> 394 ms/s, dropped 2.8 -> 3.4%.
+
+**Result:** Rejected, as in cycle 2, and now for a reason. Selector matching across
+that whole run came to 105 ms out of 2985 in style (with tracing on, so slower than
+real), and a ring's cards tell the same story (cycle 32): what costs is working out
+one card's own style after an inline write, not its contents or the selectors. The
+writes are what would have to go, and what they write is the lean and the light.
+
+---
+
+## Cycle 35: laying the page out once while it is built (adopted)
+
+**Identified bottleneck:** after the still sky, the biggest task of a load on a slow
+machine is the one that renders the data, 270-440 ms with the main thread slowed 4x,
+and after it the card measure runs a second time, 60-130 ms more in one task. By
+task, with the elements each style pass touched: three layouts forced mid-build, the
+measure's own, then the whole page restyled again, and laid out again in the frame
+after.
+
+**Root-cause hypothesis:**
+- Setting `scrollLeft = 0` on the About and Skills rows and the featured row, which
+  are not sliders on a desktop and have nothing to scroll back from, forces a layout
+  each time, between one row being built and the next. They are built next to each
+  other, so each layout is mostly wasted.
+- `--card-content-height` is written on the root, where it restyles and lays out
+  what is on the page, for what only project cards read. `--visual-viewport-height`
+  the same, at every load and every change of a phone's toolbars, for what only an
+  open project reads.
+- The root's attributes are written after the read that forces style, not before.
+- The second measure runs because the type "has just arrived", and it had: three
+  faces nothing uses until the data renders (Barlow Condensed 800 and the two lighter
+  Font Awesome faces) are first asked for by the layout that measures the cards. So
+  every visit, not only a first, measures them while those are on their way.
+
+**Proposed modification:** each of those. The rows skip the scroll unless they were
+sliders. The two properties go on `#projects` and `#project-modal`, with
+`--card-height` declared on `#projects` so it can see what is written there. The
+environment writes first and reads after. The three faces are asked for before the
+data is fetched, and the second measure runs only if a face is still loading after
+the first. The page draws in all three, so this costs no bytes; a first visit, with
+the type still on its way, measures twice as before.
+
+**Implementation:** `portfolio.js` (`setupResponsiveEnvironment`,
+`setupResponsiveCardSlider`, `setupCarousel`, `setupProjectCardFit`, the data fetch),
+`portfolio.css`.
+
+**Before / after (first load, Medium, six rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics: main thread busy | 1155 ms | 984 ms |
+| No graphics: long tasks | 5 | 3 |
+| No graphics: total blocking | 512 ms (runs 400-681) | 357 ms (runs 279-444) |
+| No graphics: longest task | 390 ms | 363 ms |
+| 3x: main thread busy | 182 ms (runs 163-209) | 156 ms (runs 125-168) |
+| Forced layouts while building | 4 | 1 |
+
+**Visual regression:** Pass: Low, Medium and High on a MacBook-sized screen and a
+phone match the base commit to within 2/255 apart from the open project's animated
+picture and the 30 x 2 px sliver noted above (the same run compared with itself shows
+those too).
+**Functional regression:** Pass (`smoke.ps1` and `layout-audit.ps1` at the end of
+this log).
+
+**Result:** Improved.
+
+---
+
+## Cycle 36: the sky fetched when it is wanted (adopted)
+
+**Identified bottleneck:** `setupGalaxyField` is 265 KB of the site's 433 KB of
+script, 73 KB of its 117 KB off the wire. Every visit starts at Medium and High is
+only ever chosen on the slider, yet every visit downloaded it, set it up (18-50 ms of
+script with the main thread slowed 4x, a canvas context, its listeners and observers)
+and released it again.
+
+**Proposed modification:** `galaxy.js`, fetched the first time High is wanted, by a
+stand-in with the same methods (`setupDeferredGalaxy`). Before it arrives its level
+and easing are kept for it; nothing else it is told matters yet. It carries the
+`?v=` of the `portfolio.js` that fetched it. To spare a first move to High the wait,
+the file is fetched, not run, as soon as the pointer or the keyboard reaches the
+slider. Its two random rolls are thrown when the page starts, as before, so a seeded
+run draws the same sky.
+
+**Implementation:** `portfolio.js`, new `galaxy.js`.
+
+**Before / after (first load, five rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| First visit: bytes | 556 KB | 487 KB |
+| First visit: `portfolio.js` off the wire | 117 KB | 48 KB |
+| First visit, no graphics: main thread busy | 1236 ms | 1197 ms |
+| First visit, no graphics: total blocking | 541 ms | 481 ms (inside the spread) |
+| Return visit, no graphics: main thread busy | 1045 ms | 920 ms |
+| Return visit, no graphics: long tasks | 3 | 2 |
+| Return visit, no graphics: DOMContentLoaded | 328 ms | 272 ms |
+| Medium: listeners on the page | 432 | 418 |
+| High, 3x, at rest: main thread | 104 ms/s | 98 ms/s |
+| High, 3x, scroll: dropped | 28.4% | 27.7% |
+| High, 3x, level walk: dropped frames | 67 | 70 |
+
+**The cost, the one thing here that gets slower:** the first move to High of a visit
+on a 200 KB/s connection with 150 ms of latency starts the sky's fade-in 365 ms after
+the choice with the slider reached first, 710 ms without a pointer on it first (a
+keyboard reaches it by focus, a script's direct change does not count), where it was
+170 ms before. The glass changes at once and Medium's sky stays behind it until the
+new one is in, as it always did while High's sky was being built (checked). Later
+moves are as they were, and a reload at High starts the file at once. If the file
+cannot be fetched High has no sky, only its glass over the plain backdrop, and asks
+again the next time it is chosen.
+
+**Visual regression:** none possible once it is in: the same code, the same seed.
+**Functional regression:** Pass: `smoke.ps1`, 29 of 29, including a sky that rests
+behind an open project and moves again.
+
+**Result:** Improved.
+
+---
+
+## Cycle 37: a shadow's fade was most of what a ring cost in Low (adopted)
+
+**Identified bottleneck:** turning a ring in Low, the graphics process rasterises
+tiles for 460-560 ms a second at 3x, 67% of the 3D engine against Medium's 17%, and
+drops 8-10% of frames. Composited scrolling for the row (`will-change:
+scroll-position`) changed nothing, and neither did taking the turn's `z-index`
+changes out.
+
+**Root-cause hypothesis:** in Low a card has no layer of its own. The card coming to
+the front fades in its deep shadow over .3s and the card leaving fades its out, about
+the length of a turn, and every frame of that fade paints the row and rasterises its
+tiles again. Taking the shadow away entirely (an ablation) took the tiles to 64 ms a
+second and the dropped frames from 34 to 1.
+
+**Proposed modification:** in Low the fade goes in three steps. That shadow only
+moves a pixel by 8/255 at most (a shot with and without it), so each step is under
+3/255. Medium and High, where each card is a layer, gain nothing from it (tiles 92 ->
+84 and 125 -> 130 ms/s, dropped 2.1 -> 1.4% and 11.2 -> 12.9%) and keep the smooth
+fade.
+
+**Implementation:** `portfolio.css`.
+
+**Before / after (`ring` in Low, three rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| 3x: dropped (frames) | 7.7% (22) | 0.6% (1) |
+| 3x: GPU 3D engine | 69% | 36% |
+| 3x: graphics process | 71% | 32% |
+| 3x: tiles | 461 ms/s | 167 ms/s |
+| MacBook size: dropped (frames) | 1.6% (4) | 0.6% (1) |
+| MacBook size: GPU 3D engine | 39% | 25% |
+| No graphics: dropped frames | 63 | 60 |
+| No graphics: main thread | 879 ms/s | 813 ms/s |
+
+(Frames shown a second fall with these, 47 to 38, because there are fewer of them to
+show.)
+
+**Visual regression:** Low's captures match to within 2/255 at rest. In motion, one
+change by design and not one to see: the deep shadow arrives in three steps of under
+3/255 in place of a smooth .3s.
+**Functional regression:** Pass.
+
+**Result:** Improved.
+
+---
+
+## Cycle 38: Low's ring writes only what Low shows (adopted)
+
+**Identified bottleneck:** with no graphics acceleration a ring in Low still drops
+18% of its frames, with style at 208 ms a second. Nothing about a card's place on the
+ring is read in Low, where the rings lie flat (`portfolio.css`), yet the six or so
+cards near the front (cycle 32 parked the rest) had all of it written on every frame,
+and each write has the browser work that card's style out again.
+
+**Proposed modification:** in Low a ring only says which card is in front. The
+stylesheet takes the rest: every card answers the pointer and the one in front stands
+over its neighbours, which also covers whatever a level above left on them. A press
+on a card works out how far round it is from where it stands. Going up from Low, an
+open ring is given its places at once.
+
+**Implementation:** `portfolio.js` (`updateCardDepth`, the ring's click, an observer
+of `data-effects`), `portfolio.css`.
+
+**Before / after (`ring` in Low, three rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics: dropped (frames) | 18.4% (56) | 9.5% (31) |
+| No graphics: frames a second | 29.4 | 34.5 |
+| No graphics: style | 208 ms/s | 117 ms/s |
+| 3x: main thread | 211 ms/s | 119 ms/s |
+| 3x: style | 85 ms/s | 18 ms/s |
+| 3x: dropped (frames) | 0.5% (1) | 1.1% (2) |
+
+**Visual regression:** Pass: all three levels match the base commit at rest on a
+MacBook-sized screen and a phone, apart from what two captures of one commit differ by
+as well: the open project's animated picture, the 30 x 2 px sliver, and on a phone the
+length of the scroll indicator's fill, depending on how much of the page has been
+measured when the shot is taken. In Low the z-order of the cards no longer changes
+through a turn; they never overlap there.
+**Functional regression:** Pass: with an open ring Low to Medium to High and back gives
+the same places as arriving at each level; in Low a press on the front card opens it,
+a press on the card beside it opens that one and walks the ring round to it, and the
+arrows turn it; in Medium a full walk of the ring leaves the right cards showing.
+
+**Result:** Improved.
+
+---
+
+## Tried and not kept in this round
+
+- **The scroll indicator as a scroll-driven animation** on the compositor. Low at 3x:
+  main thread 125 -> 100 ms/s, dropped frames 10 -> 12. Medium with no graphics: main
+  thread 691 -> 691 ms/s, dropped frames 1 -> 1. No gain anyone would see, for a second
+  way of drawing the same bar.
+- **Taking the fade animation off the clones the card measure lays out.** A
+  first load: main thread busy 960 -> 880 ms, total blocking 287 -> 276 ms, runs
+  overlapping; timed in place, 88 -> 75 ms a measure with single runs from 43 to 193.
+- **The cards' scroll-driven fade (`.project-copy`) as a cost at all.** Ablated: hover
+  380 -> 376 ms/s, ring 205 -> 210 ms/s, collections 347 -> 312 ms/s, dropped frames
+  the same. It stays.
+
+---
+
+## Each level against the commit before these cycles (measured)
+
+The base commit against the finished branch. First loads from two local servers, a
+warm cache and five rounds, `first visit` with the cache cleared; the rest as
+interleaved `ab.ps1` runs of two rounds, so treat small differences as level.
+
+| First load | Low before | Low now | Medium before | Medium now | High before | High now |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3x: main thread busy | 160 ms | 107 ms | 268 ms | 150 ms | 1019 ms | 969 ms |
+| 3x: longest task | 37 ms | 35 ms | 42 ms | 39 ms | 100 ms | 70 ms |
+| 3x: total blocking | 0 | 0 | 0 | 0 | 82 ms | 26 ms |
+| No graphics: main thread busy | 887 ms | 705 ms | 1319 ms | 836 ms | 5798 ms | 5563 ms |
+| No graphics: long tasks | 3 | 2 | 5 | 2 | 38 | 37 |
+| No graphics: total blocking | 271 ms | 236 ms | 412 ms | 264 ms | 3429 ms | 3342 ms |
+| No graphics: longest task | 305 ms | 273 ms | 327 ms | 285 ms | 809 ms | 523 ms |
+
+First visit, Medium, no graphics: 553 -> 488 KB; main thread busy 1654 -> 1169 ms;
+long tasks 6 -> 3; total blocking 653 -> 520 ms; the still sky on screen at 1633 ->
+1170 ms.
+
+| In use | Low before | Low now | Medium before | Medium now | High before | High now |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3x, ring: dropped | 7.1% | 0.6% | 0.9% | 0% | 5.6% | 6.1% |
+| 3x, ring: main thread (ms/s) | 453 | 121 | 345 | 234 | 570 | 547 |
+| 3x, ring: GPU 3D engine | 66% | 30% | 18% | 19% | 73% | 72% |
+| No graphics, ring: dropped | 32.5% | 11% | 7.4% | 1.3% | - | - |
+| No graphics, ring: long tasks | 30.5 | 0 | 35 | 6 | - | - |
+| 3x, scroll: dropped | 5.5% | 4.2% | 9.5% | 9.3% | 26.2% | 28.4% |
+| 3x, scroll: main thread (ms/s) | 125 | 114 | 131 | 131 | 160 | 131 |
+| 3x, cursor over cards: dropped | 1.2% | 1.2% | 2.4% | 2.4% | 15.2% | 15.0% |
+| 3x, project open and close: dropped | 13.4% | 12.8% | 12.4% | 14.3% | 22.9% | 24.1% |
+| 3x, every collection, then scroll: dropped | 2.9% | 2.2% | 2.1% | 2.2% | 25.2% | 27.2% |
+| No graphics, every collection: dropped | 13.5% | 7.9% | 17.1% | 13.1% | - | - |
+| At rest, High, 3x: main thread (ms/s) | - | - | - | - | 105 | 95 |
+
+Three things this does not change. High on this laptop at 3x is still limited by
+the graphics process, and its dropped frames are where they were. Under the cursor
+each level is as it was. Opening a project too: most of that is raster of what the
+project shows. One thing that reads oddly: High's first paint on a machine with no
+graphics came at 356 ms against 200 in one five-round run, with single runs from 120
+to 560 in the two arms together, and at 84 ms in both at 3x; not looked into further.
+
+---
+
+## Final checks (every level on any machine)
+
+- `smoke.ps1`: 29 of 29 with graphics acceleration and 27 of 27 without.
+- `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each.
+- `capture.ps1 -TestPattern` at each level on a MacBook-sized screen and a phone,
+  against the base commit: within 2/255 apart from what two captures of the base
+  commit differ by as well (see cycle 38).
+- Scratch scripts against a private Chrome: the still sky and the graphics question by
+  the worker and by every way of falling back, with and without graphics; the glass in
+  High the same as the build before it, arriving, up from Medium and back; a ring
+  through the levels and under the pointer.
+- Not measured: a real slow laptop, a real phone, or any browser but Chrome. Safari
+  and Firefox take the same paths unless they lack `OffscreenCanvas`, WebGL in a
+  worker or a registered custom property, each of which has a fallback that was
+  exercised only by removing it in Chrome. `@property` without support leaves those
+  properties inherited, as they were.
