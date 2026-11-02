@@ -465,12 +465,25 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 /* At rest the arrow points up and the row reads as ordinary text. Under the
    cursor it turns blue and flips to point down at the collection it opens --
    the glyph is a down arrow held upside down, so hovering rotates it back the
-   right way up rather than swapping it for a different icon. */
-.about-highlight-cta i { transform: rotate(180deg); transition: transform .18s var(--ease), color .18s ease; }
+   right way up rather than swapping it for a different icon.
+
+   The turn runs through a registered property rather than `transition:
+   transform`, and that is what stops About's cards leaving lines above them.
+   A transform transition puts the arrow on a compositor layer of its own while
+   it runs, and the card's rim, painted over the arrow, has to go on another:
+   three layers instead of one, for exactly the arrow's .18s. Those fold back
+   into the card while its .2s lift still has a little way to go, and on a
+   high-density screen the top row of the rim's layer was left on the glass
+   where it had last been drawn: a line above the card, one more for each pass.
+   Only these three cards have an arrow, so only these three did it. A
+   registered property turns on the page's thread and asks for no layer, so
+   the card stays one layer from start to finish, as a Skills card does. */
+@property --about-arrow-turn { syntax: "<angle>"; inherits: false; initial-value: 180deg; }
+.about-highlight-cta i { transform: rotate(var(--about-arrow-turn)); transition: --about-arrow-turn .18s var(--ease), color .18s ease; }
 .about-highlight-link:hover .about-highlight-cta,
 .about-highlight-link:focus-visible .about-highlight-cta { color: var(--blue); }
 .about-highlight-link:hover .about-highlight-cta i,
-.about-highlight-link:focus-visible .about-highlight-cta i { transform: rotate(360deg); }
+.about-highlight-link:focus-visible .about-highlight-cta i { --about-arrow-turn: 360deg; }
 #about > .section-header, #about > .bio-text,
 #contact > .section-header, #contact > .contact-desc, #contact > .contact-links { margin-left: 0; }
 

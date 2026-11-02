@@ -72,12 +72,16 @@
         else if (levels.indexOf(chosen) > -1) { level = chosen; reason = 'manual'; }
         root.setAttribute('data-effects', level);
         root.setAttribute('data-effects-reason', reason);
+        if (level === 'high' && read('sessionStorage', 'portfolio-aero') === '1') root.setAttribute('data-aero', '');
     })();
     </script>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261028-110413">
+    <link rel="stylesheet" href="portfolio.css?v=20261101-230448">
     <link rel="stylesheet" href="navbar.css?v=20261027-icon-controls-swipe">
+    <!-- High FX's other sky (aero.js), kept across a reload in this visit. Its
+         stylesheet is fetched only for the visitor who turned it on. -->
+    <script>if (document.documentElement.hasAttribute('data-aero')) document.write('<link id="aero-styles" rel="stylesheet" href="aero.css?v=20261102a">');</script>
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
@@ -256,7 +260,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261028-110413"></script>
+    <script src="portfolio.js?v=20261101-230448"></script>
     <script src="glass.js?v=20261027-icon-controls-swipe"></script>
 </body>
 </html>
