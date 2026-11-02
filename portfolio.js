@@ -485,6 +485,119 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     galaxyField.addEventListener('skyshown', settleBackdrop);
 
+    // ---- The other sky ---------------------------------------------------
+    // Five quick presses on the slider's High stop swap the space sky for a
+    // Frutiger Aero one, and five more swap it back; a half-second's pause
+    // starts the count again, and the sky belongs to High alone. All of it is
+    // in aero.js and aero.css, which are not fetched until the fifth press, so
+    // this counter is the only thing it costs anyone who never finds it. Going
+    // down a level, by choice or because the page had to, hands all of it back
+    // and shows that level's own backdrop; coming back up to High brings the
+    // choice back with it, for the rest of the visit.
+    const AERO_PRESSES = 5;
+    const AERO_PRESS_GAP_MS = 400;
+    const AERO_QUIET_MS = 2500;
+    const AERO_VERSION = '20261102a';
+    const aeroStorageKey = 'portfolio-aero';
+    let aeroWanted = false;
+    try {
+        aeroWanted = sessionStorage.getItem(aeroStorageKey) === '1';
+    } catch (error) {
+        aeroWanted = false;
+    }
+    let aeroShowing = false;
+    let aeroPresses = 0;
+    let aeroLastPress = 0;
+    let aeroQuietUntil = 0;
+    // Bumped by every change of mind, so a sky still getting ready when the
+    // visitor moves on is not shown over whatever they moved on to.
+    let aeroRequest = 0;
+    let aeroLoading = null;
+    const loadAero = () => {
+        if (aeroLoading) return aeroLoading;
+        const fetched = (element, attach) => new Promise((resolve, reject) => {
+            element.onload = resolve;
+            element.onerror = reject;
+            attach(element);
+        });
+        const styles = document.getElementById('aero-styles');
+        const sheet = styles ? Promise.resolve() : fetched(Object.assign(document.createElement('link'), {
+            id: 'aero-styles', rel: 'stylesheet', href: `aero.css?v=${AERO_VERSION}`
+        }), element => document.head.appendChild(element));
+        const code = fetched(Object.assign(document.createElement('script'), {
+            src: `aero.js?v=${AERO_VERSION}`
+        }), element => document.head.appendChild(element));
+        aeroLoading = Promise.all([sheet, code]).then(() => window.portfolioAero);
+        aeroLoading.catch(() => { aeroLoading = null; });
+        return aeroLoading;
+    };
+    // The swap is one crossfade of the whole page where the browser can do
+    // that: the sky, the ink and the glass all turn together.
+    const swapSkies = (change, animate) => {
+        if (animate && document.startViewTransition && !reducedMotion.matches && !document.hidden) {
+            document.startViewTransition(change);
+        } else change();
+    };
+    const syncAero = async animate => {
+        const want = aeroWanted && effectsMode === 'high';
+        if (want === aeroShowing) return;
+        const request = ++aeroRequest;
+        deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
+        if (!want) {
+            swapSkies(() => {
+                aeroShowing = false;
+                delete root.dataset.aero;
+                window.portfolioAero?.release();
+                if (effectsMode === 'high') galaxy.setQuality('high', false);
+            }, animate);
+            return;
+        }
+        try {
+            const aero = await loadAero();
+            await aero.prepare();
+            if (request !== aeroRequest) return;
+            // Moved on while it got ready: down a level, or five more presses.
+            if (!aeroWanted || effectsMode !== 'high') {
+                aero.release();
+                return;
+            }
+            swapSkies(() => {
+                aeroShowing = true;
+                root.dataset.aero = '';
+                aero.show();
+                galaxy.setQuality('medium', false);
+            }, animate);
+            deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
+        } catch (error) {
+            // Offline, or blocked: the page simply keeps the sky it has.
+            if (request !== aeroRequest) return;
+            aeroWanted = false;
+            storeEffects('sessionStorage', aeroStorageKey, '');
+            delete root.dataset.aero;
+            if (effectsMode === 'high') galaxy.setQuality('high', animate);
+        }
+    };
+    const countAeroPress = level => {
+        const now = performance.now();
+        if (level !== 'high' || now - aeroLastPress >= AERO_PRESS_GAP_MS) aeroPresses = 0;
+        aeroLastPress = now;
+        if (level !== 'high') return;
+        // Nobody spamming a button stops at exactly five. The sky takes a
+        // moment to get ready, and a hand still going through it must not
+        // count on to ten and call the whole thing off before it is seen.
+        if (now < aeroQuietUntil) {
+            aeroPresses = 0;
+            return;
+        }
+        aeroPresses += 1;
+        if (aeroPresses < AERO_PRESSES) return;
+        aeroPresses = 0;
+        aeroQuietUntil = now + AERO_QUIET_MS;
+        aeroWanted = !aeroWanted;
+        storeEffects('sessionStorage', aeroStorageKey, aeroWanted ? '1' : '');
+        syncAero(true);
+    };
+
     // ---- The slider ------------------------------------------------------
     // Three stops on a short track in the bar; in the phone menu, the last
     // row. A native range input underneath carries the keyboard (arrows,
@@ -521,7 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
         easeForBuiltInGraphics();
         syncEffectsPace();
         setBackdropLook(mode, animate);
-        galaxy.setQuality(mode, animate);
+        // The space sky is not started for a visitor who has swapped it for
+        // the other one.
+        galaxy.setQuality(mode === 'high' && aeroWanted ? 'medium' : mode, animate);
         cursor.setEnabled(mode === 'high');
         if (mode !== 'high') {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
@@ -539,6 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Turning a level on is one of the things that gives the monitor its
         // job again.
         startPerformanceMonitor();
+        syncAero(animate);
     };
 
     // A level chosen on the slider, kept for the rest of the visit. The
@@ -628,6 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const level = EFFECT_LEVELS[nearestStop(drag.stops, event.clientX)];
             endDrag();
             chooseLevel(level);
+            countAeroPress(level);
         });
         // A vertical swipe that started on the slider is the page scrolling
         // (touch-action: pan-y): the thumb goes back where it was.

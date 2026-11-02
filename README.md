@@ -11,6 +11,7 @@ Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), 
 | `portfolio.js` | Renders the profile, projects, carousels and project sheet |
 | `navbar.css` | The floating navigation bar |
 | `glass.js` | The liquid glass on the bar, cards and buttons (the modes are explained at the top of the file) |
+| `aero.js`, `aero.css` | High's hidden Frutiger Aero sky (see Visual effects). Fetched only when a visitor asks for it |
 | `portfolio-data.json` | Profile, skills, project write-ups, media and links |
 | `project-example.json` | Template for a new project |
 | `assets/` | Photos, GIFs, graphics and self-hosted fonts |
@@ -109,6 +110,14 @@ Every level wears the same clear glass, modelled on Apple's Liquid Glass at its 
 - **Stepped down when slow, one stop at a time.** A monitor eases the sky, then the glass. If the page still stutters it steps High to Medium, then Medium to Low, never two stops at once, and the thumb slides to show it. A page crawling at ten frames a second or less skips the easing but still drops only one stop.
 - **The visitor gets the last word.** A level chosen by hand is stepped down like any other. Each time the visitor puts it back up after the page lowered it is counted (`portfolio-effects-overrides`), and the third time the page stops stepping it down for the rest of the visit. Only the sky's pace is still eased after that, which changes how often it is drawn and nothing in it.
 - **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out.
+
+### The other sky
+
+Five quick presses on the slider's High stop swap the space sky for a Frutiger Aero one, and five more swap it back. A gap of 400 ms or more starts the count again, and presses on Low or Medium never count. It changes the backdrop and the colours that have to read on it (dark ink, white-frosted glass); the glass's frost and bend, the lean, the lift, the rings and the cursor are the page's own and keep working as they do. The picture is drawn by code (`aero.js`), so there is nothing to download but the two files. It is about this portfolio: a New York skyline in a glass orb, a robot arm blowing bubbles through a wand, gears, a swerve module, a 3D printer, a robot and a controller board in the bubbles, a kiwi drive on the grass, a drone's contrail. A press on a bubble bursts it.
+
+- **It costs the other levels nothing.** `aero.js` and `aero.css` are not requested until the fifth press. Low and Medium never see them, and neither does High until someone asks. All the page carries for it is a counter in the slider's press handler.
+- **It lives and dies with High.** Going down a level, by hand or because the frame monitor stepped down, puts it away at once: loop, listeners, sprites, canvas. Coming back up to High brings the choice back for the rest of the visit (`portfolio-aero` in `sessionStorage`), and a reload keeps it too. While it is showing the space sky is put away, so the two never run together.
+- **It follows the same rules as the sky.** It rests with the tab hidden and under an open project, draws half as often on a machine the page has eased (`data-effects-pace`), and holds still for anyone who prefers reduced motion.
 
 ## Privacy
 

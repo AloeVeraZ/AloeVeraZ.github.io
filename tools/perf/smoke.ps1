@@ -177,6 +177,52 @@ try {
     $old = & $js $level | ConvertFrom-Json
     Check 'a level saved across visits by an older version is forgotten' ($old.effects -eq 'medium' -and $null -eq (& $js "localStorage.getItem('portfolio-effects-level')")) "$($old.effects)/$($old.reason)"
 
+    # High's other sky: five quick presses on the High stop, not a press more
+    # or slower, fetching nothing until then, and everything handed back again.
+    & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-aero'].forEach(k => sessionStorage.removeItem(k)); sessionStorage.setItem('portfolio-effects-overrides', '3'); return 1; })()" | Out-Null
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    Start-Sleep -Seconds 1
+    $aeroFiles = { & $js "performance.getEntriesByType('resource').filter(e => /aero\.(js|css)/.test(e.name)).length" }
+    $aeroOn = { & $js "document.documentElement.hasAttribute('data-aero') && !!document.querySelector('.aero-scene')" }
+    $stopAt = { param($i) & $js "(() => { const b = document.querySelectorAll('.fx-slider-stop')[$i].getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; })()" }
+    $presses = { param($i, $times, $gap)
+        $at = & $stopAt $i
+        for ($n = 0; $n -lt $times; $n++) {
+            Send-Mouse $page 'mouseMoved' $at[0] $at[1]
+            Send-Mouse $page 'mousePressed' $at[0] $at[1] 'left' 1 1
+            Send-Mouse $page 'mouseReleased' $at[0] $at[1] 'left' 0 1
+            Start-Sleep -Milliseconds $gap
+        }
+    }
+    & $presses 0 5 90
+    & $presses 1 5 90
+    Check 'five presses on Low or Medium leave the other sky unfetched' (-not (& $aeroOn) -and (& $aeroFiles) -eq 0)
+    & $presses 2 5 550
+    Start-Sleep -Milliseconds 800
+    Check 'so do five presses half a second apart on High' (-not (& $aeroOn) -and (& $aeroFiles) -eq 0)
+    & $presses 2 5 90
+    # A hand that keeps going past five, into the moment it takes to get ready.
+    & $presses 2 7 90
+    $waited = 0
+    while (-not (& $aeroOn) -and $waited -lt 60) { Start-Sleep -Milliseconds 250; $waited++ }
+    Check 'five quick presses on High bring it up, and more do not call it off' (& $aeroOn) "$($waited * 250) ms after the last press"
+    $sky = & $js "JSON.stringify({ space: document.querySelector('.galaxy-field').width, glass: document.documentElement.dataset.glass, bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
+    Check 'the space sky is put away and the glass is left as it was' ($sky.space -eq 0 -and $sky.bend) "space canvas $($sky.space) wide, glass=$($sky.glass)"
+    Start-Sleep -Seconds 3
+    Set-EffectsLevel $page 'medium' | Out-Null
+    Start-Sleep -Milliseconds 1200
+    Check 'Medium does not keep any of it' (-not (& $js "document.documentElement.hasAttribute('data-aero')") -and -not (& $js "!!document.querySelector('.aero-scene')"))
+    Set-EffectsLevel $page 'high' | Out-Null
+    $waited = 0
+    while (-not (& $aeroOn) -and $waited -lt 60) { Start-Sleep -Milliseconds 250; $waited++ }
+    Check 'coming back up to High brings it back' (& $aeroOn)
+    Start-Sleep -Seconds 3
+    & $presses 2 5 90
+    Start-Sleep -Milliseconds 2500
+    $space = & $js "JSON.stringify({ on: document.documentElement.hasAttribute('data-aero'), scene: !!document.querySelector('.aero-scene'), space: document.querySelector('.galaxy-field').width, kept: sessionStorage.getItem('portfolio-aero') })" | ConvertFrom-Json
+    Check 'five more put the space sky back' (-not $space.on -and -not $space.scene -and $space.space -gt 0 -and -not $space.kept) "space canvas $($space.space) wide"
+
     # Everything the page logged or failed to load along the way.
     Clear-CdpEvents $page.Session -Keep '*'
     $events = @($page.Session.Events | Where-Object { $_ -is [System.Collections.IDictionary] })
