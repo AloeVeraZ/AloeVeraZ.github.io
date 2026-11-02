@@ -1298,3 +1298,55 @@ those too).
 this log).
 
 **Result:** Improved.
+
+---
+
+## Cycle 36: the sky fetched when it is wanted (adopted)
+
+**Identified bottleneck:** `setupGalaxyField` is 265 KB of the site's 433 KB of
+script, 73 KB of its 117 KB off the wire. Every visit starts at Medium and High is
+only ever chosen on the slider, yet every visit downloaded it, set it up (18-50 ms of
+script with the main thread slowed 4x, a canvas context, its listeners and observers)
+and released it again.
+
+**Proposed modification:** `galaxy.js`, fetched the first time High is wanted, by a
+stand-in with the same methods (`setupDeferredGalaxy`). Before it arrives its level
+and easing are kept for it; nothing else it is told matters yet. It carries the
+`?v=` of the `portfolio.js` that fetched it. To spare a first move to High the wait,
+the file is fetched, not run, as soon as the pointer or the keyboard reaches the
+slider. Its two random rolls are thrown when the page starts, as before, so a seeded
+run draws the same sky.
+
+**Implementation:** `portfolio.js`, new `galaxy.js`.
+
+**Before / after (first load, five rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| First visit: bytes | 556 KB | 487 KB |
+| First visit: `portfolio.js` off the wire | 117 KB | 48 KB |
+| First visit, no graphics: main thread busy | 1236 ms | 1197 ms |
+| First visit, no graphics: total blocking | 541 ms | 481 ms (inside the spread) |
+| Return visit, no graphics: main thread busy | 1045 ms | 920 ms |
+| Return visit, no graphics: long tasks | 3 | 2 |
+| Return visit, no graphics: DOMContentLoaded | 328 ms | 272 ms |
+| Medium: listeners on the page | 432 | 418 |
+| High, 3x, at rest: main thread | 104 ms/s | 98 ms/s |
+| High, 3x, scroll: dropped | 28.4% | 27.7% |
+| High, 3x, level walk: dropped frames | 67 | 70 |
+
+**The cost, the one thing here that gets slower:** the first move to High of a visit
+on a 200 KB/s connection with 150 ms of latency starts the sky's fade-in 365 ms after
+the choice with the slider reached first, 710 ms without a pointer on it first (a
+keyboard reaches it by focus, a script's direct change does not count), where it was
+170 ms before. The glass changes at once and Medium's sky stays behind it until the
+new one is in, as it always did while High's sky was being built (checked). Later
+moves are as they were, and a reload at High starts the file at once. If the file
+cannot be fetched High has no sky, only its glass over the plain backdrop, and asks
+again the next time it is chosen.
+
+**Visual regression:** none possible once it is in: the same code, the same seed.
+**Functional regression:** Pass: `smoke.ps1`, 29 of 29, including a sky that rests
+behind an open project and moves again.
+
+**Result:** Improved.
