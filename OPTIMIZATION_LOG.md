@@ -1397,3 +1397,61 @@ change by design and not one to see: the deep shadow arrives in three steps of u
 **Functional regression:** Pass.
 
 **Result:** Improved.
+
+---
+
+## Cycle 38: Low's ring writes only what Low shows (adopted)
+
+**Identified bottleneck:** with no graphics acceleration a ring in Low still drops
+18% of its frames, with style at 208 ms a second. Nothing about a card's place on the
+ring is read in Low, where the rings lie flat (`portfolio.css`), yet the six or so
+cards near the front (cycle 32 parked the rest) had all of it written on every frame,
+and each write has the browser work that card's style out again.
+
+**Proposed modification:** in Low a ring only says which card is in front. The
+stylesheet takes the rest: every card answers the pointer and the one in front stands
+over its neighbours, which also covers whatever a level above left on them. A press
+on a card works out how far round it is from where it stands. Going up from Low, an
+open ring is given its places at once.
+
+**Implementation:** `portfolio.js` (`updateCardDepth`, the ring's click, an observer
+of `data-effects`), `portfolio.css`.
+
+**Before / after (`ring` in Low, three rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics: dropped (frames) | 18.4% (56) | 9.5% (31) |
+| No graphics: frames a second | 29.4 | 34.5 |
+| No graphics: style | 208 ms/s | 117 ms/s |
+| 3x: main thread | 211 ms/s | 119 ms/s |
+| 3x: style | 85 ms/s | 18 ms/s |
+| 3x: dropped (frames) | 0.5% (1) | 1.1% (2) |
+
+**Visual regression:** Pass: all three levels match the base commit at rest on a
+MacBook-sized screen and a phone, apart from what two captures of one commit differ by
+as well: the open project's animated picture, the 30 x 2 px sliver, and on a phone the
+length of the scroll indicator's fill, depending on how much of the page has been
+measured when the shot is taken. In Low the z-order of the cards no longer changes
+through a turn; they never overlap there.
+**Functional regression:** Pass: with an open ring Low to Medium to High and back gives
+the same places as arriving at each level; in Low a press on the front card opens it,
+a press on the card beside it opens that one and walks the ring round to it, and the
+arrows turn it; in Medium a full walk of the ring leaves the right cards showing.
+
+**Result:** Improved.
+
+---
+
+## Tried and not kept in this round
+
+- **The scroll indicator as a scroll-driven animation** on the compositor. Low at 3x:
+  main thread 125 -> 100 ms/s, dropped frames 10 -> 12. Medium with no graphics: main
+  thread 691 -> 691 ms/s, dropped frames 1 -> 1. No gain anyone would see, for a second
+  way of drawing the same bar.
+- **Taking the fade animation off the clones the card measure lays out.** A
+  first load: main thread busy 960 -> 880 ms, total blocking 287 -> 276 ms, runs
+  overlapping; timed in place, 88 -> 75 ms a measure with single runs from 43 to 193.
+- **The cards' scroll-driven fade (`.project-copy`) as a cost at all.** Ablated: hover
+  380 -> 376 ms/s, ring 205 -> 210 ms/s, collections 347 -> 312 ms/s, dropped frames
+  the same. It stays.

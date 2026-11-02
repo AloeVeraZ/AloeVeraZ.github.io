@@ -1549,6 +1549,16 @@ html[data-effects="low"] .featured-project-carousel .project-card {
 html[data-effects="low"] .project-carousel .project-card {
     transition: border-color .3s ease, box-shadow .3s steps(3), opacity .15s linear, var(--card-answer-transition);
 }
+/* A ring that lies flat places nothing (updateCardDepth), and whatever a level
+   above left on its cards is not for here: every card answers the pointer, and
+   the one in front stands over its neighbours by the shadow it throws. */
+html[data-effects="low"] .circular-project-carousel .project-card {
+    z-index: 1 !important;
+    pointer-events: auto !important;
+}
+html[data-effects="low"] .circular-project-carousel .project-card.is-carousel-active {
+    z-index: 2 !important;
+}
 
 /* Promote only while a ring is actively moving. Keeping every card on its
    own compositor layer makes large collections expensive on laptop GPUs. */

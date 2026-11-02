@@ -2784,6 +2784,19 @@ function setupCarousel(carousel, controls, options = {}) {
         const metrics = getMetrics();
         if (!metrics) return;
         const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+        // In Low a ring lies flat and nothing reads where it would place a card
+        // (portfolio.css): every write below would only have the browser work
+        // the card's style out afresh, for nothing, and on a slow machine that
+        // was most of what a turn cost. All that shows is which card is in front.
+        if (settings.ring && document.documentElement.dataset.effects === 'low') {
+            cards.forEach(card => {
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const depth = Math.abs(cardCenter - carouselCenter) / metrics.distance;
+                card.classList.toggle('is-carousel-active', depth < .18);
+            });
+            retargetPointerSurfaces();
+            return;
+        }
         const cardStates = cards.map(card => {
             const cardCenter = card.offsetLeft + card.offsetWidth / 2;
             const rawPosition = (cardCenter - carouselCenter) / metrics.distance;
@@ -3202,7 +3215,10 @@ function setupCarousel(carousel, controls, options = {}) {
         }
         const selectedCard = event.target.closest('.project-card');
         if (!selectedCard || !carousel.contains(selectedCard)) return;
-        const selectedPosition = Number.parseFloat(selectedCard.style.getPropertyValue('--carousel-position')) || 0;
+        const clickMetrics = getMetrics();
+        const selectedPosition = clickMetrics?.distance
+            ? (selectedCard.offsetLeft + selectedCard.offsetWidth / 2 - carousel.scrollLeft - carousel.clientWidth / 2) / clickMetrics.distance
+            : 0;
         const logicalIndex = Number(selectedCard.dataset.carouselIndex);
         // The card in front opens where it stands, through its own click
         // listener -- unless it is a clone, which has none: cloneNode copies
@@ -3256,6 +3272,12 @@ function setupCarousel(carousel, controls, options = {}) {
         else cancelAutoplay();
     }, { threshold: .15 });
     visibilityObserver.observe(carousel);
+    // Up from Low, an open ring has places to take that were not being written.
+    if (settings.ring) {
+        new MutationObserver(() => {
+            if (initialized && !carousel.closest('[hidden]')) updateCardDepth();
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-effects'] });
+    }
     document.addEventListener('portfolio:modal-open', () => {
         cancelAutoplay();
         if (carousel.dataset.keepAnimatingThroughModal !== 'true') stopAndCenterCurrentMotion();
