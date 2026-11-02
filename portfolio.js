@@ -996,155 +996,215 @@ function createSeededRandom(seed) {
 // still slides the page over a single layer without drawing anything, which
 // is all Low costs; it is drawn again only when the window changes shape.
 // One seed a visit, so it is the same sky every time it comes back.
-const STILL_SKY_COLORS = ['224,237,255', '174,206,237', '246,221,190', '207,199,227',
-    '235,240,247', '214,226,255', '205,168,156', '255,194,142'];
-function setupStillSky(layer) {
+//
+// The drawing stands alone, with nothing from outside it but its arguments:
+// its source text is what the worker below runs.
+function paintStillSky(context, width, height, seed) {
     const TAU = Math.PI * 2;
+    const colors = ['224,237,255', '174,206,237', '246,221,190', '207,199,227',
+        '235,240,247', '214,226,255', '205,168,156', '255,194,142'];
+    let state = seed;
+    const random = () => {
+        state = (state + 0x6D2B79F5) | 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    // Three draws averaged: a bell between -1 and 1, for anything that
+    // gathers toward a line or a point.
+    const bell = () => (random() + random() + random() - 1.5) / 1.5;
+    const span = Math.max(width, height);
+    const cloud = (x, y, radius, squash, angle, rgb, alpha) => {
+        context.save();
+        context.translate(x, y);
+        context.rotate(angle);
+        context.scale(1, squash);
+        const light = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+        light.addColorStop(0, `rgba(${rgb},${alpha})`);
+        light.addColorStop(.42, `rgba(${rgb},${alpha * .42})`);
+        light.addColorStop(1, `rgba(${rgb},0)`);
+        context.fillStyle = light;
+        context.fillRect(-radius, -radius, radius * 2, radius * 2);
+        context.restore();
+    };
+    const star = (x, y, radius, alpha, rgb) => {
+        if (radius > .85) {
+            const reach = radius * 6;
+            const halo = context.createRadialGradient(x, y, 0, x, y, reach);
+            halo.addColorStop(0, `rgba(${rgb},${alpha * .38})`);
+            halo.addColorStop(.35, `rgba(${rgb},${alpha * .1})`);
+            halo.addColorStop(1, `rgba(${rgb},0)`);
+            context.fillStyle = halo;
+            context.fillRect(x - reach, y - reach, reach * 2, reach * 2);
+        }
+        context.fillStyle = `rgba(${rgb},${alpha})`;
+        context.beginPath();
+        context.arc(x, y, radius, 0, TAU);
+        context.fill();
+        // The brightest few catch the light in a cross, as High's do.
+        if (radius > 1.45) {
+            context.strokeStyle = `rgba(${rgb},${alpha * .4})`;
+            context.lineWidth = Math.max(.35, radius * .22);
+            context.beginPath();
+            context.moveTo(x - radius * 3, y);
+            context.lineTo(x + radius * 3, y);
+            context.moveTo(x, y - radius * 3);
+            context.lineTo(x, y + radius * 3);
+            context.stroke();
+        }
+    };
+    const colour = () => colors[Math.floor(random() ** 1.6 * colors.length)];
+
+    // The clouds: blue behind the hero, violet high on the right, warm low
+    // on the right, a breath of teal at the foot -- each a little off
+    // where the last visit had it -- and between them the grey haze High's
+    // clusters sit in.
+    const off = amount => (random() - .5) * amount;
+    cloud(width * (.18 + off(.08)), height * (.24 + off(.1)), span * .5, .55, -.3, '112,148,210', .2);
+    cloud(width * (.84 + off(.08)), height * (.16 + off(.1)), span * .36, .6, .4, '150,136,198', .13);
+    cloud(width * (.8 + off(.1)), height * (.78 + off(.1)), span * .42, .5, -.2, '196,166,138', .11);
+    cloud(width * (.1 + off(.08)), height * (.9 + off(.06)), span * .3, .6, .2, '112,164,184', .08);
+    for (let i = 0; i < 5; i++) {
+        cloud(width * random(), height * random(), 90 + random() * 120, .45 + random() * .4, random() * TAU,
+            '200,210,226', .05 + random() * .04);
+    }
+
+    // The band: a long, faint glow corner to corner, and a third of the
+    // stars gathered along it.
+    const bandAngle = -.42 + off(.12);
+    const bandX = width * (.5 + off(.1)), bandY = height * (.55 + off(.1));
+    const bandWidth = Math.min(width, height) * .17;
+    const bandCos = Math.cos(bandAngle), bandSin = Math.sin(bandAngle);
+    cloud(bandX, bandY, span * .78, .16, bandAngle, '196,212,255', .085);
+    const count = Math.round(width * height / 1250);
+    for (let i = 0; i < count; i++) {
+        let x = random() * width, y = random() * height;
+        if (random() < .32) {
+            const along = (random() - .5) * span * 1.5, across = bell() * bandWidth;
+            x = bandX + along * bandCos - across * bandSin;
+            y = bandY + along * bandSin + across * bandCos;
+            if (x < 0 || x > width || y < 0 || y > height) continue;
+        }
+        star(x, y, .3 + random() ** 3.4 * 1.65, .22 + random() ** 1.5 * .7, colour());
+    }
+
+    // Two clusters, each a haze with a knot of faint stars in it.
+    for (let c = 0; c < 2; c++) {
+        const cx = width * (.12 + random() * .76), cy = height * (.12 + random() * .76);
+        cloud(cx, cy, 64, 1, 0, '220,230,255', .06);
+        const stars = 30 + Math.floor(random() * 18);
+        for (let i = 0; i < stars; i++) {
+            star(cx + bell() * 46, cy + bell() * 46, .26 + random() ** 3 * .6, .22 + random() * .5, colour());
+        }
+    }
+
+    // Fading out toward the edges, as High's veil darkens its sky there.
+    context.globalCompositeOperation = 'destination-out';
+    const edge = context.createRadialGradient(width / 2, height * .45, Math.min(width, height) * .3,
+        width / 2, height * .45, Math.hypot(width, height) * .62);
+    edge.addColorStop(0, 'rgba(0,0,0,0)');
+    edge.addColorStop(1, 'rgba(0,0,0,.5)');
+    context.fillStyle = edge;
+    context.fillRect(0, 0, width, height);
+}
+
+// A worker, written out here so the page fetches nothing for it: it draws the
+// picture on a canvas of its own, encodes it and goes away again. It draws to
+// the graphics card as the page's own canvas does, which comes out the same to
+// the byte; on a canvas kept in memory the faintest stars land differently.
+const stillSkyWorkerSource = () => `
+    const paint = ${paintStillSky};
+    onmessage = async ({ data: { width, height, ratio, seed } }) => {
+        try {
+            const canvas = new OffscreenCanvas(Math.round(width * ratio), Math.round(height * ratio));
+            const context = canvas.getContext('2d');
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            paint(context, width, height, seed);
+            postMessage(await canvas.convertToBlob({ type: 'image/png' }));
+        } catch (error) {
+            postMessage(null);
+        }
+    };`;
+
+function setupStillSky(layer) {
     const seed = Math.floor(Math.random() * 4294967296);
     const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 1));
     let wanted = false, url = '', job = 0, resizeTimer = 0, releaseTimer = 0;
     let drawnWidth = 0, drawnHeight = 0, drawnRatio = 0;
 
-    const paint = (width, height, ratio) => {
+    // The finished picture, decoded and laid on the lattice's layer; the sky
+    // fades in once it is ready.
+    const adopt = (blob, ticket) => {
+        if (!blob || ticket !== job) return;
+        const next = URL.createObjectURL(blob);
+        const picture = new Image();
+        picture.src = next;
+        picture.decode().catch(() => {}).then(() => {
+            if (ticket !== job) {
+                URL.revokeObjectURL(next);
+                return;
+            }
+            const previous = url;
+            url = next;
+            layer.style.setProperty('--still-sky', `url("${next}")`);
+            layer.dataset.sky = '';
+            if (previous) window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
+        });
+    };
+    // For a browser with no canvas for its workers to draw on. All of it runs
+    // on the page's thread: toBlob reads the picture back and encodes it there,
+    // a few rows at a time, in the browser's idle moments.
+    const buildHere = (width, height, ratio, ticket) => {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(width * ratio);
         canvas.height = Math.round(height * ratio);
         const context = canvas.getContext('2d');
-        if (!context) return null;
+        if (!context) return;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        let state = seed;
-        const random = () => {
-            state = (state + 0x6D2B79F5) | 0;
-            let t = Math.imul(state ^ (state >>> 15), 1 | state);
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-        // Three draws averaged: a bell between -1 and 1, for anything that
-        // gathers toward a line or a point.
-        const bell = () => (random() + random() + random() - 1.5) / 1.5;
-        const span = Math.max(width, height);
-        const cloud = (x, y, radius, squash, angle, rgb, alpha) => {
-            context.save();
-            context.translate(x, y);
-            context.rotate(angle);
-            context.scale(1, squash);
-            const light = context.createRadialGradient(0, 0, 0, 0, 0, radius);
-            light.addColorStop(0, `rgba(${rgb},${alpha})`);
-            light.addColorStop(.42, `rgba(${rgb},${alpha * .42})`);
-            light.addColorStop(1, `rgba(${rgb},0)`);
-            context.fillStyle = light;
-            context.fillRect(-radius, -radius, radius * 2, radius * 2);
-            context.restore();
-        };
-        const star = (x, y, radius, alpha, rgb) => {
-            if (radius > .85) {
-                const reach = radius * 6;
-                const halo = context.createRadialGradient(x, y, 0, x, y, reach);
-                halo.addColorStop(0, `rgba(${rgb},${alpha * .38})`);
-                halo.addColorStop(.35, `rgba(${rgb},${alpha * .1})`);
-                halo.addColorStop(1, `rgba(${rgb},0)`);
-                context.fillStyle = halo;
-                context.fillRect(x - reach, y - reach, reach * 2, reach * 2);
-            }
-            context.fillStyle = `rgba(${rgb},${alpha})`;
-            context.beginPath();
-            context.arc(x, y, radius, 0, TAU);
-            context.fill();
-            // The brightest few catch the light in a cross, as High's do.
-            if (radius > 1.45) {
-                context.strokeStyle = `rgba(${rgb},${alpha * .4})`;
-                context.lineWidth = Math.max(.35, radius * .22);
-                context.beginPath();
-                context.moveTo(x - radius * 3, y);
-                context.lineTo(x + radius * 3, y);
-                context.moveTo(x, y - radius * 3);
-                context.lineTo(x, y + radius * 3);
-                context.stroke();
-            }
-        };
-        const colour = () => STILL_SKY_COLORS[Math.floor(random() ** 1.6 * STILL_SKY_COLORS.length)];
-
-        // The clouds: blue behind the hero, violet high on the right, warm low
-        // on the right, a breath of teal at the foot -- each a little off
-        // where the last visit had it -- and between them the grey haze High's
-        // clusters sit in.
-        const off = amount => (random() - .5) * amount;
-        cloud(width * (.18 + off(.08)), height * (.24 + off(.1)), span * .5, .55, -.3, '112,148,210', .2);
-        cloud(width * (.84 + off(.08)), height * (.16 + off(.1)), span * .36, .6, .4, '150,136,198', .13);
-        cloud(width * (.8 + off(.1)), height * (.78 + off(.1)), span * .42, .5, -.2, '196,166,138', .11);
-        cloud(width * (.1 + off(.08)), height * (.9 + off(.06)), span * .3, .6, .2, '112,164,184', .08);
-        for (let i = 0; i < 5; i++) {
-            cloud(width * random(), height * random(), 90 + random() * 120, .45 + random() * .4, random() * TAU,
-                '200,210,226', .05 + random() * .04);
-        }
-
-        // The band: a long, faint glow corner to corner, and a third of the
-        // stars gathered along it.
-        const bandAngle = -.42 + off(.12);
-        const bandX = width * (.5 + off(.1)), bandY = height * (.55 + off(.1));
-        const bandWidth = Math.min(width, height) * .17;
-        const bandCos = Math.cos(bandAngle), bandSin = Math.sin(bandAngle);
-        cloud(bandX, bandY, span * .78, .16, bandAngle, '196,212,255', .085);
-        const count = Math.round(width * height / 1250);
-        for (let i = 0; i < count; i++) {
-            let x = random() * width, y = random() * height;
-            if (random() < .32) {
-                const along = (random() - .5) * span * 1.5, across = bell() * bandWidth;
-                x = bandX + along * bandCos - across * bandSin;
-                y = bandY + along * bandSin + across * bandCos;
-                if (x < 0 || x > width || y < 0 || y > height) continue;
-            }
-            star(x, y, .3 + random() ** 3.4 * 1.65, .22 + random() ** 1.5 * .7, colour());
-        }
-
-        // Two clusters, each a haze with a knot of faint stars in it.
-        for (let c = 0; c < 2; c++) {
-            const cx = width * (.12 + random() * .76), cy = height * (.12 + random() * .76);
-            cloud(cx, cy, 64, 1, 0, '220,230,255', .06);
-            const stars = 30 + Math.floor(random() * 18);
-            for (let i = 0; i < stars; i++) {
-                star(cx + bell() * 46, cy + bell() * 46, .26 + random() ** 3 * .6, .22 + random() * .5, colour());
-            }
-        }
-
-        // Fading out toward the edges, as High's veil darkens its sky there.
-        context.globalCompositeOperation = 'destination-out';
-        const edge = context.createRadialGradient(width / 2, height * .45, Math.min(width, height) * .3,
-            width / 2, height * .45, Math.hypot(width, height) * .62);
-        edge.addColorStop(0, 'rgba(0,0,0,0)');
-        edge.addColorStop(1, 'rgba(0,0,0,.5)');
-        context.fillStyle = edge;
-        context.fillRect(0, 0, width, height);
-        return canvas;
+        paintStillSky(context, width, height, seed);
+        canvas.toBlob(blob => adopt(blob, ticket), 'image/png');
     };
-
-    // Drawn, then handed to the stylesheet as a picture. The drawing takes a
-    // few milliseconds; turning it into a picture and decoding that again
-    // happens off the page's thread, and the sky fades in once it is ready.
+    // Medium is where every visit starts, and on the page's thread this was
+    // half of what a load asked of it: on a slow laptop more than a second of
+    // drawing, reading back and encoding, in long tasks, while the visitor was
+    // already trying to scroll. Off that thread none of it can hold anything
+    // up, and with nothing waiting on the page's idle moments the sky arrives
+    // sooner.
     const build = () => {
         const width = window.innerWidth, height = window.innerHeight;
         const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
         const ticket = ++job;
-        const canvas = paint(width, height, ratio);
-        if (!canvas) return;
         drawnWidth = width; drawnHeight = height; drawnRatio = ratio;
-        canvas.toBlob(blob => {
-            if (!blob || ticket !== job) return;
-            const next = URL.createObjectURL(blob);
-            const picture = new Image();
-            picture.src = next;
-            picture.decode().catch(() => {}).then(() => {
-                if (ticket !== job) {
-                    URL.revokeObjectURL(next);
-                    return;
-                }
-                const previous = url;
-                url = next;
-                layer.style.setProperty('--still-sky', `url("${next}")`);
-                layer.dataset.sky = '';
-                if (previous) window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
-            });
-        }, 'image/png');
+        if (!('OffscreenCanvas' in window) || !('Worker' in window)) {
+            buildHere(width, height, ratio, ticket);
+            return;
+        }
+        let worker = null, source = '';
+        const finish = () => {
+            worker?.terminate();
+            if (source) URL.revokeObjectURL(source);
+        };
+        const fallBack = () => {
+            finish();
+            if (ticket === job) buildHere(width, height, ratio, ticket);
+        };
+        try {
+            source = URL.createObjectURL(new Blob([stillSkyWorkerSource()], { type: 'text/javascript' }));
+            worker = new Worker(source);
+        } catch (error) {
+            fallBack();
+            return;
+        }
+        worker.onerror = fallBack;
+        worker.onmessage = ({ data }) => {
+            if (!data) {
+                fallBack();
+                return;
+            }
+            finish();
+            adopt(data, ticket);
+        };
+        worker.postMessage({ width, height, ratio, seed });
     };
     // Sized to cover the window, so a phone's address bar sliding away only
     // trims an edge; a new shape or a new zoom draws it again.

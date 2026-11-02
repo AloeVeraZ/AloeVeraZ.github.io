@@ -1026,3 +1026,59 @@ hidden, three alternating runs, medians):**
 
 **Result:** Adopted: the difference is inside the runs' own spread.
 `smoke.ps1` 24 of 24 and 22 of 22.
+
+---
+
+# Every level on any machine (1 November 2026)
+
+Medians of interleaved rounds as before. New in these: first loads compared
+from two local servers (the commit before against the working copy), the same
+Chrome and a warm cache, with the busy time and long tasks of the page's main
+thread read from a trace of the first six seconds. Two servers with the same
+files, as a check on the method, came out at 1178 and 1176 ms busy, with single
+runs from 998 to 1434 ms and total blocking time from 318 to 629 ms. No
+graphics here means software compositing and a main thread slowed 4x; the slowed
+thread is the page's alone, so a worker there is measured at full speed.
+
+## Cycle 30: the still sky drawn off the page's thread (adopted)
+
+**Identified bottleneck:** a first load in Medium asks the page's main thread
+for about twice what one in Low does. A trace of it by task, on this laptop at
+3x: drawing the still sky 35 ms, `toBlob` reading it back 38 ms, then four or
+more `IdleEncodeRows` tasks of 6-14 ms. The comment over it said the encoding
+happened off the page's thread; for a PNG, Chromium encodes on the main thread
+in idle time, a few rows at a go. With no graphics each step is 40-300 ms, and
+Medium is where every visit starts.
+
+**Root-cause hypothesis:** nothing about the sky needs the page's thread.
+
+**Proposed modification:** the same drawing, in a worker written out inline
+(`paintStillSky` stands alone and its source text is the worker's), on an
+`OffscreenCanvas`, with `convertToBlob`. The blob comes back and is laid on the
+lattice's layer as before. No `OffscreenCanvas` or no worker falls back to the
+old way on the page's thread (each path checked by breaking it).
+
+**Implementation:** `portfolio.js` (`paintStillSky`, `setupStillSky`).
+
+**Before / after (Medium, five rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| 3x: main thread busy in the first 6 s | 316 ms | 194 ms |
+| 3x: still sky on screen | 352 ms | 285 ms |
+| No graphics: main thread busy | 1441 ms | 1239 ms |
+| No graphics: still sky on screen | 1480 ms | 1075 ms |
+| No graphics: long tasks / total blocking | 5 / 427 ms | 5 / 511 ms (inside the spread) |
+
+**Visual regression:** Pass. One seed drawn by the page's canvas and by the
+worker's comes out the same to the byte (3x, 1470 x 860). Tried first with the
+worker's canvas kept in memory, which spares the graphics process the drawing
+but moves the faintest stars: mean 0.77/255, up to 79/255 on 202 pixels. Not
+visible beside a sky that is different on every visit, but not the same either,
+so the canvas stays on the graphics card.
+**Functional regression:** Pass: the sky arrives by the worker, with no
+`OffscreenCanvas`, with a worker that cannot be built and with one that fails,
+goes on the way down to Low, comes back, and is drawn again for a new window
+shape.
+
+**Result:** Improved.
