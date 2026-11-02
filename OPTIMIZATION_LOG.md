@@ -1455,3 +1455,47 @@ arrows turn it; in Medium a full walk of the ring leaves the right cards showing
 - **The cards' scroll-driven fade (`.project-copy`) as a cost at all.** Ablated: hover
   380 -> 376 ms/s, ring 205 -> 210 ms/s, collections 347 -> 312 ms/s, dropped frames
   the same. It stays.
+
+---
+
+## Each level against the commit before these cycles (measured)
+
+The base commit against the finished branch. First loads from two local servers, a
+warm cache and five rounds, `first visit` with the cache cleared; the rest as
+interleaved `ab.ps1` runs of two rounds, so treat small differences as level.
+
+| First load | Low before | Low now | Medium before | Medium now | High before | High now |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3x: main thread busy | 160 ms | 107 ms | 268 ms | 150 ms | 1019 ms | 969 ms |
+| 3x: longest task | 37 ms | 35 ms | 42 ms | 39 ms | 100 ms | 70 ms |
+| 3x: total blocking | 0 | 0 | 0 | 0 | 82 ms | 26 ms |
+| No graphics: main thread busy | 887 ms | 705 ms | 1319 ms | 836 ms | 5798 ms | 5563 ms |
+| No graphics: long tasks | 3 | 2 | 5 | 2 | 38 | 37 |
+| No graphics: total blocking | 271 ms | 236 ms | 412 ms | 264 ms | 3429 ms | 3342 ms |
+| No graphics: longest task | 305 ms | 273 ms | 327 ms | 285 ms | 809 ms | 523 ms |
+
+First visit, Medium, no graphics: 553 -> 488 KB; main thread busy 1654 -> 1169 ms;
+long tasks 6 -> 3; total blocking 653 -> 520 ms; the still sky on screen at 1633 ->
+1170 ms.
+
+| In use | Low before | Low now | Medium before | Medium now | High before | High now |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3x, ring: dropped | 7.1% | 0.6% | 0.9% | 0% | 5.6% | 6.1% |
+| 3x, ring: main thread (ms/s) | 453 | 121 | 345 | 234 | 570 | 547 |
+| 3x, ring: GPU 3D engine | 66% | 30% | 18% | 19% | 73% | 72% |
+| No graphics, ring: dropped | 32.5% | 11% | 7.4% | 1.3% | - | - |
+| No graphics, ring: long tasks | 30.5 | 0 | 35 | 6 | - | - |
+| 3x, scroll: dropped | 5.5% | 4.2% | 9.5% | 9.3% | 26.2% | 28.4% |
+| 3x, scroll: main thread (ms/s) | 125 | 114 | 131 | 131 | 160 | 131 |
+| 3x, cursor over cards: dropped | 1.2% | 1.2% | 2.4% | 2.4% | 15.2% | 15.0% |
+| 3x, project open and close: dropped | 13.4% | 12.8% | 12.4% | 14.3% | 22.9% | 24.1% |
+| 3x, every collection, then scroll: dropped | 2.9% | 2.2% | 2.1% | 2.2% | 25.2% | 27.2% |
+| No graphics, every collection: dropped | 13.5% | 7.9% | 17.1% | 13.1% | - | - |
+| At rest, High, 3x: main thread (ms/s) | - | - | - | - | 105 | 95 |
+
+Three things this does not change. High on this laptop at 3x is still limited by
+the graphics process, and its dropped frames are where they were. Under the cursor
+each level is as it was. Opening a project too: most of that is raster of what the
+project shows. One thing that reads oddly: High's first paint on a machine with no
+graphics came at 356 ms against 200 in one five-round run, with single runs from 120
+to 560 in the two arms together, and at 84 ms in both at 3x; not looked into further.
