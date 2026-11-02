@@ -1180,3 +1180,43 @@ the ring goes from at most .75% opacity to none a few frames sooner.
 **Functional regression:** Pass (`smoke.ps1` at the end of this log).
 
 **Result:** Improved.
+
+---
+
+## Cycle 33: glass.js only watches the glass in High (adopted)
+
+**Identified bottleneck:** below High glass.js has nothing to frost or bend, but
+it still tracked every sheet on the page (a size observer on each, an intersection
+observer per ring and for the page, a mutation observer per ring and per section,
+all marks only High reads), and it read the bar's box as it ran, forcing the
+page's style and layout partway through loading, for a lens and a glint that frosted
+glass does not have.
+
+**Proposed modification:** the watching starts when High does and stops when High
+does (`startWatching`, `stopWatching`), and everything it left behind goes with it.
+The bar's box is only read outside frost, and the lens's spare canvas is only made
+for the lens.
+
+**Implementation:** `glass.js`.
+
+**Before / after (six rounds, three for the runtime rows):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics, Medium, load: DOMContentLoaded | 360 ms | 278 ms |
+| No graphics, Medium, load: main thread busy | 1235 ms | 1112 ms |
+| No graphics, Medium, load: total blocking | 505 ms | 431 ms |
+| 3x, Medium, scroll: main thread | 172 ms/s | 159 ms/s |
+| 3x, High, load: total blocking | 77 ms | 60 ms (inside the spread) |
+| 3x, level switches: dropped frames | 67 | 64 |
+
+With no graphics, scrolling and opening every collection came out level, inside
+their spreads.
+
+**Visual regression:** none possible below High; in High, a check of the page in a
+private Chrome gives the same numbers from this build and the one before: arriving
+in High, up from Medium, with a collection opened and back down and up again, the
+same sheets wear a filter and the same ones carry the off-screen mark.
+**Functional regression:** Pass (`smoke.ps1` at the end of this log).
+
+**Result:** Improved.
