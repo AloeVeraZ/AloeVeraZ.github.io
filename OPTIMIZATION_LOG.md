@@ -1565,7 +1565,7 @@ here is that the split is gone, not that the lines are.
 
 ---
 
-## Cycle 40: High's other sky, at no cost to the levels below it (adopted)
+## Cycle 40: High's bright sky, at no cost to the levels below it (adopted)
 
 **Identified bottleneck:** none: a new thing, which had to cost Low and Medium nothing.
 Five quick presses on the slider's High stop swap the space sky for a Frutiger Aero one
@@ -1611,6 +1611,112 @@ hardware, and in Chrome only.
 
 ---
 
+## Cycle 41: Low's own hidden look, all of its light painted beforehand (adopted)
+
+**Identified bottleneck:** none: a new thing for the level that has to run on anything.
+Ten quick presses on the Low stop bring up the dark web of about 2000. A first version
+drew everything in hard flat vector so as to cost nothing, and looked cheap, which is what
+was said of it. What it wanted was glow, and glow is blur, and Low cannot afford blur.
+
+**Proposed modification:** blur nobody has to work out. `tools/y2k-sky.js` paints the
+whole backdrop ahead of time in Chrome, with as much blur as it likes, into one WebP (107
+KB, and a tall one for phones) on the lattice's fixed layer, requested only by the rule
+that needs it. The rest is `y2k.css`: solid panes, gradients, and a little soft glow on
+the cards, the buttons and the big lettering, painted once with the page. No script, no
+canvas, and no crossfade on the way in.
+
+**Implementation:** `y2k.css`, `assets/y2k-sky.webp`, `assets/y2k-sky-tall.webp`,
+`tools/y2k-sky.js`, `tools/build-y2k-sky.ps1`.
+
+**Before / after (Low against this look, 3x, native, two interleaved rounds):**
+
+| | Plain | This look |
+| --- | --- | --- |
+| Scroll: dropped | 5.4% | 2.3% |
+| Scroll: main thread | 104 ms/s | 75 ms/s |
+| At rest: frames | 0 | 0 |
+| Cursor over cards: dropped | 3.1% | 5.1% |
+| Ring turning: dropped | 1.2% | 1.2% |
+| Ring turning: GPU 3D engine | 34% | 20% |
+
+Solid panes over a still picture ask less of the graphics process than clear glass does.
+
+**Result:** Adopted.
+
+---
+
+## Cycle 42: Medium's own hidden look, with windows that work (adopted)
+
+**Identified bottleneck:** none: new. Five quick presses on the Medium stop bring up a pink
+desktop of about 1999. It was to feel alive and still keep Medium's promise of no frames at
+rest.
+
+**Proposed modification:** what only sits there is one picture, drawn in a worker, on the
+lattice's layer, in place of the still sky. What can be used is plain elements on one fixed
+layer behind the page, and the page's empty stretches let a press through to them. Nothing
+runs unless a hand is on it. The infill window redraws only as its slider moves, and draws
+what a slicer would: walls of one width, set further apart as density falls, thickening
+above about half and closing up at 100%. Its share of ink is exact, by cutting a sorted copy
+of the field. The print job's bar is a plain `steps()` animation. Only holding the torque
+window asks for frames, and it stops when it has run down. Closing a window sets a timer.
+Dialogs come up on a layer of their own over the page.
+
+**Implementation:** `vapor.js`, `vapor.css`.
+
+**Before / after (Medium against this look, 3x, native, two interleaved rounds):**
+
+| | Plain | This look |
+| --- | --- | --- |
+| Scroll: dropped | 10.2% | 3.6% |
+| Scroll: GPU 3D engine | 41% | 33% |
+| At rest: frames | 0 | 0 |
+| Cursor over cards: dropped | 2.6% | 0.4% |
+| Cursor over cards: main thread | 362 ms/s | 433 ms/s |
+| Ring turning: dropped | 1.3% | 0.4% |
+| Ring turning: main thread | 221 ms/s | 288 ms/s |
+
+The main thread does somewhat more under the cursor and on a ring (hard shadows repainted on
+a lift, and the theme's selectors), and the frames still come. The field for the labyrinth
+adds about 2 MB of heap.
+
+**Result:** Adopted.
+
+---
+
+## Cycle 43: High's dark sky (adopted)
+
+**Identified bottleneck:** none: new. A first version, a neon city in lime, was sent back as
+too green and too much of a cityscape, wanted darker and more mysterious without going
+gothic. It is now the bright sky's opposite: black water, the same arm and bubbles, and a
+great lens that breathes and turns to look at the cursor.
+
+**Proposed modification:** `aero.js`'s rules: sprites once, then a frame of them moving. At
+first it dropped three times the frames of plain High on a turning ring (29% against 9%). So
+its resolution is capped at 1.6x where the bright sky's is 2x (soft dark light has few edges
+to keep), and its shafts, vignette and scan lines were moved into the one backdrop picture,
+which took two blends of the whole screen out of every frame.
+
+**Implementation:** `ego.js`, `ego.css`.
+
+**Before / after (High against this sky, 3x, native, two interleaved rounds):**
+
+| | Stars | This sky |
+| --- | --- | --- |
+| Scroll: dropped | 26.8% | 19.9% |
+| Scroll: main thread | 137 ms/s | 99 ms/s |
+| At rest on the projects: dropped | 3.4% | 0% |
+| At rest: GPU 3D engine | 31% | 42% |
+| Cursor over cards: dropped | 18.0% | 19.2% |
+| Ring turning: dropped | 10.7% | 15.7% |
+| Ring turning: GPU 3D engine | 73% | 88% |
+
+Lighter on the main thread everywhere and on a scroll, level under the cursor, heavier on the
+graphics engine at rest, and still heavier than the stars on a turning ring.
+
+**Result:** Adopted, as High, with that one cost.
+
+---
+
 ## Final checks (cycles 30-40 together)
 
 On the merged tree, not the branches:
@@ -1629,3 +1735,18 @@ On the merged tree, not the branches:
   layers, no arrow and no rim among them.
 - Not measured: the lines of cycle 39 on the machine that showed them, a real phone, or any
   browser but Chrome.
+
+Cycles 41-43, on the finished tree:
+
+- `smoke.ps1`: 41 of 41 with graphics acceleration and 39 of 39 without, including every
+  look coming up, going away and coming back through the levels, and each level's own
+  backdrop returning.
+- `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each, with the
+  page's own looks. Each hidden look at a phone, a tablet and a desktop: no sideways
+  overflow, no clipped titles, no script errors.
+- The Medium desk, with real presses, 14 of 14: the slider from 1% to 100%, the arrows, the
+  ink following them, a poke, a drag by the title bar, a print ending in its dialog, a window
+  closing and coming back by itself, one minimising to the bar and restored from it, the
+  page's own buttons still answering.
+- Not measured: touch on a real phone, or any browser but Chrome. The custom cursors could
+  not be seen in a captured screenshot.

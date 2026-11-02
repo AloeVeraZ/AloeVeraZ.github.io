@@ -1,8 +1,8 @@
 /* The Frutiger Aero sky: High FX's hidden second backdrop.
 
    Five quick presses on the effects slider's High stop swap the space sky for
-   a bright glass-and-water daydream of the mid-2000s, and five more swap it
-   back (the slider code in portfolio.js). This file holds all of it, and it
+   a bright glass-and-water daydream of the mid-2000s, and five more move on to
+   its dark twin in ego.js (the slider code in portfolio.js). This file holds all of it, and it
    is not fetched until someone asks: a visitor who never does downloads none
    of it, parses none of it and allocates nothing for it, at any level. Going
    back to the space sky, or down to Medium or Low, hands everything here back

@@ -494,122 +494,159 @@ document.addEventListener('DOMContentLoaded', () => {
         // Taken down when the sky reports that it is in (below), or after a
         // few seconds if it never does -- a hidden tab draws nothing.
         else backdropTimer = window.setTimeout(settleBackdrop, 4000);
-        if (mode === 'medium') stillSky.show();
-        else if (mode === 'low' || !backgroundGrid.dataset.look) stillSky.hide();
+        if (mode === 'medium' && !wantedSkies.medium) stillSky.show();
+        else if (mode !== 'high' || !backgroundGrid.dataset.look) stillSky.hide();
     };
     galaxyField.addEventListener('skyshown', settleBackdrop);
 
-    // ---- The other sky ---------------------------------------------------
-    // Five quick presses on the slider's High stop swap the space sky for a
-    // Frutiger Aero one, and five more swap it back; a half-second's pause
-    // starts the count again, and the sky belongs to High alone. All of it is
-    // in aero.js and aero.css, which are not fetched until the fifth press, so
-    // this counter is the only thing it costs anyone who never finds it. Going
-    // down a level, by choice or because the page had to, hands all of it back
-    // and shows that level's own backdrop; coming back up to High brings the
-    // choice back with it, for the rest of the visit.
-    const AERO_PRESSES = 5;
-    const AERO_PRESS_GAP_MS = 400;
-    const AERO_QUIET_MS = 2500;
-    const AERO_VERSION = '20261102a';
-    const aeroStorageKey = 'portfolio-aero';
-    let aeroWanted = false;
-    try {
-        aeroWanted = sessionStorage.getItem(aeroStorageKey) === '1';
-    } catch (error) {
-        aeroWanted = false;
-    }
-    let aeroShowing = false;
-    let aeroPresses = 0;
-    let aeroLastPress = 0;
-    let aeroQuietUntil = 0;
+    // ---- The other skies -------------------------------------------------
+    // Quick presses on a stop of the slider swap that level's backdrop and
+    // colours for another era's: ten on Low for the dark web of the turn of the
+    // century, five on Medium for a pastel desktop, five on High for a Frutiger
+    // Aero sky, five more for a dark one and five more for the stars again. A
+    // gap in the presses starts the count again. All of it is in files fetched
+    // only when asked for (y2k.css, vapor.*, aero.*, ego.*), so this counter is
+    // the only thing it costs anyone who never finds it. Each belongs to its
+    // level alone: leaving the level, by choice or because the page had to,
+    // hands everything back and coming back brings the choice back with it, for
+    // the rest of the visit.
+    const SKY_PRESS_GAP_MS = 400;
+    const SKY_QUIET_MS = 2500;
+    const SKY_VERSION = '20261102b';
+    const SKIES = {
+        y2k: { level: 'low' },
+        vapor: { level: 'medium', script: 'portfolioVapor', file: 'vapor.js' },
+        aero: { level: 'high', script: 'portfolioAero', file: 'aero.js' },
+        ego: { level: 'high', script: 'portfolioEgo', file: 'ego.js' }
+    };
+    const SKY_ROUNDS = {
+        low: { presses: 10, skies: ['', 'y2k'] },
+        medium: { presses: 5, skies: ['', 'vapor'] },
+        high: { presses: 5, skies: ['', 'aero', 'ego'] }
+    };
+    const skyStorageKey = level => `portfolio-sky-${level}`;
+    const wantedSkies = {};
+    Object.keys(SKY_ROUNDS).forEach(level => {
+        let stored = '';
+        try {
+            stored = sessionStorage.getItem(skyStorageKey(level)) || '';
+        } catch (error) {
+            stored = '';
+        }
+        wantedSkies[level] = SKY_ROUNDS[level].skies.includes(stored) ? stored : '';
+    });
+    let showingSky = '';
+    let pressedLevel = '';
+    let skyPresses = 0;
+    let lastSkyPress = 0;
+    let skyQuietUntil = 0;
     // Bumped by every change of mind, so a sky still getting ready when the
     // visitor moves on is not shown over whatever they moved on to.
-    let aeroRequest = 0;
-    let aeroLoading = null;
-    const loadAero = () => {
-        if (aeroLoading) return aeroLoading;
+    let skyRequest = 0;
+    const skyLoads = {};
+    const NOTHING_TO_RUN = { prepare: () => Promise.resolve(), show() {}, release() {} };
+    const loadSky = name => {
+        if (skyLoads[name]) return skyLoads[name];
         const fetched = (element, attach) => new Promise((resolve, reject) => {
             element.onload = resolve;
             element.onerror = reject;
             attach(element);
         });
-        const styles = document.getElementById('aero-styles');
-        const sheet = styles ? Promise.resolve() : fetched(Object.assign(document.createElement('link'), {
-            id: 'aero-styles', rel: 'stylesheet', href: `aero.css?v=${AERO_VERSION}`
+        const { script, file } = SKIES[name];
+        const sheet = document.getElementById(`${name}-styles`) ? Promise.resolve() : fetched(Object.assign(document.createElement('link'), {
+            id: `${name}-styles`, rel: 'stylesheet', href: `${name}.css?v=${SKY_VERSION}`
         }), element => document.head.appendChild(element));
-        const code = fetched(Object.assign(document.createElement('script'), {
-            src: `aero.js?v=${AERO_VERSION}`
-        }), element => document.head.appendChild(element));
-        aeroLoading = Promise.all([sheet, code]).then(() => window.portfolioAero);
-        aeroLoading.catch(() => { aeroLoading = null; });
-        return aeroLoading;
+        const code = script ? fetched(Object.assign(document.createElement('script'), {
+            src: `${file}?v=${SKY_VERSION}`
+        }), element => document.head.appendChild(element)) : Promise.resolve();
+        const load = Promise.all([sheet, code]).then(() => (script ? window[script] : NOTHING_TO_RUN));
+        load.catch(() => { delete skyLoads[name]; });
+        skyLoads[name] = load;
+        return load;
     };
     // The swap is one crossfade of the whole page where the browser can do
-    // that: the sky, the ink and the glass all turn together.
+    // that: the sky, the ink and the glass all turn together. Not in Low, which
+    // is there for a machine that should not be asked for a crossfade of the
+    // whole screen.
     const swapSkies = (change, animate) => {
-        if (animate && document.startViewTransition && !reducedMotion.matches && !document.hidden) {
+        if (animate && effectsMode !== 'low' && document.startViewTransition && !reducedMotion.matches && !document.hidden) {
             document.startViewTransition(change);
         } else change();
     };
-    const syncAero = async animate => {
-        const want = aeroWanted && effectsMode === 'high';
-        if (want === aeroShowing) return;
-        const request = ++aeroRequest;
+    const putSkyAway = () => {
+        if (!showingSky) return;
+        const { script } = SKIES[showingSky];
+        delete root.dataset[showingSky];
+        if (script) window[script]?.release();
+        showingSky = '';
+    };
+    const showOwnBackdrop = mode => {
+        if (mode === 'high') galaxy.setQuality('high', false);
+        else if (mode === 'medium') stillSky.show();
+    };
+    const syncSkies = async animate => {
+        const want = wantedSkies[effectsMode] || '';
+        if (want === showingSky) return;
+        const request = ++skyRequest;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
+        // Another level's sky does not stay up while this level's is fetched.
+        if (want && showingSky && SKIES[showingSky].level !== effectsMode) putSkyAway();
         if (!want) {
             swapSkies(() => {
-                aeroShowing = false;
-                delete root.dataset.aero;
-                window.portfolioAero?.release();
-                if (effectsMode === 'high') galaxy.setQuality('high', false);
+                putSkyAway();
+                showOwnBackdrop(effectsMode);
             }, animate);
             return;
         }
         try {
-            const aero = await loadAero();
-            await aero.prepare();
-            if (request !== aeroRequest) return;
-            // Moved on while it got ready: down a level, or five more presses.
-            if (!aeroWanted || effectsMode !== 'high') {
-                aero.release();
+            const sky = await loadSky(want);
+            await sky.prepare();
+            // Moved on while it got ready: another level, or more presses.
+            if ((wantedSkies[effectsMode] || '') !== want) {
+                sky.release();
                 return;
             }
+            if (request !== skyRequest) return;
             swapSkies(() => {
-                aeroShowing = true;
-                root.dataset.aero = '';
-                aero.show();
-                galaxy.setQuality('medium', false);
+                putSkyAway();
+                showingSky = want;
+                root.dataset[want] = '';
+                sky.show();
+                if (effectsMode === 'high') galaxy.setQuality('medium', false);
+                else if (effectsMode === 'medium') stillSky.hide();
             }, animate);
             deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         } catch (error) {
             // Offline, or blocked: the page simply keeps the sky it has.
-            if (request !== aeroRequest) return;
-            aeroWanted = false;
-            storeEffects('sessionStorage', aeroStorageKey, '');
-            delete root.dataset.aero;
-            if (effectsMode === 'high') galaxy.setQuality('high', animate);
+            if (request !== skyRequest) return;
+            wantedSkies[effectsMode] = '';
+            storeEffects('sessionStorage', skyStorageKey(effectsMode), '');
+            delete root.dataset[want];
+            showOwnBackdrop(effectsMode);
         }
     };
-    const countAeroPress = level => {
-        const now = performance.now();
-        if (level !== 'high' || now - aeroLastPress >= AERO_PRESS_GAP_MS) aeroPresses = 0;
-        aeroLastPress = now;
-        if (level !== 'high') return;
-        // Nobody spamming a button stops at exactly five. The sky takes a
-        // moment to get ready, and a hand still going through it must not
-        // count on to ten and call the whole thing off before it is seen.
-        if (now < aeroQuietUntil) {
-            aeroPresses = 0;
+    // By when the press happened, not when the page got round to it: on a machine
+    // that is struggling, quick presses can be answered slowly.
+    const countSkyPress = (level, now) => {
+        if (level !== pressedLevel || now - lastSkyPress >= SKY_PRESS_GAP_MS) skyPresses = 0;
+        pressedLevel = level;
+        lastSkyPress = now;
+        // Nobody spamming a button stops at exactly the right number. A sky
+        // takes a moment to get ready, and a hand still going through it must
+        // not count on and call the whole thing off before it is seen.
+        if (now < skyQuietUntil) {
+            skyPresses = 0;
             return;
         }
-        aeroPresses += 1;
-        if (aeroPresses < AERO_PRESSES) return;
-        aeroPresses = 0;
-        aeroQuietUntil = now + AERO_QUIET_MS;
-        aeroWanted = !aeroWanted;
-        storeEffects('sessionStorage', aeroStorageKey, aeroWanted ? '1' : '');
-        syncAero(true);
+        skyPresses += 1;
+        const round = SKY_ROUNDS[level];
+        if (!round || skyPresses < round.presses) return;
+        skyPresses = 0;
+        skyQuietUntil = now + SKY_QUIET_MS;
+        const next = round.skies[(round.skies.indexOf(wantedSkies[level]) + 1) % round.skies.length];
+        wantedSkies[level] = next;
+        storeEffects('sessionStorage', skyStorageKey(level), next);
+        syncSkies(true);
     };
 
     // ---- The slider ------------------------------------------------------
@@ -650,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setBackdropLook(mode, animate);
         // The space sky is not started for a visitor who has swapped it for
         // the other one.
-        galaxy.setQuality(mode === 'high' && aeroWanted ? 'medium' : mode, animate);
+        galaxy.setQuality(mode === 'high' && wantedSkies.high ? 'medium' : mode, animate);
         cursor.setEnabled(mode === 'high');
         if (mode !== 'high') {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
@@ -668,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Turning a level on is one of the things that gives the monitor its
         // job again.
         startPerformanceMonitor();
-        syncAero(animate);
+        syncSkies(animate);
     };
 
     // A level chosen on the slider, kept for the rest of the visit. The
@@ -758,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const level = EFFECT_LEVELS[nearestStop(drag.stops, event.clientX)];
             endDrag();
             chooseLevel(level);
-            countAeroPress(level);
+            countSkyPress(level, event.timeStamp);
         });
         // A vertical swipe that started on the slider is the page scrolling
         // (touch-action: pan-y): the thumb goes back where it was.

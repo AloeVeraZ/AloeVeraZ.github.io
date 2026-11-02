@@ -18,6 +18,8 @@
 .aero-scene[hidden] { display: none; }
 
 /* The swap between skies, one crossfade across the whole page. */
+/* A press goes straight through the crossfade to the page under it. */
+::view-transition { pointer-events: none; }
 ::view-transition-old(root),
 ::view-transition-new(root) {
     animation-duration: .9s;

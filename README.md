@@ -12,7 +12,7 @@ Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), 
 | `galaxy.js` | High's living sky, fetched the first time High is wanted |
 | `navbar.css` | The floating navigation bar |
 | `glass.js` | The liquid glass on the bar, cards and buttons (the modes are explained at the top of the file) |
-| `aero.js`, `aero.css` | High's hidden Frutiger Aero sky (see Visual effects). Fetched only when a visitor asks for it |
+| `y2k.css`, `vapor.js`, `vapor.css`, `aero.js`, `aero.css`, `ego.js`, `ego.css` | Each level's hidden other looks (see Visual effects). Fetched only when a visitor asks for one |
 | `portfolio-data.json` | Profile, skills, project write-ups, media and links |
 | `project-example.json` | Template for a new project |
 | `assets/` | Photos, GIFs, graphics and self-hosted fonts |
@@ -56,11 +56,11 @@ python tools/build-fonts.py       # download and self-host Inter and Barlow Cond
 python tools/build-brand.py       # favicons and the social preview image
 ```
 
-Run `build-icons.py` again after using a new `fa-` icon, or it will show up as a blank box. `tools/measure-faces.js` runs in the browser console and prints the font metrics the text trimming below depends on.
+Run `build-icons.py` again after using a new `fa-` icon, or it will show up as a blank box. `tools/measure-faces.js` runs in the browser console and prints the font metrics the text trimming below depends on. `tools/build-y2k-sky.ps1` repaints Low's hidden backdrop in the bench Chrome from `tools/y2k-sky.js`.
 
 ## Caching
 
-After changing a CSS or JS file, bump its `?v=` suffix in the HTML so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed. `galaxy.js` has no `?v=` of its own: it is fetched with `portfolio.js`'s, so a change to it alone needs that one bumped. `portfolio-data.json` needs no bump: it is fetched with `cache: 'no-cache'`, so the browser checks for a newer copy on every visit.
+After changing a CSS or JS file, bump its `?v=` suffix in the HTML so returning visitors don't get a stale copy. A local pre-commit hook does this for `portfolio.css` and `portfolio.js` on machines where it is installed. `galaxy.js` has no `?v=` of its own: it is fetched with `portfolio.js`'s, so a change to it alone needs that one bumped. The other skies' files carry `SKY_VERSION` in `portfolio.js`, written out again in `index.html`'s head; bump both when one of those files changes. `portfolio-data.json` needs no bump: it is fetched with `cache: 'no-cache'`, so the browser checks for a newer copy on every visit.
 
 ## Spacing and type
 
@@ -112,13 +112,19 @@ Every level wears the same clear glass, modelled on Apple's Liquid Glass at its 
 - **The visitor gets the last word.** A level chosen by hand is stepped down like any other. Each time the visitor puts it back up after the page lowered it is counted (`portfolio-effects-overrides`), and the third time the page stops stepping it down for the rest of the visit. Only the sky's pace is still eased after that, which changes how often it is drawn and nothing in it.
 - **Nothing left running below High.** Leaving High stops the sky at once and hands back its memory (about 80 MB at 2x) as soon as it has faded out, takes down the glass's bend filters and the custom cursor, and stops the frame monitor's checks at rest. At rest in Low or Medium the page asks for no frames at all. Going back up to High builds the sky again, about a tenth of a second while it is still faded out. The sky's script is not even fetched until High is first wanted, and in Medium and Low `glass.js` watches nothing.
 
-### The other sky
+### The other skies
 
-Five quick presses on the slider's High stop swap the space sky for a Frutiger Aero one, and five more swap it back. A gap of 400 ms or more starts the count again, and presses on Low or Medium never count. It changes the backdrop and the colours that have to read on it (dark ink, white-frosted glass); the glass's frost and bend, the lean, the lift, the rings and the cursor are the page's own and keep working as they do. The picture is drawn by code (`aero.js`), so there is nothing to download but the two files. It is about this portfolio: a New York skyline in a glass orb, a robot arm blowing bubbles through a wand, gears, a swerve module, a 3D printer, a robot and a controller board in the bubbles, a kiwi drive on the grass, a drone's contrail. A press on a bubble bursts it.
+Quick presses on a stop of the slider swap that level's backdrop and colours for another era's. A gap of 400 ms or more starts the count again. Each changes what the page looks like and nothing about how it works: the lean, the lift, the rings, the frost and the cursor behave as they did, and nothing changes place.
 
-- **It costs the other levels nothing.** `aero.js` and `aero.css` are not requested until the fifth press. Low and Medium never see them, and neither does High until someone asks. All the page carries for it is a counter in the slider's press handler.
-- **It lives and dies with High.** Going down a level, by hand or because the frame monitor stepped down, puts it away at once: loop, listeners, sprites, canvas. Coming back up to High brings the choice back for the rest of the visit (`portfolio-aero` in `sessionStorage`), and a reload keeps it too. While it is showing the space sky is put away, so the two never run together, and a reload with it on does not start or even run `galaxy.js`.
-- **It follows the same rules as the sky.** It rests with the tab hidden and under an open project, draws half as often on a machine the page has eased (`data-effects-pace`), and holds still for anyone who prefers reduced motion.
+| Stop | Presses | What comes up |
+| --- | --- | --- |
+| Low | 10, and 10 more to put it away | The dark web of about 2000 with an aura round it: dialogs with gradient title bars, wet gel buttons and pinstripes after Apple's site of the time, and behind them a violet print-shop poster of a robot's turret in a burning beam. `y2k.css` and `assets/y2k-sky.webp` (`-tall` on a phone), nothing else. |
+| Medium | 5, and 5 more to put it away | A pink desktop of about 1999 that can be used. The cards become windows with title bars and hard shadows. Behind them, the infill window's slider takes a labyrinth from 1% to solid, the print job prints it (denser takes longer) and reports back, the robot pulls a face when poked, holding the torque window winds it up, the hearts and `ROBOT.STL` answer too. Windows drag by their title bars and grow. Of the three dots, the first closes a window, which comes back on its own later, the second minimises it to the bar at the foot, the third sends it across the desk. `vapor.js`, `vapor.css`. |
+| High | 5, 5 more, 5 more | The stars, then a bright Frutiger Aero sky (`aero.js`, `aero.css`), then its opposite (`ego.js`, `ego.css`), then the stars again. Bright: a robot arm blows bubbles at a glass orb holding New York, the bubbles carry gears, a swerve module, a 3D printer, a robot and a controller board, and a press on one bursts it. Dark: the same arm and bubbles at the bottom of black water, thin currents of light, robot jellyfish, a kiwi drive with one headlamp, specks that wake near the cursor, and a great lens with a coal in it, breathing, that turns to look at the cursor. |
+
+- **They cost the other levels nothing.** None of these files is requested until the press that asks for it. All the page carries for them is a counter in the slider's press handler and a line in the head that does nothing unless one was chosen.
+- **Each lives and dies with its level.** Leaving the level, by hand or because the frame monitor stepped down, puts it away at once, and coming back brings the choice back for the rest of the visit (`portfolio-sky-low`, `-medium` and `-high` in `sessionStorage`). A reload keeps it too. While one is showing that level's own backdrop is put away, so the two never run together.
+- **Each holds to its level's budget.** Low's is flat paint and one picture on the lattice's fixed layer, with no script and no crossfade: all its glow was painted ahead of time, so nobody's machine works any of it out. Medium's is one picture on that same layer, drawn in a worker, and a few plain elements on one more fixed layer, which run only while someone has a hand on them, so at rest it asks for no frames either. High's two are animated scenes under the same rules as the space sky: they rest with the tab hidden and under an open project, draw half as often on a machine the page has eased (`data-effects-pace`), and hold still for anyone who prefers reduced motion.
 
 ## Privacy
 

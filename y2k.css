@@ -1,0 +1,248 @@
+/* The dark web of the turn of the century: Low FX's hidden second look.
+
+   Ten quick presses on the effects slider's Low stop bring it up, and ten more put
+   it away (the slider code in portfolio.js). This file and one picture are all of
+   it: no script, no canvas, nothing moving. All the light in it, the violet aura,
+   the burning beam, the glow on the machine, was painted once, ahead of time, into
+   that picture (assets/y2k-sky.webp), which lies on the lattice's own fixed layer.
+   So a scroll moves the page over it and never paints it again, and it can have
+   all the blur it likes without a visitor's machine working any of it out. Every
+   rule answers only to html[data-effects="low"][data-y2k].
+
+   What it borrows: the gel buttons, pinstripes and tabs of Apple's site around
+   2000, gone dark; dialog boxes with a gradient title bar; a media player's lit
+   readouts; and a violet print-shop poster of the year 2000, its machine a robot's
+   turret. */
+html[data-effects="low"][data-y2k] {
+    --bg: #040209;
+    --surface: rgba(16, 10, 32, .86);
+    --surface-raised: rgba(24, 16, 46, .92);
+    --ink: #f4f0ff;
+    --muted: #c3b8df;
+    --line: rgba(190, 165, 255, .28);
+    --blue: #c4a8ff;
+    --blue-light: #cdb6ff;
+    --blue-soft: #e3b3ff;
+    --red: #ff9d8a;
+    --yellow: #eadfff;
+    --radius-card: .625rem;
+    --radius-control: 999px;
+    --radius-surface: .75rem;
+    --glass-surface: rgba(16, 10, 32, .86);
+    --glass-surface-dense: rgba(16, 10, 32, .96);
+    --glass-edge-paint: transparent;
+    --glass-edge-lights: inset 0 0 0 0 transparent;
+    --glass-sheen: none;
+    --glass-shadow: none;
+    --glass-lit-body: #5a3bd0;
+    --glass-lit: linear-gradient(#7c5cf0 0, #4a2bc0 48%, #38209c 52%, #5c3cd8 100%);
+    --glass-lit-glow: none;
+    --glass-lit-ink: #ffffff;
+    /* A wet gel button with a light inside it. */
+    --y2k-gel: linear-gradient(#49397e 0, #2a1f58 47%, #1c1340 53%, #33255f 100%);
+    --y2k-gel-lit: linear-gradient(#8a6cff 0, #5533d0 47%, #3f22a8 53%, #6a48e6 100%);
+    --y2k-gel-shine: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1px 1px rgba(200, 170, 255, .22);
+    --y2k-aura: 0 0 16px rgba(130, 84, 255, .26);
+    --y2k-aura-lit: 0 0 26px rgba(150, 100, 255, .55);
+    background-color: var(--bg);
+}
+html[data-effects="low"][data-y2k] body { background: var(--bg); }
+
+/* The picture, with a pinstripe of Apple's across it. */
+html[data-effects="low"][data-y2k] .background-grid[data-look] {
+    background-image: none;
+    opacity: 1;
+}
+html[data-effects="low"][data-y2k] .background-grid::before {
+    background:
+        repeating-linear-gradient(180deg, rgba(190, 170, 255, .028) 0 1px, transparent 1px 3px),
+        url("assets/y2k-sky.webp") center / cover no-repeat;
+    opacity: 1;
+}
+@media (max-aspect-ratio: 1/1) {
+    html[data-effects="low"][data-y2k] .background-grid::before {
+        background:
+            repeating-linear-gradient(180deg, rgba(190, 170, 255, .028) 0 1px, transparent 1px 3px),
+            url("assets/y2k-sky-tall.webp") center / cover no-repeat;
+    }
+}
+
+/* The big lettering gives off light. Painted once with the rest of the page. */
+html[data-effects="low"][data-y2k] :is(.hero-name, .section-title, .library-heading h3) {
+    color: #faf7ff;
+    text-shadow: 0 0 .16em rgba(176, 130, 255, .72), 0 0 .5em rgba(110, 60, 255, .4);
+}
+html[data-effects="low"][data-y2k] :is(.hero-badge, .section-label) {
+    color: #d3bdff;
+    text-shadow: 0 0 .6em rgba(160, 110, 255, .8);
+}
+html[data-effects="low"][data-y2k] :is(.hero-tagline, .bio-text, .section-subtitle, .library-heading p, .contact-desc) {
+    color: #ece6ff;
+    text-shadow: 0 1px .5em rgba(4, 2, 9, .9);
+}
+html[data-effects="low"][data-y2k] .collection-toggle:hover { color: #ffffff; }
+html[data-effects="low"][data-y2k] .project-library { border-top-color: rgba(190, 165, 255, .3); }
+
+/* The cards: dialogs of the period, in dark glass with a soft light in the corner
+   and a glow around them. */
+html[data-effects="low"][data-y2k] :is(.about-highlight, .skill-group, .project-card) {
+    background:
+        radial-gradient(120% 70% at 12% 0%, rgba(132, 84, 255, .2), transparent 62%),
+        linear-gradient(180deg, rgba(18, 11, 38, .9), rgba(8, 5, 18, .93));
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-card);
+    box-shadow: var(--y2k-aura);
+}
+html[data-effects="low"][data-y2k] :is(.about-highlight, .skill-group, .project-card):hover {
+    background:
+        radial-gradient(120% 70% at 12% 0%, rgba(150, 100, 255, .32), transparent 66%),
+        linear-gradient(180deg, rgba(24, 15, 50, .92), rgba(10, 6, 22, .94));
+    border-color: rgba(214, 196, 255, .8);
+    box-shadow: var(--y2k-aura-lit);
+}
+html[data-effects="low"][data-y2k] :is(.about-highlight, .skill-group, .project-card)::before { box-shadow: none; }
+
+/* A title bar made of what each card already holds. */
+html[data-effects="low"][data-y2k] :is(.about-highlight > .about-highlight-label, .skill-group-title, .project-category-badge) {
+    background-color: transparent;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23f4f0ff' stroke-width='1.4'%3E%3Cpath d='M2 2l8 8M10 2l-8 8'/%3E%3C/svg%3E"),
+        linear-gradient(90deg, rgba(84, 46, 214, .92), rgba(120, 78, 240, .62) 56%, rgba(190, 130, 255, .2));
+    background-repeat: no-repeat;
+    background-size: 12px 12px, 100% 100%;
+    background-position: calc(100% - .7rem) 50%, 0 0;
+    color: #ffffff;
+    text-align: left;
+    text-shadow: 0 0 .7em rgba(214, 190, 255, .7);
+    border-bottom: 1px solid rgba(214, 196, 255, .34);
+}
+/* A label's box grows up into the card's padding and out to its sides, and gives
+   back below what it took, so the words under it stay where they were. */
+html[data-effects="low"][data-y2k] .about-highlight > .about-highlight-label {
+    --y2k-bar-height: 1.875rem;
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) max(var(--rhythm-label), calc(var(--rhythm-label) + var(--pad-card) + 1.55 * var(--type-eyebrow-sm) - var(--y2k-bar-height)));
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: var(--y2k-bar-height);
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="low"][data-y2k] .skill-group-title {
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) auto;
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: 1.875rem;
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="low"][data-y2k] .skill-group .skill-tags {
+    margin-block: auto;
+    padding-top: var(--rhythm-heading);
+}
+html[data-effects="low"][data-y2k] .project-category-badge {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    padding: .34rem 2.25rem .34rem var(--pad-card);
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    border-radius: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+html[data-effects="low"][data-y2k] :is(.project-image-wrapper, .project-image) { background: #06030e; }
+html[data-effects="low"][data-y2k] .project-card:hover .project-image.is-motion-active { background: #06030e; }
+html[data-effects="low"][data-y2k] .project-image-wrapper { border-bottom: 1px solid rgba(196, 172, 255, .24); }
+
+/* Tags are the lit readouts of a media player; every control is a wet gel button. */
+html[data-effects="low"][data-y2k] .tag {
+    background: rgba(120, 80, 240, .14);
+    border: 1px solid rgba(196, 172, 255, .3);
+    color: #e2d6ff;
+}
+html[data-effects="low"][data-y2k] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close) {
+    background: var(--y2k-gel);
+    border: 1px solid rgba(214, 196, 255, .46);
+    border-radius: 999px;
+    color: #ffffff;
+    box-shadow: var(--y2k-gel-shine), var(--y2k-aura);
+}
+html[data-effects="low"][data-y2k] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):hover {
+    background: var(--y2k-gel-lit);
+    color: #ffffff;
+    border-color: rgba(235, 225, 255, .85);
+    box-shadow: var(--y2k-gel-shine), var(--y2k-aura-lit);
+}
+html[data-effects="low"][data-y2k] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):active {
+    background: linear-gradient(#2a1a70, #3f22a8);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6);
+}
+html[data-effects="low"][data-y2k] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow, .icon-control)::before {
+    box-shadow: none;
+}
+
+/* The bar: smoked metal with a pinstripe, a hairline of light along its foot, and
+   its links the tabs of that old site, lit up only under the cursor. */
+html[data-effects="low"][data-y2k] .navbar { --nav-muted: #f4f0ff; }
+html[data-effects="low"][data-y2k] .has-scrolled .navbar { --nav-muted: #f4f0ff; }
+html[data-effects="low"][data-y2k] .navbar .nav-content::before {
+    background:
+        repeating-linear-gradient(180deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 2px),
+        linear-gradient(rgba(44, 32, 84, .96), rgba(16, 10, 34, .97));
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-surface);
+    box-shadow: inset 0 1px 0 rgba(235, 225, 255, .3), 0 0 22px rgba(120, 80, 255, .26);
+}
+html[data-effects="low"][data-y2k] .navbar .nav-content { border-radius: var(--radius-surface); }
+html[data-effects="low"][data-y2k] .navbar .nav-content::after { display: none; }
+html[data-effects="low"][data-y2k] .has-scrolled .navbar .logo,
+html[data-effects="low"][data-y2k] .has-scrolled .navbar .nav-links > li > a { text-shadow: none; }
+html[data-effects="low"][data-y2k] .navbar .logo:hover,
+html[data-effects="low"][data-y2k] .navbar .nav-links > li > a:hover { color: #d9c8ff; text-shadow: 0 0 .8em rgba(190, 150, 255, .95); }
+html[data-effects="low"][data-y2k] .navbar .fx-slider {
+    --fx-fill: rgba(150, 100, 255, .3);
+    --fx-edge: rgba(214, 196, 255, .5);
+    --fx-ground: rgba(8, 5, 18, .9);
+    --fx-bead: #d3bdff;
+    --fx-glow: 0 0 9px rgba(190, 150, 255, .9);
+}
+html[data-effects="low"][data-y2k] .navbar .fx-slider-stop { background: rgba(214, 196, 255, .5); }
+
+/* The scroll indicator: an LCD's level meter. */
+html[data-effects="low"][data-y2k] .page-scroll-track { background: rgba(196, 172, 255, .18); }
+html[data-effects="low"][data-y2k] .page-scroll-fill { background: #d3bdff; }
+html[data-effects="low"][data-y2k] .page-scroll-progress::before,
+html[data-effects="low"][data-y2k] .page-scroll-progress::after { background: rgba(214, 196, 255, .55); }
+
+/* A project's sheet: one big dialog. */
+html[data-effects="low"][data-y2k] .modal-overlay { background: rgba(4, 2, 9, .95); }
+html[data-effects="low"][data-y2k] .modal-card {
+    background:
+        radial-gradient(90% 26rem at 10% 0%, rgba(132, 84, 255, .2), transparent 70%),
+        #0e0820;
+    border: 1px solid rgba(196, 172, 255, .36);
+    border-radius: var(--radius-card);
+    box-shadow: 0 0 44px rgba(120, 80, 255, .3);
+}
+html[data-effects="low"][data-y2k] .modal-overview {
+    background: rgba(120, 80, 240, .08);
+    border: 1px solid rgba(196, 172, 255, .26);
+}
+html[data-effects="low"][data-y2k] .modal-overview-item {
+    background: linear-gradient(180deg, rgba(40, 28, 78, .8), rgba(16, 10, 34, .9));
+    border: 1px solid rgba(196, 172, 255, .24);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+}
+html[data-effects="low"][data-y2k] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
+    background: #06030e;
+}
+html[data-effects="low"][data-y2k] .modal-media-item figcaption { background: #120b26; color: var(--ink); }
