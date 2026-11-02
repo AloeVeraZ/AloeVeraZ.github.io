@@ -1350,3 +1350,50 @@ again the next time it is chosen.
 behind an open project and moves again.
 
 **Result:** Improved.
+
+---
+
+## Cycle 37: a shadow's fade was most of what a ring cost in Low (adopted)
+
+**Identified bottleneck:** turning a ring in Low, the graphics process rasterises
+tiles for 460-560 ms a second at 3x, 67% of the 3D engine against Medium's 17%, and
+drops 8-10% of frames. Composited scrolling for the row (`will-change:
+scroll-position`) changed nothing, and neither did taking the turn's `z-index`
+changes out.
+
+**Root-cause hypothesis:** in Low a card has no layer of its own. The card coming to
+the front fades in its deep shadow over .3s and the card leaving fades its out, about
+the length of a turn, and every frame of that fade paints the row and rasterises its
+tiles again. Taking the shadow away entirely (an ablation) took the tiles to 64 ms a
+second and the dropped frames from 34 to 1.
+
+**Proposed modification:** in Low the fade goes in three steps. That shadow only
+moves a pixel by 8/255 at most (a shot with and without it), so each step is under
+3/255. Medium and High, where each card is a layer, gain nothing from it (tiles 92 ->
+84 and 125 -> 130 ms/s, dropped 2.1 -> 1.4% and 11.2 -> 12.9%) and keep the smooth
+fade.
+
+**Implementation:** `portfolio.css`.
+
+**Before / after (`ring` in Low, three rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| 3x: dropped (frames) | 7.7% (22) | 0.6% (1) |
+| 3x: GPU 3D engine | 69% | 36% |
+| 3x: graphics process | 71% | 32% |
+| 3x: tiles | 461 ms/s | 167 ms/s |
+| MacBook size: dropped (frames) | 1.6% (4) | 0.6% (1) |
+| MacBook size: GPU 3D engine | 39% | 25% |
+| No graphics: dropped frames | 63 | 60 |
+| No graphics: main thread | 879 ms/s | 813 ms/s |
+
+(Frames shown a second fall with these, 47 to 38, because there are fewer of them to
+show.)
+
+**Visual regression:** Low's captures match to within 2/255 at rest. In motion, one
+change by design and not one to see: the deep shadow arrives in three steps of under
+3/255 in place of a smooth .3s.
+**Functional regression:** Pass.
+
+**Result:** Improved.

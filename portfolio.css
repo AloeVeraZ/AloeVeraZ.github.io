@@ -1541,6 +1541,14 @@ html[data-effects="low"] .featured-project-carousel .project-card {
     transform: translateY(var(--card-lift, 0px)) scale(var(--card-press, 1));
     will-change: auto;
 }
+/* Below High's and Medium's rings a card has no layer of its own, so the deep
+   shadow of the card in front fading in and out had the row painted and rastered
+   again on every frame of each turn of the ring: the graphics process's biggest
+   job by far in Low (cycle 37). Three steps instead of eighteen. That shadow only
+   ever moves a pixel by 8/255, so each step is under 3/255, and nobody can tell. */
+html[data-effects="low"] .project-carousel .project-card {
+    transition: border-color .3s ease, box-shadow .3s steps(3), opacity .15s linear, var(--card-answer-transition);
+}
 
 /* Promote only while a ring is actively moving. Keeping every card on its
    own compositor layer makes large collections expensive on laptop GPUs. */
