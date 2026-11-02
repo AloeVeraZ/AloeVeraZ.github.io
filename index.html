@@ -72,17 +72,12 @@
         else if (levels.indexOf(chosen) > -1) { level = chosen; reason = 'manual'; }
         root.setAttribute('data-effects', level);
         root.setAttribute('data-effects-reason', reason);
-        var sky = read('sessionStorage', 'portfolio-sky-' + level);
-        if (['y2k', 'vapor', 'aero', 'ego'].indexOf(sky) > -1) root.setAttribute('data-' + sky, '');
     })();
     </script>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261102-110420">
+    <link rel="stylesheet" href="portfolio.css?v=20261102-162651">
     <link rel="stylesheet" href="navbar.css?v=20261027-icon-controls-swipe">
-    <!-- A level's other sky, kept across a reload in this visit. Its stylesheet
-         is fetched only for the visitor who turned it on. -->
-    <script>['y2k', 'vapor', 'aero', 'ego'].forEach(function (sky) { if (document.documentElement.hasAttribute('data-' + sky)) document.write('<link id="' + sky + '-styles" rel="stylesheet" href="' + sky + '.css?v=20261102b">'); });</script>
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
@@ -261,7 +256,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261102-110420"></script>
+    <script src="portfolio.js?v=20261102-162651"></script>
     <script src="glass.js?v=20261102-031642"></script>
 </body>
 </html>

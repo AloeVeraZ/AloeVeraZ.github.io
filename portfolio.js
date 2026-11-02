@@ -500,41 +500,32 @@ document.addEventListener('DOMContentLoaded', () => {
     galaxyField.addEventListener('skyshown', settleBackdrop);
 
     // ---- The other skies -------------------------------------------------
-    // Quick presses on a stop of the slider swap that level's backdrop and
-    // colours for another era's: ten on Low for the dark web of the turn of the
-    // century, five on Medium for a pastel desktop, five on High for a Frutiger
-    // Aero sky, five more for a dark one and five more for the stars again. A
-    // gap in the presses starts the count again. All of it is in files fetched
-    // only when asked for (y2k.css, vapor.*, aero.*, ego.*), so this counter is
-    // the only thing it costs anyone who never finds it. Each belongs to its
-    // level alone: leaving the level, by choice or because the page had to,
-    // hands everything back and coming back brings the choice back with it, for
-    // the rest of the visit.
+    // Ten quick presses on a stop of the slider find that level's other looks,
+    // and from then on two quick presses go round them: on Low the dark web of
+    // the turn of the century, on Medium a pastel desktop, on High a Frutiger
+    // Aero sky, then a dark one, then the stars again. A gap in the presses
+    // starts the count again. All of it is in files fetched only when asked for
+    // (y2k.*, vapor.*, aero.*, ego.*), so this counter is the only thing it costs
+    // anyone who never finds it. Each belongs to its level alone: leaving the
+    // level, by choice or because the page had to, hands everything back, and
+    // coming back brings the choice back with it. A reload forgets all of it and
+    // the page starts as it always does.
     const SKY_PRESS_GAP_MS = 400;
-    const SKY_QUIET_MS = 2500;
-    const SKY_VERSION = '20261102b';
+    const SKY_CYCLE_GAP_MS = 500;
+    const SKY_UNLOCK_PRESSES = 10;
+    const SKY_CYCLE_PRESSES = 2;
+    const SKY_UNLOCK_QUIET_MS = 2500;
+    const SKY_CYCLE_QUIET_MS = 700;
+    const SKY_VERSION = '20261102c';
     const SKIES = {
-        y2k: { level: 'low' },
+        y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         vapor: { level: 'medium', script: 'portfolioVapor', file: 'vapor.js' },
         aero: { level: 'high', script: 'portfolioAero', file: 'aero.js' },
         ego: { level: 'high', script: 'portfolioEgo', file: 'ego.js' }
     };
-    const SKY_ROUNDS = {
-        low: { presses: 10, skies: ['', 'y2k'] },
-        medium: { presses: 5, skies: ['', 'vapor'] },
-        high: { presses: 5, skies: ['', 'aero', 'ego'] }
-    };
-    const skyStorageKey = level => `portfolio-sky-${level}`;
-    const wantedSkies = {};
-    Object.keys(SKY_ROUNDS).forEach(level => {
-        let stored = '';
-        try {
-            stored = sessionStorage.getItem(skyStorageKey(level)) || '';
-        } catch (error) {
-            stored = '';
-        }
-        wantedSkies[level] = SKY_ROUNDS[level].skies.includes(stored) ? stored : '';
-    });
+    const SKY_ROUNDS = { low: ['', 'y2k'], medium: ['', 'vapor'], high: ['', 'aero', 'ego'] };
+    const wantedSkies = { low: '', medium: '', high: '' };
+    const foundSkies = { low: false, medium: false, high: false };
     let showingSky = '';
     let pressedLevel = '';
     let skyPresses = 0;
@@ -620,7 +611,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Offline, or blocked: the page simply keeps the sky it has.
             if (request !== skyRequest) return;
             wantedSkies[effectsMode] = '';
-            storeEffects('sessionStorage', skyStorageKey(effectsMode), '');
             delete root.dataset[want];
             showOwnBackdrop(effectsMode);
         }
@@ -628,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // By when the press happened, not when the page got round to it: on a machine
     // that is struggling, quick presses can be answered slowly.
     const countSkyPress = (level, now) => {
-        if (level !== pressedLevel || now - lastSkyPress >= SKY_PRESS_GAP_MS) skyPresses = 0;
+        if (level !== pressedLevel || now - lastSkyPress >= (foundSkies[level] ? SKY_CYCLE_GAP_MS : SKY_PRESS_GAP_MS)) skyPresses = 0;
         pressedLevel = level;
         lastSkyPress = now;
         // Nobody spamming a button stops at exactly the right number. A sky
@@ -640,12 +630,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         skyPresses += 1;
         const round = SKY_ROUNDS[level];
-        if (!round || skyPresses < round.presses) return;
+        if (!round || skyPresses < (foundSkies[level] ? SKY_CYCLE_PRESSES : SKY_UNLOCK_PRESSES)) return;
         skyPresses = 0;
-        skyQuietUntil = now + SKY_QUIET_MS;
-        const next = round.skies[(round.skies.indexOf(wantedSkies[level]) + 1) % round.skies.length];
-        wantedSkies[level] = next;
-        storeEffects('sessionStorage', skyStorageKey(level), next);
+        skyQuietUntil = now + (foundSkies[level] ? SKY_CYCLE_QUIET_MS : SKY_UNLOCK_QUIET_MS);
+        foundSkies[level] = true;
+        wantedSkies[level] = round[(round.indexOf(wantedSkies[level]) + 1) % round.length];
         syncSkies(true);
     };
 

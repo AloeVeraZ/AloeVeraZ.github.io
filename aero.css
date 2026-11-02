@@ -1,6 +1,5 @@
 /* The Frutiger Aero sky's look on the page (aero.js has the picture itself).
-   Not fetched until a visitor asks for it, five quick presses on the effects
-   slider's High stop, and every rule below answers only to html[data-aero],
+   Not fetched until a visitor asks for it, and every rule below answers only to html[data-aero],
    which portfolio.js sets only in High FX, so nothing here reaches Low or
    Medium. Nothing about how anything moves or answers is touched: the lean,
    the lift, the bend, the rings and the rims are the page's own. Only their

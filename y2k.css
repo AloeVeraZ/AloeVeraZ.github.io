@@ -1,22 +1,22 @@
-/* The dark web of the turn of the century: Low FX's hidden second look.
+/* The dark web of the turn of the century: Low FX's hidden look.
 
-   Ten quick presses on the effects slider's Low stop bring it up, and ten more put
-   it away (the slider code in portfolio.js). This file and one picture are all of
-   it: no script, no canvas, nothing moving. All the light in it, the violet aura,
-   the burning beam, the glow on the machine, was painted once, ahead of time, into
-   that picture (assets/y2k-sky.webp), which lies on the lattice's own fixed layer.
-   So a scroll moves the page over it and never paints it again, and it can have
-   all the blur it likes without a visitor's machine working any of it out. Every
-   rule answers only to html[data-effects="low"][data-y2k].
+   Ten quick presses on the effects slider's Low stop find it, and after that two
+   quick presses turn it on and off (the slider code in portfolio.js). A reload forgets
+   it. The colour behind everything is a few gradients on the lattice's own fixed layer,
+   painted once, so a scroll moves the page over them and never paints them again. The
+   eye on top of them is y2k.js. All the rest is flat paint with no blur, frost, blend
+   or mask. Every rule answers only to html[data-effects="low"][data-y2k].
 
-   What it borrows: the gel buttons, pinstripes and tabs of Apple's site around
-   2000, gone dark; dialog boxes with a gradient title bar; a media player's lit
-   readouts; and a violet print-shop poster of the year 2000, its machine a robot's
-   turret. */
+   What it borrows: the gel buttons and tabs of Apple's site around 2000, gone dark;
+   dialog boxes with a title bar; and the dithered eye a dialog box of the time would
+   show you. */
 html[data-effects="low"][data-y2k] {
     --bg: #040209;
-    --surface: rgba(16, 10, 32, .86);
-    --surface-raised: rgba(24, 16, 46, .92);
+    /* Everything that can be seen through is seen through by exactly this much. */
+    --y2k-pane: rgba(12, 7, 26, .84);
+    --y2k-bar: rgba(78, 44, 200, .84);
+    --surface: var(--y2k-pane);
+    --surface-raised: var(--y2k-pane);
     --ink: #f4f0ff;
     --muted: #c3b8df;
     --line: rgba(190, 165, 255, .28);
@@ -28,7 +28,7 @@ html[data-effects="low"][data-y2k] {
     --radius-card: .625rem;
     --radius-control: 999px;
     --radius-surface: .75rem;
-    --glass-surface: rgba(16, 10, 32, .86);
+    --glass-surface: var(--y2k-pane);
     --glass-surface-dense: rgba(16, 10, 32, .96);
     --glass-edge-paint: transparent;
     --glass-edge-lights: inset 0 0 0 0 transparent;
@@ -48,23 +48,25 @@ html[data-effects="low"][data-y2k] {
 }
 html[data-effects="low"][data-y2k] body { background: var(--bg); }
 
-/* The picture, with a pinstripe of Apple's across it. */
+/* The aura behind the eye: colour with no edges, painted the once. */
 html[data-effects="low"][data-y2k] .background-grid[data-look] {
-    background-image: none;
+    background-image:
+        radial-gradient(70vmax 60vmax at 62% 46%, rgba(84, 36, 214, .6), transparent 70%),
+        radial-gradient(44vmax 36vmax at 88% 12%, rgba(214, 50, 200, .3), transparent 70%),
+        radial-gradient(46vmax 40vmax at 26% 92%, rgba(34, 70, 240, .3), transparent 70%);
+    background-size: auto;
     opacity: 1;
 }
-html[data-effects="low"][data-y2k] .background-grid::before {
-    background:
-        repeating-linear-gradient(180deg, rgba(190, 170, 255, .028) 0 1px, transparent 1px 3px),
-        url("assets/y2k-sky.webp") center / cover no-repeat;
-    opacity: 1;
-}
-@media (max-aspect-ratio: 1/1) {
-    html[data-effects="low"][data-y2k] .background-grid::before {
-        background:
-            repeating-linear-gradient(180deg, rgba(190, 170, 255, .028) 0 1px, transparent 1px 3px),
-            url("assets/y2k-sky-tall.webp") center / cover no-repeat;
-    }
+html[data-effects="low"][data-y2k] .background-grid::before { display: none; }
+.y2k-eye {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
 }
 
 /* The big lettering gives off light. Painted once with the rest of the page. */
@@ -73,12 +75,15 @@ html[data-effects="low"][data-y2k] :is(.hero-name, .section-title, .library-head
     text-shadow: 0 0 .16em rgba(176, 130, 255, .72), 0 0 .5em rgba(110, 60, 255, .4);
 }
 html[data-effects="low"][data-y2k] :is(.hero-badge, .section-label) {
-    color: #d3bdff;
-    text-shadow: 0 0 .6em rgba(160, 110, 255, .8);
+    color: #e2d4ff;
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
+}
+html[data-effects="low"][data-y2k] :is(.navbar .logo, .navbar .nav-links > li > a) {
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
 }
 html[data-effects="low"][data-y2k] :is(.hero-tagline, .bio-text, .section-subtitle, .library-heading p, .contact-desc) {
-    color: #ece6ff;
-    text-shadow: 0 1px .5em rgba(4, 2, 9, .9);
+    color: #f2eeff;
+    text-shadow: 0 0 .2em rgba(4, 2, 9, .98), 0 0 .6em rgba(4, 2, 9, .92);
 }
 html[data-effects="low"][data-y2k] .collection-toggle:hover { color: #ffffff; }
 html[data-effects="low"][data-y2k] .project-library { border-top-color: rgba(190, 165, 255, .3); }
@@ -86,17 +91,13 @@ html[data-effects="low"][data-y2k] .project-library { border-top-color: rgba(190
 /* The cards: dialogs of the period, in dark glass with a soft light in the corner
    and a glow around them. */
 html[data-effects="low"][data-y2k] :is(.about-highlight, .skill-group, .project-card) {
-    background:
-        radial-gradient(120% 70% at 12% 0%, rgba(132, 84, 255, .2), transparent 62%),
-        linear-gradient(180deg, rgba(18, 11, 38, .9), rgba(8, 5, 18, .93));
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .34);
     border-radius: var(--radius-card);
     box-shadow: var(--y2k-aura);
 }
 html[data-effects="low"][data-y2k] :is(.about-highlight, .skill-group, .project-card):hover {
-    background:
-        radial-gradient(120% 70% at 12% 0%, rgba(150, 100, 255, .32), transparent 66%),
-        linear-gradient(180deg, rgba(24, 15, 50, .92), rgba(10, 6, 22, .94));
+    background: var(--y2k-pane);
     border-color: rgba(214, 196, 255, .8);
     box-shadow: var(--y2k-aura-lit);
 }
@@ -107,7 +108,7 @@ html[data-effects="low"][data-y2k] :is(.about-highlight > .about-highlight-label
     background-color: transparent;
     background-image:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23f4f0ff' stroke-width='1.4'%3E%3Cpath d='M2 2l8 8M10 2l-8 8'/%3E%3C/svg%3E"),
-        linear-gradient(90deg, rgba(84, 46, 214, .92), rgba(120, 78, 240, .62) 56%, rgba(190, 130, 255, .2));
+        linear-gradient(var(--y2k-bar), var(--y2k-bar));
     background-repeat: no-repeat;
     background-size: 12px 12px, 100% 100%;
     background-position: calc(100% - .7rem) 50%, 0 0;
@@ -158,13 +159,13 @@ html[data-effects="low"][data-y2k] .project-category-badge {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-html[data-effects="low"][data-y2k] :is(.project-image-wrapper, .project-image) { background: #06030e; }
-html[data-effects="low"][data-y2k] .project-card:hover .project-image.is-motion-active { background: #06030e; }
+html[data-effects="low"][data-y2k] :is(.project-image-wrapper, .project-image) { background: transparent; }
+html[data-effects="low"][data-y2k] .project-card:hover .project-image.is-motion-active { background: transparent; }
 html[data-effects="low"][data-y2k] .project-image-wrapper { border-bottom: 1px solid rgba(196, 172, 255, .24); }
 
 /* Tags are the lit readouts of a media player; every control is a wet gel button. */
 html[data-effects="low"][data-y2k] .tag {
-    background: rgba(120, 80, 240, .14);
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .3);
     color: #e2d6ff;
 }
@@ -189,14 +190,11 @@ html[data-effects="low"][data-y2k] :is(.hero-buttons > .btn, .contact-links > .b
     box-shadow: none;
 }
 
-/* The bar: smoked metal with a pinstripe, a hairline of light along its foot, and
-   its links the tabs of that old site, lit up only under the cursor. */
+/* The bar: the same pane as the cards, with its links lit up under the cursor. */
 html[data-effects="low"][data-y2k] .navbar { --nav-muted: #f4f0ff; }
 html[data-effects="low"][data-y2k] .has-scrolled .navbar { --nav-muted: #f4f0ff; }
 html[data-effects="low"][data-y2k] .navbar .nav-content::before {
-    background:
-        repeating-linear-gradient(180deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 2px),
-        linear-gradient(rgba(44, 32, 84, .96), rgba(16, 10, 34, .97));
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .34);
     border-radius: var(--radius-surface);
     box-shadow: inset 0 1px 0 rgba(235, 225, 255, .3), 0 0 22px rgba(120, 80, 255, .26);
@@ -225,24 +223,22 @@ html[data-effects="low"][data-y2k] .page-scroll-progress::after { background: rg
 /* A project's sheet: one big dialog. */
 html[data-effects="low"][data-y2k] .modal-overlay { background: rgba(4, 2, 9, .95); }
 html[data-effects="low"][data-y2k] .modal-card {
-    background:
-        radial-gradient(90% 26rem at 10% 0%, rgba(132, 84, 255, .2), transparent 70%),
-        #0e0820;
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .36);
     border-radius: var(--radius-card);
     box-shadow: 0 0 44px rgba(120, 80, 255, .3);
 }
 html[data-effects="low"][data-y2k] .modal-overview {
-    background: rgba(120, 80, 240, .08);
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .26);
 }
 html[data-effects="low"][data-y2k] .modal-overview-item {
-    background: linear-gradient(180deg, rgba(40, 28, 78, .8), rgba(16, 10, 34, .9));
+    background: var(--y2k-pane);
     border: 1px solid rgba(196, 172, 255, .24);
     border-radius: var(--radius-card);
     box-shadow: none;
 }
 html[data-effects="low"][data-y2k] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
-    background: #06030e;
+    background: var(--y2k-pane);
 }
-html[data-effects="low"][data-y2k] .modal-media-item figcaption { background: #120b26; color: var(--ink); }
+html[data-effects="low"][data-y2k] .modal-media-item figcaption { background: var(--y2k-pane); color: var(--ink); }

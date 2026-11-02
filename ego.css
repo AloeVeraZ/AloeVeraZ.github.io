@@ -1,6 +1,5 @@
 /* The dark sky's look on the page (ego.js has the picture itself). Not fetched until
-   a visitor asks for it, ten quick presses on the slider's High stop, five to the
-   bright sky and five more to this, and every rule answers only to html[data-ego],
+   a visitor asks for it, and every rule answers only to html[data-ego],
    which portfolio.js sets only in High FX, so nothing here reaches Low or Medium.
    Nothing about how anything moves or answers is touched: the lean, the lift, the
    bend, the rings and the rims are the page's own. Only their colours change, to

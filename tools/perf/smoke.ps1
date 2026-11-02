@@ -134,8 +134,9 @@ try {
     $kept = & $js $level | ConvertFrom-Json
     Check 'the choice is kept for the visit' ($kept.effects -eq 'low' -and $kept.reason -eq 'manual' -and $kept.value -eq '0') "$($kept.effects)/$($kept.reason)"
     Set-EffectsLevel $page 'high' | Out-Null
-    Start-Sleep -Milliseconds 1500
-    $h = & $js $level | ConvertFrom-Json
+    # The old backdrop comes down once the sky is in, or after four seconds.
+    $polls = 0
+    do { Start-Sleep -Milliseconds 500; $h = & $js $level | ConvertFrom-Json; $polls++ } while ($h.look -and $polls -lt 11)
     Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -and $h.look -eq '' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
 
     # A visit the frame monitor had to step down stays there for the tab.
@@ -177,14 +178,14 @@ try {
     $old = & $js $level | ConvertFrom-Json
     Check 'a level saved across visits by an older version is forgotten' ($old.effects -eq 'medium' -and $null -eq (& $js "localStorage.getItem('portfolio-effects-level')")) "$($old.effects)/$($old.reason)"
 
-    # The other skies: quick presses on a stop, ten on Low and five on Medium and
-    # High, not a press fewer or slower, fetching nothing until then, and everything
-    # handed back again.
-    & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-sky-low', 'portfolio-sky-medium', 'portfolio-sky-high'].forEach(k => sessionStorage.removeItem(k)); sessionStorage.setItem('portfolio-effects-overrides', '3'); return 1; })()" | Out-Null
+    # The other skies: ten quick presses on a stop find them, not a press fewer or
+    # slower, fetching nothing until then. After that two quick presses go round them.
+    # Leaving a level hands everything back, and a reload forgets it all.
+    & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag'].forEach(k => sessionStorage.removeItem(k)); sessionStorage.setItem('portfolio-effects-overrides', '3'); return 1; })()" | Out-Null
     Invoke-Page $page 'Page.reload' | Out-Null
     Wait-PageReady $page
     Start-Sleep -Seconds 1
-    $skyFiles = { & $js "performance.getEntriesByType('resource').filter(e => /\/(y2k|vapor|aero|ego)\.(js|css)/.test(e.name)).length" }
+    $skyFiles = { & $js "performance.getEntriesByType('resource').filter(e => /\/(y2k|vapor|aero|ego)\.(js|css)/.test(e.name)).map(e => e.name.split('/').pop().split('?')[0]).sort().join(',')" }
     $look = { & $js "['y2k', 'vapor', 'aero', 'ego'].filter(n => document.documentElement.hasAttribute('data-' + n)).join(',')" }
     $waitFor = { param($name)
         $waited = 0
@@ -201,41 +202,56 @@ try {
             Start-Sleep -Milliseconds $gap
         }
     }
+    # Two presses that go round the looks. With no graphics the page answers so slowly
+    # that presses sent one at a time arrive further apart than any hand's, so there
+    # they are handed to the slider together.
+    $twice = { param($i)
+        if (-not $Software) { & $presses $i 2 90; return }
+        & $js "(() => { const s = document.getElementById('fx-slider'), b = document.querySelectorAll('.fx-slider-stop')[$i].getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; for (let n = 0; n < 2; n++) for (const type of ['pointerdown', 'pointerup']) s.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y })); return 1; })()" | Out-Null
+    }
     & $presses 0 9 90
     Start-Sleep -Milliseconds 800
-    Check 'nine presses on Low leave every other sky unfetched' ((& $look) -eq '' -and (& $skyFiles) -eq 0)
+    Check 'nine presses on Low leave every other sky unfetched' ((& $look) -eq '' -and (& $skyFiles) -eq '')
     & $presses 0 10 90
     $waited = & $waitFor 'y2k'
-    $files = & $js "performance.getEntriesByType('resource').filter(e => /\/(y2k|vapor|aero|ego)\.(js|css)/.test(e.name)).map(e => e.name.split('/').pop().split('?')[0]).join(',')"
-    Check 'ten quick presses on Low bring up its other look, and only its stylesheet' ((& $look) -eq 'y2k' -and $files -eq 'y2k.css') "$waited ms after the last press, $files"
+    $files = & $skyFiles
+    $eye = & $js "(() => { const c = document.querySelector('.y2k-eye'); return !!c && getComputedStyle(c).imageRendering === 'pixelated'; })()"
+    Check 'ten quick presses on Low bring up its eye, and only its own files' ((& $look) -eq 'y2k' -and $files -eq 'y2k.css,y2k.js' -and $eye) "$waited ms after the last press, $files"
     Start-Sleep -Seconds 3
+    & $twice 0
+    Start-Sleep -Milliseconds 500
+    Check 'two more on Low put it away' ((& $look) -eq '' -and -not (& $js "!!document.querySelector('.y2k-eye')"))
+    Start-Sleep -Seconds 1
+    & $twice 0
+    $waited = & $waitFor 'y2k'
+    Check 'and two more bring it back' ((& $look) -eq 'y2k') "$waited ms after the last press"
+    Start-Sleep -Seconds 1
     & $presses 1 4 90
     Start-Sleep -Milliseconds 800
-    Check 'Medium does not keep Low''s, and four presses on it do nothing' ((& $look) -eq '')
-    & $presses 1 5 90
-    # A hand that keeps going past five, into the moment it takes to get ready.
+    Check 'Medium does not keep Low''s, and four presses on it do nothing' ((& $look) -eq '' -and -not (& $js "!!document.querySelector('.y2k-eye')"))
+    & $presses 1 10 90
+    # A hand that keeps going past ten, into the moment it takes to get ready.
     & $presses 1 3 90
     $waited = & $waitFor 'vapor'
     Start-Sleep -Milliseconds 800
-    $desk = & $js "JSON.stringify({ picture: !!document.querySelector('.background-grid').style.getPropertyValue('--vapor-sky'), still: document.querySelector('.background-grid').dataset.sky === undefined || !document.querySelector('.background-grid').style.getPropertyValue('--still-sky'), canvases: document.querySelectorAll('.aero-scene, .ego-scene').length })" | ConvertFrom-Json
-    Check 'five quick presses on Medium bring up its desktop, drawn as one picture' ((& $look) -eq 'vapor' -and $desk.picture -and $desk.canvases -eq 0) "$waited ms after the last press"
+    Check 'ten quick presses on Medium bring up its desk' ((& $look) -eq 'vapor' -and (& $js "document.querySelectorAll('.vapor-win').length === 4")) "$waited ms after the last press"
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'high' | Out-Null
     Start-Sleep -Milliseconds 800
-    & $presses 2 5 550
+    & $presses 2 10 550
     Start-Sleep -Milliseconds 800
-    Check 'five presses half a second apart on High do nothing' ((& $look) -eq '')
+    Check 'ten presses half a second apart on High do nothing' ((& $look) -eq '')
+    & $presses 2 10 90
     & $presses 2 5 90
-    & $presses 2 7 90
     $waited = & $waitFor 'aero'
-    Check 'five quick presses on High bring up the bright sky, and more do not move it on' ((& $look) -eq 'aero' -and (& $js "!!document.querySelector('.aero-scene')")) "$waited ms after the last press"
+    Check 'ten quick presses on High bring up the bright sky, and more do not move it on' ((& $look) -eq 'aero' -and (& $js "!!document.querySelector('.aero-scene')")) "$waited ms after the last press"
     $sky = & $js "JSON.stringify({ space: document.querySelector('.galaxy-field').width, glass: document.documentElement.dataset.glass, bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
     Check 'the space sky is put away and the glass is left as it was' ($sky.space -eq 0 -and $sky.bend) "space canvas $($sky.space) wide, glass=$($sky.glass)"
     Start-Sleep -Seconds 3
-    & $presses 2 5 90
+    & $twice 2
     $waited = & $waitFor 'ego'
     $sky = & $js "JSON.stringify({ dark: !!document.querySelector('.ego-scene'), bright: !!document.querySelector('.aero-scene'), bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
-    Check 'five more bring up the dark sky in its place' ((& $look) -eq 'ego' -and $sky.dark -and -not $sky.bright -and $sky.bend) "$waited ms after the last press"
+    Check 'two more bring up the dark sky in its place' ((& $look) -eq 'ego' -and $sky.dark -and -not $sky.bright -and $sky.bend) "$waited ms after the last press"
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'medium' | Out-Null
     $waited = & $waitFor 'vapor'
@@ -243,21 +259,33 @@ try {
     # Once the crossfade has played: the page is at its busiest during it, and a
     # press answered more than 400 ms after the last starts the count again.
     Start-Sleep -Seconds 3
-    & $presses 1 5 90
+    & $twice 1
     $waited = & $waitFor ''
-    $stillBack = { & $js "!!document.querySelector('.background-grid').style.getPropertyValue('--still-sky') && !document.querySelector('.background-grid').style.getPropertyValue('--vapor-sky')" }
+    $stillBack = { & $js "!!document.querySelector('.background-grid').style.getPropertyValue('--still-sky') && !document.querySelector('.vapor-desk')" }
     $polls = 0
     while (-not (& $stillBack) -and $polls -lt 40) { Start-Sleep -Milliseconds 250; $polls++ }
-    $grid = & $js "(() => { const g = document.querySelector('.background-grid'); return JSON.stringify({ effects: document.documentElement.dataset.effects, stored: sessionStorage.getItem('portfolio-sky-medium'), look: g.dataset.look, still: g.style.getPropertyValue('--still-sky').slice(0, 12), vapor: g.style.getPropertyValue('--vapor-sky').slice(0, 12) }); })()"
-    Check 'five more on Medium put its still sky back' ((& $look) -eq '' -and (& $stillBack)) "$($polls * 250) ms after the swap, look=$(& $look) $grid"
+    Check 'two more on Medium put its still sky back' ((& $look) -eq '' -and (& $stillBack)) "$($polls * 250) ms after the swap"
     Set-EffectsLevel $page 'high' | Out-Null
     $waited = & $waitFor 'ego'
     Check 'coming back up to High brings the dark sky back' ((& $look) -eq 'ego' -and (& $js "!!document.querySelector('.ego-scene')"))
     Start-Sleep -Seconds 3
-    & $presses 2 5 90
-    Start-Sleep -Milliseconds 2500
-    $space = & $js "JSON.stringify({ scene: !!document.querySelector('.aero-scene, .ego-scene'), space: document.querySelector('.galaxy-field').width, kept: sessionStorage.getItem('portfolio-sky-high') })" | ConvertFrom-Json
-    Check 'five more put the space sky back' ((& $look) -eq '' -and -not $space.scene -and $space.space -gt 0 -and -not $space.kept) "space canvas $($space.space) wide"
+    & $twice 2
+    # Building the stars again takes a machine with no graphics a while.
+    $polls = 0
+    while ((& $js "document.querySelector('.galaxy-field').width") -eq 0 -and $polls -lt 60) { Start-Sleep -Milliseconds 250; $polls++ }
+    $space = & $js "JSON.stringify({ scene: !!document.querySelector('.aero-scene, .ego-scene'), space: document.querySelector('.galaxy-field').width })" | ConvertFrom-Json
+    Check 'two more put the space sky back' ((& $look) -eq '' -and -not $space.scene -and $space.space -gt 0) "space canvas $($space.space) wide"
+    Start-Sleep -Seconds 1
+    & $twice 2
+    $waited = & $waitFor 'aero'
+    Start-Sleep -Seconds 2
+    Invoke-Page $page 'Page.reload' | Out-Null
+    Wait-PageReady $page
+    Start-Sleep -Seconds 1
+    Check 'a reload goes back to the default look' ((& $look) -eq '' -and (& $skyFiles) -eq '')
+    & $twice 2
+    Start-Sleep -Milliseconds 800
+    Check 'and it takes ten presses to find them again' ((& $look) -eq '')
 
     # Everything the page logged or failed to load along the way.
     Clear-CdpEvents $page.Session -Keep '*'

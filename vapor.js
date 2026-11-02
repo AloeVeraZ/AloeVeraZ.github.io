@@ -1,20 +1,21 @@
-/* The pastel desktop: Medium FX's hidden second backdrop.
+/* The pastel desktop: Medium FX's hidden look.
 
-   Five quick presses on the effects slider's Medium stop swap the still starry sky
-   for a pink desktop of about 1999, and five more swap it back (the slider code in
-   portfolio.js). It holds to everything Medium promises. What only sits there is
-   drawn once, in a worker, into one picture on the lattice's own fixed layer, where
-   the still sky goes. What can be used is a few plain elements on one fixed layer
-   behind the page: nothing on them runs unless someone is using it, so at rest the
-   page still asks for no frames at all, and a scroll draws none of it again. This
-   file is not fetched until someone asks, and leaving Medium hands all of it back.
+   Ten quick presses on the effects slider's Medium stop find it, and after that two
+   quick presses turn it on and off (the slider code in portfolio.js). A reload forgets
+   it. The backdrop is only the lattice on pink. Everything else on the desk is something
+   to use, and all of it can be picked up and moved.
 
-   It is a desktop for this portfolio. The infill window's slider takes a part from
-   1% to solid. The print job takes that part and prints it, taking longer and using
-   more plastic the denser it is. The robot pulls a face when it is poked. Holding
-   the torque window winds it up. Windows drag by their title bars and grow. Close
-   one and it comes back on its own, a little further along the desk; minimise one
-   and it waits on the bar at the bottom. */
+   It is a desktop for this portfolio. The infill window's slider takes a part from 1%
+   to solid. The print job takes that part and prints it, taking longer and using more
+   plastic the denser it is. The robot pulls a face when it is poked. Holding the torque
+   window winds it up. Close a window and it comes back on its own; minimise one and it
+   waits on the bar at the foot.
+
+   It holds to what Medium promises. These are plain elements lying on the page at its
+   top, in the empty places beside the words, and they scroll away with it. Nothing on
+   them runs unless someone is using it, so at rest the page still asks for no frames at
+   all. This file is not fetched until someone asks, and leaving Medium hands all of it
+   back. */
 (function () {
     'use strict';
 
@@ -31,241 +32,9 @@
         '+': '0004041F040400', '?': '0E110102040004', '/': '01010204081010'
     };
 
-    /* Stands alone, with FONT, as its source text is also the worker's: everything
-       on the desk that nobody can use. CSS pixels, on a context already scaled. */
-    function paintVapor(c, W, H) {
-        const TAU = Math.PI * 2;
-        const INK = '#0c0a14', PINK = '#f8b6ee', TEAL = '#5ff0d8', PURPLE = '#b18be8', WHITE = '#ffffff', GREY = '#b4b4bd';
-        const ratio = c.getTransform ? c.getTransform().a : 1;
-        const portrait = H > W * 1.1;
-        const u = Math.min(W, H * 1.6) / 1000;
-        const line = Math.max(1.5, 2.2 * u);
-        let s = 90210;
-        const random = () => {
-            s = (s + 0x6D2B79F5) | 0;
-            let t = Math.imul(s ^ (s >>> 15), 1 | s);
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-        const crisp = value => Math.max(1, Math.round(value * ratio)) / ratio;
-        const box = (x, y, w, h, fill) => {
-            c.fillStyle = fill;
-            c.fillRect(x, y, w, h);
-            c.strokeStyle = INK;
-            c.lineWidth = line;
-            c.strokeRect(x, y, w, h);
-        };
-        const disc = (x, y, r, fill) => {
-            c.fillStyle = fill;
-            c.beginPath();
-            c.arc(x, y, r, 0, TAU);
-            c.fill();
-        };
-        const pixelText = (text, x, y, cell, color) => {
-            c.fillStyle = color;
-            for (let i = 0; i < text.length; i++) {
-                const glyph = FONT[text[i]];
-                if (!glyph) continue;
-                for (let row = 0; row < 7; row++) {
-                    const bits = parseInt(glyph.substr(row * 2, 2), 16);
-                    for (let col = 0; col < 5; col++) {
-                        if (bits & (16 >> col)) c.fillRect(x + (i * 6 + col) * cell, y + row * cell, cell, cell);
-                    }
-                }
-            }
-        };
-        const bitmap = (rows, x, y, cell, fill) => {
-            rows.forEach((row, r) => {
-                const first = row.indexOf('#'), last = row.lastIndexOf('#');
-                if (first < 0) return;
-                if (fill) {
-                    c.fillStyle = fill;
-                    c.fillRect(x + first * cell, y + r * cell, (last - first + 1) * cell, cell);
-                }
-                c.fillStyle = INK;
-                for (let i = first; i <= last; i++) {
-                    if (row[i] === '#') c.fillRect(x + i * cell, y + r * cell, cell, cell);
-                }
-            });
-        };
-        // A disc that comes apart into squares at one edge.
-        const dissolving = (cx, cy, r, fill, cell, from) => {
-            c.save();
-            c.beginPath();
-            c.rect(cx - r - 2, cy - r - 2, r * 2 + 4, r + from * r + 2);
-            c.clip();
-            disc(cx, cy, r, fill);
-            c.restore();
-            c.fillStyle = fill;
-            for (let yy = cy + from * r; yy < cy + r * 1.28; yy += cell) {
-                const depth = (yy - (cy + from * r)) / (r * (1.28 - from));
-                const half = Math.sqrt(Math.max(0, r * r - Math.min(r * .98, yy - cy) ** 2));
-                for (let xx = cx - half; xx < cx + half; xx += cell) {
-                    if (random() > depth * 1.05) c.fillRect(xx, yy, cell * .96, cell * .96);
-                }
-            }
-        };
-        const HAND = [
-            '.....##......', '....#..#.....', '....#..#.....', '....#..#.....', '....#..###...', '....#..#..##.', '.##.#..#..#.#', '#..##..#..#.#',
-            '#...#.......#', '.#..........#', '..#.........#', '..#........#.', '...#.......#.', '...#......#..', '....#######..'
-        ];
-        const ARROW = ['#.......', '##......', '#.#.....', '#..#....', '#...#...', '#....#..', '#..####.', '#.#.#...', '##..#...', '.....#..'];
-        const chevrons = (x, y, size, count) => {
-            c.fillStyle = TEAL;
-            for (let i = 0; i < count; i++) {
-                const left = x + i * size * .78;
-                c.beginPath();
-                c.moveTo(left, y);
-                c.lineTo(left + size * .32, y);
-                c.lineTo(left + size * .72, y + size * .5);
-                c.lineTo(left + size * .32, y + size);
-                c.lineTo(left, y + size);
-                c.lineTo(left + size * .4, y + size * .5);
-                c.closePath();
-                c.fill();
-            }
-        };
-        const stripes = (x, y, w, bar, gap, count) => {
-            c.fillStyle = PURPLE;
-            for (let i = 0; i < count; i++) c.fillRect(x, y + i * (bar + gap), w, bar);
-        };
-        const dotGrid = (x, y, cols, rows, gap) => {
-            c.strokeStyle = WHITE;
-            c.lineWidth = Math.max(1, 1.3 * u);
-            for (let j = 0; j < rows; j++) {
-                for (let i = 0; i < cols; i++) {
-                    c.beginPath();
-                    c.arc(x + i * gap, y + j * gap, gap * .3, 0, TAU);
-                    c.stroke();
-                }
-            }
-        };
-        const hub = (x, y, w, depth, tall) => {
-            const skew = depth * .55;
-            c.lineWidth = line;
-            c.strokeStyle = INK;
-            c.lineJoin = 'round';
-            c.fillStyle = PURPLE;
-            c.beginPath();
-            c.moveTo(x + skew, y);
-            c.lineTo(x + w, y + depth * .3);
-            c.lineTo(x + w - skew, y + depth);
-            c.lineTo(x, y + depth * .7);
-            c.closePath();
-            c.fill();
-            c.stroke();
-            c.fillStyle = TEAL;
-            c.beginPath();
-            c.moveTo(x, y + depth * .7);
-            c.lineTo(x, y + depth * .7 + tall);
-            c.lineTo(x + w * .22, y + depth * .72 + tall * 1.28);
-            c.lineTo(x + w - skew, y + depth + tall);
-            c.lineTo(x + w - skew, y + depth);
-            c.closePath();
-            c.fill();
-            c.stroke();
-            c.fillStyle = WHITE;
-            c.beginPath();
-            c.moveTo(x + w * .22, y + depth * .78);
-            c.lineTo(x + w - skew, y + depth);
-            c.lineTo(x + w - skew, y + depth + tall);
-            c.lineTo(x + w * .22, y + depth * .72 + tall * 1.28);
-            c.closePath();
-            c.fill();
-            c.stroke();
-            const left = x + w * .27, across = (w - skew - w * .27) / 4;
-            c.fillStyle = INK;
-            for (let i = 0; i < 4; i++) c.fillRect(left + i * across + across * .12, y + depth * .86 + tall * .25 + i * depth * .05, across * .62, tall * .52);
-        };
-        const gearIcon = (x, y, size) => {
-            box(x, y, size, size, WHITE);
-            c.fillStyle = PINK;
-            c.fillRect(x + size * .14, y + size * .14, size * .72, size * .72);
-            const cx = x + size / 2, cy = y + size / 2, r = size * .26;
-            c.fillStyle = WHITE;
-            for (let i = 0; i < 8; i++) {
-                c.save();
-                c.translate(cx, cy);
-                c.rotate(i / 8 * TAU);
-                c.fillRect(-r * .22, -r * 1.3, r * .44, r * .7);
-                c.restore();
-            }
-            disc(cx, cy, r, WHITE);
-            disc(cx, cy, r * .42, PINK);
-            bitmap(ARROW, x + size * .55, y + size * .52, Math.max(1, size * .034), WHITE);
-        };
-        const scrollBar = (y, height) => {
-            box(-2, y, W + 4, height, WHITE);
-            box(0, y, height * 1.6, height, WHITE);
-            box(W - height * 1.6, y, height * 1.6, height, WHITE);
-            c.fillStyle = GREY;
-            c.fillRect(height * 2, y + height * .24, W - height * 4, height * .52);
-            c.fillStyle = INK;
-            const tri = (x, dir) => {
-                c.beginPath();
-                c.moveTo(x, y + height * .25);
-                c.lineTo(x, y + height * .75);
-                c.lineTo(x + dir * height * .34, y + height * .5);
-                c.closePath();
-                c.fill();
-            };
-            tri(height * .98, -1);
-            tri(W - height * .98, 1);
-        };
-        const powerBar = (x, y, w, height) => {
-            const gradient = c.createLinearGradient(x, 0, x + w, 0);
-            gradient.addColorStop(0, TEAL);
-            gradient.addColorStop(1, PURPLE);
-            c.fillStyle = gradient;
-            c.fillRect(x, y, w, height);
-        };
-        // Down the side, in whatever the machine sets Japanese in: making things.
-        const kana = (x, y, size) => {
-            const word = 'ものづくり';
-            c.font = `500 ${size}px "Yu Gothic", "Hiragino Sans", "Noto Sans CJK JP", "Noto Sans JP", Meiryo, sans-serif`;
-            if (c.measureText('も').width < size * .7) return;
-            c.textAlign = 'center';
-            c.textBaseline = 'middle';
-            c.fillStyle = WHITE;
-            for (let i = 0; i < word.length; i++) c.fillText(word[i], x, y + i * size * 1.12);
-        };
-        const sweep = (x, r) => {
-            const g = c.createLinearGradient(x - r, 0, x + r, 0);
-            g.addColorStop(0, TEAL);
-            g.addColorStop(.55, '#8ec5e8');
-            g.addColorStop(1, PURPLE);
-            return g;
-        };
-
-        const groundBar = Math.max(16, 24 * u);
-        if (!portrait) {
-            dissolving(W * .68, H * .74, H * .2, sweep(W * .68, H * .2), Math.max(8, 15 * u), .25);
-            dissolving(W * .285, -H * .02, H * .105, INK, Math.max(7, 13 * u), .34);
-            chevrons(W * .63, H * .022, Math.max(16, 27 * u), 7);
-            dotGrid(W * .018, H * .73, 8, 4, Math.max(13, 21 * u));
-            stripes(0, H * .885, W * .13, Math.max(6, 10 * u), Math.max(5, 8 * u), 3);
-            kana(W * .582, H * .14, Math.max(20, 38 * u));
-            bitmap(HAND, W * .765, H * .63, crisp(Math.max(2.4, 4 * u)), WHITE);
-            gearIcon(W * .62, H * .815, Math.max(44, 72 * u));
-            hub(W * .685, H * .9 - groundBar, W * .085, H * .035, H * .03);
-            pixelText('LOADING...', W * .636, H * .085, crisp(Math.max(1.4, 2.2 * u)), INK);
-            powerBar(0, H - groundBar * 2.2, W * .46, groundBar * .85);
-            const cell = crisp(Math.max(1.6, 2.4 * u));
-            pixelText('FULL POWER', W * .47, H - groundBar * 2.2 + (groundBar * .85 - 7 * cell) / 2, cell, INK);
-        } else {
-            dissolving(W * .78, H * .79, W * .3, sweep(W * .78, W * .3), Math.max(7, 12 * u), .2);
-            dissolving(W * .6, -H * .012, W * .13, INK, Math.max(6, 10 * u), .3);
-            chevrons(W * .06, H * .075, Math.max(11, 18 * u), 6);
-            dotGrid(W * .05, H * .36, 5, 3, Math.max(12, 18 * u));
-            stripes(0, H * .87, W * .22, Math.max(5, 8 * u), Math.max(4, 6 * u), 3);
-            kana(W * .93, H * .68, Math.max(16, 24 * u));
-        }
-        scrollBar(H - groundBar - 1, groundBar);
-    }
-
     /* A labyrinth, the way a skin or a print's infill grows one: each cell pushed
        toward what is near it and away from what is a little further off, a few dozen
-       times. The density slider decides where to cut it. */
+       times. Stands alone, as its source text is also the worker's. */
     function growField(gw, gh) {
         let s = 3101;
         const random = () => {
@@ -316,111 +85,44 @@
 
     const FIELD_W = 200, FIELD_H = 340;
     const WORKER = `
-        const FONT = ${JSON.stringify(FONT)};
-        const paint = ${paintVapor};
         const grow = ${growField};
-        onmessage = async ({ data: { width, height, ratio, fieldW, fieldH } }) => {
-            try {
-                const canvas = new OffscreenCanvas(Math.round(width * ratio), Math.round(height * ratio));
-                const context = canvas.getContext('2d');
-                context.setTransform(ratio, 0, 0, ratio, 0, 0);
-                paint(context, width, height);
-                const blob = await canvas.convertToBlob({ type: 'image/png' });
-                const field = grow(fieldW, fieldH);
-                postMessage({ blob, field }, [field.buffer]);
-            } catch (error) {
-                postMessage(null);
-            }
+        onmessage = ({ data: { width, height } }) => {
+            const field = grow(width, height);
+            postMessage(field, [field.buffer]);
         };`;
+    let field = null, cuts = null, desk = null, growing = null;
 
-    const layer = document.querySelector('.background-grid');
-    let url = '', drawn = '', job = 0, shown = false, resizeTimer = 0;
-    let field = null, cuts = null;
-    const shape = () => `${window.innerWidth}x${Math.round(window.innerHeight / 40)}@${Math.min(window.devicePixelRatio || 1, 2)}`;
-
-    // A browser with no canvas for its workers to draw on does it here, once.
-    const paintHere = (width, height, ratio) => new Promise((resolve, reject) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(width * ratio);
-        canvas.height = Math.round(height * ratio);
-        const context = canvas.getContext('2d');
-        if (!context) {
-            reject(new Error('no canvas'));
+    // Off the page's thread, or here once if a worker cannot be had.
+    const growAway = () => new Promise(resolve => {
+        const here = () => resolve(growField(FIELD_W, FIELD_H));
+        if (!('Worker' in window)) {
+            here();
             return;
         }
-        context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        paintVapor(context, width, height);
-        canvas.toBlob(blob => (blob ? resolve({ blob, field: growField(FIELD_W, FIELD_H) }) : reject(new Error('no picture'))), 'image/png');
-    });
-    const paintAway = (width, height, ratio) => new Promise((resolve, reject) => {
-        if (!('OffscreenCanvas' in window) || !('Worker' in window)) {
-            reject(new Error('no worker'));
-            return;
-        }
-        const source = URL.createObjectURL(new Blob([WORKER], { type: 'text/javascript' }));
-        const worker = new Worker(source);
+        let source = '', worker = null;
         const finish = () => {
-            worker.terminate();
-            URL.revokeObjectURL(source);
+            worker?.terminate();
+            if (source) URL.revokeObjectURL(source);
         };
-        worker.onerror = error => {
+        try {
+            source = URL.createObjectURL(new Blob([WORKER], { type: 'text/javascript' }));
+            worker = new Worker(source);
+        } catch (error) {
             finish();
-            reject(error);
+            here();
+            return;
+        }
+        worker.onerror = () => {
+            finish();
+            here();
         };
         worker.onmessage = ({ data }) => {
             finish();
-            if (data) resolve(data);
-            else reject(new Error('no picture'));
+            resolve(data);
         };
-        worker.postMessage({ width, height, ratio, fieldW: FIELD_W, fieldH: FIELD_H });
+        worker.postMessage({ width: FIELD_W, height: FIELD_H });
     });
-    const paint = async () => {
-        const ticket = ++job;
-        const width = window.innerWidth, height = window.innerHeight;
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
-        const taken = shape();
-        const made = await paintAway(width, height, ratio).catch(() => paintHere(width, height, ratio));
-        if (ticket !== job) return;
-        const next = URL.createObjectURL(made.blob);
-        const picture = new Image();
-        picture.src = next;
-        await picture.decode().catch(() => {});
-        if (ticket !== job) {
-            URL.revokeObjectURL(next);
-            return;
-        }
-        const previous = url;
-        url = next;
-        drawn = taken;
-        field = made.field;
-        cuts = null;
-        if (shown) {
-            layer?.style.setProperty('--vapor-sky', `url("${url}")`);
-            desk?.redraw();
-        }
-        if (previous) window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
-    };
-    const onResize = () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(() => {
-            if (!shown) return;
-            desk?.redraw();
-            if (shape() !== drawn) paint();
-        }, 250);
-    };
 
-    /* ---- The desk -------------------------------------------------------------
-       Everything here happens because someone did something, and stops when they
-       stop. No loop runs unless a hand is on the torque window or it is still
-       winding down. */
-    let desk = null;
-
-    const pixelCanvas = (text, className = 'vapor-type') => {
-        const canvas = document.createElement('canvas');
-        canvas.className = className;
-        drawType(canvas, text);
-        return canvas;
-    };
     const drawType = (canvas, text) => {
         canvas.width = Math.max(1, text.length * 6 - 1);
         canvas.height = 7;
@@ -438,6 +140,12 @@
             }
         }
     };
+    const pixelCanvas = (text, className = 'vapor-type') => {
+        const canvas = document.createElement('canvas');
+        canvas.className = className;
+        drawType(canvas, text);
+        return canvas;
+    };
     const ROBOT = [
         '.........#.........', '........###........', '....###########....', '...#...........#...', '..#.............#..',
         '.##.............##.', '.##.............##.', '.##.............##.', '..#.............#..', '..#.............#..',
@@ -451,11 +159,18 @@
         { title: 'NO MORE M3S', left: ['#.#', '.#.', '#.#'], right: ['#.#', '.#.', '#.#'], mouth: ['.......', '..###..', '.#...#.'] }
     ];
     const HEART = ['.##...##.', '#..#.#..#', '#...#...#', '#.......#', '.#.....#.', '..#...#..', '...#.#...', '....#....'];
+    const PAGE = ['#########..', '#.......##.', '#.......#.#', '#.......###', '#..#####..#', '#.........#', '#..#####..#', '#.........#', '#..#####..#', '#.........#', '#.........#', '###########'];
     const COLOURS = { teal: '#5ff0d8', yellow: '#f5ea5a', purple: '#b18be8' };
+    // A tall screen has no empty places beside its words, so there everything waits
+    // on the bar until it is asked for.
+    const isTall = () => window.innerHeight > window.innerWidth * 1.1;
 
     const buildDesk = () => {
         const root = document.createElement('div');
         root.className = 'vapor-desk';
+        // Dialogs and the bar stay where they can be seen, wherever the page has got to.
+        const over = document.createElement('div');
+        over.className = 'vapor-over';
         const timers = new Set();
         const later = (fn, ms) => {
             const id = window.setTimeout(() => {
@@ -466,20 +181,24 @@
             return id;
         };
         let top = 10;
-        const raise = win => { win.style.zIndex = ++top; };
+        const raise = item => { item.style.zIndex = ++top; };
+        const place = (item, dx, dy) => {
+            item.dataset.dx = dx;
+            item.dataset.dy = dy;
+            item.style.setProperty('--dx', `${dx}px`);
+            item.style.setProperty('--dy', `${dy}px`);
+        };
 
-        // Dialogs come up over the page, where they can be seen; everything else
-        // stays on the desk behind it.
-        const over = document.createElement('div');
-        over.className = 'vapor-over';
         const makeWindow = (name, title, bar, parent = root) => {
             const win = document.createElement('section');
             win.className = 'vapor-win';
             win.dataset.win = name;
+            win.dataset.item = '';
             win.setAttribute('aria-label', title);
             win.style.setProperty('--vapor-win-bar', COLOURS[bar]);
             const head = document.createElement('header');
             head.className = 'vapor-bar';
+            head.dataset.handle = '';
             const dots = document.createElement('span');
             dots.className = 'vapor-dots';
             for (const [act, label] of [['close', 'Close'], ['tuck', 'Minimise'], ['hop', 'Send across the desk']]) {
@@ -585,8 +304,6 @@
                 const m = Math.abs(value) % span;
                 return m < size - 1 ? m : span - m;
             };
-            const portrait = window.innerHeight > window.innerWidth * 1.1;
-            const ink = portrait ? [120, 88, 170] : [12, 10, 20];
             const c = pattern.getContext('2d');
             const image = c.createImageData(px, py);
             const data = image.data;
@@ -598,9 +315,9 @@
                     const value = a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty;
                     const on = Math.abs(value) < cut;
                     const k = (j * px + i) * 4;
-                    data[k] = on ? ink[0] : 255;
-                    data[k + 1] = on ? ink[1] : 255;
-                    data[k + 2] = on ? ink[2] : 255;
+                    data[k] = on ? 12 : 255;
+                    data[k + 1] = on ? 10 : 255;
+                    data[k + 2] = on ? 20 : 255;
                     data[k + 3] = 255;
                 }
             }
@@ -615,7 +332,7 @@
             slider.setAttribute('aria-valuetext', `${density} percent`);
             infillWin.win.setTitle(`INFILL ${density}%`);
             askPattern();
-            job1.describe();
+            printJob.describe();
         };
 
         /* The print job: the part as it stands, printed. The bar fills in steps by a
@@ -638,8 +355,9 @@
         printButton.appendChild(printLabel);
         row.append(info, printButton);
         printWin.pane.append(progress, row);
-        const job1 = {
+        const printJob = {
             state: 'idle',
+            madeAt: 20,
             grams: () => Math.round(4 + density * .46),
             seconds: () => Math.round(5 + density * .13),
             describe() {
@@ -681,7 +399,7 @@
                 drawFace(made < 5 ? 4 : 3);
             }
         };
-        fill.addEventListener('animationend', () => job1.finish());
+        fill.addEventListener('animationend', () => printJob.finish());
 
         /* Torque: hold it down and the rings wind up; let go and they run down. */
         const torqueWin = makeWindow('torque', 'TORQUE', 'teal');
@@ -700,8 +418,6 @@
                 rings.height = py;
             }
             const c = rings.getContext('2d');
-            const portrait = window.innerHeight > window.innerWidth * 1.1;
-            const ink = portrait ? 'rgb(120,88,170)' : '#0c0a14';
             const cx = px / 2, cy = py / 2, R = Math.hypot(px, py) / 2;
             const step = Math.max(6, Math.min(px, py) * .06);
             c.fillStyle = '#ffffff';
@@ -709,7 +425,7 @@
             const offset = ((phase % 1) + 1) % 1;
             let dark = Math.floor(R / step) % 2 === 0;
             for (let r = R + step * (1 - offset); r > 0; r -= step, dark = !dark) {
-                c.fillStyle = dark ? ink : '#ffffff';
+                c.fillStyle = dark ? '#0c0a14' : '#ffffff';
                 c.beginPath();
                 c.arc(cx, cy, r, 0, Math.PI * 2);
                 c.fill();
@@ -737,9 +453,11 @@
             if (!ringFrame) ringFrame = requestAnimationFrame(ringStep);
         };
 
-        /* Three hearts and a file, on the desk itself. */
+        /* Three hearts and a file, lying on the desk. */
         const hearts = document.createElement('div');
         hearts.className = 'vapor-hearts';
+        hearts.dataset.item = '';
+        hearts.dataset.handle = '';
         const heartColours = ['#b18be8', '#5ff0d8', '#f5ea5a'];
         const drawHeart = (canvas, on, colour) => {
             const c = canvas.getContext('2d');
@@ -772,31 +490,56 @@
         file.type = 'button';
         file.className = 'vapor-file';
         file.dataset.act = 'file';
-        file.setAttribute('aria-label', 'Open robot.stl');
-        file.appendChild(pixelCanvas('ROBOT.STL'));
+        file.dataset.item = '';
+        file.dataset.handle = '';
+        file.setAttribute('aria-label', 'Print robot.stl');
+        const glyph = document.createElement('canvas');
+        glyph.className = 'vapor-file-icon';
+        glyph.width = 11;
+        glyph.height = 12;
+        {
+            const c = glyph.getContext('2d');
+            PAGE.forEach((line, y) => {
+                const first = line.indexOf('#'), last = line.lastIndexOf('#');
+                c.fillStyle = '#ffffff';
+                c.fillRect(first, y, last - first + 1, 1);
+                c.fillStyle = '#0c0a14';
+                [...line].forEach((v, x) => { if (v === '#') c.fillRect(x, y, 1, 1); });
+            });
+        }
+        file.append(glyph, pixelCanvas('ROBOT.STL'));
         root.append(hearts, file);
 
         /* The bar along the foot, for whatever has been put away. */
         const tray = document.createElement('div');
         tray.className = 'vapor-tray';
-        root.appendChild(tray);
-
+        over.appendChild(tray);
         const windows = [robotWin.win, infillWin.win, printWin.win, torqueWin.win];
         const titleOf = win => win.getAttribute('aria-label');
-        const nudge = win => {
-            const dx = (parseFloat(win.dataset.dx) || 0) + (Math.random() - .5) * 60;
-            const dy = (parseFloat(win.dataset.dy) || 0) + (Math.random() - .5) * 44;
-            moveWindow(win, dx, dy);
+        const addChip = win => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'vapor-chip';
+            chip.dataset.act = 'restore';
+            chip.dataset.restore = win.dataset.win;
+            chip.setAttribute('aria-label', `Restore ${titleOf(win)}`);
+            chip.appendChild(pixelCanvas(titleOf(win)));
+            tray.appendChild(chip);
         };
-        const moveWindow = (win, dx, dy) => {
-            win.dataset.dx = dx;
-            win.dataset.dy = dy;
-            win.style.setProperty('--dx', `${dx}px`);
-            win.style.setProperty('--dy', `${dy}px`);
+        const chipFor = win => tray.querySelector(`[data-restore="${win.dataset.win}"]`);
+        // The page may have scrolled on since this window was last seen.
+        const intoView = win => {
+            const box = win.getBoundingClientRect();
+            const room = window.innerHeight;
+            if (box.top >= 56 && box.bottom <= room - 8) return;
+            const dy = parseFloat(win.dataset.dy) || 0;
+            const to = Math.max(64, Math.min(room * .14, room - box.height - 8));
+            place(win, parseFloat(win.dataset.dx) || 0, dy + to - box.top);
         };
-        const open = (win, noisy) => {
+        const open = (win, bringIt) => {
             if (!win.hidden && !win.classList.contains('is-gone')) {
                 raise(win);
+                if (bringIt) intoView(win);
                 return;
             }
             win.hidden = false;
@@ -804,8 +547,8 @@
             win.classList.add('is-opening');
             raise(win);
             later(() => win.classList.remove('is-opening'), 260);
-            tray.querySelector(`[data-restore="${win.dataset.win}"]`)?.remove();
-            if (noisy) nudge(win);
+            chipFor(win)?.remove();
+            if (bringIt) intoView(win);
             if (win === infillWin.win) askPattern();
             if (win === torqueWin.win) drawRings();
         };
@@ -815,31 +558,32 @@
         };
         const allGone = () => windows.every(win => win.classList.contains('is-gone'));
         const afterHiding = () => {
-            if (allGone()) later(() => {
-                if (allGone()) popup('NOTHING LEFT', 'NOW WHAT?', 'ALWAYS BUILD', () => windows.forEach(win => open(win)));
+            if (!isTall() && allGone()) later(() => {
+                if (allGone()) popup('NOTHING LEFT', 'NOW WHAT?', 'ALWAYS BUILD', () => windows.forEach(win => open(win, true)));
             }, 500);
-        };
-        const close = win => {
-            hide(win);
-            // It does not stay closed. Nothing on this desk ever did.
-            later(() => { if (win.classList.contains('is-gone') && !tray.querySelector(`[data-restore="${win.dataset.win}"]`)) open(win, true); }, 7000 + Math.random() * 9000);
-            afterHiding();
         };
         const tuck = win => {
             hide(win);
-            const chip = document.createElement('button');
-            chip.type = 'button';
-            chip.className = 'vapor-chip';
-            chip.dataset.act = 'restore';
-            chip.dataset.restore = win.dataset.win;
-            chip.setAttribute('aria-label', `Restore ${titleOf(win)}`);
-            chip.appendChild(pixelCanvas(titleOf(win)));
-            tray.appendChild(chip);
+            if (!chipFor(win)) addChip(win);
+            afterHiding();
+        };
+        const close = win => {
+            if (isTall()) {
+                tuck(win);
+                return;
+            }
+            hide(win);
+            // It does not stay closed. Nothing on this desk ever did.
+            later(() => { if (win.classList.contains('is-gone') && !chipFor(win)) open(win); }, 7000 + Math.random() * 9000);
             afterHiding();
         };
         const popups = new Set();
         const popup = (title, text, answer, then) => {
-            popups.forEach(old => { if (old.dataset.title === title) old.remove(); });
+            popups.forEach(old => {
+                if (old.dataset.title !== title) return;
+                popups.delete(old);
+                old.remove();
+            });
             const made = makeWindow('popup', title, 'yellow', over);
             made.win.classList.add('vapor-popup', 'is-opening');
             made.win.dataset.title = title;
@@ -852,47 +596,59 @@
             key.appendChild(pixelCanvas(answer));
             made.pane.append(words, key);
             made.win.then = then;
-            moveWindow(made.win, (Math.random() - .5) * 60, (Math.random() - .5) * 44);
             raise(made.win);
             popups.add(made.win);
             later(() => made.win.classList.remove('is-opening'), 260);
             return made.win;
         };
 
-        /* Hands on. */
-        let drag = null;
+        /* Hands on. Anything with a handle can be picked up. A press that does not move
+           is still only a press, so a heart can be pressed or carried off. */
+        let drag = null, swallowClick = false;
         const onPointerDown = event => {
-            const win = event.target.closest('.vapor-win');
-            if (win) raise(win);
+            const item = event.target.closest('[data-item]');
+            if (item) raise(item);
             if (event.target.dataset.act === 'wind') {
                 holding = true;
                 event.target.setPointerCapture?.(event.pointerId);
                 windRings();
                 return;
             }
-            const head = event.target.closest('.vapor-bar');
-            if (!head || event.target.closest('button') || event.button) return;
+            const handle = event.target.closest('[data-handle]');
+            if (!handle || event.button) return;
+            if (handle.classList.contains('vapor-bar') && event.target.closest('button')) return;
             drag = {
-                win, id: event.pointerId,
-                x: event.clientX - (parseFloat(win.dataset.dx) || 0),
-                y: event.clientY - (parseFloat(win.dataset.dy) || 0)
+                item, handle, id: event.pointerId, moved: false, fromX: event.clientX, fromY: event.clientY,
+                x: event.clientX - (parseFloat(item.dataset.dx) || 0),
+                y: event.clientY - (parseFloat(item.dataset.dy) || 0)
             };
-            head.setPointerCapture?.(event.pointerId);
-            win.classList.add('is-held');
-            event.preventDefault();
         };
         const onPointerMove = event => {
             if (!drag || event.pointerId !== drag.id) return;
-            moveWindow(drag.win, event.clientX - drag.x, event.clientY - drag.y);
+            if (!drag.moved) {
+                if (Math.hypot(event.clientX - drag.fromX, event.clientY - drag.fromY) < 4) return;
+                drag.moved = true;
+                drag.handle.setPointerCapture?.(event.pointerId);
+                drag.item.classList.add('is-held');
+            }
+            place(drag.item, event.clientX - drag.x, event.clientY - drag.y);
         };
         const onPointerUp = event => {
-            if (holding) holding = false;
+            holding = false;
             if (drag && event.pointerId === drag.id) {
-                drag.win.classList.remove('is-held');
+                if (drag.moved) {
+                    swallowClick = true;
+                    later(() => { swallowClick = false; }, 50);
+                }
+                drag.item.classList.remove('is-held');
                 drag = null;
             }
         };
         const onClick = event => {
+            if (swallowClick) {
+                swallowClick = false;
+                return;
+            }
             const target = event.target.closest('[data-act]');
             if (!target) return;
             const win = target.closest('.vapor-win');
@@ -906,8 +662,8 @@
                 } else if (act === 'close') close(win);
                 else tuck(win);
             } else if (act === 'hop') {
-                if (!win.classList.contains('vapor-popup')) win.classList.add('is-hopping');
-                moveWindow(win, (Math.random() - .5) * window.innerWidth * .3, (Math.random() - .5) * window.innerHeight * .24);
+                win.classList.add('is-hopping');
+                place(win, (Math.random() - .5) * window.innerWidth * .34, (Math.random() - .5) * window.innerHeight * .34);
                 later(() => win.classList.remove('is-hopping'), 400);
             } else if (act === 'grow') {
                 win.classList.toggle('is-big');
@@ -921,14 +677,14 @@
             } else if (act === 'less') setDensity(density - 5);
             else if (act === 'more') setDensity(density + 5);
             else if (act === 'print') {
-                if (job1.state === 'idle') job1.start();
-                else if (job1.state === 'printing') job1.pause();
-                else job1.resume();
+                if (printJob.state === 'idle') printJob.start();
+                else if (printJob.state === 'printing') printJob.pause();
+                else printJob.resume();
             } else if (act === 'restore') {
-                open(windows.find(w => w.dataset.win === target.dataset.restore));
+                open(windows.find(w => w.dataset.win === target.dataset.restore), true);
             } else if (act === 'file') {
-                open(printWin.win);
-                if (job1.state === 'idle') job1.start();
+                open(printWin.win, true);
+                if (printJob.state === 'idle') printJob.start();
             } else if (act === 'heart') {
                 const i = Number(target.dataset.index);
                 heartStates[i] = !heartStates[i];
@@ -948,29 +704,18 @@
             surface.addEventListener('click', onClick);
         }
         root.addEventListener('input', onInput);
+        document.body.append(root, over);
 
-        layer?.after(root);
-        document.body.appendChild(over);
-        // A phone has room for three behind its words. The fourth waits on the bar.
-        if (window.innerHeight > window.innerWidth * 1.1) {
-            torqueWin.win.classList.add('is-gone');
-            torqueWin.win.hidden = true;
-            const chip = document.createElement('button');
-            chip.type = 'button';
-            chip.className = 'vapor-chip';
-            chip.dataset.act = 'restore';
-            chip.dataset.restore = 'torque';
-            chip.setAttribute('aria-label', 'Restore TORQUE');
-            chip.appendChild(pixelCanvas('TORQUE'));
-            tray.appendChild(chip);
+        printJob.describe();
+        if (isTall()) {
+            windows.forEach(win => {
+                win.classList.add('is-gone');
+                win.hidden = true;
+                addChip(win);
+            });
         }
-        job1.describe();
         return {
             redraw() {
-                askPattern();
-                drawRings();
-            },
-            first() {
                 askPattern();
                 drawRings();
             },
@@ -985,26 +730,31 @@
         };
     };
 
+    let resizeTimer = 0;
+    const onResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(() => desk?.redraw(), 250);
+    };
+
     window.portfolioVapor = {
-        prepare: () => (url && field && shape() === drawn ? Promise.resolve() : paint()),
+        prepare() {
+            if (field) return Promise.resolve();
+            if (!growing) growing = growAway().then(made => {
+                field = made;
+                growing = null;
+            });
+            return growing;
+        },
         show() {
-            shown = true;
-            if (url) layer?.style.setProperty('--vapor-sky', `url("${url}")`);
             if (!desk) desk = buildDesk();
-            desk.first();
+            desk.redraw();
             window.addEventListener('resize', onResize, { passive: true });
         },
         release() {
-            shown = false;
-            job++;
             clearTimeout(resizeTimer);
             window.removeEventListener('resize', onResize);
-            layer?.style.removeProperty('--vapor-sky');
             desk?.remove();
             desk = null;
-            if (url) window.setTimeout((old => () => URL.revokeObjectURL(old))(url), 1000);
-            url = '';
-            drawn = '';
             field = null;
             cuts = null;
         }

@@ -1,12 +1,13 @@
 /* The dark sky: the third of High FX's backdrops.
 
-   Five quick presses on the effects slider's High stop go from the stars to the
-   bright Frutiger Aero sky (aero.js), five more come here, and five more go back to
-   the stars (the slider code in portfolio.js). This is that sunlit daydream's other
-   side: the same bubbles, the same arm, a long way down where the light gives out.
-   Black water, a few thin currents of light, glowing specks that wake near the
-   cursor, and out of the dark a great lens, slowly breathing, that turns to look at
-   whatever the visitor is looking at.
+   Ten quick presses on the effects slider's High stop find High's other skies, and
+   after that two quick presses go round them: the stars, the bright Frutiger Aero sky
+   (aero.js), this, and the stars again (the slider code in portfolio.js). This is that
+   sunlit daydream's other side, a long way down where the light gives out. Black water,
+   a few thin currents of light, and specks that wake near the cursor. Bubbles carry up
+   the projects on these pages, as CAD and as photographs. Out of the dark a great lens,
+   slowly breathing, turns to look at whatever the visitor is looking at, and as the
+   page goes by it drifts away to the left while the arm that blew the bubbles sinks.
 
    Nothing here is fetched until someone asks, and leaving it hands everything back.
    Everything is painted once into sprites, and a frame is those sprites being moved
@@ -69,11 +70,6 @@
         c.beginPath();
         c.arc(0, 0, r, 0, TAU);
         c.stroke();
-    };
-    const rounded = (c, x, y, width, height, radius) => {
-        c.beginPath();
-        if (c.roundRect) c.roundRect(x, y, width, height, radius);
-        else c.rect(x, y, width, height);
     };
     const shellPath = (c, length, r0, r1) => {
         c.beginPath();
@@ -190,144 +186,97 @@
         disc(c, 0, -size * .28, size * .1, 'rgba(255,255,255,.92)');
     });
 
-    /* ---- What the bubbles carry -------------------------------------------- */
-    const toothedGear = (c, radius, teeth, hole, fill) => {
-        c.beginPath();
-        for (let i = 0; i < teeth; i++) {
-            const a = i / teeth * TAU, w = TAU / teeth;
-            for (const [angle, reach] of [[a, .8], [a + w * .14, 1], [a + w * .4, 1], [a + w * .54, .8]]) c.lineTo(Math.cos(angle) * radius * reach, Math.sin(angle) * radius * reach);
-            c.arc(0, 0, radius * .8, a + w * .54, a + w, false);
-        }
-        c.closePath();
-        c.moveTo(radius * hole, 0);
-        c.arc(0, 0, radius * hole, 0, TAU, true);
-        c.fillStyle = fill;
-        c.fill('evenodd');
-    };
-    const steel = (c, r) => metal(c, -r, -r, r, r);
-    const spark = (c, x, y, r) => {
-        c.shadowColor = ICE;
-        c.shadowBlur = r * 1.4;
-        disc(c, x, y, r, ICE);
-        c.shadowBlur = 0;
-    };
-    const ICONS = {
-        gear: c => {
-            toothedGear(c, 60, 12, .32, steel(c, 60));
-            spark(c, 0, 0, 7);
-        },
-        gears: c => {
-            c.save();
-            c.translate(-22, 16);
-            toothedGear(c, 42, 12, .3, steel(c, 42));
-            c.restore();
-            c.save();
-            c.translate(32, -26);
-            c.rotate(.14);
-            toothedGear(c, 30, 9, .3, steel(c, 30));
-            c.restore();
-        },
-        swerve: c => {
-            c.fillStyle = metal(c, -34, 0, -12, 0);
-            c.fillRect(-34, -62, 22, 44);
-            c.fillStyle = metal(c, 12, 0, 34, 0);
-            c.fillRect(12, -62, 22, 44);
-            c.fillStyle = metal(c, 0, -22, 0, -10);
-            c.fillRect(-46, -20, 92, 10);
-            c.fillStyle = '#1c2228';
-            c.fillRect(-42, -12, 8, 44);
-            c.fillRect(34, -12, 8, 44);
-            disc(c, 0, 22, 36, radial(c, -7, 14, 6, 0, 22, 38, [[0, '#262d34'], [.7, '#0c0f13'], [1, '#020304']]));
-            c.save();
-            c.translate(0, 22);
-            toothedGear(c, 21, 10, .3, steel(c, 21));
-            c.restore();
-            spark(c, 0, 22, 4);
-        },
-        printer: c => {
-            c.strokeStyle = metal(c, -50, -50, 50, 50);
-            c.lineWidth = 6;
-            c.strokeRect(-42, -48, 84, 96);
-            c.fillStyle = metal(c, 0, -24, 0, -16);
-            c.fillRect(-42, -24, 84, 8);
-            c.fillStyle = '#05070a';
-            c.fillRect(-13, -32, 26, 22);
-            spark(c, 0, -6, 3);
-            c.fillStyle = linear(c, 0, 8, 0, 34, [[0, 'rgba(166,236,255,.7)'], [1, 'rgba(60,120,170,.3)']]);
-            c.beginPath();
-            c.moveTo(-22, 34);
-            c.lineTo(-13, 8);
-            c.lineTo(13, 8);
-            c.lineTo(22, 34);
-            c.closePath();
-            c.fill();
-            c.fillStyle = metal(c, 0, 34, 0, 41);
-            c.fillRect(-36, 34, 72, 7);
-        },
-        bot: c => {
-            c.strokeStyle = '#4b5660';
-            c.lineWidth = 3;
-            c.beginPath();
-            c.moveTo(0, -38);
-            c.lineTo(0, -56);
-            c.stroke();
-            spark(c, 0, -57, 5);
-            c.fillStyle = metal(c, 0, -40, 0, 42);
-            rounded(c, -46, -40, 92, 80, 26);
-            c.fill();
-            c.fillStyle = '#020305';
-            rounded(c, -34, -24, 68, 42, 16);
-            c.fill();
-            c.fillStyle = ICE;
-            c.shadowColor = ICE;
-            c.shadowBlur = 8;
-            for (const side of [-1, 1]) {
-                c.beginPath();
-                c.ellipse(side * 15, -4, 5, 8, 0, 0, TAU);
-                c.fill();
-            }
-            c.shadowBlur = 0;
-        },
-        board: c => {
-            c.fillStyle = linear(c, -44, -44, 44, 44, [[0, '#0b1a22'], [1, '#02070a']]);
-            rounded(c, -46, -40, 92, 80, 7);
-            c.fill();
-            c.strokeStyle = 'rgba(166,236,255,.55)';
-            c.lineWidth = 1.6;
-            for (let i = 0; i < 6; i++) {
-                const y = -30 + i * 12;
-                c.beginPath();
-                c.moveTo(-40, y);
-                c.lineTo(-22, y);
-                c.moveTo(40, y);
-                c.lineTo(22, y);
-                c.stroke();
-            }
-            c.fillStyle = metal(c, -18, -22, 18, 22);
-            c.fillRect(-20, -22, 40, 44);
-        },
-        power: c => {
-            disc(c, 0, 0, 58, steel(c, 58));
-            disc(c, 0, 0, 44, radial(c, -14, -18, 4, 0, 0, 46, [[0, '#141a20'], [.6, '#05070a'], [1, '#010203']]));
-            c.strokeStyle = ICE;
-            c.shadowColor = ICE;
-            c.shadowBlur = 10;
-            c.lineWidth = 5;
-            c.lineCap = 'round';
-            c.beginPath();
-            c.arc(0, 2, 22, -Math.PI * .3, Math.PI * 1.3);
-            c.stroke();
-            c.beginPath();
-            c.moveTo(0, -26);
-            c.lineTo(0, -4);
-            c.stroke();
-            c.shadowBlur = 0;
-        }
-    };
-    const iconSprite = (name, size) => sprite(size, size, size / 2, size / 2, c => {
-        c.scale(size / 150, size / 150);
-        ICONS[name](c);
+    /* ---- What the bubbles carry --------------------------------------------
+       Things actually made for these pages. A CAD render sits on black, so its black
+       is made clear and it floats in the bubble as a bare part. A photograph is cut
+       to a circle and graded down into the cold. */
+    const PROJECTS = [
+        { file: 'assembly-render.webp', cad: true },
+        { file: 'omni-bot-cad-900.webp', cad: true },
+        { file: 'cad-lower-mecanum-section-900.webp', cad: true },
+        { file: 'omnibot-assembled-900.webp' },
+        { file: 'zerog-hydra-900.webp' },
+        { file: 'a-eye-animatronic-900.webp' },
+        { file: 'a301-swerve-wheel-assembly-900.webp' },
+        { file: 'digital-camera-enclosure.webp' },
+        { file: 'final-robot-900.webp' },
+        { file: 'kiwi-swerve-prototype-900.webp' }
+    ];
+    const SPRITE_SIZE = 360;
+    const fetchPicture = file => new Promise(resolve => {
+        const picture = new Image();
+        picture.onload = () => resolve(picture);
+        picture.onerror = () => resolve(null);
+        picture.src = `assets/${file}`;
     });
+    const cadSprite = picture => {
+        // How much of the frame is really the part: a render has a lot of black to spare.
+        const probe = blank(96, 96);
+        const pc = probe.getContext('2d', { willReadFrequently: true });
+        pc.fillStyle = '#000';
+        pc.fillRect(0, 0, 96, 96);
+        const fit = 96 / Math.max(picture.width, picture.height);
+        const pw = picture.width * fit, ph = picture.height * fit, ox = (96 - pw) / 2, oy = (96 - ph) / 2;
+        pc.drawImage(picture, ox, oy, pw, ph);
+        const seen = pc.getImageData(0, 0, 96, 96).data;
+        let x0 = 96, y0 = 96, x1 = 0, y1 = 0;
+        for (let y = 0; y < 96; y++) {
+            for (let x = 0; x < 96; x++) {
+                const i = (y * 96 + x) * 4;
+                if (seen[i] + seen[i + 1] + seen[i + 2] < 60) continue;
+                if (x < x0) x0 = x;
+                if (y < y0) y0 = y;
+                if (x > x1) x1 = x;
+                if (y > y1) y1 = y;
+            }
+        }
+        if (x1 <= x0 || y1 <= y0) return null;
+        const side = Math.max(x1 - x0, y1 - y0) * 1.06 / fit;
+        const midX = ((x0 + x1) / 2 - ox) / fit, midY = ((y0 + y1) / 2 - oy) / fit;
+        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
+        const c = canvas.getContext('2d', { willReadFrequently: true });
+        c.fillStyle = '#000';
+        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        c.drawImage(picture, midX - side / 2, midY - side / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        const image = c.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        const d = image.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const light = (d[i] + d[i + 1] + d[i + 2]) / 3;
+            d[i + 3] = Math.min(255, Math.max(0, (light - 8) * 5));
+            d[i] = Math.min(255, d[i] * 1.2);
+            d[i + 1] = Math.min(255, d[i + 1] * 1.32);
+            d[i + 2] = Math.min(255, d[i + 2] * 1.48);
+        }
+        c.putImageData(image, 0, 0);
+        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: SPRITE_SIZE / 2, anchorY: SPRITE_SIZE / 2, cad: true };
+    };
+    const photoSprite = picture => {
+        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
+        const c = canvas.getContext('2d');
+        const side = Math.min(picture.width, picture.height);
+        c.filter = 'saturate(.72) brightness(.66) contrast(1.14)';
+        c.drawImage(picture, (picture.width - side) / 2, (picture.height - side) / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        c.filter = 'none';
+        c.globalCompositeOperation = 'multiply';
+        c.fillStyle = 'rgb(150,195,225)';
+        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        c.globalCompositeOperation = 'destination-in';
+        const r = SPRITE_SIZE / 2;
+        c.fillStyle = radial(c, r, r, r * .62, r, r, r, [[0, 'rgba(0,0,0,1)'], [.7, 'rgba(0,0,0,.92)'], [1, 'rgba(0,0,0,0)']]);
+        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: r, anchorY: r, cad: false };
+    };
+    const loadProjects = async () => {
+        const pictures = await Promise.all(PROJECTS.map(project => fetchPicture(project.file)));
+        const made = [];
+        for (let i = 0; i < PROJECTS.length; i++) {
+            if (!pictures[i]) continue;
+            await breathe();
+            const sprite_ = PROJECTS[i].cad ? cadSprite(pictures[i]) : photoSprite(pictures[i]);
+            if (sprite_) made.push(sprite_);
+        }
+        return made;
+    };
 
     /* ---- Light in the dark ---------------------------------------------------- */
     // A bubble is seen only by what catches its rim: drawn additively, it is nothing
@@ -396,21 +345,6 @@
         }
         disc(c, 0, 0, R * .92, linear(c, -R, -R, R, R, [[0, '#10171d'], [.5, '#030507'], [1, '#0a0f14']]));
         ring(c, R * .92, 'rgba(170,215,240,.25)', 1);
-        // The lettering engraved on its front ring.
-        const words = 'ROBOT VISION   1 : 0.95   f = 3812 M   SEARCHING   ';
-        const size = R * .046;
-        c.font = `600 ${size}px "Barlow Condensed", sans-serif`;
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillStyle = 'rgba(180,225,245,.5)';
-        const step = .056;
-        [...words].forEach((letter, i) => {
-            c.save();
-            c.rotate(-2.2 + i * step);
-            c.translate(0, -R * .85);
-            c.fillText(letter, 0, 0);
-            c.restore();
-        });
         disc(c, 0, 0, R * .78, radial(c, -R * .2, -R * .26, R * .04, 0, 0, R * .78, [[0, '#0b151e'], [.55, '#040a10'], [1, '#010203']]));
         ring(c, R * .78, 'rgba(160,205,235,.32)', 1.2);
         ring(c, R * .66, 'rgba(160,205,235,.12)', 1);
@@ -500,6 +434,7 @@
     let underProject = false, underProjectTimer = 0;
     let scene = null, reducedMotion = null, rebuilding = 0, resizeTimer = 0;
     let pointerX = 0, pointerY = 0, pointerSeen = false, lookX = 0, lookY = 0, scrolled = 0, sinking = 0;
+    let projectSprites = null, scrollRoom = 1, roomMeasured = -10;
 
     const floorCurve = () => {
         const crest = portrait ? .93 : .9;
@@ -530,13 +465,6 @@
         swoosh(c, -W * .05, H * .74, W * .44, H * .46, W * 1.04, H * .4, H * .004, 'rgba(160,230,255,.1)');
         swoosh(c, W * .1, H * .9, W * .52, H * .62, W * 1.04, H * .62, H * .006, 'rgba(125,103,255,.11)');
         c.globalCompositeOperation = 'source-over';
-        // What the instruments are saying, somewhere off to one side.
-        const size = Math.max(10, 12.5 * unit);
-        c.font = `600 ${size}px "Barlow Condensed", sans-serif`;
-        c.fillStyle = 'rgba(170,225,245,.3)';
-        c.textBaseline = 'top';
-        const hudX = portrait ? W * .06 : W * .5, hudY = portrait ? H * .06 + size * 3 : H * .86;
-        ['DEPTH  3812 M', 'LIGHT  0.00', 'SIGNAL  ...'].forEach((text, i) => c.fillText(text, hudX, hudY + i * size * 1.35));
         // The shafts, the vignette and the scan lines go into this one picture rather
         // than over each frame: each would be another blend of the whole screen.
         c.globalCompositeOperation = 'lighter';
@@ -681,8 +609,8 @@
         await breathe();
 
         const glassSizes = [96, 192, 384].map(size => ({ size, canvas: bubbleGlass(size) }));
-        const icons = {};
-        for (const name of Object.keys(ICONS)) icons[name] = iconSprite(name, 180);
+        projectSprites = projectSprites || await loadProjects();
+        const icons = projectSprites;
         await breathe();
         const speck = glowSprite(32, '130,230,255');
         const speckViolet = glowSprite(32, '150,130,255');
@@ -690,17 +618,16 @@
 
         const random = seeded(2718);
         const count = portrait ? 14 : Math.round(clamp(W * H / 42000, 16, 30));
-        const iconNames = ['power', 'gear', 'swerve', 'printer', 'bot', 'board', 'gears'];
         const bubbles = [];
-        for (let i = 0; i < count; i++) {
-            const carrying = i < iconNames.length;
-            const radius = (carrying ? 40 + random() * 26 : 6 + Math.pow(random(), 2.2) * 40) * unit * (portrait ? 1.1 : 1.15);
+        for (let i = 0; i < Math.max(count, icons.length + 4); i++) {
+            const carrying = i < icons.length;
+            const radius = (carrying ? 50 + random() * 26 : 6 + Math.pow(random(), 2.2) * 40) * unit * (portrait ? 1.1 : 1.15);
             bubbles.push({
                 x: random() * W, y: random() * (H + 200) - 100,
                 r: radius, grown: 1, depth: .25 + random() * .75,
                 rise: (carrying ? 6 : 10) + random() * 13,
                 sway: 6 + random() * 18, swayRate: .14 + random() * .3, phase: random() * TAU,
-                icon: carrying ? iconNames[i] : null,
+                icon: carrying ? icons[i] : null,
                 turn: 0, turnRate: (random() - .5) * .3, pop: 0, drawnX: 0, drawnY: 0
             });
         }
@@ -716,7 +643,7 @@
         ];
 
         scene = {
-            lens, sky, fog, ribbons, floor, curve, lensParts, arm, sprites, glassSizes, icons, speck, speckViolet, torch,
+            lens, lensAt: { x: lens.x, y: lens.y }, lensK: 0, armAway: 0, sky, fog, ribbons, floor, curve, lensParts, arm, sprites, glassSizes, speck, speckViolet, torch,
             bubbles, specks, jellies, sparks: [], irisX: 0, irisY: 0, pingAt: 4,
             kiwi: { x: W * (portrait ? .6 : .2), dir: 1, wait: 0 },
             nextWandBubble: 2, nextGlitch: 11
@@ -745,12 +672,26 @@
         lookY += ((pointerSeen ? pointerY / H - .5 : 0) - lookY) * Math.min(1, dt * 1.6);
         sinking += (Math.min(scrolled * .09, H * .17) - sinking) * Math.min(1, dt * 6);
 
+        // As the page goes by, the lens drifts off to the left, through the middle of
+        // the screen, until it is half out of the far side; and the arm goes down.
+        if (t - roomMeasured > 1) {
+            roomMeasured = t;
+            scrollRoom = Math.max(1, document.documentElement.scrollHeight - H);
+        }
+        const wantK = clamp(scrolled / (scrollRoom * .7), 0, 1);
+        s.lensK += (wantK - s.lensK) * Math.min(1, dt * 2.6);
+        const eased = s.lensK * s.lensK * (3 - 2 * s.lensK);
+        const leftmost = W * (portrait ? .1 : .04);
+        s.lensAt.x = s.lens.x + (leftmost - s.lens.x) * eased;
+        s.lensAt.y = s.lens.y + (H * .5 - s.lens.y) * Math.min(1, eased * 1.4);
+        s.armAway = clamp(scrolled / (H * .85), 0, 1);
+
         // The iris turns toward the cursor, unhurried; with nothing to look at, it
         // looks about for itself.
         const reach = s.lens.r * .085;
         let wantX = Math.sin(t * .17) * reach * .6, wantY = Math.sin(t * .23 + 1) * reach * .5;
         if (pointerSeen) {
-            const dx = pointerX - s.lens.x, dy = pointerY - s.lens.y, d = Math.hypot(dx, dy) || 1;
+            const dx = pointerX - s.lensAt.x, dy = pointerY - s.lensAt.y, d = Math.hypot(dx, dy) || 1;
             const pull = Math.min(1, d / (s.lens.r * 1.4));
             wantX = dx / d * reach * pull;
             wantY = dy / d * reach * pull;
@@ -781,9 +722,10 @@
                 continue;
             }
             if (b.grown < 1) {
-                b.grown = Math.min(1, b.grown + dt / 1.8);
+                // Let go of if the arm is on its way down.
+                b.grown = s.armAway > .55 ? 1 : Math.min(1, b.grown + dt / 1.8);
                 b.x = arm.ring[0] + (lookX * 26 * b.depth - lookX * 26 * .62);
-                b.y = arm.ring[1] + (lookY * 14 * b.depth - lookY * 14 * .62) + sinking + scrollShift(b);
+                b.y = arm.ring[1] + (lookY * 14 * b.depth - lookY * 14 * .62) + sinking + scrollShift(b) + s.armAway * s.armAway * H * .8;
                 if (b.grown >= 1) {
                     b.x += Math.cos(arm.angles[2]) * b.r * .9;
                     b.y += Math.sin(arm.angles[2]) * b.r * .9 - b.r * .3;
@@ -803,7 +745,7 @@
                 }
             }
             if (b.y + b.r < scrollShift(b) - 60) {
-                if (!b.icon && t > s.nextWandBubble) {
+                if (!b.icon && s.armAway < .5 && t > s.nextWandBubble) {
                     b.grown = 0;
                     b.depth = 1;
                     b.r = (14 + Math.random() * 26) * unit * 1.15;
@@ -869,7 +811,7 @@
         // The lens.
         const L = s.lens, P = s.lensParts;
         const [lx, ly] = lookAt(.3);
-        const lensX = L.x + lx, lensY = L.y + ly - sinking * .12;
+        const lensX = s.lensAt.x + lx, lensY = s.lensAt.y + ly;
         put(P.body, lensX, lensY);
         // Opening and closing, as slowly as breath.
         put(P.iris, lensX + s.irisX, lensY + s.irisY, t * .012, 1, 1 + .055 * Math.sin(t * .31));
@@ -946,14 +888,16 @@
         c.globalCompositeOperation = 'source-over';
         put(s.sprites.kiwi, kiwi.x + nx, kiwiY, Math.atan(slope), kiwi.dir);
 
-        const arm = s.arm, ax = nx, ay = ny + floorShift;
-        put(s.sprites.base, arm.x + ax, arm.y + ay);
-        put(s.sprites.upper, arm.shoulder[0] + ax, arm.shoulder[1] + ay, arm.angles[0]);
-        put(s.sprites.shoulder, arm.shoulder[0] + ax, arm.shoulder[1] + ay);
-        put(s.sprites.wand, arm.wrist[0] + ax, arm.wrist[1] + ay, arm.angles[2]);
-        put(s.sprites.fore, arm.elbow[0] + ax, arm.elbow[1] + ay, arm.angles[1]);
-        put(s.sprites.elbow, arm.elbow[0] + ax, arm.elbow[1] + ay);
-        put(s.sprites.wrist, arm.wrist[0] + ax, arm.wrist[1] + ay);
+        if (s.armAway < 1) {
+            const arm = s.arm, ax = nx, ay = ny + floorShift + s.armAway * s.armAway * H * .8;
+            put(s.sprites.base, arm.x + ax, arm.y + ay);
+            put(s.sprites.upper, arm.shoulder[0] + ax, arm.shoulder[1] + ay, arm.angles[0]);
+            put(s.sprites.shoulder, arm.shoulder[0] + ax, arm.shoulder[1] + ay);
+            put(s.sprites.wand, arm.wrist[0] + ax, arm.wrist[1] + ay, arm.angles[2]);
+            put(s.sprites.fore, arm.elbow[0] + ax, arm.elbow[1] + ay, arm.angles[1]);
+            put(s.sprites.elbow, arm.elbow[0] + ax, arm.elbow[1] + ay);
+            put(s.sprites.wrist, arm.wrist[0] + ax, arm.wrist[1] + ay);
+        }
 
         for (const j of s.jellies) jelly(j, false);
 
@@ -980,12 +924,12 @@
             if (y + r < -6 || y - r > H + 6 || x + r < -6 || x - r > W + 6) continue;
             const wobble = 1 + Math.sin(t * 1.1 + b.phase) * .012;
             if (b.icon) {
-                const icon = s.icons[b.icon];
-                const turn = b.icon === 'gear' || b.icon === 'gears' ? b.turn * 3 : Math.sin(t * .35 + b.phase) * .22;
-                const size = r * 1.32 / icon.width;
+                const icon = b.icon;
+                const turn = Math.sin(t * .3 + b.phase) * .16;
+                const size = r * (icon.cad ? 1.62 : 1.9) / icon.width;
                 const cos = Math.cos(turn) * size, sin = Math.sin(turn) * size;
                 c.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, scale * x, scale * y);
-                c.globalAlpha = .82;
+                c.globalAlpha = .95;
                 c.drawImage(icon.canvas, -icon.anchorX, -icon.anchorY, icon.width, icon.height);
                 c.globalAlpha = 1;
             }
@@ -1182,6 +1126,7 @@
         window.removeEventListener('pointerdown', onPointerDown);
         window.removeEventListener('resize', onResize);
         scene = null;
+        projectSprites = null;
         if (canvas) {
             canvas.width = canvas.height = 0;
             canvas.remove();

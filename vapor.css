@@ -1,6 +1,6 @@
-/* The pastel desktop's look on the page (vapor.js has the picture itself). Not
-   fetched until a visitor asks for it, five quick presses on the slider's Medium
-   stop, and every rule answers only to html[data-effects="medium"][data-vapor].
+/* The pastel desktop's look on the page (vapor.js has the windows on it). Not fetched
+   until a visitor asks for it, ten quick presses on the slider's Medium stop, and
+   every rule answers only to html[data-effects="medium"][data-vapor].
    Nothing about how anything moves or answers changes: the lean, the lift, the
    rings and the light under the cursor are the page's own. The cards become
    windows out of what they already hold. Each title bar is an element the card
@@ -57,7 +57,7 @@ html[data-effects="medium"][data-vapor] :is(a, button, .btn, .link-btn, .project
     cursor: var(--vapor-hand);
 }
 
-/* The backdrop: white lines across the pink, and the desk laid over them. */
+/* The backdrop: white lines across the pink, and nothing else. */
 html[data-effects="medium"][data-vapor] .background-grid[data-look] {
     background-image:
         linear-gradient(rgba(255, 255, 255, .34) 1px, transparent 1px),
@@ -66,8 +66,7 @@ html[data-effects="medium"][data-vapor] .background-grid[data-look] {
     opacity: 1;
 }
 html[data-effects="medium"][data-vapor] .background-grid::before {
-    background: var(--vapor-sky, none) center / cover no-repeat;
-    opacity: 1;
+    display: none;
 }
 
 /* Lettering on the pink itself. */
@@ -231,6 +230,11 @@ html[data-effects="medium"][data-vapor] .navbar .fx-slider {
     --fx-ground: #ffffff;
     --fx-bead: #0c0a14;
     --fx-glow: 0 0 0 transparent;
+    /* A block that fills the track from edge to edge: 48 wide less 2 of border each
+       side leaves 44, a third of that for the block, and the rest is two steps. */
+    --fx-pad: 0px;
+    --fx-knob: 14px;
+    --fx-step: 15px;
 }
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-track {
     border: 2px solid #0c0a14;
@@ -241,6 +245,9 @@ html[data-effects="medium"][data-vapor] .navbar .fx-slider-rail,
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-fill { border-radius: 0; }
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-stop { background: #8a8494; border-radius: 0; }
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-thumb {
+    top: 0;
+    left: 0;
+    height: 100%;
     background: #0c0a14;
     border-radius: 0;
     box-shadow: none;
@@ -283,19 +290,23 @@ html[data-effects="medium"][data-vapor] .modal-feature-video-player { background
 html[data-effects="medium"][data-vapor] .navbar[data-nav-open] { --nav-muted: var(--ink); }
 
 /* ---- The desk -------------------------------------------------------------
-   What can be used stands on one fixed layer behind the page (vapor.js). The page's
-   empty stretches let a press through to it, and everything on the page that answers
-   a press still does. All flat paint. */
-html[data-effects="medium"][data-vapor] :is(.hero-section, .hero-section *, main, main *, footer) { pointer-events: none; }
-html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section button, .hero-section .btn, .hero-section .social-links > *,
-    main a, main button, main input, main .project-card, main .project-card *, main .about-highlight, main .about-highlight *, main .skill-group, main .skill-group *,
-    #about-highlights, .skills-categories, .featured-grid, .project-carousel, .carousel-controls, .carousel-controls *, .collection-toggle, .collection-toggle *, footer *) {
-    pointer-events: auto;
-}
+   Everything on it can be used and picked up (vapor.js). It lies over the page at the
+   page's top, in the empty places beside the words, and scrolls away with it. All flat
+   paint. */
 .vapor-desk {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    width: 100%;
+    height: 0;
+    --vapor-cell: 2px;
+    --vapor-ink: #0c0a14;
+}
+.vapor-over {
     position: fixed;
     inset: 0;
-    z-index: 0;
+    z-index: 900;
     overflow: hidden;
     pointer-events: none;
     --vapor-cell: 2px;
@@ -308,19 +319,24 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
     height: calc(7 * var(--vapor-cell));
     image-rendering: pixelated;
 }
-.vapor-win {
+.vapor-win,
+.vapor-hearts,
+.vapor-file {
     position: absolute;
+    transform: translate(var(--dx, 0), var(--dy, 0));
+}
+.vapor-win {
     display: flex;
     flex-direction: column;
     pointer-events: auto;
     background: #ffffff;
     border: 2px solid var(--vapor-ink);
     box-shadow: 4px 4px 0 var(--vapor-ink);
-    transform: translate(var(--dx, 0), var(--dy, 0));
 }
 .vapor-win[hidden] { display: none; }
 .vapor-win.is-gone { visibility: hidden; }
-.vapor-win.is-held { will-change: transform; box-shadow: 9px 9px 0 var(--vapor-ink); }
+.is-held { will-change: transform; }
+.vapor-win.is-held { box-shadow: 9px 9px 0 var(--vapor-ink); }
 .vapor-win.is-hopping { transition: transform .32s steps(6); }
 .vapor-win.is-opening { animation: vapor-open .24s steps(4); }
 @keyframes vapor-open { from { clip-path: inset(46% 46%); } to { clip-path: inset(-12px); } }
@@ -328,40 +344,26 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
     .vapor-win.is-opening { animation: none; }
     .vapor-win.is-hopping { transition: none; }
 }
-.vapor-win[data-win="robot"] {
-    left: 62.5vw; top: 11.5vh; width: 16.5vw; height: 33vh;
-    box-shadow: -8px 8px 0 #ffffff, -8px 8px 0 2px var(--vapor-ink), -16px 16px 0 #ffffff, -16px 16px 0 2px var(--vapor-ink);
-}
-.vapor-win[data-win="infill"] { left: min(83.5vw, calc(100vw - 14rem)); top: 8.5vh; width: max(14.5vw, 13rem); height: 66vh; }
-.vapor-win[data-win="robot"] { --vapor-cell: 1.5px; }
-.vapor-win[data-win="torque"] { left: 60vw; top: 50vh; width: 13.5vw; height: 27vh; }
-.vapor-win[data-win="print"] { left: 77.5vw; top: 79vh; width: 20.5vw; min-width: 15rem; }
-.vapor-win.is-big[data-win="robot"] { width: 26vw; height: 52vh; }
-.vapor-win.is-big[data-win="infill"] { width: 26vw; left: 72vw; height: 78vh; top: 6vh; }
-.vapor-win.is-big[data-win="torque"] { width: 24vw; height: 44vh; top: 36vh; }
-.vapor-win.is-big[data-win="print"] { width: 30vw; left: 66vw; }
-.vapor-over {
-    position: fixed;
-    inset: 0;
-    z-index: 900;
-    overflow: hidden;
-    pointer-events: none;
-    --vapor-cell: 2px;
-    --vapor-ink: #0c0a14;
-}
-.vapor-popup { left: calc(50% - 8rem); top: 38vh; min-width: 16rem; box-shadow: 7px 7px 0 var(--vapor-ink); }
+/* Where each stands, clear of the name and of one another. */
+.vapor-win[data-win="infill"] { left: 75.5vw; top: 12vh; width: 22vw; height: 50vh; }
+.vapor-win[data-win="print"] { left: 75.5vw; top: 66vh; width: 22vw; }
+.vapor-win[data-win="robot"] { left: 41vw; top: 66vh; width: 16vw; height: 26vh; --vapor-cell: 1.5px; }
+.vapor-win[data-win="torque"] { left: 58.5vw; top: 66vh; width: 15vw; height: 26vh; }
+.vapor-win.is-big[data-win="infill"] { width: 34vw; left: 63.5vw; height: 66vh; }
+.vapor-win.is-big[data-win="print"] { width: 32vw; left: 65.5vw; }
+.vapor-win.is-big[data-win="robot"] { width: 26vw; height: 44vh; top: 48vh; }
+.vapor-win.is-big[data-win="torque"] { width: 25vw; height: 44vh; top: 48vh; }
+.vapor-popup { position: absolute; left: calc(50% - 8rem); top: 38vh; min-width: 16rem; box-shadow: 7px 7px 0 var(--vapor-ink); }
+/* On a tall screen they wait on the bar, and open across the middle of it. */
 @media (max-aspect-ratio: 10/11) {
-    .vapor-desk, .vapor-win[data-win="robot"] { --vapor-cell: 1.25px; }
-    .vapor-dot { width: .6rem; height: .6rem; border-width: 1.5px; }
-    .vapor-win[data-win="robot"] { left: 56vw; top: 9vh; width: 41vw; height: 17vh; box-shadow: -5px 5px 0 #ffffff, -5px 5px 0 2px var(--vapor-ink); }
-    .vapor-win[data-win="infill"] { left: 60vw; top: 33vh; width: 37vw; height: 28vh; }
-    .vapor-win[data-win="torque"] { left: 2vw; top: 62vh; width: 26vw; height: 14vh; }
-    .vapor-win[data-win="print"] { left: 16vw; top: 84vh; width: 62vw; min-width: 0; }
-    .vapor-win.is-big[data-win="robot"] { left: 30vw; width: 66vw; height: 30vh; }
-    .vapor-win.is-big[data-win="infill"] { left: 20vw; top: 22vh; width: 76vw; height: 52vh; }
-    .vapor-win.is-big[data-win="torque"] { width: 66vw; height: 30vh; top: 40vh; }
-    .vapor-win.is-big[data-win="print"] { left: 4vw; width: 88vw; }
-    .vapor-popup { left: 8vw; right: 8vw; top: 40vh; min-width: 0; }
+    .vapor-desk, .vapor-win[data-win="robot"] { --vapor-cell: 1.5px; }
+    .vapor-win[data-win] { left: 8vw; right: auto; top: 14vh; width: 84vw; }
+    .vapor-win[data-win="infill"], .vapor-win.is-big[data-win="infill"] { height: 58vh; }
+    .vapor-win[data-win="robot"], .vapor-win.is-big[data-win="robot"],
+    .vapor-win[data-win="torque"], .vapor-win.is-big[data-win="torque"] { height: 36vh; }
+    .vapor-win.is-big[data-win] { left: 4vw; top: 12vh; width: 92vw; }
+    .vapor-popup { left: 8vw; right: 8vw; min-width: 0; }
+    .vapor-hearts, .vapor-file { display: none; }
 }
 .vapor-bar {
     flex: none;
@@ -402,7 +404,7 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
 .vapor-grow:hover { transform: scale(1.2); }
 .vapor-pane { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .vapor-poke { flex: 1; min-height: 0; padding: .5rem; border: 0; background: #ffffff; display: grid; place-items: center; }
-.vapor-robot { width: 76%; max-height: 100%; aspect-ratio: 19 / 16; image-rendering: pixelated; object-fit: contain; }
+.vapor-robot { width: auto; height: 100%; max-width: 100%; aspect-ratio: 19 / 16; image-rendering: pixelated; }
 .vapor-poke.is-poked .vapor-robot { animation: vapor-poked .28s steps(3); }
 @keyframes vapor-poked { 0% { transform: translateY(0); } 40% { transform: translateY(-8%); } 100% { transform: translateY(0); } }
 .vapor-pattern { flex: 1; min-height: 0; width: 100%; display: block; }
@@ -493,40 +495,43 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
 .vapor-key:active { box-shadow: none; transform: translate(2px, 2px); }
 .vapor-rings { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
 .vapor-hearts {
-    position: absolute;
-    left: 74.2vw;
-    top: 50vh;
+    left: 42vw;
+    top: 13vh;
     display: flex;
     gap: .35rem;
     pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
 }
 .vapor-heart { padding: 0; border: 0; background: none; }
 .vapor-heart canvas { display: block; width: 1.75rem; height: auto; aspect-ratio: 9 / 8; image-rendering: pixelated; }
 .vapor-heart:hover { transform: translateY(-2px) scale(1.1); }
 .vapor-file {
-    position: absolute;
-    left: 74.4vw;
-    top: 56vh;
-    padding: .2rem .25rem;
+    left: 58vw;
+    top: 12vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    padding: .3rem .4rem;
     background: transparent;
     border: 0;
     pointer-events: auto;
+    touch-action: none;
 }
+.vapor-file-icon { display: block; width: 2.75rem; aspect-ratio: 11 / 12; height: auto; image-rendering: pixelated; }
 .vapor-file:hover { background: #ffffff; outline: 2px solid var(--vapor-ink); }
-@media (max-aspect-ratio: 10/11) {
-    .vapor-hearts { left: 5vw; top: 80vh; }
-    .vapor-file { left: 30vw; top: 80.4vh; }
-}
 .vapor-tray {
     position: absolute;
-    left: calc(2.5rem + 8px);
-    bottom: 2px;
+    left: .5rem;
+    bottom: .5rem;
     display: flex;
+    flex-wrap: wrap;
     gap: .25rem;
     pointer-events: auto;
 }
 .vapor-chip {
-    padding: .2rem .4rem;
+    padding: .3rem .45rem;
     background: #5ff0d8;
     border: 2px solid var(--vapor-ink);
     box-shadow: 2px 2px 0 var(--vapor-ink);
