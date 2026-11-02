@@ -1518,3 +1518,114 @@ to 560 in the two arms together, and at 84 ms in both at 3x; not looked into fur
   worker or a registered custom property, each of which has a fallback that was
   exercised only by removing it in Chrome. `@property` without support leaves those
   properties inherited, as they were.
+
+---
+
+## Cycle 39: the lines over the About cards, with a cause this time (fix adopted, ghost not reproduced here)
+
+**Identified bottleneck:** reported with a screen recording, in Low: passing the cursor
+on and off Education, Robotics Experience or Hands On Work leaves a few lines above the
+card until a scroll draws that place again. Software & Controls, Manufacturing &
+Fabrication, CAD & Design and the project cards never do it. In the recording (3x) the
+lines sit where the raised card's top had been and about 2 CSS px above where it rests.
+Cycle 28 put this down to that machine's own Chrome and gave a raised surface a steady
+layer. That did not explain why only three cards do it.
+
+**Root-cause hypothesis:** the three have one thing the others do not: the link's arrow,
+which turned by `transition: transform`. A layer log of the bench Chrome through a hover
+(`LayerTree.layerTreeDidChange`) shows what follows from it. Chrome gives the arrow a
+layer of its own while it turns, and the card's rim (`::before`, z-index 5) overlaps the
+arrow and paints after it, so the rim has to go on a layer too. The whole 1143 x 1009 rim
+comes off the card for about 180 ms on the way in and again on the way out, and folds
+back while the card's .2s lift is still moving. That leaves the strip the rim has just
+left to a repaint which, on that screen, does not come.
+
+**Proposed modification:** the arrow's turn goes through a registered custom property,
+`--about-arrow-turn`, with the same .18s and the same easing. A property's transition
+runs on the main thread, so nothing is promoted and nothing has to climb over it.
+
+**Implementation:** `portfolio.css`.
+
+**Before / after (layers through a hover on and off, Low):**
+
+| | Before | After |
+| --- | --- | --- |
+| About card | card, arrow and rim, about 180 ms each way | one, throughout |
+| Skills card | one | one |
+
+Medium loses its arrow layer the same way. High's cards are layers anyway.
+
+**Visual regression:** none to see: the same turn on the same clock. It costs a few
+repaints of a 34 x 39 box for .18s.
+**Functional regression:** Pass (`smoke.ps1`).
+
+**Result:** Adopted, to be confirmed on the machine that showed it. The lines themselves
+have never appeared in the bench Chrome, in this report or in cycle 28's, so what is proven
+here is that the split is gone, not that the lines are.
+
+---
+
+## Cycle 40: High's other sky, at no cost to the levels below it (adopted)
+
+**Identified bottleneck:** none: a new thing, which had to cost Low and Medium nothing.
+Five quick presses on the slider's High stop swap the space sky for a Frutiger Aero one
+(README, "The other sky").
+
+**Proposed modification:** all of it is in `aero.js` (75 KB, 19 KB off the wire) and
+`aero.css` (9 KB, 3 KB off the wire), requested on the fifth press and never before. What
+every visitor carries is the counter in `portfolio.js` (4 KB, 1.4 KB off the wire) and one
+line in the head that does nothing without `data-aero`. It is drawn by code once, into
+sprites and flat backgrounds (the clouds in a worker), and the frames are `drawImage`s of
+those. While it shows, the space sky is told it is at Medium, so its loop and memory go;
+with cycle 36, a reload with it on never runs `galaxy.js` at all. Going down a level hands
+back the loop, listeners, sprites and canvas.
+
+**Implementation:** `aero.js`, `aero.css`, `portfolio.js` (`loadAero`, `syncAero`,
+`countAeroPress`, `applyEffectsMode`), `index.html`'s head.
+
+**The sky against the space sky (High, 3x, native, two interleaved rounds, measured before
+the merge with cycles 30-38):**
+
+| | Space | Aero |
+| --- | --- | --- |
+| Scroll: dropped | 34.6% | 26.4% |
+| Scroll: main thread | 117 ms/s | 69 ms/s |
+| Scroll: GPU 3D engine | 41% | 49% |
+| At rest on the projects: dropped | 1.2% | 0% |
+| At rest: main thread | 108 ms/s | 70 ms/s |
+| At rest: GPU 3D engine | 41% | 51% |
+| Cursor over cards: dropped | 29.6% | 27.3% |
+| Cursor over cards: main thread | 482 ms/s | 335 ms/s |
+| Cursor over cards: GPU 3D engine | 93% | 91% |
+| Heap | 11-21 MB | 2-3 MB |
+
+So it asks no more than the High it replaces, with the graphics engine somewhat busier at
+rest. Two rounds, so small differences are level.
+
+**Visual regression:** Low, Medium and High without it: nothing changes, as no rule in
+`aero.css` is loaded or answers without `data-aero`.
+**Functional regression:** Pass: see the final checks below. Not on a phone's real
+hardware, and in Chrome only.
+
+**Result:** Adopted.
+
+---
+
+## Final checks (cycles 30-40 together)
+
+On the merged tree, not the branches:
+
+- `smoke.ps1`: 36 of 36 with graphics acceleration and 34 of 34 without.
+- `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each.
+- The other sky end to end in a private Chrome, with real presses, 17 of 17: nothing of it
+  fetched on a first visit at Medium; five presses on Low or Medium, five half a second
+  apart, four, and three then a pause then two all do nothing; five quick ones on High bring
+  it up about a second later with the glass still `refract`; a card still rises and leans; a
+  project opens and closes over it; Medium removes it; High brings it back; a reload keeps it
+  and `galaxy.js` does not run; five more put the space sky back; no script errors.
+- With reduced motion asked for, its canvas is the same two shots 1.5 s apart, and it moves
+  without.
+- Layer log, Low: an About card and a Skills card now go through a hover with the same
+  layers, no arrow and no rim among them.
+- Not measured: the lines of cycle 39 on the machine that showed them, a real phone, or any
+  browser but Chrome.
