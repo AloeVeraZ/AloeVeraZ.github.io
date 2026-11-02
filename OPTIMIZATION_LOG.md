@@ -1220,3 +1220,81 @@ same sheets wear a filter and the same ones carry the off-screen mark.
 **Functional regression:** Pass (`smoke.ps1` at the end of this log).
 
 **Result:** Improved.
+
+---
+
+## Cycle 34: the cursor's light, not inherited (rejected again)
+
+**Identified bottleneck:** with the cursor on a card in Medium, style is 172-190 ms
+of the page's 390 ms a second: the card and the 24 elements in it, 3-4 ms a frame.
+
+**Root-cause hypothesis:** `--card-glow`, `-x` and `-y` are inherited, as cycle 2
+found. In High the sparks muddied that test; Medium has none.
+
+**Before / after (`hover`, three rounds):** with them registered as not inherited
+and the card's `::after` asking for them by name, style 172 -> 191 ms/s, main thread
+385 -> 394 ms/s, dropped 2.8 -> 3.4%.
+
+**Result:** Rejected, as in cycle 2, and now for a reason. Selector matching across
+that whole run came to 105 ms out of 2985 in style (with tracing on, so slower than
+real), and a ring's cards tell the same story (cycle 32): what costs is working out
+one card's own style after an inline write, not its contents or the selectors. The
+writes are what would have to go, and what they write is the lean and the light.
+
+---
+
+## Cycle 35: laying the page out once while it is built (adopted)
+
+**Identified bottleneck:** after the still sky, the biggest task of a load on a slow
+machine is the one that renders the data, 270-440 ms with the main thread slowed 4x,
+and after it the card measure runs a second time, 60-130 ms more in one task. By
+task, with the elements each style pass touched: three layouts forced mid-build, the
+measure's own, then the whole page restyled again, and laid out again in the frame
+after.
+
+**Root-cause hypothesis:**
+- Setting `scrollLeft = 0` on the About and Skills rows and the featured row, which
+  are not sliders on a desktop and have nothing to scroll back from, forces a layout
+  each time, between one row being built and the next. They are built next to each
+  other, so each layout is mostly wasted.
+- `--card-content-height` is written on the root, where it restyles and lays out
+  what is on the page, for what only project cards read. `--visual-viewport-height`
+  the same, at every load and every change of a phone's toolbars, for what only an
+  open project reads.
+- The root's attributes are written after the read that forces style, not before.
+- The second measure runs because the type "has just arrived", and it had: three
+  faces nothing uses until the data renders (Barlow Condensed 800 and the two lighter
+  Font Awesome faces) are first asked for by the layout that measures the cards. So
+  every visit, not only a first, measures them while those are on their way.
+
+**Proposed modification:** each of those. The rows skip the scroll unless they were
+sliders. The two properties go on `#projects` and `#project-modal`, with
+`--card-height` declared on `#projects` so it can see what is written there. The
+environment writes first and reads after. The three faces are asked for before the
+data is fetched, and the second measure runs only if a face is still loading after
+the first. The page draws in all three, so this costs no bytes; a first visit, with
+the type still on its way, measures twice as before.
+
+**Implementation:** `portfolio.js` (`setupResponsiveEnvironment`,
+`setupResponsiveCardSlider`, `setupCarousel`, `setupProjectCardFit`, the data fetch),
+`portfolio.css`.
+
+**Before / after (first load, Medium, six rounds):**
+
+| | Before | After |
+| --- | --- | --- |
+| No graphics: main thread busy | 1155 ms | 984 ms |
+| No graphics: long tasks | 5 | 3 |
+| No graphics: total blocking | 512 ms (runs 400-681) | 357 ms (runs 279-444) |
+| No graphics: longest task | 390 ms | 363 ms |
+| 3x: main thread busy | 182 ms (runs 163-209) | 156 ms (runs 125-168) |
+| Forced layouts while building | 4 | 1 |
+
+**Visual regression:** Pass: Low, Medium and High on a MacBook-sized screen and a
+phone match the base commit to within 2/255 apart from the open project's animated
+picture and the 30 x 2 px sliver noted above (the same run compared with itself shows
+those too).
+**Functional regression:** Pass (`smoke.ps1` and `layout-audit.ps1` at the end of
+this log).
+
+**Result:** Improved.

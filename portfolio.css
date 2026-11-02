@@ -1918,6 +1918,10 @@ html.effects-background-click-fading .galaxy-streak {
     --nav-bar-bottom: calc(4.5rem + var(--safe-area-top));
     --card-fit-gap: var(--space-2);
     --card-fit-height: calc(var(--viewport-block) - var(--nav-bar-bottom) - var(--card-fit-gap) * 2);
+}
+/* On the section, where setupProjectCardFit writes what it has measured: a var()
+   in a custom property is settled where the property is declared. */
+#projects {
     --card-content-height: 30rem;
     --card-height: max(18rem, min(var(--card-fit-height), max(var(--card-content-height), var(--project-card-height))));
 }
@@ -1929,6 +1933,8 @@ html.effects-background-click-fading .galaxy-streak {
 @media (max-width: 639px) {
     :root {
         --nav-bar-bottom: calc(4rem + var(--safe-area-top));
+    }
+    #projects {
         --card-height: max(18rem, min(var(--card-fit-height), max(var(--card-content-height), var(--project-card-height-mobile))));
     }
 }

@@ -15,23 +15,11 @@ function setupResponsiveEnvironment() {
         verticalSegments: window.matchMedia('(vertical-viewport-segments: 2)')
     };
 
+    // Only an open project reads the window's height, so it goes on the project's
+    // overlay. On the root, every change of it -- a phone's toolbars sliding away,
+    // the page's own first call -- had the browser restyle the whole page.
+    const modal = document.getElementById('project-modal');
     const update = () => {
-        // CSS pixels already account for OS scale, browser zoom, and display
-        // density. Classify the space the page actually owns instead of trying
-        // to infer physical resolution from screen or browser-frame dimensions.
-        const width = root.clientWidth || window.innerWidth;
-        const visualHeight = window.visualViewport?.height || window.innerHeight;
-        const tier = width < 360
-            ? 'micro'
-            : width < 640
-                ? 'compact'
-                : width < 1008
-                    ? 'medium'
-                    : width < 1600
-                        ? 'large'
-                        : width < 2560
-                            ? 'wide'
-                            : 'ultrawide';
         const input = media.coarsePointer.matches && !media.hover.matches
             ? 'touch'
             : media.finePointer.matches && media.hover.matches
@@ -48,12 +36,31 @@ function setupResponsiveEnvironment() {
                 ? 'vertical-2'
                 : 'single';
 
-        root.dataset.viewportTier = tier;
+        // Written before anything below reads the page's size: a read has the
+        // browser work out the page's style, and a change to the root after it
+        // has it do so again. (The tier and the orientation are read by nothing
+        // in the stylesheets, so they change nothing whenever they are written.)
         root.dataset.primaryInput = input;
         root.dataset.orientation = media.portrait.matches ? 'portrait' : 'landscape';
         root.dataset.devicePosture = posture;
         root.dataset.viewportSegments = segments;
-        root.style.setProperty('--visual-viewport-height', `${Math.max(Math.round(visualHeight), 1)}px`);
+        // CSS pixels already account for OS scale, browser zoom, and display
+        // density. Classify the space the page actually owns instead of trying
+        // to infer physical resolution from screen or browser-frame dimensions.
+        const width = root.clientWidth || window.innerWidth;
+        const visualHeight = window.visualViewport?.height || window.innerHeight;
+        root.dataset.viewportTier = width < 360
+            ? 'micro'
+            : width < 640
+                ? 'compact'
+                : width < 1008
+                    ? 'medium'
+                    : width < 1600
+                        ? 'large'
+                        : width < 2560
+                            ? 'wide'
+                            : 'ultrawide';
+        modal?.style.setProperty('--visual-viewport-height', `${Math.max(Math.round(visualHeight), 1)}px`);
     };
 
     Object.values(media).forEach(query => query.addEventListener?.('change', update));
@@ -891,6 +898,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // past index.html's four seconds, up to ten: on a slow connection they
     // would otherwise show up empty and be pushed down when it lands.
     window.portfolioDataPending = true;
+    // The three faces nothing is drawn in until the data has rendered. Left to
+    // the cards to ask for, they are still arriving when the cards are measured
+    // (setupProjectCardFit), so every visit measured the cards all over again.
+    // They are on their way here before the data is, and on a return visit in
+    // by the time it lands. The page draws in all three, so this costs no bytes.
+    ['800 1em "Barlow Condensed"', '400 1em "Font Awesome 6 Free"', '400 1em "Font Awesome 6 Brands"']
+        .forEach(face => document.fonts?.load(face).catch(() => {}));
     fetch('portfolio-data.json', { cache: 'no-cache' })
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
@@ -6574,6 +6588,7 @@ function setupResponsiveCardSlider(container, options) {
 
     const updateLayout = () => {
         const useSlider = carouselConstraints.some(constraint => constraint.matches);
+        const wasSlider = container.classList.contains('is-responsive-card-slider');
         container.classList.toggle('is-responsive-card-slider', useSlider);
         container.parentElement?.classList.toggle('has-responsive-card-slider', useSlider);
         controls.classList.toggle('is-active', useSlider);
@@ -6585,7 +6600,10 @@ function setupResponsiveCardSlider(container, options) {
             container.removeAttribute('role');
             container.removeAttribute('aria-roledescription');
             container.removeAttribute('aria-label');
-            container.scrollLeft = 0;
+            // Only a row that was a slider has anywhere to scroll back from.
+            // Setting it anyway makes the browser lay the page out there and
+            // then, once for each row, in the middle of the page being built.
+            if (wasSlider) container.scrollLeft = 0;
             updateControls();
             return;
         }
@@ -7103,8 +7121,10 @@ function setupProjectCardFit() {
         });
         probe.remove();
         // A few pixels of slack for the sub-pixel rounding between the column
-        // measured here and the one the card really gets.
-        if (need) document.documentElement.style.setProperty('--card-content-height', `${Math.ceil(need) + 6}px`);
+        // measured here and the one the card really gets. On the section that
+        // holds the cards: on the root, it restyled and laid out the whole page
+        // again for what only a project card reads.
+        if (need) document.getElementById('projects').style.setProperty('--card-content-height', `${Math.ceil(need) + 6}px`);
     };
     let timer = 0;
     const schedule = () => {
@@ -7113,7 +7133,12 @@ function setupProjectCardFit() {
     };
     refitProjectCards = measure;
     measure();
-    document.fonts?.ready.then(schedule);
+    // Again once the type has arrived, if it had not when that was measured
+    // (laying the cards out above is what asks for any face not loaded yet).
+    // With it already loaded, as on any visit but the first, the same cards were
+    // measured a second time to the same answer: a tenth of a second on a slow
+    // laptop, all in one task.
+    if (document.fonts?.status === 'loading') document.fonts.ready.then(schedule);
     window.addEventListener('resize', schedule, { passive: true });
 }
 
@@ -7390,11 +7415,12 @@ function setupCarousel(carousel, controls, options = {}) {
     const initialize = () => {
         if (!isEnabled()) {
             window.cancelAnimationFrame(scrollAnimation);
+            // The same as a slider that has never been one: nothing to scroll back.
+            if (initialized) setInternalScrollPosition(0);
             initialized = false;
             isAnimating = false;
             currentIndex = 0;
             currentPhysicalIndex = cloneCount;
-            setInternalScrollPosition(0);
             clearCardDepth();
             updateIndicators();
             return;
