@@ -32,6 +32,7 @@ is named after: they are this machine (an Intel Iris Xe laptop with a
 | `native` | 1280 x 720 | 3x | This laptop as it is. The page sees Intel graphics and starts with its sky eased. |
 | `mac` | 1470 x 860 | 2x | A 13-inch MacBook Air's default size. The page is told it runs on Apple graphics, so it runs its sky at full rate as it would on a Mac. |
 | `lowend` | 1366 x 650 | 1x | No graphics acceleration at all (software compositing) and the main thread slowed 4x. |
+| `minimum` | 1366 x 650 | 1x | The same, slowed 6x: Windows' own minimum, a dual-core at about 1 GHz with 4 GB and basic graphics. Low FX has to run here. Medium FX is held to `native`, an 11th-generation i7 laptop on Iris Xe, close to the 12th-generation laptops it is meant for. |
 | `phone` | 390 x 844 | 3x | A touch phone, main thread slowed 4x. Says nothing about a phone's graphics. |
 
 ## Scenarios

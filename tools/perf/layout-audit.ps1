@@ -77,7 +77,7 @@ $audit = @'
   };
   const docWidth = document.documentElement.scrollWidth;
   if (docWidth > vw + 1) problems.push(`page is ${docWidth}px wide in a ${vw}px window (sideways scroll)`);
-  const all = [...document.querySelectorAll('body *')].filter(e => !e.closest('#project-modal, .galaxy-field, .galaxy-streak, .cursor-dot, script, style, svg *, .skip-link, .visually-hidden'));
+  const all = [...document.querySelectorAll('body *')].filter(e => !e.closest('#project-modal, .cosmos, .cursor-dot, script, style, svg *, .skip-link, .visually-hidden'));
   for (const e of all) {
     if (!visible(e)) continue;
     const r = e.getBoundingClientRect();

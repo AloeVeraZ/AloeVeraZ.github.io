@@ -1767,6 +1767,398 @@ be read stand on a plain label of the desk's own pink.
 
 ---
 
+## Cycle 45: An eye on every level, a desk that wants to harm your machine (adopted)
+
+**Identified bottleneck:** none: new. The bright sky of cycles 40 and 43 was removed on request.
+Every level is now its usual sky and one great eye, and Medium has the pink desk as its last
+switch. The desk was to look like a real virus: far more windows, overlapping, with the portfolio's
+own projects among them and a character with some menace, moved the way Dokkaebi's phone hack moves
+in Rainbow Six without copying any of how it looks.
+
+**Proposed modification:** Medium's eye sits between the other two. Low's works out each cell on the
+page's thread a few times a second, High's runs two passes on the graphics card on every frame, and
+this runs one pass, thirty times a second, only while something is moving, so it asks for no frames
+between one movement and the next. On the desk, 56 windows break in over seven seconds, each torn
+across and thrown about for a quarter of a second, the notes stacking a little down and to the right
+of each other until the stack runs out of room, with a ceiling of 80. The desk's own robot has gone
+bad: a very small canvas, eight times a second, of static blocks flickering round it while it glares
+at the cursor, bares its teeth, laughs and breaks up, and types out what it is doing to your machine.
+Only the newest three act up at once. Static breaks out across the desk in surges, and otherwise its
+canvas is put away. A project's picture is read once from its smallest copy and dithered onto a 96
+by 60 canvas, and its OPEN opens that project.
+
+**Implementation:** `iris.js`, `iris.css`, `vapor.js`, `vapor.css`, `portfolio.js`; `aero.js` and
+`aero.css` removed.
+
+**Before / after (each against its plain level, 3x, native, two interleaved rounds):**
+
+| | Low eye | Medium eye | Medium desk | High eye |
+| --- | --- | --- | --- | --- |
+| At rest: frames a second | 7 | 16 | 9 | 60 |
+| At rest: main thread | 14 ms/s | 15 ms/s | 26 ms/s | 53 ms/s |
+| At rest: GPU 3D engine | 1% | 7% | 5% | 38% |
+| At rest: GPU process CPU | 1% | 4% | 12% | 48% |
+| Scroll: dropped (plain level) | 3.5% (6.7%) | 8.1% (15.2%) | 3.6% (9.5%) | 17.8% (33.3%) |
+| Cursor over cards: dropped (plain level) | 3.2% (0.5%) | 1.9% (2.8%) | 0.2% (2.2%) | 15.2% (23.3%) |
+| Ring turning: dropped (plain level) | 1.8% (1.3%) | 0% (0.9%) | 0.2% (0.7%) | 22.2% (15.3%) |
+| Ring turning: GPU 3D engine (plain level) | 19% (34%) | 38% (18%) | 42% (18%) | 85% (70%) |
+
+The plain levels keep their order too: at rest Low and Medium ask for nothing and High's GPU 3D engine
+is at 34%; under the cursor the GPU 3D engine is 13%, 53% and 90%. The desk no longer asks for nothing
+at rest, because the robot keeps moving, and it is the one thing at Medium that costs more at rest
+than Medium's eye. Giving the robot's window a layer of its own took its main thread from 31 to 26
+ms/s and the GPU process from 14% to 12%; the rest is what a page at three times the pixels costs to
+put up nine times a second, and it stays about a quarter of High's. Under the cursor Low's eye costs
+more than plain Low, as cycle 41 says.
+
+**Result:** Adopted. Each level's looks stay in order: Low under Medium under High.
+
+---
+
+## Cycle 46: Every switch a transition, eyes that arrive, and a desk of 900 layers brought to 30 (adopted)
+
+**Identified bottleneck:** a change of level was a cut with a pause while the new backdrop was
+built, and so was a change of look. Two presses now go round the looks on any stop, with no ten to
+find them first, and the look carries from level to level, so switches are far more common. And
+after the desk's popups were multiplied to about two hundred, the desk cost more than High's eye on
+a scroll (GPU 3D engine 76% against plain Medium's 38%) and under the cursor. A count of the
+compositor's layers found why: 903 of them. Every one of the desk's little lettering canvases (590)
+and project pictures (58) was a layer of its own, as a GPU-drawn canvas is, and with them every note
+above one (209) had to be a layer too to keep its place in the pile. All of them were put together
+on every frame, eight or nine frames a second at rest while the robot moves.
+
+**Proposed modification:**
+- `shift(kind, change)` holds a View Transition snapshot of the page while `change` builds the new
+  one, then uncovers it with a compositor animation that says what changed: a level going up spreads
+  out from the slider and going down draws back into it; an eye opens out of a slit and closes into
+  one; the desk breaks in torn across and leaving it switches off like an old screen; the page goes
+  dark for High's eye. While one plays, further changes go straight onto its new side. Low gets them
+  too, and reduced motion skips them. The rule is in `CLAUDE.md` for anyone who works here next.
+- Each eye arrives in its own way. Low's is simply there. Medium's lies shut, twitches, and wakes all
+  at once with three rings of shock. High's builds itself out of the dark over 3.4 seconds of real time
+  (so a slow machine does not watch it in slow motion): the lattice alone, the ground coming up from
+  the foot of the screen, cells pouring in round it in arms, the ball winding in from its rim, then
+  the white, the veins, the iris and the glint, all of it spinning down to stillness before it wakes.
+  Both of the graphics-card eyes keep what they compiled between switches, so a switch back is at
+  once; High's gives back its picture's memory.
+- Low's own backdrop gets a draughtsman's construction drawn faint over the lattice, painted once.
+- The desk's lettering is drawn once per line and shown as an image, and so are the project
+  pictures. Only the robot's own typing, on the robot's own layer, stays a canvas.
+
+**Implementation:** `portfolio.js`, `portfolio.css`, `y2k.js`, `iris.js`, `ego.js`, `vapor.js`,
+`vapor.css`, `CLAUDE.md`.
+
+**Before / after, the desk with about 220 out (3x, native, two interleaved rounds):**
+
+| | Plain Medium | Desk, canvases | Desk, pictures |
+| --- | --- | --- | --- |
+| Compositor layers | - | 903 | about 30 |
+| Scroll: dropped | 8.1-11.5% | 17.5% | 3.8% |
+| Scroll: GPU 3D engine | 35-38% | 76% | 51% |
+| At rest: main thread | 3 ms/s | 41 ms/s | 31 ms/s |
+| At rest: GPU process CPU | 0% | 18% | 8% |
+| Cursor over cards: dropped | 2.0-2.3% | 0.8% | 0.1% |
+| Cursor over cards: GPU 3D engine | 49-50% | 61% | 42% |
+| Ring turning: dropped | 0.5-0.8% | 3.9% | 0.6% |
+
+The main thread still does more than plain Medium on a scroll and under the cursor (about 300 and
+590 ms/s against 120 and 390): that is the burst itself, two hundred windows made in seven seconds,
+which every one of these runs catches. It drops no more frames for it.
+
+**The ladder, each look against its own plain level (3x, native, two interleaved rounds):**
+
+| | Low eye | Medium eye | Medium desk | High eye |
+| --- | --- | --- | --- | --- |
+| At rest: frames a second | 7 | 11 | 9 | 60 |
+| At rest: main thread | 14 ms/s | 11 ms/s | 31 ms/s | 46 ms/s |
+| At rest: GPU 3D engine | 1% | 5% | 3% | 49% |
+| At rest: GPU process CPU | 1% | 3% | 8% | 42% |
+| Scroll: dropped (plain level) | 2.6% (6.9%) | 7.8% (9.8%) | 3.8% (11.5%) | 15.7% (26.6%) |
+| Cursor over cards: dropped (plain level) | 3.4% (0.7%) | 1.2% (2.1%) | 0.1% (2.3%) | 11.3% (14.9%) |
+| Ring turning: dropped (plain level) | 1.7% (2.2%) | 0% (1.0%) | 0.6% (0.8%) | 15.3% (5.0%) |
+
+**Result:** Adopted. The earlier desk of 56 windows had the same fault on a smaller scale, about 250
+layers; anything put on this site in quantity should be checked for it.
+
+---
+
+## Cycle 47: Dark skies, one large thing on High and many small ones, Medium held still (adopted)
+
+**Identified bottleneck:** looks, then cost. The galaxies read as friendly: purple and blue,
+bright, and on Medium and High one great spiral filled the right half of the screen. Wanted:
+space dark, mysterious and frightening without anything from horror in it, a real galaxy;
+Low dark with stars and only slow, few movements; Medium still, one large thing with a few
+others round it; High all moving, no lattice, one large thing at most and many smaller ones
+that change as the page is scrolled, with ships of two kinds fighting. Medium's living galaxy
+was also the most expensive thing Medium did at rest, and on a basic graphics driver it would
+have been drawn on the processor.
+
+**Proposed modification:**
+- One painter for the still sky (`paintGalaxySky` in `portfolio.js`, run once in a worker) in a
+  dark palette: near-black deep, nebulae at half their old strength, a vignette. Low gets it as
+  it was, darker, with its four slow glints and slow shooting stars. Medium gets the full
+  painting: dust clouds, sixteen far galaxies, a large spiral with pale arms, heavy dust, red
+  knots and a black hole at its heart, three black holes in discs of fire, a world with a ring,
+  a red star dying in its shells and a galaxy edge on. Nothing on Medium moves.
+- `cosmos.js` is High's alone. The galaxy at the top of the page is a third of the width it
+  was. Down the page six things come in for every screen scrolled, each placed from its own
+  number so the page is always the same, each at its own depth and speed, of eight kinds; at
+  most 24 on the screen at once go to the shader, each pixel skipping any it is not near.
+  Two kinds of fighters and their great ships fight on a 2D canvas over it, their numbers set
+  by how far down the page it is.
+- The shader is built on the side (`KHR_parallel_shader_compile`) and the galaxy fades in once
+  it is ready, instead of the page stopping while it is compiled.
+- A graphics card the browser imitates on the processor (SwiftShader, llvmpipe, Microsoft
+  Basic Render Driver) gets no galaxy.
+
+- The desk's loose words lost their pink blocks for a haze of pink round every letter, seven
+  soft shadows deep. It read well and cost the desk a sixth of its frames on a scroll: 15-18%
+  dropped against 3.8% in cycle 46. A lighter haze of three shadows, and a ring of twelve
+  shadows with no blur at all, cost the same; so did a pink outline (`-webkit-text-stroke`
+  under the letters, `paint-order: stroke fill`) on top of the headings' teal offset. With no
+  shadow on the desk at all it was 2%. What kept it there and still reads: the outline alone
+  on the words, and the headings' hard offset alone, with no outline on them. Drawing a
+  shadow or an outline round type of the headings' size is what costs, not how soft it is.
+- High's galaxy draws every other frame, a little softer, on a machine the page has eased
+  (`data-effects-pace`), as the eye and the sky beside it already did.
+
+**Implementation:** `portfolio.js`, `portfolio.css`, `galaxy.js`, `cosmos.js`, `vapor.css`.
+
+**Low against the last commit, on `minimum` (no graphics acceleration, main thread 6x slower, two interleaved rounds):**
+
+| | Last commit | Now | Now, eye |
+| --- | --- | --- | --- |
+| Scroll: dropped | 0.8% | 1.1% | 0.6% |
+| Scroll: frames a second | 56.5 | 57.6 | 58.4 |
+| Scroll: main thread (6x slower) | 764 ms/s | 842 ms/s | 803 ms/s |
+| At rest: frames in eight seconds | 0 | 7 | 13 |
+| At rest: main thread (6x slower) | 6 ms/s | 22 ms/s | 61 ms/s |
+
+The seven frames at rest are its four glints changing step, the compositor's alone.
+
+**Medium and High on `native` (3x, two interleaved rounds):**
+
+| | Medium | Medium, desk | High, last commit | High, now |
+| --- | --- | --- | --- | --- |
+| Scroll: dropped | 9.6% (11.2% at the last commit) | 3.1% (16.5% with the haze) | 27.3% | 26.1% |
+| Scroll: GPU 3D engine | 36% | 51% | 46% | 57% |
+| At rest: frames a second | 0 | 18 | 25 | 42 |
+| At rest: main thread | 3 ms/s | 43 ms/s | 85 ms/s | 135 ms/s |
+| At rest: GPU 3D engine | 0% | 7% | 33% | 58% |
+| At rest: GPU process CPU | 0% | 12% | 34% | 59% |
+
+Before the easing above, High at rest drew 59 frames a second with the GPU 87% busy. Medium's
+eye at rest: 6 frames a second, 13 ms/s. Switching to High stopped the page for 648 ms while
+the shader was compiled; built on the side, 220 ms, the rest being the sky behind it.
+
+Medium at rest now does less than Low: Low has its slow glints and Medium, asked to hold
+still, has nothing. Both are next to nothing; everywhere else the order holds.
+
+**Checks:** `smoke.ps1` 50 of 50 with graphics and 48 of 48 without; the desk with real
+presses 34 of 34; with touch 11 of 11; every card's and sheet's picture in all seven looks,
+with one report at Medium and High that is the 3D ring itself (two cards on it measured at
+different angles, a pixel apart). The first smoke run failed three presses at High: the page
+was stopped while the shader compiled, and the presses landed as one. Building it on the side
+fixed that. High filmed down the whole page at 1470x860 and 390x844: no script errors.
+
+**Result:** Adopted.
+
+---
+
+## Cycle 48: One living sky for Medium and High, things that act on each other, the sky going out when nobody is there (adopted)
+
+**Identified bottleneck:** looks and lag together. High ran two skies at once: the old one
+(`galaxy.js`, a 2D canvas redrawn over the whole screen) under the new galaxy (`cosmos.js`),
+and on this machine's built-in graphics the galaxy drew every other frame, so what scrolled
+with the page juddered against it. "Very laggy." The things scattered down High's page sat
+still where they were put; Aloe's reference was the old High, where worlds fell into black
+holes and craft landed on them. Medium was asked for movement again, things floating "that
+interact with the background" without being "crazy". The pulsars (the bluish spinning thing
+with beams and a blink) were to go everywhere. The black the backdrop went when the tab was
+left was liked, and wanted on purpose: dark a few seconds after nobody moves, alive again on
+the next move, at every level.
+
+**Proposed modification:**
+- `galaxy.js` is gone. Every level lays down the still sky (`paintGalaxySky`), which is now
+  far off: stars, and far galaxies as points of light. Medium and High draw `cosmos.js` over
+  it, one engine with two budgets (`LEVELS`). Medium's painting keeps its spiral; the black
+  holes, the ringed world and the dying star painted into it before are now live.
+- What is near acts on what is round it, all of it in the page's script and none of it on the
+  graphics card but the drawing: each thing floats about its place and springs back when
+  pushed; the cursor pushes; every so often a hole takes hold of the nearest thing it can
+  swallow, which drifts in, is caught, goes round along the hole's disc faster and smaller,
+  and is swallowed with a flare and sparks that mostly fall back; comets are bent by the holes
+  and by the cursor and caught by the holes; worlds are lit from the side of whatever burns
+  nearest; landers come down on worlds and are taken with one that goes in. At High the
+  fighters steer round the worlds, are pulled at by the holes and taken if they stray, their
+  shots bend round the holes and knock the orbs they hit. Medium's painted spiral has a live
+  heart where the painting put it.
+- The holes bend the picture behind them: `setupStillSky` hands the picture to `cosmos.js`,
+  which samples it wherever a hole (or, gently, the cursor) bends the light, so the stars
+  behind are drawn round a hole in a ring. Everywhere else the picture shows as it is.
+- High is crowded with orbs -- rock, ice, molten under a crust, balls of light -- that wander
+  further than anything else and can be pushed a long way; one pushed into a hole cracks,
+  spins up, and comes apart on the way in, the pieces following it. Far things are small and
+  slow. Pulsars are taken out; the orbs have their kind number.
+- One full-screen pass for all of it, at High every frame (scale 1.25, or 1 eased -- easing no
+  longer halves the frames), at Medium thirty a second unless something is moving fast, a
+  scroll included. Two parallax layers of stars at High and one at Medium give the scroll
+  depth. Each shader is built on the side; the other level's is built in idle time once the
+  first is up, so a change of level does not wait for one.
+- The backdrop goes dark at every level five seconds after the last move, scroll, key or
+  touch (`IDLE_DARK_MS`), and `cosmos.js` stops drawing once it has faded; the next move
+  wakes it with a flare. The eyes and the desk keep watching.
+- Switches grade with the level. Up to High bursts out of the slider (`surge`); between the
+  stars and the eye only the backdrop moves (`warp`): High swirls the old one down into a
+  flash, holds black, and climbs the new one up from behind; Medium is the same lighter and
+  Low a few steps. A new still picture fades over the old one (`.background-grid::after`)
+  instead of replacing it in a frame, and is started at once on a change of level.
+
+- On a machine the page has eased, High also rests at thirty frames a second, and takes every
+  frame only while someone is scrolling or moving: every frame of a moving backdrop is every
+  sheet of High's glass filtered again, which is most of what a frame costs (with the glass
+  forced to frost, High dropped 36% on a scroll against 46%).
+- Medium's desk (a helper agent, `vapor.js`, `vapor.css`): the pop-ups that did nothing are a
+  wall painted once at three depths behind the page; those in front all lead somewhere.
+
+**Implementation:** `cosmos.js`, `portfolio.js`, `portfolio.css`, `vapor.js`, `vapor.css`,
+`CLAUDE.md`, `tools/perf/smoke.ps1`, `tools/perf/ab.ps1` (a port of its own for each arm: a
+Chrome slow to close was stopping the next one starting); `galaxy.js` removed.
+
+**On `native`, two interleaved rounds, kept awake by a key every second.** The machine was
+busy with other work throughout and every number moved by a third between runs; compare
+within a table only.
+
+| | Low | Medium | High |
+| --- | --- | --- | --- |
+| Scroll: dropped | 7.5% | 18.2% | 41.5% |
+| Scroll: GPU 3D engine | 24% | 50% | 43% |
+| At rest: frames a second | 1.9 | 40 | 29 |
+| At rest: main thread | 5 ms/s | 72 ms/s | 126 ms/s |
+| At rest: GPU 3D engine | 0% | 35% | 59% |
+| At rest: GPU process CPU | 3% | 24% | 81% |
+
+| High | Before (two skies) | Now | Now, glass as frost |
+| --- | --- | --- | --- |
+| Scroll: dropped | 49.2% | 45.9% | 36.1% |
+| Scroll: main thread | 137 ms/s | 56 ms/s | 72 ms/s |
+| At rest: main thread | 220 ms/s | 76 ms/s | 85 ms/s |
+| At rest: GPU 3D engine | 67% | 50% | 47% |
+| At rest: compositing on the GPU process | 336 ms/s | 184 ms/s | 110 ms/s |
+
+High's scroll is what it was; at rest it does less, and Medium sits between Low and High at
+every point. Medium at rest is no longer nothing: it was asked to move. Left alone, every
+level goes dark after five seconds: Medium measured 0.7 ms/s once it had, and High's frame
+count stops a second and a half after the fade begins. The desk, by the helper's own five rounds: 8.3% dropped on a
+scroll before, 3.6% now, 2,665 elements on it before and 1,024 now.
+
+**Checks:** `smoke.ps1` 50 of 50 with graphics and 48 of 48 without (the transition check
+now waits out the eye's warp before the next switch, and watches `data-warp` as well as
+`data-shift`); touch 11 of 11; every card's and sheet's picture in all seven looks, the one
+report again the 3D ring's two cards a pixel apart; the desk's own test with every front
+pop-up pressed through to where it leads. High and Medium filmed at 1470x860 and 390x844, the
+warp at High and the burst up to it filmed frame by frame: no script errors. In forty seconds
+watched, Medium swallowed four things and High seven, and High went dark when left and came
+back on one move.
+
+**Result:** Adopted.
+
+---
+
+## Cycle 49: Darker, sharper, ships with a look, and switches that die and burst (adopted)
+
+**Identified bottleneck:** looks. Set beside the live High (`galaxy.js`, near black, grey, a
+dark planet lit only at its rim), the new skies were "very bright and colorful" with "a lot
+going on"; the ships read as cursor arrows; the planets were blocky looked at closely, drawn
+at one canvas pixel to a CSS pixel on an eased machine with a hard edge; and the switches
+between the stars and the eye were a spinning rectangle. Low's switch was liked as High's.
+
+**Proposed modification:**
+- Medium and High graded dark and grey in the shader (`uDim`, `uMono`), stars, holes, nebulae
+  and the galaxy dimmer, fewer things (High nine to a screen, orbs two in five of them), and
+  the worlds and orbs dark and lit at the rim. The still picture for Medium and High painted
+  near black with its colour taken down to a trace (`paintGalaxySky`'s `dark`), Low's as it was.
+  The worker never got `live` before: Medium painted its holes, ringed world and dying star
+  under the live ones. It does now.
+- Worlds, orbs and moons have a soft edge a pixel wide, and High draws at up to twice the
+  screen's pixels (1.5 on an eased machine), Medium 1.25.
+- Each kind of ship drawn once, large, into a sprite of its own, and laid down turned; the
+  great ships likewise; the wrecks the same sprites with the lights out; a faint wake behind
+  each fighter.
+- Switches between the stars and the eye at Medium and High drawn on a canvas of their own
+  over the backdrop: leaving the stars the galaxy collapses and goes off in a Big Bang down to
+  black, the eye arriving under it and waiting it out (`show({ after })`); leaving an eye it
+  dies (`die(ms)`: the pupil blows, the lids come down), tears, and comes apart in blocks from
+  the iris out before the stars burst back through the dark. Every eye, as it wakes, has light
+  pour into its iris and starts out at the viewer. Low takes the old swirl, without filters.
+
+**Implementation:** `cosmos.js`, `portfolio.js`, `portfolio.css`, `ego.js`, `iris.js`,
+`CLAUDE.md`, `tools/perf/smoke.ps1`.
+
+**High, sharper against drawn at 1x, on `native` (two interleaved rounds, kept awake):**
+scroll 30.5% dropped against 31.3%; at rest 30 frames a second either way, the GPU 3D engine
+52% against 45%. Kept: High has no ceiling, and the rest of the frame is the glass.
+
+**Checks:** `smoke.ps1` 50 of 50 with graphics and 48 of 48 without (the test now waits out
+Low's longer switch, and waits for High's eye to say it is awake, `data-awake`, before
+pressing it); touch 11 of 11. The Big Bang at High and Medium, High's eye dying, and the light
+pouring into it filmed frame by frame: no script errors.
+
+**Result:** Adopted.
+
+Afterwards, by request: the great ships and the wrecks are gone (the wrecks were the fighters'
+sprites blown up past three times their size, "big weird ships"); Medium plays High's Big Bang
+and death at full strength; and High's eye builds itself over five seconds from the bones out
+-- a wire globe with its measurements marked, ten wedges coming in from an exploded view with
+their cut edges lit, veins growing in from the rim, the iris, the skin closing over it from the
+edges, a ring of light sealing it -- in place of the arms of cells. `smoke.ps1` 50 of 50 with
+graphics (one run before that failed three of High's eye checks while the machine was busy
+and passed on its own) and 48 of 48 without.
+
+Then: Medium's things hold still on the screen (nine of them, no parallax, no wander, no
+push; comets, feeding and landers still move); every level paints the same dark sky, Low's
+shown at .62; High's things are placed down the page one after another and across and up the
+screen by a Halton sequence, so the middle is no longer bare; High's switches between the
+stars and the eye swirl and change colour as the galaxy falls in and pass through a trip of
+wheeling colour before the new one; and Medium's eye builds itself from the bones out like
+High's. `smoke.ps1` 50 of 50 with graphics and 48 of 48 without; touch 11 of 11.
+
+Last, by request: the centred rainbow trip is gone. Medium and High play one switch: the Big
+Bang, the eye building itself, then the eye's own dots, dithered in its colours, spiralling in
+from the whole screen round the iris and swallowed by it (`pourIntoIris`, drawn cell by cell
+into a small picture and laid on the screen with its pixels showing, about 20,000 cells), and
+the eye waking wild for a second and a half or so; leaving it, its dots evaporate upward. From
+one level's eye to another's the eye is simply there (`settled`). The frame monitor now looks
+away while a switch plays (`deferPerformanceSampling`), since a switch's own work is not the
+machine struggling. `smoke.ps1` over five runs with graphics: 50, 50, 49, 48 and 49 of 50,
+each miss in a different check about the eye arriving at High or counting a step down and
+each passing on the next run and in a probe on its own; without graphics 48 of 48 in every
+run.
+
+Then, by request: the spiral is faster and feeds the pupil. It lasts 0.6 s rather than 1.1
+(`GATHER_MS` in ego.js and iris.js), turns about three times as fast, and wheels round the
+pupil where the eye is looking (`irisAt`) rather than off to one side, in the iris's own
+colours by how far out it is, pale pink at the middle through violet to lavender, with a cold
+cyan streaking round, where it used to cycle five colours by angle. The holes lost the thin
+bright ring at the edge of their dark (the shader's photon ring, and the stroke in the still
+sky's fallback). And nothing is kept to the right any more: the holes and dying stars are
+placed across the whole screen like everything else, the stars and things behind the words are
+only a shade quieter, and the galaxy stands somewhere new each visit, chosen from the still
+sky's seed (`portfolioSkySpot`), where Medium's painted spiral and its feeding heart and
+High's living galaxy all go. Low's picture keeps its old composition.
+
+Then: the spiral's five arms closed up, at the end, into a figure like a swastika, so the pour
+has no arms at all now. It is a whirlpool of loose dots, about one to every five cells of its
+grid (4,200 at most), each starting anywhere on the screen and winding in on a path of its own,
+reaching the pupil at a time of its own, with a curved tail of five steps behind it; written
+straight into the grid's pixels, so a frame is a few milliseconds of plain arithmetic. The eyes
+go wild for half a second once awake, not 1.7 or 1.8, and Medium's and High's look at the cursor
+all the time once awake, as Low's did; the two presses still fix them, flushed, as before. A
+switch no longer leaves the new eye staring ahead until the cursor moves: the page keeps where
+the cursor last was (`window.portfolioPointer`) and the eye looks there as it arrives.
+
+---
+
 ## Final checks (cycles 30-40 together)
 
 On the merged tree, not the branches:
@@ -1786,24 +2178,33 @@ On the merged tree, not the branches:
 - Not measured: the lines of cycle 39 on the machine that showed them, a real phone, or any
   browser but Chrome.
 
-Cycles 41-44, on the finished tree:
+Cycles 41-46, on the finished tree:
 
-- `smoke.ps1`: 47 of 47 with graphics acceleration and 45 of 45 without, including ten presses
-  finding each look, two going round them, a double press setting the eye following, leaving and
-  coming back through the levels, each level's own backdrop returning, and a reload forgetting all
-  of it. With no graphics the two-press steps are handed to the slider together, as presses sent
-  one at a time arrive further apart there than any hand's.
+- `smoke.ps1`: 50 of 50 with graphics acceleration and 48 of 48 without, including one press and two
+  slow ones doing nothing, two quick ones finding each look and going round them, the eye carrying
+  from level to level, Medium's desk last and its absence at the other levels, a double press setting
+  High's eye following once it has built itself, a transition playing for a change of look and of
+  level, each level's own backdrop returning, and a reload going back to the usual look. With no
+  graphics the two-press steps are handed to the slider together, as presses sent one at a time
+  arrive further apart there than any hand's. One run without graphics failed 'moving it back up after
+  a step down is counted' straight after a reload, and passed on the next run.
+- Every transition and High's eye being built, filmed frame by frame: each kind plays, and no script
+  errors.
 - `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each, with the
-  page's own looks. With each hidden look on: Low's eye, High's eye and the bright sky 0 of 24. The
-  Medium desk reports 13 of 24, every one a touch screen and every report the same: its small retro
-  controls are small to look at. They answer beyond their edges, which that check does not measure.
-- Seven looks at seventeen screens, photographed and looked at: no sideways overflow, nothing
-  stranded off the screen, no script errors.
-- The Medium desk, with real presses, 26 of 26: nothing out to begin with, seven at about three and
-  a half seconds, fourteen at seven, then a pause; all six real things among them; fixed as the page
-  scrolls and behind it; a press that moves straight off carrying nothing; a hold lifting one; a
-  fast flick carrying it over the page and under the navigation; sinking back when let go; a slow
-  press on a button still pressing it; the gaps after the burst all 5 to 30 s; twenty and no more.
+  page's own looks. With each hidden look on: all three eyes 0 of 24. The Medium desk reports 13 of 24,
+  every one a touch screen and every report the same: its small retro controls are small to look at.
+  They answer beyond their edges, which that check does not measure.
+- The looks at seventeen screens, photographed and looked at: no sideways overflow, nothing
+  stranded off the screen, no script errors. The bright sky was checked at these before it was removed.
+- The Medium desk, with real presses, 34 of 34: next to nothing out to begin with, about a hundred at
+  three and a half seconds, two hundred at seven (on time, however late its timers run, since it makes
+  up whatever is due), then a pause; all six real things among them, with the robot, project pictures
+  that had arrived and links to the page; the robot's picture changing; fixed as the page scrolls and
+  behind it; a press that moves straight off carrying nothing; a hold lifting one; a fast flick carrying
+  it over the page and under the navigation; sinking back when let go; a slow press on a button still
+  pressing it; a project popup opening its project; a warning scrolling to the page; STOP IT not closing
+  the robot; closing it bringing it back; the static going away again; the gaps after the burst all 5 to
+  30 s; 260 and no more.
 - The same with real touch events at a phone's size, 11 of 11: a swipe across a window scrolling the
   page and leaving it where it was; a hold lifting it; the finger carrying it with the page not
   scrolling; a tap just off a small key closing the note.

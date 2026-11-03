@@ -1,9 +1,10 @@
-/* The eye, in full: the third of High FX's backdrops.
+/* The eye, in full: High FX's other backdrop.
 
-   Ten quick presses on the effects slider's High stop find High's other skies, and
-   after that two quick presses go round them: the stars, the bright Frutiger Aero sky
-   (aero.js), this, and the stars again (the slider code in portfolio.js). It is the same
-   dithered eye as Low's other look (y2k.js), with all that High can spend on it.
+   Two quick presses on the effects slider's High stop go between it and the stars (the
+   slider code in portfolio.js). It is the same dithered eye as Low's (y2k.js) and Medium's
+   (iris.js), with all that High can spend on it. It arrives by building itself over five
+   seconds from the bones out, as a machine would draw it, then has light pour into its iris
+   (portfolio.js draws that) and starts out at the viewer as it wakes; it leaves by dying.
 
    It is a ball, and it moves by turning. The iris lies on the ball and narrows as it comes
    round to the edge, the veins go round with it, its light and the window it reflects stay
@@ -28,6 +29,13 @@
     };
     const FOLLOW_MS = 15000;
     const DOUBLE_PRESS_MS = 450;
+    const SETTLE_MS = 900;
+    // How long it takes to build itself out of the dark, and how long, once it is whole,
+    // light pours into its iris before it starts out at the viewer and wakes.
+    const BIRTH_S = 5;
+    const GATHER_MS = 600;
+    // How long it goes wild for once it wakes.
+    const FRENZY_S = .5;
     // How far the ball can turn, in radians: a long way to the sides, less up and down.
     const MOST_YAW = .72, MOST_PITCH = .3;
     const turnFor = (offset, most) => clamp(Math.asin(clamp(offset, -1, 1)), -most, most);
@@ -43,7 +51,7 @@
         uniform vec2 uGrid, uEye, uLookAt, uLid;
         uniform vec3 uSize;
         uniform mat3 uTurn;
-        uniform float uBall, uCap, uIris, uTime, uOpen, uPupil, uShock, uTall, uFollow;
+        uniform float uBall, uCap, uIris, uTime, uOpen, uPupil, uShock, uTall, uFollow, uBirth;
         out vec4 outColor;
         const float TAU = 6.2831853;
         const vec3 LIGHT = vec3(0.26, -0.34, 0.9);
@@ -80,23 +88,58 @@
             float u = clamp((x - uEye.x - uLid.x) / uSize.x, -1.0, 1.0);
             float edge = pow(1.0 - u * u, 1.08);
             float middle = uEye.y + uLid.y;
-            float top = middle - uOpen * uSize.y * edge, foot = middle + uOpen * uSize.z * edge;
+            float born = uBirth;
+            // Being born, over five seconds, from the bones out, like a drawing of the body taken
+            // apart in layers, done by a machine: first a wire skeleton of it, a globe drawn line
+            // by line with its measurements marked; then its pieces come in from where they were
+            // laid out round it, catching the light along their cut edges as they move, and lock
+            // together; veins grow over the white from its rim; the iris winds in; the skin
+            // closes over it from the edges into lids; and the seams close and it is one thing.
+            float wireIn = smoothstep(0.0, 0.2, born), wireOut = 1.0 - smoothstep(0.78, 0.96, born);
+            float sealed = smoothstep(0.86, 0.99, born);
+            float veinsIn = smoothstep(0.4, 0.68, born);
+            float irisIn = smoothstep(0.55, 0.84, born);
+            float skinIn = smoothstep(0.66, 0.92, born);
+            float spin = (1.0 - smoothstep(0.1, 0.9, born)) * 3.0;
+            // Until the skin closes over it there are no lids: the whole of it shows.
+            float opening = mix(2.6, edge, skinIn);
+            float top = middle - uOpen * uSize.y * opening, foot = middle + uOpen * uSize.z * opening;
+            float lidTop = middle - uOpen * uSize.y * edge, lidFoot = middle + uOpen * uSize.z * edge;
             float dim = mix(0.24 + 0.76 * smoothstep(0.14, 0.68, r.x), 0.46, uTall) * (0.3 + 0.7 * smoothstep(0.05, 0.17, r.y));
             float warm = smoothstep(0.25, 0.95, r.x) * smoothstep(0.8, 0.1, r.y);
             float cool = smoothstep(0.7, 0.1, r.x) * smoothstep(0.3, 1.0, r.y);
             vec3 tint = vec3(206.0 + warm * 49.0 - cool * 90.0, 190.0 - warm * 70.0 - cool * 20.0, 255.0 - warm * 14.0) / 255.0;
             vec3 color = tint;
+            const vec3 WIRE = vec3(0.5, 0.95, 1.0);
             float tone;
             vec2 toEye = cell - uEye;
+            // Laid out in pieces: ten wedges round its middle, each set out from it along its own
+            // line and brought in at its own time.
+            float wedgeAt = (atan(toEye.y, toEye.x) / TAU + 0.5) * 10.0;
+            float wedge = floor(wedgeAt);
+            float due = 0.18 + 0.3 * hash(vec2(wedge, 7.0));
+            float apart = 1.0 - smoothstep(due, due + 0.16, born);
+            float mid = (wedge + 0.5) / 10.0 * TAU - TAU * 0.5;
+            vec2 outward = vec2(cos(mid), sin(mid));
+            vec2 placed = toEye - outward * apart * uBall * 0.5;
+            bool gap = apart > 0.0 && dot(placed, outward) < 0.0;
+            float seamAt = min(fract(wedgeAt), 1.0 - fract(wedgeAt)) * TAU / 10.0 * length(toEye);
+            float seam = (1.0 - sealed) * smoothstep(1.6, 0.4, seamAt);
+            float moving = apart * (1.0 - apart) * 4.0;
+            toEye = placed;
             float ringAt = length(toEye) / (uIris * 0.1), angle = atan(toEye.y, toEye.x);
+            vec2 fromBall = toEye / uBall;
+            float rr = length(fromBall);
             if (y > top && y < foot) {
                 // The ball. Where this cell lands on it is n, and p is the part of the ball
                 // that has turned to face it, so everything painted by p goes round with it.
                 vec2 flat2 = toEye / uBall;
                 float reach = dot(flat2, flat2);
-                if (reach < 1.0) {
+                if (gap) tone = 0.0;
+                else if (reach < 1.0) {
                     vec3 n = vec3(flat2, sqrt(1.0 - reach));
                     vec3 p = uTurn * n;
+                    p.xy = mat2(cos(spin), sin(spin), -sin(spin), cos(spin)) * p.xy;
                     float away = acos(clamp(p.z, -1.0, 1.0));
                     float k = away / uCap;
                     angle = atan(p.y, p.x);
@@ -105,18 +148,27 @@
                     // The white, round under its light, with veins in it that flare and fade.
                     tone = 0.05 + 0.6 * pow(light, 1.5);
                     float rn = fbm(p.xy / (1.0 + max(p.z, -0.6)) * 13.0);
-                    float vein = pow(1.0 - abs(rn * 2.0 - 1.0), 18.0) * smoothstep(0.75, 1.9, k);
+                    // Growing in from the rim, a bright tip on each as it goes.
+                    float reachOf = mix(2.6, 0.75, veinsIn);
+                    float vein = pow(1.0 - abs(rn * 2.0 - 1.0), 18.0) * smoothstep(0.75, 1.9, k) * smoothstep(reachOf - 0.12, reachOf, k) * step(0.001, veinsIn);
+                    float tip = pow(1.0 - abs(rn * 2.0 - 1.0), 14.0) * exp(-pow((k - reachOf) / 0.07, 2.0)) * veinsIn * (1.0 - veinsIn) * 4.0;
                     float flare = 0.4 + 0.6 * pow(0.5 + 0.5 * sin(uTime * 1.3 + rn * 22.0), 3.0);
                     if (vein * flare > 0.12) {
                         tone = max(tone, vein * flare * 1.4);
                         color = mix(color, vec3(1.0, 0.36, 0.72), 0.85);
+                    }
+                    if (tip > 0.2) {
+                        tone = max(tone, tip);
+                        color = mix(color, vec3(1.0, 0.85, 0.95), 0.8);
                     }
                     // Faint lines round it, like a globe's, that wrap as it turns.
                     float lat = smoothstep(0.92, 1.0, abs(fract(away * 5.2 - uTime * 0.03) - 0.5) * 2.0);
                     float lon = smoothstep(0.95, 1.0, abs(fract(angle / TAU * 16.0) - 0.5) * 2.0);
                     if (k > 1.04) tone += (0.1 * lat + 0.07 * lon) * (0.3 + light);
                     if (k < 1.0) {
-                        float pupil = 0.36 + uPupil;
+                        float pupil = 0.36 + uPupil + (1.0 - irisIn) * 0.45;
+                        float irisKey = (1.0 - k) * 0.85 + fract(angle / TAU + 0.5) * 0.15;
+                        float irisHere = smoothstep(irisKey - 0.06, irisKey, irisIn * 1.1);
                         float fibre = 0.5 + 0.5 * sin(angle * 34.0 + sin(angle * 9.0 + uTime * 0.3) * 1.6 + uTime * 0.25);
                         float fine = 0.5 + 0.5 * sin(angle * 71.0 - uTime * 0.7);
                         tone = 0.2 + 0.62 * fibre * smoothstep(pupil - 0.06, 0.7, k) * smoothstep(1.0, 0.78, k);
@@ -132,6 +184,8 @@
                         if (k < pupil) tone = 0.0;
                         else tone = max(tone, 0.14 * smoothstep(pupil * 1.3, pupil, k));
                         tone *= 0.42 + 0.72 * light;
+                        tone = mix(0.05 + 0.6 * pow(light, 1.5), tone, irisHere);
+                        color = mix(tint, color, irisHere);
                     }
                     // Light caught round the edge of the ball, where it turns away.
                     float rim = pow(1.0 - n.z, 2.6);
@@ -140,10 +194,34 @@
                     // The window it reflects stays with the room, and only slides a little
                     // as the bulge of the eye comes round under it.
                     vec2 glint = (toEye - (uLookAt - uEye) * 0.28) / uIris;
-                    if (length(glint - vec2(0.3, -0.34)) < 0.09 || length(glint + vec2(0.24, -0.3)) < 0.035) {
+                    if (born > 0.9 && (length(glint - vec2(0.3, -0.34)) < 0.09 || length(glint + vec2(0.24, -0.3)) < 0.035)) {
                         tone = 1.0;
                         color = vec3(1.0);
                     }
+                    // Before the skin, the flesh of it: darker, redder, scanned in lines.
+                    float bare = 1.0 - skinIn;
+                    tone *= 1.0 - 0.45 * bare * (0.5 + 0.5 * step(0.5, fract(y * 0.5)));
+                    color = mix(color, vec3(0.86, 0.34, 0.5), 0.5 * bare * (1.0 - irisIn));
+                    // The wire skeleton, drawn in line by line, globe lines and the marks of its
+                    // measure: the iris and the pupil ringed, a cross through its middle.
+                    float lines = 16.0 * wireIn;
+                    float wireLon = step(fract(angle / TAU + 0.5) * 16.0, lines) * smoothstep(0.9, 1.0, abs(fract(angle / TAU * 16.0) - 0.5) * 2.0);
+                    float wireLat = step(away / 3.1416 * 9.0, lines) * smoothstep(0.88, 1.0, abs(fract(away * 2.9) - 0.5) * 2.0);
+                    float marks = 0.0;
+                    if (abs(length(toEye) - uIris) < 0.7 || abs(length(toEye) - uIris * (0.36 + uPupil)) < 0.6) marks = step(0.5, fract(atan(toEye.y, toEye.x) * 12.0));
+                    if ((abs(toEye.x) < 0.6 || abs(toEye.y) < 0.6) && length(toEye) < uBall) marks = max(marks, step(0.45, fract(length(toEye) * 0.25)));
+                    float wire = max(max(wireLon, wireLat) * wireIn, marks * wireIn * 0.8) * wireOut;
+                    tone = max(tone * (0.15 + 0.85 * smoothstep(0.12, 0.5, born)), wire * 0.95);
+                    color = mix(color, WIRE, wire * 0.85);
+                    // A piece on its way in shows its cut edges lit, and the seams stay open
+                    // till the end.
+                    float cut = moving * (smoothstep(1.4, 0.3, seamAt) + smoothstep(0.9, 1.0, rr));
+                    tone = max(tone * (1.0 - seam * 0.85), cut * 0.9);
+                    color = mix(color, WIRE, min(1.0, cut));
+                    // And as it closes, a ring of light runs in over it and it is one.
+                    float fuse = exp(-pow((rr - (1.15 - sealed * 1.3)) / 0.07, 2.0)) * sealed * (1.0 - sealed) * 4.0;
+                    tone += fuse * 0.85;
+                    color = mix(color, vec3(0.9, 0.97, 1.0), min(1.0, fuse));
                 } else tone = 0.025;
                 // The shadows the lids throw on it.
                 float under = (y - top) / (uGrid.y * 0.07);
@@ -162,10 +240,18 @@
                 color = mix(color, vec3(0.5, 0.42, 1.0), smoothstep(0.42, 0.72, flow) * 0.6);
                 float toLid = min(abs(y - top), abs(y - foot));
                 if (edge > 0.02 && toLid < 1.3) tone = abs(y - top) < 1.3 ? 0.92 : 0.6;
+                // The skin comes in from the edges of the screen.
+                float fromEdge = max(abs(r.x - 0.5) * 2.0, abs(r.y - 0.5) * 2.0);
+                tone *= smoothstep(1.0 - skinIn * 1.15, 1.0 - skinIn * 1.15 + 0.12, fromEdge) * skinIn;
+            }
+            // Before the skin, where the lids will be, drawn in wire.
+            if (wireOut > 0.0 && edge > 0.02 && (abs(y - lidTop) < 0.7 || abs(y - lidFoot) < 0.7) && step(0.5, fract(x * 0.2)) > 0.0) {
+                tone = max(tone, 0.7 * wireIn * wireOut * (1.0 - skinIn * 0.6));
+                color = mix(color, WIRE, 0.85);
             }
             // Sparks going round it, ring by ring: on the ball they ride it as it turns.
             float ring = floor(ringAt);
-            if (ring > 10.0) {
+            if (ring > 10.0 && born > 0.7) {
                 float way = mod(ring, 2.0) * 2.0 - 1.0;
                 float count = 16.0 + ring * 2.0;
                 float at = floor((angle / TAU + 0.5 + uTime * way * (0.012 + 0.03 * hash(vec2(ring, 3.0)))) * count);
@@ -189,7 +275,7 @@
         precision highp float;
         uniform sampler2D uScene;
         uniform vec2 uGrid, uRes, uPupilAt;
-        uniform float uTime, uGlitch, uTall, uFollow;
+        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice;
         out vec4 outColor;
         float hash(vec2 p) {
             p = fract(p * vec2(123.34, 456.21));
@@ -218,8 +304,10 @@
             base += vec3(0.84, 0.2, 0.78) * 0.3 * exp(-dot(w, w) * 4.5);
             vec2 z = (uv - vec2(0.2, 0.08)) * vec2(wide, 1.0);
             base += vec3(0.13, 0.27, 0.94) * 0.3 * exp(-dot(z, z) * 4.0);
+            // Being born, it starts from the dark, and the aura comes up with it.
+            base = mix(vec3(0.012, 0.008, 0.02), base, smoothstep(0.5, 0.95, uBirth));
             // Light bleeding out of the bright places.
-            vec3 bloom = textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7;
+            vec3 bloom = (textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7) * (1.0 + (1.0 - uBirth) * 0.7);
             // Shafts coming off the pupil.
             vec3 shafts = vec3(0.0);
             vec2 toPupil = (uPupilAt - uv) / 9.0;
@@ -233,6 +321,11 @@
             shafts *= 0.09 * (0.8 + 0.5 * uFollow);
             float quiet = mix(0.38 + 0.62 * smoothstep(0.1, 0.66, uv.x), 0.6, uTall);
             vec3 color = base + crisp + (bloom * 0.62 + shafts) * quiet;
+            // The page's own lattice, which is all there is to begin with, gone once it is born.
+            vec2 onPage = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+            vec2 major = mod(onPage, uLattice), minor = mod(onPage, uLattice * 0.25);
+            float lattice = (major.x < 1.0 || major.y < 1.0) ? 0.09 : (minor.x < 1.0 || minor.y < 1.0) ? 0.03 : 0.0;
+            color += vec3(0.57, 0.78, 1.0) * lattice * (1.0 - smoothstep(0.25, 0.85, uBirth));
             color *= 0.955 + 0.045 * sin(gl_FragCoord.y * 2.2);
             vec2 edge = uv - 0.5;
             color *= 1.0 - dot(edge, edge) * 0.72;
@@ -246,6 +339,8 @@
     let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false;
     let open = 1, blinkAt = -1, nextBlink = 3, secondBlink = false, nextLook = 1, shockAt = -9, glitchUntil = -1, nextGlitch = 6;
     let followUntil = 0, followAmount = 0, lastPress = -1e9, pupil = 0;
+    let shownAt = 0, wakeAt = -1, wakeDarts = 0, wakeX = 0, wakeY = 0, birthStart = -Infinity, born = 1, woke = true, lattice = 48;
+    let gatherAt = -1, dieAt = -1, dieMs = 1, frenzyUntil = -1;
     const turn = new Float32Array(9);
 
     const compile = (type, source) => {
@@ -271,8 +366,8 @@
         canvas.setAttribute('aria-hidden', 'true');
         gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
         if (!gl) throw new Error('no WebGL 2');
-        const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow']);
-        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow']);
+        const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth']);
+        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice']);
         eyeProgram = eye.program;
         eyeUniforms = eye.uniforms;
         screenProgram = screen.program;
@@ -307,6 +402,8 @@
         const ratio = Math.min(window.devicePixelRatio || 1, document.documentElement.dataset.effectsPace ? 1 : 1.25);
         canvas.width = Math.round(width * ratio);
         canvas.height = Math.round(height * ratio);
+        // The page's lattice is three rem across.
+        lattice = parseFloat(getComputedStyle(document.documentElement).fontSize) * 3 * (canvas.width / width);
         gl.bindTexture(gl.TEXTURE_2D, scene);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -327,10 +424,21 @@
             else if (!fixed && canvas.dataset.following !== undefined) delete canvas.dataset.following;
         }
         followAmount += ((fixed ? 1 : 0) - followAmount) * Math.min(1, dt * 4);
-        if (fixed && pointerSeen) {
+        // Awake and done going wild, it looks at the cursor wherever it is, always; pressed
+        // twice it fixes on it as well, its pupil pinned and the iris flushed.
+        const tracking = pointerSeen && woke && t >= frenzyUntil && dieAt < 0;
+        if ((fixed || tracking) && pointerSeen) {
             // Turned until the pupil is on the cursor, as far as a ball can turn.
             wantYaw = turnFor((pointerX / cell - cx) / ball, mostYaw);
             wantPitch = turnFor((pointerY / cell - cy) / ball, MOST_PITCH);
+        } else if (t > nextLook && wakeDarts > 0) {
+            // Just woken: straight for whoever woke it, then a quick look round.
+            const first = wakeDarts === 4;
+            const side = wakeDarts % 2 ? .8 : -1;
+            wantYaw = first ? turnFor((wakeX / cell - cx) / ball, mostYaw) : side * mostYaw;
+            wantPitch = first ? turnFor((wakeY / cell - cy) / ball, MOST_PITCH) : (Math.random() * 2 - 1) * MOST_PITCH;
+            wakeDarts -= 1;
+            nextLook = t + (t < frenzyUntil ? .09 + Math.random() * .08 : .34);
         } else if (t > nextLook) {
             // A dart somewhere, and a while looking at it. Now and then back to the middle.
             if (Math.random() < .25) {
@@ -342,7 +450,7 @@
             }
             nextLook = t + .7 + Math.random() * Math.random() * 3.6;
         }
-        const pull = Math.min(1, dt * (fixed ? 7 : 11));
+        const pull = Math.min(1, dt * (t < frenzyUntil ? 28 : fixed || tracking ? 8 : wakeDarts > 0 || t - wakeAt < 1.4 ? 22 : 11));
         yaw += (wantYaw - yaw) * pull;
         pitch += (wantPitch - pitch) * pull;
         const wantPupil = .03 * Math.sin(t * .4) + (fixed ? -.1 : 0);
@@ -351,6 +459,31 @@
             blinkAt = t;
             secondBlink = Math.random() < .22;
             nextBlink = t + 2.4 + Math.random() * 5;
+        }
+        // Built on the clock on the wall, so a slow machine does not watch it in slow motion,
+        // and woken the moment it is whole.
+        born = Math.min(1, Math.max(0, (performance.now() - birthStart) / (BIRTH_S * 1000)));
+        if (!woke && born >= 1) {
+            // Whole: light pours into the iris a moment (portfolio.js draws it), then it starts
+            // out at the viewer and wakes.
+            if (gatherAt < 0) {
+                gatherAt = performance.now();
+                document.dispatchEvent(new CustomEvent('portfolio:eye-gather', { detail: { ...irisAt(), ms: GATHER_MS } }));
+            } else if (performance.now() - gatherAt >= GATHER_MS) {
+                woke = true;
+                wakeAt = shockAt = t;
+                glitchUntil = t + .4;
+                nextLook = t;
+                nextBlink = t + 2.5;
+                pupil = -.18;
+                // And goes wild a moment: darting everywhere, its pupil throbbing, tearing, rings
+                // going out from it, before it settles to looking about.
+                frenzyUntil = t + FRENZY_S;
+                wakeDarts = 6;
+                pop();
+                // Said on it, for the smoke test.
+                if (canvas) canvas.dataset.awake = '';
+            }
         }
         if (blinkAt >= 0) {
             const age = t - blinkAt;
@@ -367,6 +500,38 @@
             glitchUntil = t + .07 + Math.random() * .16;
             nextGlitch = t + 4 + Math.random() * 7;
         }
+        if (t < frenzyUntil) {
+            pupil = -.2 + .24 * Math.sin(t * 34);
+            if (Math.random() < .5) glitchUntil = t + .05;
+            if (t - shockAt > .55) shockAt = t;
+        }
+        // Dying, on the way out: the pupil blows, it rolls up and away, it tears, and the
+        // lids come down on it.
+        if (dieAt >= 0) {
+            const k = clamp((performance.now() - dieAt) / dieMs, 0, 1);
+            pupil = .55 * smooth(0, .5, k);
+            wantYaw *= .9;
+            wantPitch = -MOST_PITCH;
+            open = 1 - smooth(.35, .85, k);
+            blinkAt = -1;
+            nextBlink = nextLook = Infinity;
+            if (Math.random() < .35) glitchUntil = t + .05;
+        }
+    };
+    // Where its iris is on the screen, for what portfolio.js draws round it.
+    // At the pupil, where it is looking.
+    const irisAt = () => ({ x: (cx + ball * Math.sin(yaw) * Math.cos(pitch)) * cell, y: (cy + ball * Math.sin(pitch)) * cell, r: irisR * cell });
+    // It starts out at the viewer as it wakes.
+    const pop = () => {
+        if (!canvas || reducedMotion?.matches) return;
+        const at = irisAt();
+        canvas.style.transformOrigin = `${Math.round(at.x)}px ${Math.round(at.y)}px`;
+        canvas.animate([
+            { transform: 'scale(1)', filter: 'brightness(1)' },
+            { transform: 'scale(1.12)', filter: 'brightness(2.4)', offset: .2 },
+            { transform: 'scale(.985)', filter: 'brightness(1.1)', offset: .55 },
+            { transform: 'scale(1)', filter: 'brightness(1)' }
+        ], { duration: 700, easing: 'cubic-bezier(.2, .9, .3, 1)' });
     };
     const draw = () => {
         const t = clock;
@@ -400,8 +565,9 @@
         gl.uniform1f(e.uPupil, pupil);
         gl.uniform1f(e.uTall, tall);
         gl.uniform1f(e.uFollow, followAmount);
-        const shock = t - shockAt;
-        gl.uniform1f(e.uShock, shock < 1 ? shock : -1);
+        const shock = t - shockAt, shocking = shock >= 0 && shock < 1;
+        gl.uniform1f(e.uShock, shocking ? shock : -1);
+        gl.uniform1f(e.uBirth, born);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.activeTexture(gl.TEXTURE0);
@@ -415,7 +581,9 @@
         gl.uniform2f(s.uRes, canvas.width, canvas.height);
         gl.uniform2f(s.uPupilAt, (cx + lookX) / cols, 1 - (cy + lookY) / rows);
         gl.uniform1f(s.uTime, t);
-        gl.uniform1f(s.uGlitch, t < glitchUntil ? 1 : Math.max(0, 1 - shock * 3));
+        gl.uniform1f(s.uGlitch, t < glitchUntil && t >= wakeAt ? 1 : shocking ? Math.max(0, 1 - shock * 3) : born < 1 && Math.random() < .12 ? .5 : 0);
+        gl.uniform1f(s.uBirth, born);
+        gl.uniform1f(s.uLattice, lattice);
         gl.uniform1f(s.uTall, tall);
         gl.uniform1f(s.uFollow, followAmount);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -475,6 +643,9 @@
         pointerSeen = true;
         if (event.button || event.target.closest?.(ANSWERS)) return;
         const now = performance.now();
+        // A hand still spamming the slider as the eye arrives, through the crossfade, where
+        // a press lands on nothing in particular, is not asking for anything.
+        if (now - shownAt < SETTLE_MS || clock < wakeAt) return;
         if (now - lastPress < DOUBLE_PRESS_MS) {
             followUntil = now + FOLLOW_MS;
             shockAt = clock;
@@ -495,7 +666,7 @@
     window.portfolioEgo = {
         prepare() {
             try {
-                if (!gl) setUp();
+                if (!gl || gl.isContextLost()) setUp();
                 return Promise.resolve();
             } catch (error) {
                 gl = null;
@@ -503,14 +674,54 @@
                 return Promise.reject(error);
             }
         },
-        show() {
+        // `after`: how long it is hidden under the switch that brings it (portfolio.js), so it
+        // is building itself where it can be seen.
+        // `settled`: brought in from another level's eye, it is simply there, awake, where that
+        // one was.
+        show({ after = 0, settled = false } = {}) {
             if (!gl) return;
             reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            shownAt = performance.now();
+            gatherAt = dieAt = frenzyUntil = -1;
+            // Wherever the cursor is now (portfolio.js keeps it), it looks at once it is
+            // awake, without waiting for it to move.
+            if (window.portfolioPointer) {
+                ({ x: pointerX, y: pointerY } = window.portfolioPointer);
+                pointerSeen = true;
+            }
+            canvas.getAnimations?.().forEach(animation => animation.cancel());
+            delete canvas.dataset.awake;
             const anchor = document.querySelector('.galaxy-nebula') || document.querySelector('.galaxy-field');
             if (anchor) anchor.after(canvas);
             else document.body.prepend(canvas);
             shown = true;
             size();
+            // It builds itself out of the dark, over a few seconds (see the shaders), and the
+            // moment it is whole it wakes with a jolt through everything, the pupil pins,
+            // and it goes for the hand on the slider and looks round.
+            open = 1;
+            birthStart = -Infinity;
+            born = 1;
+            if (!reducedMotion.matches && !settled) {
+                const slider = document.querySelector('.fx-slider')?.getBoundingClientRect();
+                wakeX = slider?.width ? slider.left + slider.width / 2 : window.innerWidth * .8;
+                wakeY = slider?.width ? slider.top + slider.height / 2 : 40;
+                birthStart = performance.now() + after;
+                born = 0;
+                // Nothing of its waking is due until it is whole.
+                wakeAt = shockAt = nextLook = nextBlink = Infinity;
+                wakeDarts = 4;
+                woke = false;
+            } else {
+                // There already: awake, looking about, a press answered at once.
+                woke = true;
+                wakeDarts = 0;
+                wakeAt = shockAt = clock - 10;
+                nextLook = clock;
+                nextBlink = clock + 2;
+                shownAt -= SETTLE_MS;
+                canvas.dataset.awake = '';
+            }
             update(1 / 60);
             draw();
             document.addEventListener('visibilitychange', onVisibility);
@@ -521,8 +732,16 @@
             window.addEventListener('resize', onResize, { passive: true });
             startLoop();
         },
+        irisAt: () => irisAt(),
+        // On the way out (portfolio.js): it dies over `ms`, and is put away after.
+        die(ms) {
+            if (!shown || reducedMotion?.matches) return;
+            dieAt = performance.now();
+            dieMs = ms;
+        },
         release() {
             shown = false;
+            dieAt = -1;
             stopLoop();
             clearTimeout(resizeTimer);
             clearTimeout(underProjectTimer);
@@ -534,10 +753,12 @@
             window.removeEventListener('pointermove', onPointerMove);
             window.removeEventListener('pointerdown', onPointerDown);
             window.removeEventListener('resize', onResize);
-            if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext();
-            canvas?.remove();
-            canvas = null;
-            gl = null;
+            // Off the page and down to nothing, so its picture's memory goes back, but what was
+            // compiled for it is kept, so a switch back is at once.
+            if (canvas) {
+                canvas.width = canvas.height = 1;
+                canvas.remove();
+            }
         }
     };
 })();

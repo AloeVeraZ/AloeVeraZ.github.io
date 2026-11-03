@@ -13,7 +13,7 @@
 #>
 param(
     [Parameter(Mandatory)][string]$Variants,
-    [ValidateSet('native', 'mac', 'lowend', 'phone')][string]$Config = 'native',
+    [ValidateSet('native', 'mac', 'lowend', 'minimum', 'phone')][string]$Config = 'native',
     [string[]]$Scenarios = @('scroll', 'idle-projects'),
     [int]$Rounds = 3,
     [string]$Label = 'ab',
@@ -33,8 +33,9 @@ for ($round = 1; $round -le $Rounds; $round++) {
     foreach ($name in $order) {
         $arm = $arms[$name]
         $overrides = if ($arm.Overrides) { $arm.Overrides } else { @{} }
+        # A port of its own for each arm, so a Chrome slow to close cannot hold the next one up.
         $output = & (Join-Path $PSScriptRoot 'bench.ps1') -Config $Config -Scenarios $Scenarios -Label "$Label-$name" `
-            -Site $Site -Port $Port `
+            -Site $Site -Port ($Port + [array]::IndexOf($names, $name)) `
             -InjectCss ([string]$arm.Css) -InjectJs ([string]$arm.Js) -Overrides $overrides 6>&1
         $output | Where-Object { "$_" -match '^\[' } | ForEach-Object { Write-Host "  r$round $name $_" }
         $dir = ($output | Where-Object { "$_" -match '^Results: ' } | Select-Object -Last 1) -replace '^Results: ', ''

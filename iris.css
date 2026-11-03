@@ -1,0 +1,240 @@
+/* The eye's look on the page at Medium (iris.js has the eye itself): Low's other look
+   (y2k.css), rule for rule. The colour behind everything is a few gradients on the lattice's
+   own fixed layer, painted once. Not fetched until a visitor asks for it, and every rule
+   answers only to html[data-effects="medium"][data-iris]. The lean, the lift, the light under
+   the cursor and the rings are the page's own and keep working as they do. */
+/* A press goes straight through the crossfade to the page under it. */
+::view-transition { pointer-events: none; }
+
+html[data-effects="medium"][data-iris] {
+    --bg: #040209;
+    /* Everything that can be seen through is seen through by exactly this much. */
+    --iris-pane: rgba(12, 7, 26, .84);
+    --iris-bar: rgba(78, 44, 200, .84);
+    --surface: var(--iris-pane);
+    --surface-raised: var(--iris-pane);
+    --ink: #f4f0ff;
+    --muted: #c3b8df;
+    --line: rgba(190, 165, 255, .28);
+    --blue: #c4a8ff;
+    --blue-light: #cdb6ff;
+    --blue-soft: #e3b3ff;
+    --red: #ff9d8a;
+    --yellow: #eadfff;
+    --radius-card: .625rem;
+    --radius-control: 999px;
+    --radius-surface: .75rem;
+    --glass-surface: var(--iris-pane);
+    --glass-surface-dense: rgba(16, 10, 32, .96);
+    --glass-edge-paint: transparent;
+    --glass-edge-lights: inset 0 0 0 0 transparent;
+    --glass-sheen: none;
+    --glass-shadow: none;
+    --glass-lit-body: #5a3bd0;
+    --glass-lit: linear-gradient(#7c5cf0 0, #4a2bc0 48%, #38209c 52%, #5c3cd8 100%);
+    --glass-lit-glow: none;
+    --glass-lit-ink: #ffffff;
+    /* A wet gel button with a light inside it. */
+    --iris-gel: linear-gradient(#49397e 0, #2a1f58 47%, #1c1340 53%, #33255f 100%);
+    --iris-gel-lit: linear-gradient(#8a6cff 0, #5533d0 47%, #3f22a8 53%, #6a48e6 100%);
+    --iris-gel-shine: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1px 1px rgba(200, 170, 255, .22);
+    --iris-aura: 0 0 16px rgba(130, 84, 255, .26);
+    --iris-aura-lit: 0 0 26px rgba(150, 100, 255, .55);
+    background-color: var(--bg);
+}
+html[data-effects="medium"][data-iris] body { background: var(--bg); }
+
+/* The aura behind the eye: colour with no edges, painted the once. */
+html[data-effects="medium"][data-iris] .background-grid[data-look] {
+    background-image:
+        radial-gradient(70vmax 60vmax at 62% 46%, rgba(84, 36, 214, .6), transparent 70%),
+        radial-gradient(44vmax 36vmax at 88% 12%, rgba(214, 50, 200, .3), transparent 70%),
+        radial-gradient(46vmax 40vmax at 26% 92%, rgba(34, 70, 240, .3), transparent 70%);
+    background-size: auto;
+    opacity: 1;
+}
+html[data-effects="medium"][data-iris] .background-grid::before { display: none; }
+.iris-eye {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+/* The big lettering gives off light. Painted once with the rest of the page. */
+html[data-effects="medium"][data-iris] :is(.hero-name, .section-title, .library-heading h3) {
+    color: #faf7ff;
+    text-shadow: 0 0 .16em rgba(176, 130, 255, .72), 0 0 .5em rgba(110, 60, 255, .4);
+}
+html[data-effects="medium"][data-iris] :is(.hero-badge, .section-label) {
+    color: #e2d4ff;
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
+}
+html[data-effects="medium"][data-iris] :is(.navbar .logo, .navbar .nav-links > li > a) {
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
+}
+html[data-effects="medium"][data-iris] :is(.hero-tagline, .bio-text, .section-subtitle, .library-heading p, .contact-desc) {
+    color: #f2eeff;
+    text-shadow: 0 0 .2em rgba(4, 2, 9, .98), 0 0 .6em rgba(4, 2, 9, .92);
+}
+html[data-effects="medium"][data-iris] .collection-toggle:hover { color: #ffffff; }
+html[data-effects="medium"][data-iris] .project-library { border-top-color: rgba(190, 165, 255, .3); }
+
+/* The cards: dialogs of the period, in dark glass with a soft light in the corner
+   and a glow around them. */
+html[data-effects="medium"][data-iris] :is(.about-highlight, .skill-group, .project-card) {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-card);
+    box-shadow: var(--iris-aura);
+}
+html[data-effects="medium"][data-iris] :is(.about-highlight, .skill-group, .project-card):hover {
+    background: var(--iris-pane);
+    border-color: rgba(214, 196, 255, .8);
+    box-shadow: var(--iris-aura-lit);
+}
+html[data-effects="medium"][data-iris] :is(.about-highlight, .skill-group, .project-card)::before { box-shadow: none; }
+
+/* A title bar made of what each card already holds. */
+html[data-effects="medium"][data-iris] :is(.about-highlight > .about-highlight-label, .skill-group-title, .project-category-badge) {
+    background-color: transparent;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23f4f0ff' stroke-width='1.4'%3E%3Cpath d='M2 2l8 8M10 2l-8 8'/%3E%3C/svg%3E"),
+        linear-gradient(var(--iris-bar), var(--iris-bar));
+    background-repeat: no-repeat;
+    background-size: 12px 12px, 100% 100%;
+    background-position: calc(100% - .7rem) 50%, 0 0;
+    color: #ffffff;
+    text-align: left;
+    text-shadow: 0 0 .7em rgba(214, 190, 255, .7);
+    border-bottom: 1px solid rgba(214, 196, 255, .34);
+}
+/* A label's box grows up into the card's padding and out to its sides, and gives
+   back below what it took, so the words under it stay where they were. */
+html[data-effects="medium"][data-iris] .about-highlight > .about-highlight-label {
+    --iris-bar-height: 1.875rem;
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) max(var(--rhythm-label), calc(var(--rhythm-label) + var(--pad-card) + 1.55 * var(--type-eyebrow-sm) - var(--iris-bar-height)));
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: var(--iris-bar-height);
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="medium"][data-iris] .skill-group-title {
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) auto;
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: 1.875rem;
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="medium"][data-iris] .skill-group .skill-tags {
+    margin-block: auto;
+    padding-top: var(--rhythm-heading);
+}
+html[data-effects="medium"][data-iris] .project-category-badge {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    padding: .34rem 2.25rem .34rem var(--pad-card);
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    border-radius: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+html[data-effects="medium"][data-iris] :is(.project-image-wrapper, .project-image) { background: transparent; }
+html[data-effects="medium"][data-iris] .project-card:hover .project-image.is-motion-active { background: transparent; }
+html[data-effects="medium"][data-iris] .project-image-wrapper { border-bottom: 1px solid rgba(196, 172, 255, .24); }
+
+/* Tags are the lit readouts of a media player; every control is a wet gel button. */
+html[data-effects="medium"][data-iris] .tag {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .3);
+    color: #e2d6ff;
+}
+html[data-effects="medium"][data-iris] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close) {
+    background: var(--iris-gel);
+    border: 1px solid rgba(214, 196, 255, .46);
+    border-radius: 999px;
+    color: #ffffff;
+    box-shadow: var(--iris-gel-shine), var(--iris-aura);
+}
+html[data-effects="medium"][data-iris] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):hover {
+    background: var(--iris-gel-lit);
+    color: #ffffff;
+    border-color: rgba(235, 225, 255, .85);
+    box-shadow: var(--iris-gel-shine), var(--iris-aura-lit);
+}
+html[data-effects="medium"][data-iris] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):active {
+    background: linear-gradient(#2a1a70, #3f22a8);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6);
+}
+html[data-effects="medium"][data-iris] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow, .icon-control)::before {
+    box-shadow: none;
+}
+
+/* The bar: the same pane as the cards, with its links lit up under the cursor. */
+html[data-effects="medium"][data-iris] .navbar { --nav-muted: #f4f0ff; }
+html[data-effects="medium"][data-iris] .has-scrolled .navbar { --nav-muted: #f4f0ff; }
+html[data-effects="medium"][data-iris] .navbar .nav-content::before {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-surface);
+    box-shadow: inset 0 1px 0 rgba(235, 225, 255, .3), 0 0 22px rgba(120, 80, 255, .26);
+}
+html[data-effects="medium"][data-iris] .navbar .nav-content { border-radius: var(--radius-surface); }
+html[data-effects="medium"][data-iris] .navbar .nav-content::after { display: none; }
+html[data-effects="medium"][data-iris] .has-scrolled .navbar .logo,
+html[data-effects="medium"][data-iris] .has-scrolled .navbar .nav-links > li > a { text-shadow: none; }
+html[data-effects="medium"][data-iris] .navbar .logo:hover,
+html[data-effects="medium"][data-iris] .navbar .nav-links > li > a:hover { color: #d9c8ff; text-shadow: 0 0 .8em rgba(190, 150, 255, .95); }
+html[data-effects="medium"][data-iris] .navbar .fx-slider {
+    --fx-fill: rgba(150, 100, 255, .3);
+    --fx-edge: rgba(214, 196, 255, .5);
+    --fx-ground: rgba(8, 5, 18, .9);
+    --fx-bead: #d3bdff;
+    --fx-glow: 0 0 9px rgba(190, 150, 255, .9);
+}
+html[data-effects="medium"][data-iris] .navbar .fx-slider-stop { background: rgba(214, 196, 255, .5); }
+
+/* The scroll indicator: an LCD's level meter. */
+html[data-effects="medium"][data-iris] .page-scroll-track { background: rgba(196, 172, 255, .18); }
+html[data-effects="medium"][data-iris] .page-scroll-fill { background: #d3bdff; }
+html[data-effects="medium"][data-iris] .page-scroll-progress::before,
+html[data-effects="medium"][data-iris] .page-scroll-progress::after { background: rgba(214, 196, 255, .55); }
+
+/* A project's sheet: one big dialog. */
+html[data-effects="medium"][data-iris] .modal-overlay { background: rgba(4, 2, 9, .95); }
+html[data-effects="medium"][data-iris] .modal-card {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .36);
+    border-radius: var(--radius-card);
+    box-shadow: 0 0 44px rgba(120, 80, 255, .3);
+}
+html[data-effects="medium"][data-iris] .modal-overview {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .26);
+}
+html[data-effects="medium"][data-iris] .modal-overview-item {
+    background: var(--iris-pane);
+    border: 1px solid rgba(196, 172, 255, .24);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+}
+html[data-effects="medium"][data-iris] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
+    background: transparent;
+}
+html[data-effects="medium"][data-iris] .modal-media-item figcaption { background: var(--iris-pane); color: var(--ink); }

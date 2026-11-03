@@ -15,10 +15,6 @@
 .ego-scene[hidden] { display: none; }
 /* A press goes straight through the crossfade to the page under it. */
 ::view-transition { pointer-events: none; }
-::view-transition-old(root),
-::view-transition-new(root) {
-    animation-duration: .9s;
-}
 
 html[data-effects="high"][data-ego] {
     --bg: #040209;
@@ -228,7 +224,7 @@ html[data-effects="high"][data-ego] .modal-overview-item {
     box-shadow: none;
 }
 html[data-effects="high"][data-ego] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
-    background: var(--y2k-pane);
+    background: transparent;
 }
 html[data-effects="high"][data-ego] .modal-media-item figcaption { background: var(--y2k-pane); color: var(--ink); }
 

@@ -49,8 +49,10 @@ try {
     Check 'every project is rendered' ($cards -ge $data.projects) "$cards cards for $($data.projects) projects"
     Check 'featured row' ((& $js "document.querySelectorAll('#featured-projects-container .project-card').length") -eq [Math]::Min(3, $data.featured))
     Check 'one row per collection' ((& $js "document.querySelectorAll('.project-collection').length") -eq $data.collections)
-    $mode = & $js "JSON.stringify({ effects: document.documentElement.dataset.effects, glass: document.documentElement.dataset.glass, canvas: document.querySelector('.galaxy-field').width > 0 && !document.querySelector('.galaxy-field').hidden })" | ConvertFrom-Json
-    Check 'starts in Medium FX, with no sky drawing' ($mode.effects -eq 'medium' -and -not $mode.canvas) "effects=$($mode.effects) glass=$($mode.glass)"
+    # The living sky (cosmos.js), which a machine with no graphics card goes without.
+    $living = "(() => { const s = window.portfolioCosmos && window.portfolioCosmos.stats(); return !!s && s.shown && !document.querySelector('.cosmos').hidden; })()"
+    $mode = & $js "JSON.stringify({ effects: document.documentElement.dataset.effects, glass: document.documentElement.dataset.glass, living: $living })" | ConvertFrom-Json
+    Check 'starts in Medium FX, with its living sky where there is a graphics card' ($mode.effects -eq 'medium' -and $mode.living -eq (-not $Software)) "effects=$($mode.effects) glass=$($mode.glass) living=$($mode.living)"
     # The frame monitor steps a level down when this machine stutters, which
     # would move the levels these checks set out from under them. Told the
     # visitor has insisted three times, it leaves them be; the counting
@@ -90,12 +92,11 @@ try {
     Check 'the close button closes it' (-not (& $js "document.getElementById('project-modal').classList.contains('active')"))
     if (-not $Software) {
         # The sky is parked behind an open project and has to wake once it
-        # closes. A checksum of what the sky's canvas holds, a moment apart.
-        # The page starts in Medium, which draws no sky, so High is chosen
+        # closes: how many frames it has drawn, a moment apart. High is chosen
         # for this and forgotten again after.
         Set-EffectsLevel $page 'high' | Out-Null
         Start-Sleep -Milliseconds 1500
-        $sky ="(() => { const d = document.querySelector('.galaxy-field').toDataURL(); let h = 0; for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0; return h; })()"
+        $sky = "window.portfolioCosmos ? window.portfolioCosmos.stats().frames : -1"
         & $click '#featured-projects-container .project-card' 2
         Start-Sleep -Milliseconds 600
         $a = & $js $sky; Start-Sleep -Milliseconds 1200; $b = & $js $sky
@@ -117,11 +118,11 @@ try {
     Check 'its ring turns' ($after -ne $before) "scrollLeft $before -> $after"
 
     # The effects slider: each level, what it draws, and that it is kept.
-    $level = "JSON.stringify({ effects: document.documentElement.dataset.effects, reason: document.documentElement.dataset.effectsReason, glass: document.documentElement.dataset.glass, sky: !document.querySelector('.galaxy-field').hidden, look: document.querySelector('.background-grid').dataset.look || '', value: document.getElementById('fx-level').value })"
+    $level = "JSON.stringify({ effects: document.documentElement.dataset.effects, reason: document.documentElement.dataset.effectsReason, glass: document.documentElement.dataset.glass, sky: $living, look: document.querySelector('.background-grid').dataset.look || '', value: document.getElementById('fx-level').value })"
     Set-EffectsLevel $page 'medium' | Out-Null
     Start-Sleep -Milliseconds 900
     $m = & $js $level | ConvertFrom-Json
-    Check 'the slider sets Medium: glass, no sky' ($m.effects -eq 'medium' -and -not $m.sky -and $m.look -eq 'medium' -and $m.value -eq '1') "$($m.effects) glass=$($m.glass) sky=$($m.sky)"
+    Check 'the slider sets Medium: glass, and its living sky' ($m.effects -eq 'medium' -and $m.sky -eq (-not $Software) -and $m.look -eq 'medium' -and $m.value -eq '1') "$($m.effects) glass=$($m.glass) sky=$($m.sky)"
     Set-EffectsLevel $page 'low' | Out-Null
     Start-Sleep -Milliseconds 900
     $l = & $js $level | ConvertFrom-Json
@@ -129,25 +130,27 @@ try {
     # The hint a screen reader hears stays; nothing else may hold words.
     $words = & $js "(() => { const c = document.getElementById('fx-slider').cloneNode(true); c.querySelectorAll('.visually-hidden').forEach(e => e.remove()); return c.textContent.trim(); })()"
     Check 'the slider shows no word for its level' (-not $words) $words
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     $kept = & $js $level | ConvertFrom-Json
     Check 'the choice is kept for the visit' ($kept.effects -eq 'low' -and $kept.reason -eq 'manual' -and $kept.value -eq '0') "$($kept.effects)/$($kept.reason)"
     Set-EffectsLevel $page 'high' | Out-Null
-    # The old backdrop comes down once the sky is in, or after four seconds.
+    # The living sky is fetched and built on the side; it is up within a few seconds.
     $polls = 0
-    do { Start-Sleep -Milliseconds 500; $h = & $js $level | ConvertFrom-Json; $polls++ } while ($h.look -and $polls -lt 11)
-    Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -and $h.look -eq '' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
+    do { Start-Sleep -Milliseconds 500; $h = & $js $level | ConvertFrom-Json; $polls++ } while (-not $h.sky -and -not $Software -and $polls -lt 11)
+    Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -eq (-not $Software) -and $h.look -eq 'high' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
 
     # A visit the frame monitor had to step down stays there for the tab.
     # Chosen first and stepped down after: the step down is the later word.
     & $js "(() => { sessionStorage.setItem('portfolio-effects-level', 'high'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     $slow = & $js $level | ConvertFrom-Json
     Check 'a slow visit reloads at the level it was stepped down to' ($slow.effects -eq 'low' -and $slow.reason -eq 'lag') "$($slow.effects)/$($slow.reason)"
     Set-EffectsLevel $page 'high' | Out-Null
-    Start-Sleep -Milliseconds 300
+    # The level is put up inside its transition, which a machine with no graphics is slow to start.
+    $polls = 0
+    while ((& $js "document.documentElement.dataset.effects") -ne 'high' -and $polls -lt 30) { Start-Sleep -Milliseconds 100; $polls++ }
     Check 'choosing a level by hand forgets it' ((& $js "sessionStorage.getItem('portfolio-effects-lag')") -eq $null -and (& $js "document.documentElement.dataset.effects") -eq 'high')
 
     # Putting the level back up after the page stepped it down is counted;
@@ -155,38 +158,41 @@ try {
     # stops stepping it down for the rest of the visit.
     $overrides = { & $js "sessionStorage.getItem('portfolio-effects-overrides')" }
     & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     $fresh = & $js $level | ConvertFrom-Json
     Set-EffectsLevel $page 'high' | Out-Null
     Check 'a fresh visit starts Medium, and moving up unprompted is not counted' ($fresh.effects -eq 'medium' -and $fresh.reason -eq 'default' -and $null -eq (& $overrides)) "$($fresh.effects)/$($fresh.reason) overrides=$(& $overrides)"
     & $js "(() => { sessionStorage.setItem('portfolio-effects-lag', 'medium'); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     Set-EffectsLevel $page 'high' | Out-Null
     Check 'moving it back up after a step down is counted' ((& $overrides) -eq '1') "overrides=$(& $overrides)"
     & $js "(() => { sessionStorage.setItem('portfolio-effects-overrides', '2'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     Set-EffectsLevel $page 'medium' | Out-Null
+    # The level is put up inside its transition, a frame later or more.
+    $polls = 0
+    while ((& $js "document.documentElement.dataset.effects") -ne 'medium' -and $polls -lt 30) { Start-Sleep -Milliseconds 100; $polls++ }
     Check 'the third time holds the level for the visit' ((& $overrides) -eq '3' -and (& $js "document.documentElement.dataset.effects") -eq 'medium') "overrides=$(& $overrides)"
 
     # A level an older version of the site saved for every visit is cleared.
     & $js "(() => { localStorage.setItem('portfolio-effects-level', 'high'); ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     $old = & $js $level | ConvertFrom-Json
     Check 'a level saved across visits by an older version is forgotten' ($old.effects -eq 'medium' -and $null -eq (& $js "localStorage.getItem('portfolio-effects-level')")) "$($old.effects)/$($old.reason)"
 
-    # The other skies: ten quick presses on a stop find them, not a press fewer or
-    # slower, fetching nothing until then. After that two quick presses go round them.
-    # Leaving a level hands everything back, and a reload forgets it all.
+    # The other skies: two quick presses on a stop go round them, not one press and not
+    # two slow ones, fetching nothing until then. Leaving a level hands everything back,
+    # and a reload forgets it all.
     & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag'].forEach(k => sessionStorage.removeItem(k)); sessionStorage.setItem('portfolio-effects-overrides', '3'); return 1; })()" | Out-Null
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     Start-Sleep -Seconds 1
-    $skyFiles = { & $js "performance.getEntriesByType('resource').filter(e => /\/(y2k|vapor|aero|ego)\.(js|css)/.test(e.name)).map(e => e.name.split('/').pop().split('?')[0]).sort().join(',')" }
-    $look = { & $js "['y2k', 'vapor', 'aero', 'ego'].filter(n => document.documentElement.hasAttribute('data-' + n)).join(',')" }
+    $skyFiles = { & $js "performance.getEntriesByType('resource').filter(e => /\/(y2k|iris|vapor|ego)\.(js|css)/.test(e.name)).map(e => e.name.split('/').pop().split('?')[0]).sort().join(',')" }
+    $look = { & $js "['y2k', 'iris', 'vapor', 'ego'].filter(n => document.documentElement.hasAttribute('data-' + n)).join(',')" }
     $waitFor = { param($name)
         $waited = 0
         while ((& $look) -ne $name -and $waited -lt 60) { Start-Sleep -Milliseconds 250; $waited++ }
@@ -209,49 +215,53 @@ try {
         if (-not $Software) { & $presses $i 2 90; return }
         & $js "(() => { const s = document.getElementById('fx-slider'), b = document.querySelectorAll('.fx-slider-stop')[$i].getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; for (let n = 0; n < 2; n++) for (const type of ['pointerdown', 'pointerup']) s.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y })); return 1; })()" | Out-Null
     }
-    & $presses 0 9 90
+    & $presses 0 1 90
+    Start-Sleep -Milliseconds 900
+    Check 'one press on Low leaves every other sky unfetched' ((& $look) -eq '' -and (& $skyFiles) -eq '')
+    & $presses 0 2 650
     Start-Sleep -Milliseconds 800
-    Check 'nine presses on Low leave every other sky unfetched' ((& $look) -eq '' -and (& $skyFiles) -eq '')
-    & $presses 0 10 90
-    $waited = & $waitFor 'y2k'
-    $files = & $skyFiles
-    $eye = & $js "(() => { const c = document.querySelector('.y2k-eye'); return !!c && getComputedStyle(c).imageRendering === 'pixelated'; })()"
-    Check 'ten quick presses on Low bring up its eye, and only its own files' ((& $look) -eq 'y2k' -and $files -eq 'y2k.css,y2k.js' -and $eye) "$waited ms after the last press, $files"
-    Start-Sleep -Seconds 3
+    Check 'two presses more than half a second apart do nothing' ((& $look) -eq '' -and (& $skyFiles) -eq '')
     & $twice 0
-    Start-Sleep -Milliseconds 500
+    # A hand that keeps going, into the moment it takes to get ready. With no graphics a
+    # press can arrive long after it was sent, past the moment the page stops counting a
+    # hand that keeps going, and that hand is not one anyone has.
+    if (-not $Software) { & $presses 0 1 90 }
+    $waited = & $waitFor 'y2k'
+    $eye = & $js "(() => { const c = document.querySelector('.y2k-eye'); return !!c && getComputedStyle(c).imageRendering === 'pixelated'; })()"
+    Check 'two quick presses on Low bring up its eye, and one more does not move it on' ((& $look) -eq 'y2k' -and $eye) "$waited ms after the last press"
+    Start-Sleep -Seconds 3
+    $files = & $skyFiles
+    Check 'and every look is fetched, ready for a switch' ($files -eq 'ego.css,ego.js,iris.css,iris.js,vapor.css,vapor.js,y2k.css,y2k.js') $files
+    & $twice 0
+    # Its way out takes a second or so (portfolio.js, warp).
+    Start-Sleep -Milliseconds 300
+    $polls = 0
+    while ((& $js "'warp' in document.documentElement.dataset") -and $polls -lt 60) { Start-Sleep -Milliseconds 100; $polls++ }
     Check 'two more on Low put it away' ((& $look) -eq '' -and -not (& $js "!!document.querySelector('.y2k-eye')"))
     Start-Sleep -Seconds 1
     & $twice 0
     $waited = & $waitFor 'y2k'
     Check 'and two more bring it back' ((& $look) -eq 'y2k') "$waited ms after the last press"
     Start-Sleep -Seconds 1
-    & $presses 1 4 90
-    Start-Sleep -Milliseconds 800
-    Check 'Medium does not keep Low''s, and four presses on it do nothing' ((& $look) -eq '' -and -not (& $js "!!document.querySelector('.y2k-eye')"))
-    & $presses 1 10 90
-    # A hand that keeps going past ten, into the moment it takes to get ready.
-    & $presses 1 3 90
+    Set-EffectsLevel $page 'medium' | Out-Null
+    $waited = & $waitFor 'iris'
+    Check 'going up to Medium the eye stays on, as Medium''s own' ((& $look) -eq 'iris' -and (& $js "!!document.querySelector('.iris-eye') && !document.querySelector('.y2k-eye')")) "$waited ms"
+    Start-Sleep -Seconds 3
+    & $twice 1
     $waited = & $waitFor 'vapor'
     Start-Sleep -Milliseconds 800
-    Check 'ten quick presses on Medium bring up its desk' ((& $look) -eq 'vapor' -and (& $js "document.querySelectorAll('.vapor-win:not(.vapor-note)').length === 4")) "$waited ms after the last press"
+    Check 'two presses on Medium bring up its desk, last of all' ((& $look) -eq 'vapor' -and -not (& $js "!!document.querySelector('.iris-eye')") -and (& $js "document.querySelectorAll('.vapor-win:not(.vapor-note)').length === 4")) "$waited ms after the last press"
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'high' | Out-Null
-    Start-Sleep -Milliseconds 800
-    & $presses 2 10 550
-    Start-Sleep -Milliseconds 800
-    Check 'ten presses half a second apart on High do nothing' ((& $look) -eq '')
-    & $presses 2 10 90
-    & $presses 2 5 90
-    $waited = & $waitFor 'aero'
-    Check 'ten quick presses on High bring up the bright sky, and more do not move it on' ((& $look) -eq 'aero' -and (& $js "!!document.querySelector('.aero-scene')")) "$waited ms after the last press"
-    $sky = & $js "JSON.stringify({ space: document.querySelector('.galaxy-field').width, glass: document.documentElement.dataset.glass, bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
-    Check 'the space sky is put away and the glass is left as it was' ($sky.space -eq 0 -and $sky.bend) "space canvas $($sky.space) wide, glass=$($sky.glass)"
-    Start-Sleep -Seconds 3
-    & $twice 2
     $waited = & $waitFor 'ego'
-    $sky = & $js "JSON.stringify({ dark: !!document.querySelector('.ego-scene'), bright: !!document.querySelector('.aero-scene'), bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
-    Check 'two more bring up the eye in its place' ((& $look) -eq 'ego' -and $sky.dark -and -not $sky.bright -and $sky.bend) "$waited ms after the last press"
+    Check 'High has no desk, so it goes to the eye that was on' ((& $look) -eq 'ego' -and (& $js "!!document.querySelector('.ego-scene') && !document.querySelector('.vapor-desk')")) "$waited ms"
+    $sky = & $js "JSON.stringify({ space: $living, glass: document.documentElement.dataset.glass, bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
+    Check 'the space sky is put away and the glass is left as it was' (-not $sky.space -and $sky.bend) "space sky $($sky.space), glass=$($sky.glass)"
+    # It builds itself for a few seconds first, and pays no mind to presses until it is whole
+    # and awake (ego.js marks it).
+    $polls = 0
+    while (-not (& $js "!!document.querySelector('.ego-scene[data-awake]')") -and $polls -lt 120) { Start-Sleep -Milliseconds 100; $polls++ }
+    Start-Sleep -Milliseconds 300
     # Pressed twice on an empty part of the page, it fixes on the cursor.
     $empty = & $js "[innerWidth * .62, innerHeight * .2]"
     Check 'the eye does not start out following' (-not (& $js "'following' in document.querySelector('.ego-scene').dataset"))
@@ -269,7 +279,14 @@ try {
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'medium' | Out-Null
     $waited = & $waitFor 'vapor'
-    Check 'going down leaves none of it, and Medium remembers its own' ((& $look) -eq 'vapor' -and -not (& $js "!!document.querySelector('.ego-scene, .aero-scene')"))
+    Check 'coming back to Medium brings its desk back' ((& $look) -eq 'vapor' -and -not (& $js "!!document.querySelector('.ego-scene')")) "$waited ms"
+    Start-Sleep -Seconds 2
+    Set-EffectsLevel $page 'low' | Out-Null
+    $waited = & $waitFor 'y2k'
+    Check 'and Low goes to the eye too' ((& $look) -eq 'y2k' -and -not (& $js "!!document.querySelector('.vapor-desk')")) "$waited ms"
+    Start-Sleep -Seconds 1
+    Set-EffectsLevel $page 'medium' | Out-Null
+    $waited = & $waitFor 'vapor'
     # Once the crossfade has played: the page is at its busiest during it, and a
     # press answered more than 400 ms after the last starts the count again.
     Start-Sleep -Seconds 3
@@ -280,26 +297,53 @@ try {
     while (-not (& $stillBack) -and $polls -lt 40) { Start-Sleep -Milliseconds 250; $polls++ }
     Check 'two more on Medium put its still sky back' ((& $look) -eq '' -and (& $stillBack)) "$($polls * 250) ms after the swap"
     Set-EffectsLevel $page 'high' | Out-Null
-    $waited = & $waitFor 'ego'
-    Check 'coming back up to High brings the eye back' ((& $look) -eq 'ego' -and (& $js "!!document.querySelector('.ego-scene')"))
-    Start-Sleep -Seconds 3
-    & $twice 2
     # Building the stars again takes a machine with no graphics a while.
     $polls = 0
-    while ((& $js "document.querySelector('.galaxy-field').width") -eq 0 -and $polls -lt 60) { Start-Sleep -Milliseconds 250; $polls++ }
-    $space = & $js "JSON.stringify({ scene: !!document.querySelector('.aero-scene, .ego-scene'), space: document.querySelector('.galaxy-field').width })" | ConvertFrom-Json
-    Check 'two more put the space sky back' ((& $look) -eq '' -and -not $space.scene -and $space.space -gt 0) "space canvas $($space.space) wide"
+    while (-not $Software -and -not (& $js $living) -and $polls -lt 60) { Start-Sleep -Milliseconds 250; $polls++ }
+    $space = & $js "JSON.stringify({ scene: !!document.querySelector('.ego-scene'), space: $living })" | ConvertFrom-Json
+    Check 'and going up to High it is on the stars there too' ((& $look) -eq '' -and -not $space.scene -and $space.space -eq (-not $Software)) "space sky $($space.space)"
     Start-Sleep -Seconds 1
     & $twice 2
-    $waited = & $waitFor 'aero'
+    $waited = & $waitFor 'ego'
+    Check 'two presses work on High as well' ((& $look) -eq 'ego') "$waited ms after the last press"
+    Start-Sleep -Seconds 3
+    Set-EffectsLevel $page 'low' | Out-Null
+    $waited = & $waitFor 'y2k'
+    Start-Sleep -Seconds 1
+    & $twice 0
+    Start-Sleep -Milliseconds 500
+    Set-EffectsLevel $page 'high' | Out-Null
+    $polls = 0
+    while (-not $Software -and -not (& $js $living) -and $polls -lt 60) { Start-Sleep -Milliseconds 250; $polls++ }
+    Check 'turned off on Low it is off at High' ((& $look) -eq '' -and (& $js $living) -eq (-not $Software))
+    Start-Sleep -Seconds 1
+    & $twice 2
+    $waited = & $waitFor 'ego'
     Start-Sleep -Seconds 2
-    Invoke-Page $page 'Page.reload' | Out-Null
+    Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     Start-Sleep -Seconds 1
     Check 'a reload goes back to the default look' ((& $look) -eq '' -and (& $skyFiles) -eq '')
+    Start-Sleep -Seconds 1
     & $twice 2
-    Start-Sleep -Milliseconds 800
-    Check 'and it takes ten presses to find them again' ((& $look) -eq '')
+    $waited = & $waitFor 'ego'
+    Check 'and two presses find them again' ((& $look) -eq 'ego') "$waited ms after the last press"
+    # Every switch plays a transition, never a cut. The eye's own warp in is let finish first:
+    # a switch made while one plays goes straight through.
+    $polls = 0
+    while ((& $js "'warp' in document.documentElement.dataset") -and $polls -lt 60) { Start-Sleep -Milliseconds 100; $polls++ }
+    Start-Sleep -Seconds 1
+    & $js "(() => { window.__shifts = []; new MutationObserver(() => { const k = document.documentElement.dataset.shift; const w = document.documentElement.dataset.warp; if (k) window.__shifts.push(k); if (w) window.__shifts.push('warp-' + w); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-shift', 'data-warp'] }); return 1; })()" | Out-Null
+    & $twice 2
+    # Putting the eye away builds High's sky again inside that transition, which takes a while,
+    # and a change made while one is playing goes straight through without one of its own.
+    $polls = 0
+    while ((& $js "'shift' in document.documentElement.dataset || 'warp' in document.documentElement.dataset") -and $polls -lt 60) { Start-Sleep -Milliseconds 100; $polls++ }
+    Start-Sleep -Milliseconds 300
+    Set-EffectsLevel $page 'low' | Out-Null
+    Start-Sleep -Seconds 1
+    $shifts = & $js "window.__shifts.join(',')"
+    Check 'switching looks and levels plays a transition each time' ($Software -or ($shifts -match 'warp-high' -and $shifts -match 'fall')) $shifts
 
     # Everything the page logged or failed to load along the way.
     Clear-CdpEvents $page.Session -Keep '*'

@@ -48,7 +48,7 @@ $screens = @{
 }
 $pattern = @'
 html, body { background: repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 2px, transparent 2px 23px), repeating-linear-gradient(0deg, rgba(123,168,216,.22) 0 1px, transparent 1px 17px) #080808 !important; background-attachment: fixed !important; }
-.galaxy-field, .galaxy-streak, .cursor-dot, .cursor-spark, .cursor-ripple { visibility: hidden !important; }
+.cosmos, .cursor-dot, .cursor-spark, .cursor-ripple { visibility: hidden !important; }
 *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; caret-color: transparent !important; }
 '@
 $init = @"

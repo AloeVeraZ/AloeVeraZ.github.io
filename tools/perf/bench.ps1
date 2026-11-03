@@ -15,10 +15,12 @@
             for Intel graphics as it would on this machine
     lowend  no graphics acceleration (software compositing), a 1366x768 1x
             screen and a main thread slowed 4x: a cheap, old or locked-down PC
+    minimum the same, slowed 6x: Windows' own minimum, a dual-core at about
+            1 GHz with 4 GB and basic graphics. What Low FX has to run on
     phone   a 390x844 3x touch phone, main thread slowed 4x
 #>
 param(
-    [ValidateSet('native', 'mac', 'lowend', 'phone')][string]$Config = 'native',
+    [ValidateSet('native', 'mac', 'lowend', 'minimum', 'phone')][string]$Config = 'native',
     [string[]]$Scenarios = @('idle-top', 'idle-projects', 'scroll', 'hover', 'ring', 'modal', 'fx-toggle', 'collections'),
     [int]$Repeat = 1,
     [string]$Label = 'run',
@@ -58,6 +60,7 @@ $settings = @{
     native = @{ Scale = 0; Width = 1280; Height = 720; Flags = @(); Throttle = 1; Mobile = $false; Renderer = '' }
     mac = @{ Scale = 2; Width = 1470; Height = 860; Flags = @(); Throttle = 1; Mobile = $false; Renderer = 'Apple M2' }
     lowend = @{ Scale = 1; Width = 1366; Height = 650; Flags = @('--disable-gpu', '--disable-gpu-compositing'); Throttle = 4; Mobile = $false; Renderer = '' }
+    minimum = @{ Scale = 1; Width = 1366; Height = 650; Flags = @('--disable-gpu', '--disable-gpu-compositing'); Throttle = 6; Mobile = $false; Renderer = '' }
     phone = @{ Scale = 0; Width = 390; Height = 844; Flags = @(); Throttle = 4; Mobile = $true; Renderer = '' }
 }[$Config]
 

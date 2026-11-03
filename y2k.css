@@ -239,6 +239,6 @@ html[data-effects="low"][data-y2k] .modal-overview-item {
     box-shadow: none;
 }
 html[data-effects="low"][data-y2k] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
-    background: var(--y2k-pane);
+    background: transparent;
 }
 html[data-effects="low"][data-y2k] .modal-media-item figcaption { background: var(--y2k-pane); color: var(--ink); }

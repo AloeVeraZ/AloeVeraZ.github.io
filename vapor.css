@@ -1,5 +1,5 @@
 /* The pastel desktop's look on the page (vapor.js has the windows on it). Not fetched
-   until a visitor asks for it, ten quick presses on the slider's Medium stop, and
+   until a visitor asks for it, quick presses on the slider's Medium stop, and
    every rule answers only to html[data-effects="medium"][data-vapor].
    Nothing about how anything moves or answers changes: the lean, the lift, the
    rings and the light under the cursor are the page's own. The cards become
@@ -9,10 +9,6 @@
    graphics process than the clear glass they replace. */
 /* A press goes straight through the crossfade to the page under it. */
 ::view-transition { pointer-events: none; }
-::view-transition-old(root),
-::view-transition-new(root) {
-    animation-duration: .5s;
-}
 
 html[data-effects="medium"][data-vapor] {
     --bg: #f8b6ee;
@@ -30,7 +26,6 @@ html[data-effects="medium"][data-vapor] {
     --vapor-purple: #b18be8;
     --vapor-yellow: #f5ea5a;
     --vapor-pink: #f8b6ee;
-    --vapor-halo: 0 0 .5em #f8b6ee, 0 0 .16em #f8b6ee;
     --radius-card: 0;
     --radius-control: 0;
     --radius-surface: 0;
@@ -69,25 +64,36 @@ html[data-effects="medium"][data-vapor] .background-grid::before {
     display: none;
 }
 
-/* Lettering on the pink itself. */
-html[data-effects="medium"][data-vapor] :is(.hero-badge, .hero-tagline, .bio-text, .section-label, .section-subtitle, .library-heading p,
-    .contact-desc, .collection-copy strong, .collection-copy small, .collection-index, footer) {
-    text-shadow: var(--vapor-halo);
-}
+/* Lettering on the pink itself. The words loose on the desk are outlined in its own pink,
+   drawn under every letter, so whatever has popped up behind them falls back and they stand
+   on the desk itself, with no box round them. An outline and not a glow: a soft shadow on
+   this much lettering made a scroll drop one frame in six here (OPTIMIZATION_LOG, cycle 47). */
 html[data-effects="medium"][data-vapor] :is(.hero-tagline, .bio-text) { color: var(--ink); }
-/* The words that have to be read stand on a plain label of the desk's own pink, so
-   whatever pops up behind them on a small screen does not get in their way. */
-html[data-effects="medium"][data-vapor] :is(.hero-badge, .hero-tagline, .bio-text, .section-label, .section-subtitle, .library-heading p, .contact-desc) {
-    width: fit-content;
-    background-color: var(--bg);
-    box-shadow: 0 0 0 .25em var(--bg);
+html[data-effects="medium"][data-vapor] :is(.hero-badge, .hero-tagline, .bio-text, .section-label, .section-subtitle, .library-heading p, .contact-desc, footer, footer *) {
+    text-shadow: none;
+    paint-order: stroke fill;
+    -webkit-text-stroke: .3em var(--bg);
 }
-/* The big lettering wears a hard offset, not a halo: a blur the size of that type
-   would wash over the words and windows around it. */
+/* The big lettering wears a hard offset and nothing else: an outline as well, on type this
+   size, costs as much as the glow did. */
 html[data-effects="medium"][data-vapor] :is(.hero-name, .section-title, .library-heading h3) { text-shadow: .03em .03em 0 #5ff0d8; }
 html[data-effects="medium"][data-vapor] .collection-toggle:hover { color: #3a1a86; }
 html[data-effects="medium"][data-vapor] .project-library { border-top-color: #0c0a14; }
-
+/* Each row of the archive is a white window like the cards, in the page's own ink:
+   nothing with words in it is see-through. */
+html[data-effects="medium"][data-vapor] .project-collections { border-top: 0; }
+html[data-effects="medium"][data-vapor] .project-collection {
+    margin-bottom: .875rem;
+    background: #ffffff;
+    border: 2px solid #0c0a14;
+    box-shadow: 4px 4px 0 #0c0a14;
+}
+html[data-effects="medium"][data-vapor] .collection-toggle { padding-inline: 1rem; color: #0c0a14; }
+html[data-effects="medium"][data-vapor] .collection-toggle :is(.collection-copy strong, .collection-copy small, .collection-index) { text-shadow: none; }
+html[data-effects="medium"][data-vapor] .collection-copy small { color: #2d2640; }
+html[data-effects="medium"][data-vapor] .collection-index { color: #3a1a86; }
+html[data-effects="medium"][data-vapor] :is(.collection-toggle:hover, .collection-toggle:focus-visible, .collection-toggle[aria-expanded="true"]) { background-color: #fdeafb; }
+html[data-effects="medium"][data-vapor] .collection-content { padding-inline: 1rem; border-top: 2px solid #0c0a14; background: #fdeafb; }
 /* The windows. A hard shadow and a second sheet behind each, as in the stack of
    them on the desk; a flat shadow is one rectangle's paint. */
 html[data-effects="medium"][data-vapor] :is(.about-highlight, .skill-group, .project-card) {
@@ -179,9 +185,9 @@ html[data-effects="medium"][data-vapor] .project-category-badge {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-html[data-effects="medium"][data-vapor] :is(.project-image-wrapper, .project-image) { background: #efe9f6; }
+html[data-effects="medium"][data-vapor] :is(.project-image-wrapper, .project-image) { background: transparent; }
 html[data-effects="medium"][data-vapor] .project-image-wrapper { border-bottom: 2px solid #0c0a14; }
-html[data-effects="medium"][data-vapor] .project-card:hover .project-image.is-motion-active { background: #efe9f6; }
+html[data-effects="medium"][data-vapor] .project-card:hover .project-image.is-motion-active { background: transparent; }
 html[data-effects="medium"][data-vapor] .card-media-placeholder,
 html[data-effects="medium"][data-vapor] :is(.card-media-placeholder i, .card-media-placeholder span) { color: var(--ink); }
 
@@ -251,13 +257,17 @@ html[data-effects="medium"][data-vapor] .navbar .fx-slider-track {
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-rail,
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-fill { border-radius: 0; }
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-stop { background: #8a8494; border-radius: 0; }
+/* The knob, in pixels like everything else here: a grip with a bevel, that clicks
+   from stop to stop rather than gliding. */
 html[data-effects="medium"][data-vapor] .navbar .fx-slider-thumb {
     top: 0;
     left: 0;
     height: 100%;
-    background: #0c0a14;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6' shape-rendering='crispEdges'%3E%3Crect width='7' height='6' fill='%230c0a14'/%3E%3Crect x='1' y='1' width='5' height='4' fill='%23ffffff'/%3E%3Crect x='5' y='1' width='1' height='4' fill='%23b4b4bd'/%3E%3Crect x='1' y='4' width='5' height='1' fill='%23b4b4bd'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%235ff0d8'/%3E%3Crect x='2' y='2' width='1' height='2' fill='%230c0a14'/%3E%3Crect x='4' y='2' width='1' height='2' fill='%230c0a14'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    image-rendering: pixelated;
     border-radius: 0;
     box-shadow: none;
+    transition: transform .24s steps(4, end);
 }
 
 /* The scroll indicator: a scroll bar. */
@@ -286,7 +296,7 @@ html[data-effects="medium"][data-vapor] .modal-overview-item {
     box-shadow: 3px 3px 0 #0c0a14;
 }
 html[data-effects="medium"][data-vapor] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
-    background: #efe9f6;
+    background: transparent;
     border-radius: 0;
 }
 html[data-effects="medium"][data-vapor] .modal-media-item figcaption {
@@ -297,7 +307,8 @@ html[data-effects="medium"][data-vapor] .modal-feature-video-player { background
 html[data-effects="medium"][data-vapor] .navbar[data-nav-open] { --nav-muted: var(--ink); }
 
 /* ---- The desk -------------------------------------------------------------
-   Everything on it can be used and picked up (vapor.js). It stands on one fixed layer
+   At the back a wall of windows that do nothing, painted once; in front, everything can be
+   used and picked up, and every pop-up leads somewhere (vapor.js). It stands on one fixed layer
    behind the page, so it stays with the visitor all the way down, and the page's empty
    stretches let a press through to it while everything on the page that answers a press
    still does. All flat paint. */
@@ -343,6 +354,7 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
     -webkit-touch-callout: none;
 }
 .vapor-win {
+    contain: layout style;
     display: flex;
     flex-direction: column;
     pointer-events: auto;
@@ -357,10 +369,27 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
 .vapor-hearts.is-held, .vapor-file.is-held { outline: 2px dashed var(--vapor-ink); outline-offset: 3px; }
 html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][data-vapor] .is-held * { cursor: grabbing; }
 .vapor-win.is-hopping { transition: transform .32s steps(6); }
-.vapor-win.is-opening { animation: vapor-open .24s steps(4); }
-@keyframes vapor-open { from { clip-path: inset(46% 46%); } to { clip-path: inset(-1em); } }
+/* A window does not open, it breaks in: too big, torn across, thrown about, and then there. */
+.vapor-win.is-opening,
+.vapor-hearts.is-opening,
+.vapor-file.is-opening { animation: vapor-break-in .26s steps(1) both; }
+@keyframes vapor-break-in {
+    0% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, 0)) scale(1.28); clip-path: inset(38% -1em 38% -1em); }
+    20% { opacity: 1; transform: translate(calc(var(--dx, 0px) - .6em), var(--dy, 0)) scale(1.12); clip-path: inset(-1em -1em 52% -1em); }
+    45% { transform: translate(calc(var(--dx, 0px) + .5em), var(--dy, 0)) scale(1.04); clip-path: inset(44% -1em -1em -1em); }
+    70% { transform: translate(calc(var(--dx, 0px) - .25em), var(--dy, 0)); clip-path: inset(-1em); }
+    100% { opacity: 1; transform: translate(var(--dx, 0), var(--dy, 0)); clip-path: inset(-1em); }
+}
+/* Shaking like a phone that will not stop ringing. */
+.is-buzzing { animation: vapor-buzz .1s steps(1) 6; }
+@keyframes vapor-buzz {
+    0%, 100% { translate: 0 0; }
+    25% { translate: -.16em .08em; }
+    50% { translate: .14em -.1em; }
+    75% { translate: -.08em -.08em; }
+}
 @media (prefers-reduced-motion: reduce) {
-    .vapor-win.is-opening { animation: none; }
+    .vapor-win.is-opening, .vapor-hearts.is-opening, .vapor-file.is-opening, .is-buzzing { animation: none; }
     .vapor-win.is-hopping { transition: none; }
 }
 /* How big each is. Where it stands is up to vapor.js. */
@@ -376,6 +405,24 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
 .vapor-win.is-big[data-win="robot"] { width: 20.8em; height: 22em; }
 .vapor-win.is-big[data-win="torque"] { width: 20em; height: 22em; }
 .vapor-popup { min-width: 16em; box-shadow: .4375em .4375em 0 var(--vapor-ink); }
+/* The wall at the back of the desk: the windows that do nothing, three depths of them over the
+   whole screen, each a picture painted once (vapor.js), never pressed and never painted again.
+   The two at the back are drawn soft, as things out of focus are. */
+.vapor-wall { position: absolute; inset: 0; pointer-events: none; contain: strict; }
+.vapor-brick {
+    position: absolute;
+    display: block;
+    max-width: none;
+    image-rendering: pixelated;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.vapor-wall-depth[data-worn] .vapor-brick { image-rendering: auto; }
+/* In front of it, three depths of pop-ups that lead somewhere, far to near (FRONT_SCALES). */
+.vapor-note[data-depth="0"] { font-size: .78em; }
+.vapor-note[data-depth="1"] { font-size: .89em; }
+html[data-effects="medium"][data-vapor] :is(.vapor-note[data-act="go"], .vapor-note[data-act="go"] .vapor-bar) { cursor: var(--vapor-hand); }
 .vapor-over [data-win="popup"] { left: calc(50% - 8em); top: 38vh; }
 .vapor-bar {
     flex: none;
@@ -400,8 +447,11 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
     border: var(--vapor-line) solid var(--vapor-ink);
     border-radius: 50%;
 }
-.vapor-dot:hover { background: #ffffff; }
-.vapor-dot[data-act="close"]:hover { background: #ff6f91; }
+/* The pop-ups in the pile do not light up under the cursor: dozens of them lie over the wall
+   behind the page, and a cursor crossing them would have the pile painted again at every edge.
+   Their buttons still press, and the cursor still says so. */
+:is(.vapor-win:not(.vapor-note), .vapor-gremlin-win) .vapor-dot:hover { background: #ffffff; }
+:is(.vapor-win:not(.vapor-note), .vapor-gremlin-win) .vapor-dot[data-act="close"]:hover { background: #ff6f91; }
 .vapor-grow {
     flex: none;
     width: 1.125em;
@@ -500,7 +550,7 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
     border: var(--vapor-line) solid var(--vapor-ink);
     box-shadow: .125em .125em 0 var(--vapor-ink);
 }
-.vapor-key:hover { background: #5ff0d8; }
+:is(.vapor-win:not(.vapor-note), .vapor-gremlin-win) .vapor-key:hover { background: #5ff0d8; }
 .vapor-key:active { box-shadow: none; transform: translate(.125em, .125em); }
 .vapor-rings { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
 .vapor-hearts {
@@ -542,6 +592,48 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
 .vapor-chip:hover { background: #f5ea5a; }
 .vapor-popup .vapor-pane { align-items: center; gap: .6em; padding: .85em 1em; }
 .vapor-popup .vapor-grow { visibility: hidden; }
+/* Over the pile, on a layer of its own: under it, every flicker would paint the whole pile again. */
+.vapor-static {
+    position: absolute;
+    inset: 0;
+    z-index: 9900000;
+    will-change: transform;
+    pointer-events: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+.vapor-static[hidden] { display: none; }
+/* A green outline of the robot, here and gone, all over the desk. */
+.vapor-ghost {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 4.75em;
+    height: auto;
+    transform: translate(var(--dx, 0), var(--dy, 0)) scale(var(--ghost-scale, 1));
+    image-rendering: pixelated;
+    filter: drop-shadow(0 0 .3em #39ff8a);
+    pointer-events: none;
+}
+.vapor-ghost[hidden] { display: none; }
+/* On a layer of its own, or every frame of it would paint the whole pile under it again. */
+.vapor-gremlin-win { width: 18em; will-change: transform; }
+.vapor-gremlin-win .vapor-pane { gap: .45em; padding: .45em; background: var(--vapor-ink); }
+.vapor-gremlin-body { display: flex; flex-direction: column; align-items: center; gap: .45em; width: 100%; --vapor-cell: .094em; }
+.vapor-gremlin { display: block; width: 100%; aspect-ratio: 48 / 33; image-rendering: pixelated; }
+.vapor-gremlin-win .vapor-progress { width: 100%; margin: 0; box-sizing: border-box; }
+.vapor-gremlin-win .vapor-progress i { background: var(--vapor-gremlin-fill, #ff5c8a); }
+.vapor-snap {
+    display: block;
+    flex: none;
+    width: 14em;
+    height: 8.75em;
+    background: #d9d9de;
+    border: var(--vapor-line) solid var(--vapor-ink);
+    image-rendering: pixelated;
+}
 :is(.vapor-desk, .vapor-over) :is(button, input):focus-visible { outline: 2px solid #3a1a86; outline-offset: 2px; }
 /* A finger needs more than these show, so each answers a good way beyond its edge. */
 @media (pointer: coarse) {

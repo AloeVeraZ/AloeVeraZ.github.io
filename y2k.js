@@ -33,6 +33,7 @@
     let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, lookX = 0, lookY = 0, mostYaw = MOST_YAW;
     let frame = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
     let underProject = false, pointerSeen = false, reducedMotion = null;
+    let lastX = 0, lastY = 0;
 
     const build = () => {
         const width = Math.max(320, document.documentElement.clientWidth), height = Math.max(320, window.innerHeight);
@@ -292,12 +293,33 @@
             scheduleRoam();
         }, 2200 + Math.random() * 3800);
     };
+    // On Low nothing plays on the way in. It is simply there, already looking at the
+    // hand on the slider, and from then on at the cursor.
+    // Or at the cursor, wherever it is now (portfolio.js keeps it).
+    const lookAtSlider = () => {
+        const slider = document.querySelector('.fx-slider')?.getBoundingClientRect();
+        const cursor = window.portfolioPointer?.mouse && window.portfolioPointer;
+        lastX = cursor ? cursor.x : slider?.width ? slider.left + slider.width / 2 : window.innerWidth * .8;
+        lastY = cursor ? cursor.y : slider?.width ? slider.top + slider.height / 2 : 40;
+        if (cursor) pointerSeen = true;
+        aim(lastX, lastY);
+        yaw = wantYaw;
+        pitch = wantPitch;
+        lookX = ball * Math.sin(yaw) * Math.cos(pitch);
+        lookY = ball * Math.sin(pitch);
+    };
     const onPointerMove = event => {
         if (event.pointerType && event.pointerType !== 'mouse') return;
         pointerSeen = true;
-        aim(event.clientX, event.clientY);
+        lastX = event.clientX;
+        lastY = event.clientY;
+        aim(lastX, lastY);
     };
-    const onPointerDown = event => { aim(event.clientX, event.clientY); };
+    const onPointerDown = event => {
+        lastX = event.clientX;
+        lastY = event.clientY;
+        aim(lastX, lastY);
+    };
     const onVisibility = () => { if (!document.hidden) wake(); };
     const onModalOpen = () => { underProject = true; };
     const onModalClose = () => {
@@ -330,6 +352,7 @@
             open = 1;
             yaw = pitch = wantYaw = wantPitch = lookX = lookY = 0;
             build();
+            lookAtSlider();
             whole();
             window.addEventListener('resize', onResize, { passive: true });
             document.addEventListener('visibilitychange', onVisibility);

@@ -79,40 +79,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundGrid = document.createElement('div');
     backgroundGrid.className = 'background-grid';
     backgroundGrid.setAttribute('aria-hidden', 'true');
-    const galaxyField = document.createElement('canvas');
-    galaxyField.className = 'galaxy-field';
-    galaxyField.setAttribute('aria-hidden', 'true');
     const galaxyNebula = document.createElement('div');
     galaxyNebula.className = 'galaxy-nebula';
     galaxyNebula.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
-    backgroundGrid.after(galaxyField);
-    galaxyField.after(galaxyNebula);
+    backgroundGrid.after(galaxyNebula);
+    const cosmosCanvas = document.createElement('canvas');
+    cosmosCanvas.className = 'cosmos';
+    cosmosCanvas.setAttribute('aria-hidden', 'true');
+    cosmosCanvas.hidden = true;
+    galaxyNebula.after(cosmosCanvas);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
     pageScrollProgress.innerHTML = '<span class="page-scroll-track"><i class="page-scroll-fill"></i></span>';
-    galaxyNebula.after(pageScrollProgress);
+    cosmosCanvas.after(pageScrollProgress);
     const cursorDot = document.createElement('span');
     cursorDot.className = 'cursor-dot';
     cursorDot.setAttribute('aria-hidden', 'true');
     document.body.appendChild(cursorDot);
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const galaxy = setupDeferredGalaxy(galaxyField, reducedMotion);
-    const stillSky = setupStillSky(backgroundGrid);
+    const stillSky = setupStillSky(backgroundGrid, reducedMotion);
+    const cosmos = setupDeferredCosmos(cosmosCanvas, stillSky);
     const cursor = setupCursorEffects(cursorDot, reducedMotion);
     setupPointerReactiveSurfaces(reducedMotion);
     setupSteadyLift();
     // ---- Effects levels -------------------------------------------------
     // Three, chosen on the slider in the bar, left to right:
     //
-    //   low     the lattice on its own under clear glass, and nothing moves
-    //           that need not
-    //   medium  a still sky under the lattice (setupStillSky), painted once,
-    //           and the cards leaning toward the cursor, its light on them
-    //           and the rings turning
-    //   high    the sky alive behind glass that frosts and bends what is
-    //           behind it, and the cursor's own light
+    //   low     a still sky (setupStillSky), painted once, under clear glass,
+    //           and nothing moves that need not
+    //   medium  that sky with a spiral in it, a few things floating over it
+    //           that act on one another (cosmos.js), and the cards leaning
+    //           toward the cursor, its light on them and the rings turning
+    //   high    a galaxy of its own, everything in it alive and a war across
+    //           it, behind glass that frosts and bends what is behind it, and
+    //           the cursor's own light
     //
     // The level is decided before the first paint by the script in
     // index.html's head and written to html[data-effects], with the reason
@@ -238,17 +240,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // second, then three and a half seconds down to nothing. Pressing a
     // collection row ran that whole cycle, so opening one lit the sky up and
     // pressing again took it away, which reads as the background answering the
-    // panel rather than sitting behind it. It holds one brightness now. The
-    // only thing that still darkens it is the tab going away, where there is
-    // nobody to see it and parking the render loop costs nothing.
+    // panel rather than sitting behind it. Now the sky goes dark once nobody
+    // has moved for a few seconds, at every level -- the whole backdrop
+    // together, so it reads as the sky going out, not a panel answering -- and
+    // comes back alive the moment anyone moves (cosmos.js wakes it with a
+    // flare). The eyes and the desk keep watching. It darkens too when the
+    // tab goes away.
+    const IDLE_DARK_MS = 5000;
+    let darkensWhenIdle = false;
+    const darkenBackdrop = () => {
+        backgroundIdleTimer = 0;
+        document.documentElement.classList.add('effects-background-idle');
+        document.dispatchEvent(new Event('portfolio:backdrop-idle'));
+    };
     const wakeEffectsBackground = () => {
         const root = document.documentElement;
         // Touching classList on every pointermove churns style + observers for
         // no reason; only clear the state when it is actually set.
         if (root.classList.contains('effects-background-idle') || root.classList.contains('effects-background-click-fading')) {
             root.classList.remove('effects-background-idle', 'effects-background-click-fading');
+            document.dispatchEvent(new Event('portfolio:backdrop-wake'));
         }
         clearBackgroundIdleTimer();
+        if (darkensWhenIdle && !document.hidden) backgroundIdleTimer = window.setTimeout(darkenBackdrop, IDLE_DARK_MS);
     };
 
     document.documentElement.dataset.effectsHardware = `${logicalCores}-threads-${deviceMemory || 'unknown'}gb`;
@@ -397,25 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Before a level is given up, the page is asked for less, a step at a
-        // time: in High FX the sky runs slower, every effect kept and only
-        // drawn less often; then the glass keeps its frost and lets go of the
+        // time: in High FX the sky is drawn nearer the screen's own pixels,
+        // every effect kept; then the glass keeps its frost and lets go of the
         // bend at its rim (glass.js). Only once those have been tried, and the
         // page is still clunky, does it step down a level -- High to Medium,
-        // which puts the sky away, then Medium to Low. Each step gets a clean
-        // look of its own before the page is judged again.
+        // then Medium to Low. Each step gets a clean look of its own before
+        // the page is judged again.
         const canEaseSky = effectsMode === 'high' && !skyEased;
-        // Medium FX draws neither the sky nor the frost and bend, so there is
-        // nothing to ease there before stepping down.
+        // Medium FX draws no frost and bend, and its sky is already drawn at
+        // the screen's own pixels, so there is nothing to ease there first.
         const canEaseGlass = automatic && !glassEased && effectsMode === 'high';
         if (canEaseSky || canEaseGlass) {
             strainedWindows = strained ? strainedWindows + 1 : 0;
             if (strainedWindows >= STRAINED_WINDOWS_BEFORE_EASING) {
                 if (canEaseSky) {
                     skyEased = true;
-                    galaxy.ease();
+                    cosmos.ease();
                 } else {
                     glassEased = true;
-                    galaxy.lighten();
                 }
                 syncEffectsPace();
                 deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS, timestamp);
@@ -455,8 +468,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', watchPerformanceAfterInput, { passive: true, capture: true });
 
     // How far the page has eased itself, for the stylesheets, glass.js and
-    // the perf tools: 'eased' once the sky is drawn less often, 'lighter'
-    // once the glass has let go of its bend as well.
+    // the perf tools: 'eased' once the sky is drawn softer, 'lighter' once
+    // the glass has let go of its bend as well.
     const syncEffectsPace = () => {
         if (glassEased) root.dataset.effectsPace = 'lighter';
         else if (skyEased) root.dataset.effectsPace = 'eased';
@@ -469,63 +482,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const easeForBuiltInGraphics = () => {
         if (!builtInGraphics || skyEased || effectsMode !== 'high') return;
         skyEased = true;
-        galaxy.ease();
+        cosmos.ease();
         syncEffectsPace();
     };
 
-    // What lies behind the glass when no sky is drawn (portfolio.css): the
-    // lattice, and in Medium the still sky with it. Going down
-    // to Low or Medium it is put up at once, under the sky as the sky fades
-    // out; going up to High it stays until the sky has faded in over it, so
-    // a change of level crossfades rather than passing through black.
-    let backdropTimer = 0;
-    const settleBackdrop = () => {
-        window.clearTimeout(backdropTimer);
-        backdropTimer = 0;
-        if (effectsMode !== 'high') return;
-        delete backgroundGrid.dataset.look;
-        stillSky.hide();
+    // What lies behind the glass (portfolio.css): at every level the still
+    // sky, painted once; at Medium and High the living sky drawn over it
+    // (cosmos.js), which is fetched the first time either wants it. A look
+    // (the eye, the desk) brings its own and puts these away.
+    const showOwnBackdrop = mode => {
+        stillSky.show();
+        if (mode === 'low') cosmos.hide();
+        else cosmos.show(mode);
+        darkensWhenIdle = true;
+        wakeEffectsBackground();
     };
-    const setBackdropLook = (mode, animate) => {
-        window.clearTimeout(backdropTimer);
-        backdropTimer = 0;
-        if (mode !== 'high') backgroundGrid.dataset.look = mode;
-        else if (!animate || !backgroundGrid.dataset.look) delete backgroundGrid.dataset.look;
-        // Taken down when the sky reports that it is in (below), or after a
-        // few seconds if it never does -- a hidden tab draws nothing.
-        else backdropTimer = window.setTimeout(settleBackdrop, 4000);
-        if (mode === 'medium' && !wantedSkies.medium) stillSky.show();
-        else if (mode !== 'high' || !backgroundGrid.dataset.look) stillSky.hide();
+    const setBackdropLook = mode => {
+        backgroundGrid.dataset.look = mode;
+        if (!wantedSky(mode)) showOwnBackdrop(mode);
     };
-    galaxyField.addEventListener('skyshown', settleBackdrop);
 
     // ---- The other skies -------------------------------------------------
-    // Ten quick presses on a stop of the slider find that level's other looks,
-    // and from then on two quick presses go round them: on Low the dark web of
-    // the turn of the century, on Medium a pastel desktop, on High a Frutiger
-    // Aero sky, then a dark one, then the stars again. A gap in the presses
-    // starts the count again. All of it is in files fetched only when asked for
-    // (y2k.*, vapor.*, aero.*, ego.*), so this counter is the only thing it costs
+    // Two quick presses on any stop of the slider go round that level's looks,
+    // so anyone pressing about finds them. Every level
+    // has its stars and its eye, each built for what that level can spend, and the
+    // choice is one choice: an eye turned on at one level is on at all of them.
+    // Medium has a pink desktop last of all, which only Medium can show; the other
+    // two show whichever of the stars and the eye was on when it came up. A gap in
+    // the presses starts the count again. All of it is in files fetched only when
+    // asked for (y2k.*, iris.*, vapor.*, ego.*), so this counter is the only thing
+    // it costs
     // anyone who never finds it. Each belongs to its level alone: leaving the
     // level, by choice or because the page had to, hands everything back, and
     // coming back brings the choice back with it. A reload forgets all of it and
     // the page starts as it always does.
-    const SKY_PRESS_GAP_MS = 400;
-    const SKY_CYCLE_GAP_MS = 500;
-    const SKY_UNLOCK_PRESSES = 10;
-    const SKY_CYCLE_PRESSES = 2;
-    const SKY_UNLOCK_QUIET_MS = 2500;
-    const SKY_CYCLE_QUIET_MS = 700;
-    const SKY_VERSION = '20261102f';
+    const SKY_PRESS_GAP_MS = 500;
+    const SKY_PRESSES = 2;
+    const SKY_QUIET_MS = 700;
+    const SKY_VERSION = '20261103j';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
+        iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
         vapor: { level: 'medium', script: 'portfolioVapor', file: 'vapor.js' },
-        aero: { level: 'high', script: 'portfolioAero', file: 'aero.js' },
         ego: { level: 'high', script: 'portfolioEgo', file: 'ego.js' }
     };
-    const SKY_ROUNDS = { low: ['', 'y2k'], medium: ['', 'vapor'], high: ['', 'aero', 'ego'] };
-    const wantedSkies = { low: '', medium: '', high: '' };
-    const foundSkies = { low: false, medium: false, high: false };
+    const EYES = { low: 'y2k', medium: 'iris', high: 'ego' };
+    // A look this machine could not show (no WebGL 2, say) is skipped from then on, so
+    // it does not stand in the way of the one after it.
+    const skippedSkies = new Set();
+    let eyeOn = false;
+    let deskOn = false;
+    let skiesFound = false;
+    const wantedSky = level => {
+        if (level === 'medium' && deskOn && !skippedSkies.has('vapor')) return 'vapor';
+        const eye = EYES[level];
+        return eyeOn && eye && !skippedSkies.has(eye) ? eye : '';
+    };
     let showingSky = '';
     let pressedLevel = '';
     let skyPresses = 0;
@@ -555,29 +567,461 @@ document.addEventListener('DOMContentLoaded', () => {
         skyLoads[name] = load;
         return load;
     };
-    // The swap is one crossfade of the whole page where the browser can do
-    // that: the sky, the ink and the glass all turn together. Not in Low, which
-    // is there for a machine that should not be asked for a crossfade of the
-    // whole screen.
-    const swapSkies = (change, animate) => {
-        if (animate && effectsMode !== 'low' && document.startViewTransition && !reducedMotion.matches && !document.hidden) {
-            document.startViewTransition(change);
-        } else change();
+    /* ---- Every switch is seen to happen ----------------------------------
+       A change of level or of look is never a cut and never a bare pause, and
+       the higher the level the more happens. A change of level holds the page
+       as it was while the new one is put together under it, and uncovers the
+       new one in a way that says what changed (portfolio.css, html[data-shift]):
+       going up to Medium it spreads out from the slider; going up to High it
+       bursts out of the slider, blinding at first, while the old page falls
+       away behind it; going down it draws back into the slider. The desk breaks
+       in torn across, and leaving it switches off like an old screen. Between
+       the stars and the eye only the backdrop changes, so only the backdrop
+       moves (warp, below). While one plays, anything else that changes shows on
+       its new side rather than starting another. Anything new that switches
+       the page's look gets one of these, or a new kind of its own. */
+    let shiftToken = 0, shiftPlaying = false;
+    const shift = (kind, change) => {
+        if (shiftPlaying || !document.startViewTransition || reducedMotion.matches || document.hidden) {
+            change();
+            return;
+        }
+        const slider = document.getElementById('fx-slider')?.getBoundingClientRect();
+        root.style.setProperty('--shift-x', slider?.width ? `${Math.round(slider.left + slider.width / 2)}px` : '85vw');
+        root.style.setProperty('--shift-y', slider?.width ? `${Math.round(slider.top + slider.height / 2)}px` : '2rem');
+        const token = ++shiftToken;
+        root.dataset.shift = kind;
+        shiftPlaying = true;
+        document.startViewTransition(change).finished.finally(() => {
+            if (token !== shiftToken) return;
+            shiftPlaying = false;
+            delete root.dataset.shift;
+        });
     };
-    const putSkyAway = () => {
+    /* Between the stars and the eye. The page stays where it is; only the backdrop -- all
+       that comes before the scroll bar in the body -- changes, and only it moves.
+
+       Low: the old one swells, swirls down into a point with a flash where it went, the
+       screen behind the page goes black, and the new one climbs up out of the deep from
+       behind and overshoots. Transforms and opacity only, for the cheapest machine there is.
+
+       Medium and High go further, both as hard as they like. Leaving the stars, the galaxy falls in on itself to a point, streaks of
+       it dragged in after, and goes off like the first moment of everything: a flash, a
+       ring going out, sparks thrown everywhere, burning down to black, out of which the eye
+       comes (and once it has built itself, light pours into its iris and it starts out at
+       the viewer; the eyes do that themselves, and `gather` below draws the light). Leaving
+       the eye, it dies: its pupil blows and its lids drop, it tears and jumps, and it comes
+       apart into blocks, the iris first, chips of it thrown off, down to pitch black, out
+       of which the stars burst back, the dark torn open from the middle. */
+    const SPIN = {
+        out: [
+            { transform: 'none', opacity: 1 },
+            { transform: 'scale(1.06) rotate(1.5deg)', opacity: 1, offset: .14 },
+            { transform: 'scale(.5) rotate(-70deg)', opacity: .9, offset: .58 },
+            { transform: 'scale(.01) rotate(-280deg)', opacity: 0 }
+        ],
+        outFor: 950, hold: 280,
+        in: [
+            { transform: 'perspective(1000px) translate3d(0, 16%, -1100px) rotateX(20deg)', opacity: 0 },
+            { transform: 'perspective(1000px) translate3d(0, 3%, -160px) rotateX(5deg)', opacity: 1, offset: .55 },
+            { transform: 'perspective(1000px) translate3d(0, -.6%, 30px) rotateX(-1deg)', opacity: 1, offset: .8 },
+            { transform: 'none', opacity: 1 }
+        ],
+        inFor: 1300
+    };
+    let warping = false;
+    // How long an eye brought in under the burst stays out of sight; it waits that out.
+    let arrival = 0;
+    const backdropLayers = () => {
+        const layers = [];
+        for (const element of document.body.children) {
+            if (element === pageScrollProgress) break;
+            if (!element.classList.contains('switch-fx') && !element.classList.contains('warp-flash')) layers.push(element);
+        }
+        return layers;
+    };
+    const settle = animations => Promise.all(animations.map(animation => animation.finished.catch(() => {})));
+    const pause = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+    // One canvas over the backdrop and under the page, put up only while a switch draws on
+    // it. Each piece of drawing is given how far through it is, 0 to 1, and drawn at 1 on
+    // its last frame, so the next piece takes over with nothing showing between them.
+    const fx = (() => {
+        let canvas = null, context = null, frame = 0, w = 0, h = 0, ratio = 1;
+        const jobs = new Set();
+        const tick = now => {
+            frame = 0;
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            context.clearRect(0, 0, w, h);
+            for (const job of jobs) {
+                const t = (now - job.start) / job.duration;
+                if (t < 0) continue;
+                job.draw(context, Math.min(1, t), w, h);
+                if (t >= 1) {
+                    jobs.delete(job);
+                    job.done();
+                }
+            }
+            if (jobs.size) frame = requestAnimationFrame(tick);
+            else {
+                canvas.remove();
+                canvas = null;
+            }
+        };
+        return {
+            play(duration, draw) {
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvas.className = 'switch-fx';
+                    canvas.setAttribute('aria-hidden', 'true');
+                    w = document.documentElement.clientWidth;
+                    h = window.innerHeight;
+                    ratio = Math.min(window.devicePixelRatio || 1, effectsMode === 'high' ? 1.5 : 1);
+                    canvas.width = Math.round(w * ratio);
+                    canvas.height = Math.round(h * ratio);
+                    context = canvas.getContext('2d');
+                    pageScrollProgress.before(canvas);
+                }
+                return new Promise(resolve => {
+                    jobs.add({ start: performance.now(), duration, draw, done: resolve });
+                    if (!frame) frame = requestAnimationFrame(tick);
+                });
+            },
+            size: () => [w || document.documentElement.clientWidth, h || window.innerHeight]
+        };
+    })();
+    const easeIn = t => t * t * t, easeOut = t => 1 - (1 - t) ** 3;
+    // Low's: the old one swirled away, black, and the new one up from the deep.
+    const spin = async change => {
+        const outgoing = backdropLayers().map(layer => layer.animate(SPIN.out, { duration: SPIN.outFor, easing: 'cubic-bezier(.5, 0, .8, .4)', fill: 'forwards' }));
+        const flash = document.createElement('span');
+        flash.className = 'warp-flash';
+        flash.setAttribute('aria-hidden', 'true');
+        pageScrollProgress.before(flash);
+        flash.animate([
+            { transform: 'scale(0)', opacity: 1 },
+            { transform: 'scale(.6)', opacity: .95, offset: .3 },
+            { transform: 'scale(1.5)', opacity: 0 }
+        ], { duration: 620, delay: SPIN.outFor - 120, easing: 'cubic-bezier(.2, .8, .3, 1)', fill: 'both' }).finished.finally(() => flash.remove());
+        await pause(SPIN.outFor + SPIN.hold);
+        change();
+        const incoming = backdropLayers().map(layer => layer.animate(SPIN.in, { duration: SPIN.inFor, easing: 'cubic-bezier(.2, .7, .25, 1)', fill: 'backwards' }));
+        outgoing.forEach(animation => animation.cancel());
+        await settle(incoming);
+    };
+    // As an eye comes alive (the eyes send portfolio:eye-gather when they are whole): its own
+    // dots, thousands of them loose across the screen, are drawn in to its pupil, each on a
+    // path of its own that tightens and quickens as it nears, so they make a whirlpool of dust
+    // and never arms or any figure; coloured as its iris is -- pale pink at the middle, violet
+    // out through it, lavender beyond, some cold cyan -- and the last of them a flash in the
+    // pupil as the eye wakes.
+    const DOTS = [[158, 107, 255], [255, 92, 184], [107, 230, 255], [206, 190, 255], [120, 70, 220]];
+    const mixed = (from, to, k) => from + (to - from) * k;
+    // The iris's colours, by how far out from the pupil in irises.
+    const irisColour = k => {
+        if (k < .6) {
+            const s = k / .6;
+            return [255, mixed(205, 128, s), mixed(240, 214, s)];
+        }
+        if (k < 1.3) {
+            const s = (k - .6) / .7;
+            return [mixed(255, 189, s), 128, mixed(214, 255, s)];
+        }
+        const s = Math.min(1, (k - 1.3) / 2);
+        return [mixed(189, 206, s), mixed(128, 190, s), 255];
+    };
+    const CYAN = [107, 230, 255];
+    const pourIntoIris = ({ x: irisX, y: irisY, r: irisR, ms }) => {
+        // A switch's own work is not the machine struggling: the frame monitor looks away.
+        deferPerformanceSampling(ms + 800);
+        const [w, h] = fx.size();
+        const cell = Math.max(6, Math.round(Math.sqrt(w * h / 18000)));
+        const cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
+        const grid = document.createElement('canvas');
+        grid.width = cols;
+        grid.height = rows;
+        const dots = grid.getContext('2d');
+        const image = dots.createImageData(cols, rows), data = image.data;
+        const cx = irisX / cell, cy = irisY / cell, iris = irisR / cell;
+        const reach = Math.hypot(Math.max(cx, cols - cx), Math.max(cy, rows - cy));
+        // Every dot: how far out it starts (spread evenly over the screen's area), at what
+        // angle, when it reaches the pupil, how hard it winds, and whether it is a cold one.
+        const count = Math.min(4200, Math.round(cols * rows * .2));
+        const from = new Float32Array(count), angle = new Float32Array(count), arrive = new Float32Array(count);
+        const wind = new Float32Array(count), cold = new Uint8Array(count);
+        for (let i = 0; i < count; i++) {
+            from[i] = iris * .3 + Math.sqrt(Math.random()) * reach;
+            angle[i] = Math.random() * Math.PI * 2;
+            arrive[i] = .45 + Math.random() * .4;
+            wind[i] = 1.3 + Math.random() * .9;
+            cold[i] = Math.random() < .14 ? 1 : 0;
+        }
+        const put = (x, y, colour, alpha) => {
+            const px = Math.round(x), py = Math.round(y);
+            if (px < 0 || py < 0 || px >= cols || py >= rows) return;
+            const o = (py * cols + px) * 4;
+            if (data[o + 3] >= alpha) return;
+            data[o] = colour[0];
+            data[o + 1] = colour[1];
+            data[o + 2] = colour[2];
+            data[o + 3] = alpha;
+        };
+        return fx.play(ms, (context, t) => {
+            const swell = Math.min(1, t / .1);
+            data.fill(0);
+            for (let i = 0; i < count; i++) {
+                // Each dot and a tail curving behind it, along its own way in, so the whole
+                // reads as a whirlpool turning.
+                for (let tail = 0; tail < 6; tail++) {
+                    const s = Math.min(1, Math.max(0, t - tail * .02) / arrive[i]);
+                    if (s >= 1) break;
+                    const r = Math.max(.4, from[i] * (1 - s) ** 1.7);
+                    const a = angle[i] + t * 2.4 + wind[i] * Math.log(from[i] / r);
+                    const colour = cold[i] ? CYAN : irisColour(r / iris);
+                    put(cx + Math.cos(a) * r, cy + Math.sin(a) * r, colour, Math.round(235 * swell * (1 - tail * .15)));
+                }
+            }
+            dots.putImageData(image, 0, 0);
+            context.globalCompositeOperation = 'source-over';
+            context.imageSmoothingEnabled = false;
+            context.drawImage(grid, 0, 0, cols * cell, rows * cell);
+            context.imageSmoothingEnabled = true;
+            if (t > .7) {
+                const k = (t - .7) / .3;
+                context.globalCompositeOperation = 'lighter';
+                const flash = context.createRadialGradient(irisX, irisY, 0, irisX, irisY, irisR * (.3 + k));
+                flash.addColorStop(0, `rgba(255,240,250,${(k * .95).toFixed(3)})`);
+                flash.addColorStop(1, 'rgba(189,128,255,0)');
+                context.fillStyle = flash;
+                context.fillRect(irisX - irisR * 1.4, irisY - irisR * 1.4, irisR * 2.8, irisR * 2.8);
+            }
+        });
+    };
+
+    // Leaving the stars: the galaxy falls in on itself and goes off.
+    const bigBang = async change => {
+        const [w, h] = fx.size(), cx = w / 2, cy = h / 2, far = Math.hypot(w, h) / 2;
+        const fallFor = 900, bangFor = 1000, clearFor = 520;
+        const outgoing = backdropLayers().map(layer => layer.animate([
+            { transform: 'none', clipPath: 'circle(150vmax at 50% 50%)', filter: 'brightness(1)' },
+            { transform: 'scale(.55)', clipPath: 'circle(55vmax at 50% 50%)', filter: 'brightness(1.6)', offset: .6 },
+            { transform: 'scale(.02)', clipPath: 'circle(1vmax at 50% 50%)', filter: 'brightness(4)' }
+        ], { duration: fallFor, easing: 'cubic-bezier(.55, 0, .9, .35)', fill: 'forwards' }));
+        // Streaks of it dragged in after it.
+        const streaks = Array.from({ length: 150 }, () => {
+            const angle = Math.random() * Math.PI * 2;
+            return { angle, from: far * (.5 + Math.random() * .7), late: Math.random() * .35, rgb: Math.random() < .7 ? '220,228,255' : '255,214,170' };
+        });
+        await fx.play(fallFor, (context, t) => {
+            context.globalCompositeOperation = 'lighter';
+            context.lineCap = 'round';
+            for (const streak of streaks) {
+                const k = Math.max(0, (t - streak.late) / (1 - streak.late));
+                if (k <= 0) continue;
+                const r = streak.from * (1 - easeIn(k)), tail = Math.min(r, 20 + 160 * k);
+                const dx = Math.cos(streak.angle), dy = Math.sin(streak.angle);
+                context.strokeStyle = `rgba(${streak.rgb},${(.15 + .6 * k).toFixed(3)})`;
+                context.lineWidth = 1 + k * 1.5;
+                context.beginPath();
+                context.moveTo(cx + dx * r, cy + dy * r);
+                context.lineTo(cx + dx * (r + tail), cy + dy * (r + tail));
+                context.stroke();
+            }
+        });
+        // The eye goes up unseen, under the burst, and waits to build itself till it can be seen.
+        arrival = bangFor + clearFor * .5;
+        change();
+        arrival = 0;
+        outgoing.forEach(animation => animation.cancel());
+        const sparks = Array.from({ length: 320 }, () => {
+            const angle = Math.random() * Math.PI * 2;
+            return { dx: Math.cos(angle), dy: Math.sin(angle), speed: far * (.4 + Math.random() * 1.6), size: .8 + Math.random() * 2.2, rgb: ['255,250,240', '255,220,180', '200,215,255'][Math.floor(Math.random() * 3)] };
+        });
+        await fx.play(bangFor, (context, t) => {
+            context.globalCompositeOperation = 'source-over';
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, w, h);
+            context.globalCompositeOperation = 'lighter';
+            const core = 30 + far * 1.1 * easeOut(Math.min(1, t * 1.6));
+            const flash = context.createRadialGradient(cx, cy, 0, cx, cy, core);
+            flash.addColorStop(0, `rgba(255,255,255,${((1 - t) ** 1.6).toFixed(3)})`);
+            flash.addColorStop(.25, `rgba(255,232,200,${((1 - t) ** 2 * .7).toFixed(3)})`);
+            flash.addColorStop(1, 'rgba(120,90,160,0)');
+            context.fillStyle = flash;
+            context.fillRect(0, 0, w, h);
+            for (const [reach, alpha, width] of [[1.25, .85, 26], [.8, .4, 10]]) {
+                context.strokeStyle = `rgba(255,240,225,${((1 - t) ** 1.4 * alpha).toFixed(3)})`;
+                context.lineWidth = Math.max(1, width * (1 - t));
+                context.beginPath();
+                context.arc(cx, cy, far * reach * easeOut(t), 0, Math.PI * 2);
+                context.stroke();
+            }
+            const fadeBy = (1 - t) ** 1.2;
+            for (const spark of sparks) {
+                const r = spark.speed * easeOut(t), trail = 6 + spark.speed * .05 * (1 - t);
+                context.strokeStyle = `rgba(${spark.rgb},${fadeBy.toFixed(3)})`;
+                context.lineWidth = spark.size;
+                context.beginPath();
+                context.moveTo(cx + spark.dx * r, cy + spark.dy * r);
+                context.lineTo(cx + spark.dx * Math.max(0, r - trail), cy + spark.dy * Math.max(0, r - trail));
+                context.stroke();
+            }
+        });
+        // Burnt down to black, and out of it the eye.
+        await fx.play(clearFor, (context, t) => {
+            context.globalCompositeOperation = 'source-over';
+            context.fillStyle = `rgba(0,0,0,${(1 - easeOut(t)).toFixed(3)})`;
+            context.fillRect(0, 0, w, h);
+        });
+    };
+    // Leaving the eye: it dies, and comes apart, down to black; the stars burst back.
+    const decompile = async (change, from) => {
+        const [w, h] = fx.size();
+        const eye = window[SKIES[from]?.script];
+        const at = eye?.irisAt?.() || { x: w * .56, y: h * .5, r: Math.min(w, h) * .2 };
+        const dieFor = 1250, burstFor = 1000;
+        eye?.die?.(dieFor);
+        // It tears and jumps as it goes.
+        const jolts = backdropLayers().map(layer => layer.animate([
+            { translate: '0 0', clipPath: 'inset(0)' },
+            { translate: '-1.2vw 0', clipPath: 'inset(0 0 0 0)', offset: .12 },
+            { translate: '1.6vw 0', clipPath: 'inset(12% 0 64% 0)', offset: .2 },
+            { translate: '-.6vw 0', clipPath: 'inset(0)', offset: .3 },
+            { translate: '2vw 0', clipPath: 'inset(48% 0 20% 0)', offset: .42 },
+            { translate: '-1vw 0', clipPath: 'inset(0 0 30% 0)', offset: .55 },
+            { translate: '.4vw 0', clipPath: 'inset(0)', offset: .66 },
+            { translate: '0 0', clipPath: 'inset(0)' }
+        ], { duration: dieFor, easing: 'steps(1, end)', fill: 'forwards' }));
+        // Blocks, the iris first and outward from it, each flaring in the eye's own light
+        // before it goes black; chips of it thrown off.
+        const cell = 16, cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
+        const reach = Math.hypot(Math.max(at.x, w - at.x), Math.max(at.y, h - at.y));
+        const when = new Float32Array(cols * rows);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const d = Math.hypot((col + .5) * cell - at.x, (row + .5) * cell - at.y) / reach;
+                when[row * cols + col] = .22 + .58 * (d * .65 + Math.random() * .35);
+            }
+        }
+        const chips = [];
+        const tint = '205,185,255';
+        await fx.play(dieFor, (context, t) => {
+            context.globalCompositeOperation = 'source-over';
+            context.fillStyle = '#000';
+            context.beginPath();
+            const flaring = [];
+            for (let i = 0; i < when.length; i++) {
+                const k = (t - when[i]) / .07;
+                if (k <= 0) continue;
+                const x = (i % cols) * cell, y = Math.floor(i / cols) * cell;
+                if (k < 1) {
+                    flaring.push(x, y, k);
+                    // Its dots evaporate: lifted off upward, wavering, going out.
+                    if (chips.length < 1400 && Math.random() < .3) {
+                        const angle = -Math.PI / 2 + (Math.random() - .5) * .9, speed = 40 + Math.random() * 120;
+                        chips.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, born: t, size: cell * (.5 + Math.random() * .4), sway: Math.random() * 6 });
+                    }
+                } else context.rect(x, y, cell, cell);
+            }
+            context.fill();
+            context.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < flaring.length; i += 3) {
+                context.fillStyle = `rgba(${tint},${((1 - flaring[i + 2]) * .85).toFixed(3)})`;
+                context.fillRect(flaring[i], flaring[i + 1], cell, cell);
+            }
+            for (const chip of chips) {
+                const age = (t - chip.born) * dieFor / 1000, life = 1.3;
+                if (age > life) continue;
+                const colour = DOTS[Math.floor(chip.sway) % 5].join(',');
+                context.fillStyle = `rgba(${colour},${((1 - age / life) * .75).toFixed(3)})`;
+                const sway = Math.sin(age * 7 + chip.sway) * 6 * age;
+                context.fillRect(Math.round(chip.x + chip.vx * age + sway), Math.round(chip.y + chip.vy * age), chip.size, chip.size);
+            }
+            if (t > .9) {
+                context.globalCompositeOperation = 'source-over';
+                context.fillStyle = `rgba(0,0,0,${((t - .9) / .1).toFixed(3)})`;
+                context.fillRect(0, 0, w, h);
+            }
+        });
+        // Pitch black a moment, the stars put up under it, and the dark torn open from the
+        // middle with the light of them coming through.
+        change();
+        jolts.forEach(animation => animation.cancel());
+        await fx.play(260, context => {
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, w, h);
+        });
+        const incoming = backdropLayers().map(layer => layer.animate([
+            { transform: 'scale(1.3)', filter: 'brightness(2.4)' },
+            { transform: 'scale(.97)', filter: 'brightness(1.15)', offset: .6 },
+            { transform: 'none', filter: 'none' }
+        ], { duration: burstFor + 300, easing: 'cubic-bezier(.2, .8, .3, 1)' }));
+        const cx = w / 2, cy = h / 2, far = Math.hypot(w, h) / 2;
+        await fx.play(burstFor, (context, t) => {
+            const open = far * 1.05 * easeOut(t);
+            context.globalCompositeOperation = 'source-over';
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, w, h);
+            context.globalCompositeOperation = 'destination-out';
+            const hole = context.createRadialGradient(cx, cy, open * .7, cx, cy, Math.max(open, 1));
+            hole.addColorStop(0, 'rgba(0,0,0,1)');
+            hole.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = hole;
+            context.beginPath();
+            context.arc(cx, cy, Math.max(open, 1), 0, Math.PI * 2);
+            context.fill();
+            context.globalCompositeOperation = 'lighter';
+            context.strokeStyle = `rgba(225,232,255,${((1 - t) * .7).toFixed(3)})`;
+            context.lineWidth = Math.max(1, 14 * (1 - t));
+            context.beginPath();
+            context.arc(cx, cy, open, 0, Math.PI * 2);
+            context.stroke();
+        });
+        await settle(incoming);
+    };
+    // Where the cursor last was, so an eye a switch brings in looks at it straight away
+    // rather than waiting for it to move (ego.js, iris.js, y2k.js).
+    window.addEventListener('pointermove', event => {
+        window.portfolioPointer = { x: event.clientX, y: event.clientY, mouse: event.pointerType === 'mouse' };
+    }, { passive: true });
+    document.addEventListener('portfolio:eye-gather', ({ detail }) => {
+        if (!reducedMotion.matches && !document.hidden) pourIntoIris(detail);
+    });
+    const warp = (level, change, from, to) => {
+        if (warping || shiftPlaying || reducedMotion.matches || document.hidden || !Element.prototype.animate) {
+            change();
+            return;
+        }
+        warping = true;
+        deferPerformanceSampling(5000);
+        // Said on the page while it plays, for the stylesheets and the smoke test.
+        root.dataset.warp = level;
+        let changed = false;
+        const once = () => {
+            if (changed) return;
+            changed = true;
+            change();
+        };
+        const sequence = level === 'low' ? spin(once) : to ? bigBang(once) : decompile(once, from);
+        sequence.catch(() => once()).finally(() => {
+            warping = false;
+            delete root.dataset.warp;
+        });
+    };
+    const swapSkies = (change, animate, from, to) => {
+        if (!animate) change();
+        else if (from === 'vapor' || to === 'vapor') shift(to === 'vapor' ? 'glitch' : 'off', change);
+        else warp(effectsMode, change, from, to);
+    };    const putSkyAway = () => {
         if (!showingSky) return;
         const { script } = SKIES[showingSky];
         delete root.dataset[showingSky];
         if (script) window[script]?.release();
         showingSky = '';
     };
-    const showOwnBackdrop = mode => {
-        if (mode === 'high') galaxy.setQuality('high', false);
-        else if (mode === 'medium') stillSky.show();
-    };
     const syncSkies = async animate => {
-        const want = wantedSkies[effectsMode] || '';
+        const want = wantedSky(effectsMode);
         if (want === showingSky) return;
+        const from = showingSky;
         const request = ++skyRequest;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         // Another level's sky does not stay up while this level's is fetched.
@@ -586,14 +1030,14 @@ document.addEventListener('DOMContentLoaded', () => {
             swapSkies(() => {
                 putSkyAway();
                 showOwnBackdrop(effectsMode);
-            }, animate);
+            }, animate, from, want);
             return;
         }
         try {
             const sky = await loadSky(want);
             await sky.prepare();
             // Moved on while it got ready: another level, or more presses.
-            if ((wantedSkies[effectsMode] || '') !== want) {
+            if (wantedSky(effectsMode) !== want) {
                 sky.release();
                 return;
             }
@@ -602,15 +1046,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 putSkyAway();
                 showingSky = want;
                 root.dataset[want] = '';
-                sky.show();
-                if (effectsMode === 'high') galaxy.setQuality('medium', false);
-                else if (effectsMode === 'medium') stillSky.hide();
-            }, animate);
+                // From one level's eye to another's it is simply there, where that one was.
+                sky.show({ after: arrival, settled: Object.values(EYES).includes(from) });
+                stillSky.hide();
+                cosmos.hide();
+                darkensWhenIdle = false;
+                wakeEffectsBackground();
+            }, animate, from, want);
             deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         } catch (error) {
             // Offline, or blocked: the page simply keeps the sky it has.
             if (request !== skyRequest) return;
-            wantedSkies[effectsMode] = '';
+            skippedSkies.add(want);
             delete root.dataset[want];
             showOwnBackdrop(effectsMode);
         }
@@ -618,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // By when the press happened, not when the page got round to it: on a machine
     // that is struggling, quick presses can be answered slowly.
     const countSkyPress = (level, now) => {
-        if (level !== pressedLevel || now - lastSkyPress >= (foundSkies[level] ? SKY_CYCLE_GAP_MS : SKY_PRESS_GAP_MS)) skyPresses = 0;
+        if (level !== pressedLevel || now - lastSkyPress >= SKY_PRESS_GAP_MS) skyPresses = 0;
         pressedLevel = level;
         lastSkyPress = now;
         // Nobody spamming a button stops at exactly the right number. A sky
@@ -629,12 +1076,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         skyPresses += 1;
-        const round = SKY_ROUNDS[level];
-        if (!round || skyPresses < (foundSkies[level] ? SKY_CYCLE_PRESSES : SKY_UNLOCK_PRESSES)) return;
+        if (!EYES[level] || skyPresses < SKY_PRESSES) return;
         skyPresses = 0;
-        skyQuietUntil = now + (foundSkies[level] ? SKY_CYCLE_QUIET_MS : SKY_UNLOCK_QUIET_MS);
-        foundSkies[level] = true;
-        wantedSkies[level] = round[(round.indexOf(wantedSkies[level]) + 1) % round.length];
+        skyQuietUntil = now + SKY_QUIET_MS;
+        // Once found, every look is fetched, so a switch from here on is at once.
+        if (!skiesFound) Object.keys(SKIES).forEach(name => loadSky(name).catch(() => {}));
+        skiesFound = true;
+        if (level === 'medium') {
+            if (deskOn) deskOn = eyeOn = false;
+            else if (eyeOn || skippedSkies.has('iris')) deskOn = true;
+            else eyeOn = true;
+        } else {
+            deskOn = false;
+            eyeOn = !eyeOn;
+        }
         syncSkies(true);
     };
 
@@ -673,10 +1128,9 @@ document.addEventListener('DOMContentLoaded', () => {
         root.dataset.effectsReason = reason;
         easeForBuiltInGraphics();
         syncEffectsPace();
-        setBackdropLook(mode, animate);
         // The space sky is not started for a visitor who has swapped it for
         // the other one.
-        galaxy.setQuality(mode === 'high' && wantedSkies.high ? 'medium' : mode, animate);
+        setBackdropLook(mode);
         cursor.setEnabled(mode === 'high');
         if (mode !== 'high') {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
@@ -712,17 +1166,19 @@ document.addEventListener('DOMContentLoaded', () => {
             storeEffects('sessionStorage', overrideStorageKey, String(overrides));
         }
         // The page took the bend off the glass, not the visitor: a level
-        // chosen by hand gets it back. The sky keeps its pace, which only
-        // changes how often it is drawn.
-        if (glassEased) {
-            glassEased = false;
-            galaxy.sharpen();
-        }
+        // chosen by hand gets it back. The sky stays as soft as it was eased
+        // to, which only changes how finely it is drawn.
+        glassEased = false;
         monitorDone = false;
         crawlingSince = 0;
         crawlingWindows = 0;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
-        applyEffectsMode(level, true, 'manual');
+        // Kept at once: the level itself goes up a frame or more later, inside its
+        // transition, and a reload in between must still find the visitor's choice.
+        storeEffects('sessionStorage', levelStorageKey, level);
+        storeEffects('sessionStorage', lagStorageKey, '');
+        const rising = EFFECT_LEVELS.indexOf(level) > EFFECT_LEVELS.indexOf(effectsMode);
+        shift(!rising ? 'fall' : level === 'high' ? 'surge' : 'rise', () => applyEffectsMode(level, true, 'manual'));
     };
 
     if (fxSlider && fxInput && fxTrack) {
@@ -761,8 +1217,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!event.isPrimary || event.button !== 0) return;
             const stops = stopCentres();
             const box = fxTrack.getBoundingClientRect();
-            // The sparkle beside the track only says what the track is for.
-            if (event.clientX < box.left - 8) return;
+            // The sparkle beside the track does not move the thumb, but it is part of the
+            // control all the same: two quick presses on it go round the looks, as two on
+            // the thumb's own stop do.
+            if (event.clientX < box.left - 8) {
+                event.preventDefault();
+                countSkyPress(effectsMode, event.timeStamp);
+                return;
+            }
             event.preventDefault();
             // So the arrow keys carry on from a click, without a focus ring
             // for it (:focus-visible). A finger has no keys to carry on with.
@@ -942,65 +1404,33 @@ document.addEventListener('DOMContentLoaded', () => {
         latestPointerEvent = event;
         if (pointerFrame) return;
         pointerFrame = requestAnimationFrame(() => {
-            // The cursor dot, and the field -- which reads the pointer only to
-            // shove the bodies nearest it out of the way. The lens that used to
-            // travel with the cursor is gone: it lit whatever it passed over and
-            // went out again over every button and card, which is the brightening
-            // and dimming the field itself was doing, one light switching on and
-            // off under the reader's hand as they moved toward a control.
+            // The cursor dot. The sky reads the pointer for itself (cosmos.js).
             cursor.move(latestPointerEvent);
-            galaxy.move(latestPointerEvent);
             pointerFrame = 0;
         });
     };
     window.addEventListener('pointermove', queueHighEffectsMovement, { passive: true });
-    // Touch drives the field directly rather than being funnelled through the
-    // cursor path: a fingertip is a position on the sheet, not a hovering
-    // pointer, so it presses its own dent instead of tilting the whole scene.
-    window.addEventListener('touchstart', event => {
+    // A finger wakes the backdrop as the cursor does. A swipe that has let go
+    // leaves the page gliding on, and the glide is not someone there.
+    window.addEventListener('touchstart', () => {
         highEffectsTouchSwipeActive = false;
         touchSwipeReleased = false;
         wakeEffectsBackground();
-        if (effectsMode !== 'high') return;
-        Array.from(event.changedTouches).forEach(touch => {
-            // touch.target is where the finger landed and stays that element for
-            // the life of the touch, which is exactly the test the field wants.
-            galaxy.touchStart(touch.identifier, touch.clientX, touch.clientY, touch.target);
-        });
     }, { passive: true });
     window.addEventListener('touchmove', event => {
         if (!event.touches.length && !event.changedTouches.length) return;
         if (effectsMode === 'high') highEffectsTouchSwipeActive = true;
         wakeEffectsBackground();
-        if (effectsMode !== 'high') return;
-        Array.from(event.changedTouches).forEach(touch => {
-            galaxy.touchMove(touch.identifier, touch.clientX, touch.clientY);
-        });
     }, { passive: true });
     ['touchend', 'touchcancel'].forEach(eventName => {
         window.addEventListener(eventName, event => {
-            Array.from(event.changedTouches).forEach(touch => galaxy.touchEnd(touch.identifier));
             if (event.touches.length || !highEffectsTouchSwipeActive) return;
             highEffectsTouchSwipeActive = false;
             touchSwipeReleased = true;
             wakeEffectsBackground();
         }, { passive: true });
     });
-    // A stylus is a fingertip with a finer point: same dent, same rebound.
-    window.addEventListener('pointerdown', event => {
-        wakeEffectsBackground();
-        if (effectsMode === 'high' && event.pointerType === 'pen') {
-            galaxy.touchStart(`pen-${event.pointerId}`, event.clientX, event.clientY, event.target);
-        }
-    }, { passive: true });
-    window.addEventListener('pointermove', event => {
-        if (event.pointerType === 'pen') galaxy.touchMove(`pen-${event.pointerId}`, event.clientX, event.clientY);
-    }, { passive: true });
-    ['pointerup', 'pointercancel'].forEach(eventName => {
-        window.addEventListener(eventName, event => {
-            if (event.pointerType === 'pen') galaxy.touchEnd(`pen-${event.pointerId}`);
-        }, { passive: true });
-    });
+    window.addEventListener('pointerdown', wakeEffectsBackground, { passive: true });
     window.addEventListener('keydown', wakeEffectsBackground, { passive: true });
     window.addEventListener('wheel', () => {
         touchSwipeReleased = false;
@@ -1020,7 +1450,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateScrollMotion = () => {
         const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
         pageScrollFill.style.transform = `scaleY(${progress})`;
-        galaxy.scroll(window.scrollY);
         document.body.classList.toggle('has-scrolled', window.scrollY > 18);
         scrollFrame = 0;
     };
@@ -1065,7 +1494,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.classList.remove('awaiting-data');
             revealLinkedSection();
             updateScrollMotion();
-            window.requestAnimationFrame(() => window.requestAnimationFrame(() => galaxy.refreshLayout()));
         })
         .catch(error => {
             console.error('Error loading portfolio data:', error);
@@ -1189,23 +1617,28 @@ function setupMobileNav() {
     });
 }
 
-// ---- The still sky (Medium FX) ------------------------------------------------
-// Low lays the bare lattice on one fixed layer that is painted once; High
-// draws a living sky on a canvas of its own, frame after frame. Medium sits
-// between them: a sky of the same kind -- stars in High's colours, a faint
-// band where they crowd, a couple of tight clusters and a few soft clouds --
-// drawn once into a picture and laid on the lattice's own layer
-// (.background-grid::before, portfolio.css). Nothing in it moves, so a scroll
-// still slides the page over a single layer without drawing anything, which
-// is all Low costs; it is drawn again only when the window changes shape.
-// One seed a visit, so it is the same sky every time it comes back.
+// ---- The still sky (every level) -------------------------------------------------
+// A sky that asks almost nothing: deep space, nebulae, a band of stars and thousands
+// more, drawn once into a picture off the page's thread and laid on one fixed layer
+// (.background-grid::before, portfolio.css), so a scroll slides the page over it without
+// drawing anything. At Low it is all there is, with four stars that brighten and fade
+// very slowly and a slow shooting star now and then, every one a compositor animation.
+// Medium and High draw the living sky over it (cosmos.js), which is handed the picture
+// so that its black holes bend the stars actually there. One seed a visit, so it is the
+// same sky every time it comes back.
 //
-// The drawing stands alone, with nothing from outside it but its arguments:
-// its source text is what the worker below runs.
-function paintStillSky(context, width, height, seed) {
+// The drawing stands alone, with nothing from outside it but its arguments: its source
+// text is what the worker below runs. Where the galaxy stands is set out here, in
+// cosmos.js and in portfolio.css, and they have to agree.
+// Medium's (full) has a spiral with a dark heart, far galaxies and clouds of dust;
+// cosmos.js makes the heart a hole that feeds. `spot` is where this visit's galaxy stands
+// (setupStillSky), anywhere across the screen, and everything bright is spread wide with
+// it; without one (Low, as Aloe settled it) the glow is off to the right, the words'
+// side kept quiet. With `live` false -- no
+// cosmos.js on this machine -- it has the black holes, the ringed world and the dying
+// star painted in too, which cosmos.js otherwise floats over it.
+function paintGalaxySky(context, width, height, seed, full, live, dark, spot) {
     const TAU = Math.PI * 2;
-    const colors = ['224,237,255', '174,206,237', '246,221,190', '207,199,227',
-        '235,240,247', '214,226,255', '205,168,156', '255,194,142'];
     let state = seed;
     const random = () => {
         state = (state + 0x6D2B79F5) | 0;
@@ -1213,29 +1646,98 @@ function paintStillSky(context, width, height, seed) {
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-    // Three draws averaged: a bell between -1 and 1, for anything that
-    // gathers toward a line or a point.
+    // Three draws averaged: a bell between -1 and 1, for anything that gathers.
     const bell = () => (random() + random() + random() - 1.5) / 1.5;
+    const tall = height >= width * 1.1;
+    const [gxShare, gyShare] = spot || (tall ? [.64, .28] : [.76, .5]);
+    const gx = width * gxShare, gy = height * gyShare;
     const span = Math.max(width, height);
-    const cloud = (x, y, radius, squash, angle, rgb, alpha) => {
+    // The page's words run down the left; what lies behind them is kept quiet.
+    const quiet = x => (tall ? .6 : spot ? .8 + .2 * Math.min(1, Math.max(0, (x / width - .1) / .5)) : .36 + .64 * Math.min(1, Math.max(0, (x / width - .1) / .5)));
+    // Dark: darker still and nearly without colour, as High was before the levels shared
+    // it: what colour there is kept to a trace, and all of it dimmer. Every level asks for it.
+    const tone = dark ? (rgb, dim = .62) => {
+        const [r, g, b] = rgb.split(',').map(Number), l = r * .3 + g * .59 + b * .11;
+        return [r, g, b].map(v => Math.round((l + (v - l) * .28) * dim)).join(',');
+    } : rgb => rgb;
+    // The deep: near black, lifting a little toward the galaxy.
+    const deep = context.createRadialGradient(gx, gy, 0, gx, gy, span);
+    deep.addColorStop(0, dark ? '#07070b' : '#0a0b16');
+    deep.addColorStop(.38, dark ? '#030305' : '#05050c');
+    deep.addColorStop(1, dark ? '#000000' : '#010103');
+    context.fillStyle = deep;
+    context.fillRect(0, 0, width, height);
+    const puff = (x, y, radius, rgb, alpha, squash, angle) => {
         context.save();
         context.translate(x, y);
         context.rotate(angle);
         context.scale(1, squash);
         const light = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+        rgb = tone(rgb);
         light.addColorStop(0, `rgba(${rgb},${alpha})`);
-        light.addColorStop(.42, `rgba(${rgb},${alpha * .42})`);
+        light.addColorStop(.4, `rgba(${rgb},${alpha * .45})`);
         light.addColorStop(1, `rgba(${rgb},0)`);
         context.fillStyle = light;
         context.fillRect(-radius, -radius, radius * 2, radius * 2);
         context.restore();
     };
+    // Nebulae: each a drifting trail of soft light in two or three colours, added up.
+    // Dark and cold: colour only where something is burning, and not much of it.
+    const violet = '70,52,140', magenta = '110,40,96', blue = '40,64,140', teal = '30,86,104';
+    const ember = '150,70,46', rose = '130,46,70';
+    const glow = dark ? .5 : full ? .6 : .72;
+    const nebula = (x, y, reach, palette, puffs, strength) => {
+        let px = x, py = y, heading = random() * TAU;
+        for (let i = 0; i < puffs; i++) {
+            heading += bell() * 1.1;
+            px += Math.cos(heading) * reach * .07;
+            py += Math.sin(heading) * reach * .07;
+            const rgb = palette[Math.floor(random() * palette.length)];
+            puff(px, py, reach * (.1 + random() * .28), rgb, strength * (.5 + random()) * quiet(px), .35 + random() * .65, random() * TAU);
+        }
+    };
+    context.globalCompositeOperation = 'lighter';
+    nebula(gx + span * .08, gy - height * .2, span * .5, [violet, magenta, blue], 46, .05 * glow);
+    nebula(gx - span * .06, gy + height * .22, span * .42, [blue, teal, violet], 40, .045 * glow);
+    nebula(width * .12, height * .88, span * .34, [teal, blue], 26, .035 * glow);
+    nebula(width * (tall ? .2 : .34), height * .08, span * .3, [violet, rose], 22, .028 * glow);
+    nebula(width * .95, height * .92, span * .3, [ember, rose, magenta], 24, .03 * glow);
+    // Dark dust drifting across the brightest of it.
+    context.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 26; i++) {
+        const along = random() - .5;
+        puff(gx + along * span * .9 + bell() * 60, gy - along * height * .3 + bell() * height * .2,
+            30 + random() * 110, '4,4,10', .12 + random() * .16, .25 + random() * .4, -.5 + bell() * .5);
+    }
+    // The band: long and faint, corner to corner, with a third of the stars along it.
+    const bandAngle = -.5 + bell() * .1;
+    const bandCos = Math.cos(bandAngle), bandSin = Math.sin(bandAngle);
+    const bandX = width * .5, bandY = height * .55, bandWidth = Math.min(width, height) * .16;
+    context.globalCompositeOperation = 'lighter';
+    puff(bandX, bandY, span * .8, '170,186,255', .05, .14, bandAngle);
+    // Stars. Most are faint, a few are bright with a halo, and the brightest catch the
+    // light in long spikes.
+    const colors = ['224,237,255', '190,214,255', '246,226,196', '214,206,240', '240,244,250', '255,206,160', '200,220,255', '255,186,170'];
+    // The stars keep their brightness; only their colour goes.
+    const colour = () => tone(colors[Math.floor(random() ** 1.7 * colors.length)], 1);
+    const spike = (x, y, dx, dy, length, rgb, alpha, thick) => {
+        const line = context.createLinearGradient(x - dx * length, y - dy * length, x + dx * length, y + dy * length);
+        line.addColorStop(0, `rgba(${rgb},0)`);
+        line.addColorStop(.5, `rgba(${rgb},${alpha})`);
+        line.addColorStop(1, `rgba(${rgb},0)`);
+        context.strokeStyle = line;
+        context.lineWidth = thick;
+        context.beginPath();
+        context.moveTo(x - dx * length, y - dy * length);
+        context.lineTo(x + dx * length, y + dy * length);
+        context.stroke();
+    };
     const star = (x, y, radius, alpha, rgb) => {
-        if (radius > .85) {
-            const reach = radius * 6;
+        if (radius > .9) {
+            const reach = radius * 7;
             const halo = context.createRadialGradient(x, y, 0, x, y, reach);
-            halo.addColorStop(0, `rgba(${rgb},${alpha * .38})`);
-            halo.addColorStop(.35, `rgba(${rgb},${alpha * .1})`);
+            halo.addColorStop(0, `rgba(${rgb},${alpha * .45})`);
+            halo.addColorStop(.3, `rgba(${rgb},${alpha * .12})`);
             halo.addColorStop(1, `rgba(${rgb},0)`);
             context.fillStyle = halo;
             context.fillRect(x - reach, y - reach, reach * 2, reach * 2);
@@ -1244,99 +1746,293 @@ function paintStillSky(context, width, height, seed) {
         context.beginPath();
         context.arc(x, y, radius, 0, TAU);
         context.fill();
-        // The brightest few catch the light in a cross, as High's do.
-        if (radius > 1.45) {
-            context.strokeStyle = `rgba(${rgb},${alpha * .4})`;
-            context.lineWidth = Math.max(.35, radius * .22);
-            context.beginPath();
-            context.moveTo(x - radius * 3, y);
-            context.lineTo(x + radius * 3, y);
-            context.moveTo(x, y - radius * 3);
-            context.lineTo(x, y + radius * 3);
-            context.stroke();
+        if (radius > 1.55) {
+            const long = radius * (9 + random() * 8);
+            spike(x, y, 1, 0, long, rgb, alpha * .55, Math.max(.5, radius * .28));
+            spike(x, y, 0, 1, long * .8, rgb, alpha * .55, Math.max(.5, radius * .28));
         }
     };
-    const colour = () => colors[Math.floor(random() ** 1.6 * colors.length)];
-
-    // The clouds: blue behind the hero, violet high on the right, warm low
-    // on the right, a breath of teal at the foot -- each a little off
-    // where the last visit had it -- and between them the grey haze High's
-    // clusters sit in.
-    const off = amount => (random() - .5) * amount;
-    cloud(width * (.18 + off(.08)), height * (.24 + off(.1)), span * .5, .55, -.3, '112,148,210', .2);
-    cloud(width * (.84 + off(.08)), height * (.16 + off(.1)), span * .36, .6, .4, '150,136,198', .13);
-    cloud(width * (.8 + off(.1)), height * (.78 + off(.1)), span * .42, .5, -.2, '196,166,138', .11);
-    cloud(width * (.1 + off(.08)), height * (.9 + off(.06)), span * .3, .6, .2, '112,164,184', .08);
-    for (let i = 0; i < 5; i++) {
-        cloud(width * random(), height * random(), 90 + random() * 120, .45 + random() * .4, random() * TAU,
-            '200,210,226', .05 + random() * .04);
-    }
-
-    // The band: a long, faint glow corner to corner, and a third of the
-    // stars gathered along it.
-    const bandAngle = -.42 + off(.12);
-    const bandX = width * (.5 + off(.1)), bandY = height * (.55 + off(.1));
-    const bandWidth = Math.min(width, height) * .17;
-    const bandCos = Math.cos(bandAngle), bandSin = Math.sin(bandAngle);
-    cloud(bandX, bandY, span * .78, .16, bandAngle, '196,212,255', .085);
-    const count = Math.round(width * height / 1250);
+    const count = Math.round(width * height / 640);
     for (let i = 0; i < count; i++) {
         let x = random() * width, y = random() * height;
-        if (random() < .32) {
+        if (random() < .3) {
             const along = (random() - .5) * span * 1.5, across = bell() * bandWidth;
             x = bandX + along * bandCos - across * bandSin;
             y = bandY + along * bandSin + across * bandCos;
             if (x < 0 || x > width || y < 0 || y > height) continue;
         }
-        star(x, y, .3 + random() ** 3.4 * 1.65, .22 + random() ** 1.5 * .7, colour());
+        star(x, y, .28 + random() ** 4.2 * 1.9, (.2 + random() ** 1.4 * .75) * (.55 + .45 * quiet(x)), colour());
     }
-
-    // Two clusters, each a haze with a knot of faint stars in it.
-    for (let c = 0; c < 2; c++) {
-        const cx = width * (.12 + random() * .76), cy = height * (.12 + random() * .76);
-        cloud(cx, cy, 64, 1, 0, '220,230,255', .06);
-        const stars = 30 + Math.floor(random() * 18);
+    // A few clusters: a haze with a knot of faint stars in it.
+    for (let c = 0; c < 3; c++) {
+        const cx = width * (spot ? .04 + random() * .92 : .3 + random() * .66), cy = height * (.1 + random() * .8);
+        puff(cx, cy, 70, '220,230,255', .05, 1, 0);
+        const stars = 30 + Math.floor(random() * 24);
         for (let i = 0; i < stars; i++) {
-            star(cx + bell() * 46, cy + bell() * 46, .26 + random() ** 3 * .6, .22 + random() * .5, colour());
+            star(cx + bell() * 50, cy + bell() * 50, .26 + random() ** 3 * .7, .25 + random() * .5, colour());
         }
     }
-
-    // Fading out toward the edges, as High's veil darkens its sky there.
-    context.globalCompositeOperation = 'destination-out';
-    const edge = context.createRadialGradient(width / 2, height * .45, Math.min(width, height) * .3,
+    if (full) {
+        const blot = (x, y, radius, rgb, alpha, squash = 1, angle = 0) => puff(x, y, radius, rgb, alpha, squash, angle);
+        // Clouds of dust across the light, darker than the dark.
+        context.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < 18; i++) {
+            blot(width * random(), height * random(), 60 + random() * 200, '1,1,4', .22 + random() * .2, .3 + random() * .5, random() * TAU);
+        }
+        // Far galaxies, small and tilted, each a core and a fainter disc.
+        context.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 16; i++) {
+            const x = width * (.02 + random() * .96), y = height * random(), size = 5 + random() ** 2 * 24;
+            const squash = .2 + random() * .6, angle = random() * TAU, warm = random() < .35;
+            blot(x, y, size, warm ? '170,140,110' : '120,140,180', .07 + random() * .07, squash, angle);
+            blot(x, y, size * .28, warm ? '240,210,180' : '210,220,245', .22, squash, angle);
+        }
+        // The spiral, where the living one stands at High: pale arms, heavy
+        // dust, and at its heart not a light but a hole, with fire round it.
+        const radius = (tall ? Math.min(width * 1.25, height * .64) : Math.min(width * .64, height * 1.28)) * .46;
+        const unit = radius / 400;
+        context.save();
+        context.translate(gx, gy);
+        context.rotate(-.42);
+        context.scale(1, .42);
+        const turnAt = u => Math.log(Math.max(u, .07) / .07) / .46;
+        const at = (u, angle) => [Math.cos(angle) * u * radius, Math.sin(angle) * u * radius];
+        context.globalCompositeOperation = 'lighter';
+        blot(0, 0, radius * 1.1, '50,58,96', .12);
+        blot(0, 0, radius * .34, '150,128,110', .12);
+        for (let arm = 0; arm < 2; arm++) {
+            for (let u = .07; u < 1; u += .008) {
+                const [x, y] = at(u + bell() * .03, arm * Math.PI + turnAt(u) + bell() * .1);
+                blot(x, y, (10 + random() * 22) * unit, '110,124,160', .05 * (1.1 - u * .6));
+            }
+        }
+        for (let i = 0; i < 2600; i++) {
+            const arm = random() < .5 ? 0 : Math.PI, onArm = random() < .7;
+            const u = onArm ? .07 + random() ** .8 * .93 : Math.abs(bell()) * .3;
+            const angle = onArm ? arm + turnAt(u) + bell() * (.05 + u * .1) : random() * TAU;
+            const [x, y] = at(u, angle);
+            context.fillStyle = `rgba(${tone(random() < .8 ? '205,215,235' : '235,215,195', .85)},${(.25 + random() * .6).toFixed(2)})`;
+            context.fillRect(x, y, unit * 1.6, unit * 1.6);
+        }
+        for (let i = 0; i < 26; i++) {
+            const u = .25 + random() * .7;
+            const [x, y] = at(u, (random() < .5 ? 0 : Math.PI) + turnAt(u) + bell() * .08);
+            blot(x, y, (4 + random() * 7) * unit, '170,36,56', .45);
+        }
+        context.globalCompositeOperation = 'source-over';
+        for (let arm = 0; arm < 2; arm++) {
+            for (let u = .1; u < .92; u += .007) {
+                const [x, y] = at(u + bell() * .015, arm * Math.PI + turnAt(u) - .24 + bell() * .05);
+                blot(x, y, (7 + random() * 13) * unit, '2,1,5', .22 + random() * .22);
+            }
+        }
+        context.globalCompositeOperation = 'lighter';
+        const fire = context.createRadialGradient(0, 0, radius * .03, 0, 0, radius * .1);
+        fire.addColorStop(0, 'rgba(0,0,0,0)');
+        fire.addColorStop(.25, 'rgba(255,186,120,.55)');
+        fire.addColorStop(.55, 'rgba(220,100,50,.22)');
+        fire.addColorStop(1, 'rgba(120,40,20,0)');
+        context.fillStyle = fire;
+        context.fillRect(-radius * .1, -radius * .1, radius * .2, radius * .2);
+        context.globalCompositeOperation = 'source-over';
+        context.fillStyle = '#000000';
+        context.beginPath();
+        context.arc(0, 0, radius * .034, 0, TAU);
+        context.fill();
+        context.restore();
+        // What cosmos.js floats over the picture, when it is not there to.
+        if (!live) {
+            // Black holes: nothing at all, and a disc of gas it lights as it pulls it in.
+            const holes = tall ? [[.22, .62, 22], [.8, .84, 14]] : [[.46, .82, 26], [.93, .16, 16], [.58, .2, 11]];
+            for (const [hx, hy, size] of holes) {
+                const x = width * hx + bell() * 20, y = height * hy + bell() * 20, r = size * (.8 + random() * .4);
+                const tilt = -.3 + random() * .6;
+                context.globalCompositeOperation = 'lighter';
+                blot(x, y, r * 4, '120,60,30', .1);
+                context.save();
+                context.translate(x, y);
+                context.rotate(tilt);
+                context.scale(1, .28);
+                const disc = context.createRadialGradient(0, 0, r * 1.15, 0, 0, r * 3.4);
+                disc.addColorStop(0, 'rgba(255,214,170,.7)');
+                disc.addColorStop(.3, 'rgba(240,140,70,.35)');
+                disc.addColorStop(1, 'rgba(120,40,20,0)');
+                context.fillStyle = disc;
+                context.fillRect(-r * 3.4, -r * 3.4, r * 6.8, r * 6.8);
+                context.restore();
+                context.globalCompositeOperation = 'source-over';
+                context.fillStyle = '#000000';
+                context.beginPath();
+                context.arc(x, y, r, 0, TAU);
+                context.fill();
+            }
+            // A world with a ring, lit from the upper left, the ring behind it and in front.
+            const [wx, wy, wr] = tall ? [width * .2, height * .9, 20] : [width * .9, height * .86, 24];
+            const ring = (from, to) => {
+                context.save();
+                context.translate(wx, wy);
+                context.rotate(-.3);
+                context.scale(1, .24);
+                context.strokeStyle = 'rgba(170,150,126,.42)';
+                context.lineWidth = wr * .9;
+                context.beginPath();
+                context.arc(0, 0, wr * 1.75, from, to);
+                context.stroke();
+                context.restore();
+            };
+            context.globalCompositeOperation = 'source-over';
+            ring(Math.PI, TAU);
+            const ball = context.createRadialGradient(wx - wr * .45, wy - wr * .4, wr * .1, wx, wy, wr);
+            ball.addColorStop(0, 'rgb(150,116,90)');
+            ball.addColorStop(.55, 'rgb(48,34,30)');
+            ball.addColorStop(1, 'rgb(5,4,6)');
+            context.fillStyle = ball;
+            context.beginPath();
+            context.arc(wx, wy, wr, 0, TAU);
+            context.fill();
+            ring(0, Math.PI);
+            // A star dying, deep red, with the shells it threw off standing round it.
+            const [sx, sy] = tall ? [width * .82, height * .07] : [width * .67, height * .09];
+            context.globalCompositeOperation = 'lighter';
+            blot(sx, sy, 34, '170,40,30', .22);
+            blot(sx, sy, 6, '255,150,110', .9);
+            for (let i = 1; i <= 3; i++) {
+                context.strokeStyle = `rgba(200,60,44,${(.3 / i).toFixed(3)})`;
+                context.lineWidth = 2 + i;
+                context.beginPath();
+                context.ellipse(sx, sy, 16 * i + bell() * 3, 15 * i + bell() * 3, random() * TAU, 0, TAU);
+                context.stroke();
+            }
+        }
+        // A galaxy seen edge on, a dark lane through the middle of it.
+        const [ex, ey] = tall ? [width * .32, height * .42] : [width * .34, height * .72];
+        const edgeAngle = -.2 + bell() * .3;
+        blot(ex, ey, 80, '190,180,160', .2 * quiet(ex) + .05, .1, edgeAngle);
+        blot(ex, ey, 14, '245,230,205', .55, .45, edgeAngle);
+        context.globalCompositeOperation = 'source-over';
+        blot(ex, ey, 72, '1,1,3', .7, .025, edgeAngle);
+    }
+    // Darker toward the edges.
+    context.globalCompositeOperation = 'source-over';
+    const edge = context.createRadialGradient(width / 2, height * .45, Math.min(width, height) * .35,
         width / 2, height * .45, Math.hypot(width, height) * .62);
-    edge.addColorStop(0, 'rgba(0,0,0,0)');
-    edge.addColorStop(1, 'rgba(0,0,0,.5)');
+    edge.addColorStop(0, 'rgba(2,2,6,0)');
+    edge.addColorStop(1, 'rgba(0,0,2,.7)');
     context.fillStyle = edge;
     context.fillRect(0, 0, width, height);
 }
 
-// A worker, written out here so the page fetches nothing for it: it draws the
-// picture on a canvas of its own, encodes it and goes away again. It draws to
-// the graphics card as the page's own canvas does, which comes out the same to
-// the byte; on a canvas kept in memory the faintest stars land differently.
+// A worker, written out here so the page fetches nothing for it: it draws the picture
+// on a canvas of its own, encodes it and goes away again.
 const stillSkyWorkerSource = () => `
-    const paint = ${paintStillSky};
-    onmessage = async ({ data: { width, height, ratio, seed } }) => {
+    const paint = ${paintGalaxySky};
+    onmessage = async ({ data: { width, height, ratio, seed, full, live, dark, spot } }) => {
         try {
             const canvas = new OffscreenCanvas(Math.round(width * ratio), Math.round(height * ratio));
             const context = canvas.getContext('2d');
             context.setTransform(ratio, 0, 0, ratio, 0, 0);
-            paint(context, width, height, seed);
+            paint(context, width, height, seed, full, live, dark, spot);
             postMessage(await canvas.convertToBlob({ type: 'image/png' }));
         } catch (error) {
             postMessage(null);
         }
     };`;
-
-function setupStillSky(layer) {
+function setupStillSky(layer, reducedMotion) {
     const seed = Math.floor(Math.random() * 4294967296);
     const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 1));
-    let wanted = false, url = '', job = 0, resizeTimer = 0, releaseTimer = 0;
-    let drawnWidth = 0, drawnHeight = 0, drawnRatio = 0;
+    let wanted = false, url = '', job = 0, resizeTimer = 0, releaseTimer = 0, swapTimer = 0;
+    let drawnWidth = 0, drawnHeight = 0, drawnRatio = 0, drawnFull = false, drawnLive = true, drawnDark = false, drawnSpot = false;
+    // Whether cosmos.js is drawing over this; until it is found it cannot, it is taken to.
+    let live = true;
+    const root = document.documentElement;
+    const wantFull = () => root.dataset.effects === 'medium';
+    // Every level the same dark sky; Low only shows it dimmer (portfolio.css).
+    const wantDark = () => true;
+    // Where this visit's galaxy stands, as shares of the screen: anywhere across it, one visit
+    // behind the words and the next off to a side, and the bright things spread wide with it.
+    // cosmos.js stands High's living galaxy and Medium's feeding heart there too. Low keeps
+    // its sky as Aloe settled it.
+    const across = (seed >>> 3) % 997 / 997, down = (seed >>> 13) % 991 / 991;
+    const skySpot = tall => (tall ? [.3 + across * .4, .2 + down * .16] : [.2 + across * .6, .34 + down * .3]);
+    window.portfolioSkySpot = skySpot;
+    const wantSpot = (width, height) => (root.dataset.effects === 'low' ? null : skySpot(height >= width * 1.1));
 
-    // The finished picture, decoded and laid on the lattice's layer; the sky
-    // fades in once it is ready.
+    // What moves on it: stars that glint and shooting stars. Where the glints stand is
+    // part of the visit's sky too.
+    const life = document.createElement('div');
+    life.className = 'sky-life';
+    life.setAttribute('aria-hidden', 'true');
+    life.hidden = true;
+    {
+        let state = seed ^ 0x2545f491;
+        const random = () => {
+            state = (state + 0x6D2B79F5) | 0;
+            let t = Math.imul(state ^ (state >>> 15), 1 | state);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        for (let i = 0; i < 12; i++) {
+            const glint = document.createElement('span');
+            glint.className = 'sky-glint';
+            // Most of them off to the right, clear of the page's words.
+            const x = random() < .72 ? 44 + random() * 54 : 2 + random() * 42;
+            glint.style.cssText = `--x:${x.toFixed(1)}%;--y:${(4 + random() * 92).toFixed(1)}%;--period:${(5 + random() * 7).toFixed(2)}s;--slow:${(16 + random() * 14).toFixed(2)}s;--delay:${(-random() * 30).toFixed(2)}s`;
+            life.appendChild(glint);
+        }
+    }
+    const shooters = [];
+    for (let i = 0; i < 5; i++) {
+        const shooter = document.createElement('span');
+        shooter.className = 'sky-shooting';
+        shooter.addEventListener('animationend', () => shooter.classList.remove('is-shooting'));
+        shooters.push(shooter);
+        life.appendChild(shooter);
+    }
+    layer.after(life);
+    const living = () => wanted && !life.hidden && !document.hidden && !reducedMotion.matches;
+
+    // Now and then a shooting star: at Low a slow one, seldom; at Medium more often,
+    // and sometimes several together.
+    let shootTimer = 0, resting = false;
+    const shoot = (shooter, fromLeft) => {
+        shooter.style.setProperty('--from-x', `${(fromLeft ? 8 + Math.random() * 30 : 45 + Math.random() * 50).toFixed(1)}vw`);
+        shooter.style.setProperty('--from-y', `${(4 + Math.random() * 40).toFixed(1)}vh`);
+        shooter.style.setProperty('--angle', `${(fromLeft ? 18 + Math.random() * 22 : 140 + Math.random() * 22).toFixed(1)}deg`);
+        shooter.style.setProperty('--travel', `${(18 + Math.random() * 22).toFixed(1)}vmax`);
+        shooter.classList.remove('is-shooting');
+        void shooter.offsetWidth;
+        shooter.classList.add('is-shooting');
+    };
+    const scheduleShot = () => {
+        clearTimeout(shootTimer);
+        const low = root.dataset.effects === 'low';
+        shootTimer = window.setTimeout(() => {
+            if (living() && !resting && root.dataset.effects === 'low') {
+                const fromLeft = Math.random() < .35;
+                const count = !low && Math.random() < .25 ? 3 + Math.floor(Math.random() * 3) : 1;
+                for (let i = 0; i < count; i++) window.setTimeout(() => shoot(shooters[i], fromLeft), i * (180 + Math.random() * 260));
+            }
+            if (wanted) scheduleShot();
+        }, low ? 18000 + Math.random() * 16000 : 5000 + Math.random() * 6000);
+    };
+    const rest = () => {
+        resting = true;
+        life.classList.add('is-resting');
+    };
+    const wake = () => {
+        resting = false;
+        life.classList.remove('is-resting');
+    };
+    document.addEventListener('portfolio:modal-open', rest);
+    document.addEventListener('portfolio:modal-close', wake);
+
+    // The picture as cosmos.js takes it: the image, and the size it was drawn for.
+    const handOver = detail => {
+        window.portfolioStillSky = detail;
+        document.dispatchEvent(new CustomEvent('portfolio:sky-picture', { detail }));
+    };
+    // The finished picture, decoded and laid on the layer; it fades in once it is ready,
+    // and one that takes the place of another fades over it (.background-grid::after).
     const adopt = (blob, ticket) => {
         if (!blob || ticket !== job) return;
         const next = URL.createObjectURL(blob);
@@ -1349,14 +2045,31 @@ function setupStillSky(layer) {
             }
             const previous = url;
             url = next;
+            if (previous && 'sky' in layer.dataset) {
+                clearTimeout(swapTimer);
+                layer.style.setProperty('--still-sky-old', `url("${previous}")`);
+                delete layer.dataset.swap;
+                void layer.offsetWidth;
+                layer.dataset.swap = '';
+            }
             layer.style.setProperty('--still-sky', `url("${next}")`);
             layer.dataset.sky = '';
-            if (previous) window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
+            if (wanted) life.hidden = false;
+            handOver({ picture, width: drawnWidth, height: drawnHeight });
+            if (previous) {
+                swapTimer = window.setTimeout(() => {
+                    delete layer.dataset.swap;
+                    layer.style.removeProperty('--still-sky-old');
+                    URL.revokeObjectURL(previous);
+                }, 1000);
+            }
         });
     };
-    // For a browser with no canvas for its workers to draw on. All of it runs
-    // on the page's thread: toBlob reads the picture back and encodes it there,
-    // a few rows at a time, in the browser's idle moments.
+    // At Low, for the cheapest machine there is, at the screen's plain resolution: a
+    // quarter of the memory of the sharper picture, and the stars are points anyway.
+    const targetRatio = () => Math.min(window.devicePixelRatio || 1, root.dataset.effects === 'low' ? 1 : 1.5);
+    // For a browser with no canvas for its workers to draw on. All of it runs on the
+    // page's thread, in its idle moments.
     const buildHere = (width, height, ratio, ticket) => {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(width * ratio);
@@ -1364,20 +2077,16 @@ function setupStillSky(layer) {
         const context = canvas.getContext('2d');
         if (!context) return;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        paintStillSky(context, width, height, seed);
+        paintGalaxySky(context, width, height, seed, wantFull(), live, wantDark(), wantSpot(width, height));
         canvas.toBlob(blob => adopt(blob, ticket), 'image/png');
     };
-    // Medium is where every visit starts, and on the page's thread this was
-    // half of what a load asked of it: on a slow laptop more than a second of
-    // drawing, reading back and encoding, in long tasks, while the visitor was
-    // already trying to scroll. Off that thread none of it can hold anything
-    // up, and with nothing waiting on the page's idle moments the sky arrives
-    // sooner.
+    // Every visit starts at Medium, so this is drawn on every load. Off the page's
+    // thread none of it can hold anything up.
     const build = () => {
         const width = window.innerWidth, height = window.innerHeight;
-        const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+        const ratio = targetRatio();
         const ticket = ++job;
-        drawnWidth = width; drawnHeight = height; drawnRatio = ratio;
+        drawnWidth = width; drawnHeight = height; drawnRatio = ratio; drawnFull = wantFull(); drawnLive = live; drawnDark = wantDark(); drawnSpot = !!wantSpot(width, height);
         if (!('OffscreenCanvas' in window) || !('Worker' in window)) {
             buildHere(width, height, ratio, ticket);
             return;
@@ -1407,13 +2116,18 @@ function setupStillSky(layer) {
             finish();
             adopt(data, ticket);
         };
-        worker.postMessage({ width, height, ratio, seed });
+        worker.postMessage({ width, height, ratio, seed, full: wantFull(), live, dark: wantDark(), spot: wantSpot(width, height) });
     };
-    // Sized to cover the window, so a phone's address bar sliding away only
-    // trims an edge; a new shape or a new zoom draws it again.
+    // Sized to cover the window, so a phone's address bar sliding away only trims an
+    // edge; a new shape, a new zoom or a level that wants it sharper or fuller draws it
+    // again.
     const reshaped = () => window.innerWidth !== drawnWidth
         || Math.abs(window.innerHeight / drawnHeight - 1) > .2
-        || Math.min(window.devicePixelRatio || 1, 1.5) !== drawnRatio;
+        || targetRatio() !== drawnRatio
+        || wantFull() !== drawnFull
+        || wantDark() !== drawnDark
+        || !!wantSpot(window.innerWidth, window.innerHeight) !== drawnSpot
+        || (drawnFull && live !== drawnLive);
     window.addEventListener('resize', () => {
         if (!wanted) return;
         clearTimeout(resizeTimer);
@@ -1426,113 +2140,103 @@ function setupStillSky(layer) {
         if (url) URL.revokeObjectURL(url);
         url = '';
         drawnWidth = drawnHeight = drawnRatio = 0;
+        drawnFull = false;
+        handOver(null);
     };
     return {
         show() {
             clearTimeout(releaseTimer);
-            if (wanted) return;
+            if (wanted) {
+                // From one level to another: the picture at the resolution, and with the
+                // things, that level wants, started at once so it is in by the end of the
+                // change's transition (it is painted off the page's thread).
+                if (reshaped()) build();
+                scheduleShot();
+                return;
+            }
             wanted = true;
-            if (url && !reshaped()) layer.dataset.sky = '';
-            else idle(() => { if (wanted) build(); }, { timeout: 600 });
+            scheduleShot();
+            if (url && !reshaped()) {
+                layer.dataset.sky = '';
+                life.hidden = false;
+            } else idle(() => { if (wanted) build(); }, { timeout: 600 });
         },
-        // Handed back once the lattice's fade has carried it out.
+        // Handed back once the layer's fade has carried it out.
         hide() {
             if (!wanted) return;
             wanted = false;
             job++;
+            life.hidden = true;
+            clearTimeout(shootTimer);
             clearTimeout(resizeTimer);
             clearTimeout(releaseTimer);
-            releaseTimer = window.setTimeout(release, 700);
+            // Kept a while, so coming back from an eye has it at once.
+            releaseTimer = window.setTimeout(release, 20000);
+        },
+        // cosmos.js could not run here: Medium's picture gets the things it would have floated.
+        alone() {
+            if (!live) return;
+            live = false;
+            if (wanted && reshaped()) idle(() => { if (wanted) build(); }, { timeout: 600 });
         }
     };
 }
 
-// ---- The living sky (High FX) ------------------------------------------------
-// The sky itself is setupGalaxyField, in galaxy.js, and it is most of the site's
-// script: three bytes in every five of what used to arrive in this file, seventy
-// kilobytes off the wire. Every visit starts at Medium and High is only ever
-// chosen on the slider, so most visitors never see it, and they were downloading
-// it and having it set up, on the thread that was trying to draw the page, for
-// nothing. It is fetched the first time High is wanted, and this stands in for it
-// until then. What the page says to it before it arrives is either kept for it
-// (its level and how far it has been eased) or is about something it would not
-// have been showing yet anyway (the cursor, a scroll).
-function setupDeferredGalaxy(canvas, reducedMotion) {
-    // The visit's two rolls for the sky, thrown here rather than when it
-    // arrives. A visit's Math.random used to be drawn on in that order, and the
-    // perf tools seed it so that two runs draw the same sky.
-    const landmarkRoll = Math.random(), universeRoll = Math.random();
-    let sky = null, script = null, ahead = null;
-    // The level the sky was last asked for while it was not here, and anything
-    // else to tell it when it is.
-    let wanted = null;
-    const settings = [];
-    // The same version as this file, so what bumps one bumps both.
-    const source = `galaxy.js${PORTFOLIO_SCRIPT_QUERY}`;
+// ---- The living sky (Medium and High FX) -----------------------------------------
+// cosmos.js, fetched the first time Medium or High wants it and never for Low. Every visit
+// starts at Medium, so it is asked for on every load -- once the page has settled, so the
+// first paint does not wait on it. Its canvas is put up now, empty and hidden, so it has
+// its place among the backdrop's layers. Where it cannot run (no WebGL 2, or a graphics
+// card the browser only imitates), the still sky is painted with what it would have
+// floated over it.
+function setupDeferredCosmos(canvas, stillSky) {
+    let wanted = '', script = null, failed = false, eased = false, asked = false;
+    const fail = () => {
+        failed = true;
+        stillSky.alone();
+    };
+    document.addEventListener('portfolio:cosmos-failed', fail);
     const arrive = () => {
-        if (!wanted || sky) return;
-        sky = setupGalaxyField(canvas, reducedMotion, landmarkRoll, universeRoll);
-        settings.splice(0).forEach(name => sky[name]());
-        const [mode, animate] = wanted;
-        wanted = null;
-        sky.setQuality(mode, animate);
+        if (!wanted || failed) return;
+        if (eased) window.portfolioCosmos.ease();
+        if (!window.portfolioCosmos.show(canvas, wanted)) fail();
     };
     const load = () => {
-        if (typeof setupGalaxyField === 'function') {
-            arrive();
-            return;
-        }
-        if (script) return;
+        if (script || failed) return;
         script = document.createElement('script');
-        script.src = source;
+        script.src = `cosmos.js${PORTFOLIO_SCRIPT_QUERY}`;
         script.onload = arrive;
-        // Asked for again the next time High is chosen.
         script.onerror = () => {
             script.remove();
             script = null;
         };
         document.head.appendChild(script);
     };
-    // Fetched, but not run, as soon as the pointer or the keyboard reaches the
-    // slider, so a first move to High on a slow connection does not wait for it.
-    const fetchAhead = () => {
-        if (ahead || script) return;
-        ahead = document.createElement('link');
-        ahead.rel = 'prefetch';
-        ahead.as = 'script';
-        ahead.href = source;
-        document.head.appendChild(ahead);
-    };
-    const slider = document.getElementById('fx-slider');
-    slider?.addEventListener('pointerenter', fetchAhead, { once: true, passive: true });
-    slider?.addEventListener('focusin', fetchAhead, { once: true, passive: true });
-    canvas.hidden = true;
-    const remember = name => () => {
-        if (sky) sky[name]();
-        else settings.push(name);
-    };
     return {
-        move: event => sky?.move(event),
-        release: () => sky?.release(),
-        scroll: y => sky?.scroll(y),
-        refreshLayout: () => sky?.refreshLayout(),
-        touchStart: (id, x, y, target) => sky?.touchStart(id, x, y, target),
-        touchMove: (id, x, y) => sky?.touchMove(id, x, y),
-        touchEnd: id => sky?.touchEnd(id),
-        ease: remember('ease'),
-        lighten: remember('lighten'),
-        sharpen: remember('sharpen'),
-        setQuality(mode, animate) {
-            if (sky) {
-                sky.setQuality(mode, animate);
+        show(level) {
+            wanted = level;
+            if (failed) return;
+            if (window.portfolioCosmos) {
+                arrive();
                 return;
             }
-            wanted = mode === 'high' ? [mode, animate] : null;
-            if (wanted) load();
+            if (asked) {
+                load();
+                return;
+            }
+            asked = true;
+            (window.requestIdleCallback || (callback => window.setTimeout(callback, 200)))(load, { timeout: 1500 });
+        },
+        hide() {
+            wanted = '';
+            window.portfolioCosmos?.hide();
+        },
+        ease() {
+            eased = true;
+            window.portfolioCosmos?.ease();
         }
     };
 }
-
 // Which surfaces answer a pointer, and how far each one is allowed to move.
 // The spotlight and the tilt are lifted from motion-primitives' Spotlight and
 // Tilt; their rotation default is 15deg, which is far too much for a card the

@@ -232,17 +232,6 @@ button { font: inherit; }
     opacity: 1;
     transition: opacity 1.4s ease;
 }
-.galaxy-field {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    width: 100%;
-    height: 100%;
-    opacity: .94;
-    transition: opacity 1.4s ease;
-    contain: strict;
-}
 .galaxy-nebula {
     position: absolute;
     inset: 0;
@@ -503,8 +492,8 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .project-card { display: flex; height: var(--project-card-height); flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s; }
 .project-card:hover { --card-lift: var(--lift-card); border-color: rgba(123,168,216,.42); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
 .project-card[role="button"]:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
-.project-image-wrapper { position: relative; height: var(--project-image-height); overflow: hidden; background: #34363d; }
-.project-image { width: 100%; height: 100%; object-fit: contain; object-position: center; background: #0c0c0c; transition: transform .25s var(--ease); }
+.project-image-wrapper { position: relative; height: var(--project-image-height); overflow: hidden; background: transparent; }
+.project-image { width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transition: transform .25s var(--ease); }
 .project-image.is-certificate-thumbnail { object-fit: cover; object-position: center top; transform: scale(1.35); transform-origin: center top; }
 .project-card:hover .project-image.is-certificate-thumbnail { transform: scale(1.35); }
 .project-card:hover .project-image { transform: scale(1.012); }
@@ -577,12 +566,15 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-period[hidden] { display: none; }
 .modal-program-summary { --lh: 1.6; margin: 0 0 var(--rhythm-block); max-width: 42.5rem; color: var(--muted); font-size: var(--type-small); line-height: var(--lh); }
 .modal-program-summary[hidden] { display: none; }
-.modal-image { display: block; width: 100%; height: auto; max-height: 410px; aspect-ratio: 16 / 9; min-height: 0; margin-bottom: var(--rhythm-block); overflow: hidden; background: #0c0c0c; }
-.modal-image img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; }
-.modal-image.is-certificate { background: #0c0c0c; }
-.modal-image.is-certificate img { width: 100%; height: 100%; object-fit: contain; }
-.modal-image.has-motion-media { display: block; height: auto; max-height: 410px; aspect-ratio: 16 / 9; background: #0c0c0c; }
-.modal-image.has-motion-media img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
+/* A project's lead picture at its own shape: no band of another colour round a picture
+   that is taller or wider than the frame, just the picture, centred on the sheet, with
+   the sheet itself round it. */
+.modal-image { display: flex; justify-content: center; align-items: center; width: 100%; height: auto; max-height: none; aspect-ratio: auto; min-height: 0; margin-bottom: var(--rhythm-block); overflow: visible; background: transparent; }
+.modal-image img { display: block; width: auto; max-width: 100%; height: auto; max-height: min(410px, 52vh); object-fit: contain; border-radius: inherit; }
+.modal-image.is-certificate,
+.modal-image.has-motion-media { background: transparent; aspect-ratio: auto; max-height: none; }
+.modal-image.is-certificate img,
+.modal-image.has-motion-media img { width: auto; max-width: 100%; height: auto; max-height: min(410px, 52vh); object-fit: contain; }
 .modal-summary { --lh: 1.55; line-height: var(--lh); color: #dedee0; font-size: 1.125rem; font-weight: 600; }
 .modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
 .modal-overview { margin: var(--rhythm-header) 0; padding: var(--space-5); border: 1px solid rgba(85,168,255,.28); background: linear-gradient(145deg, rgba(85,168,255,.07), rgba(255,255,255,.018) 44%, transparent); }
@@ -613,11 +605,11 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
    nearly as far from its own paragraph as from the one before it. */
 .modal-detail-section h4 { margin-bottom: var(--rhythm-heading); color: var(--ink); font-family: var(--font-display); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); line-height: 1.05; text-transform: uppercase; }
 .modal-media { display: grid; grid-template-columns: 1fr; gap: var(--gutter); margin: 0 0 var(--rhythm-block); align-items: start; }
-.modal-media-item { display: flex; width: 100%; min-height: 0; margin: 0; flex-direction: column; align-self: start; background: #0c0c0c; overflow: hidden; }
+.modal-media-item { display: flex; width: 100%; min-height: 0; margin: 0; flex-direction: column; align-self: start; background: transparent; overflow: hidden; }
 .modal-media-item img { width: 100%; height: auto; display: block; object-fit: contain; object-position: center; }
-.modal-media-item.media-contain { background: #0c0c0c; }
+.modal-media-item.media-contain { background: transparent; }
 .modal-media-item.media-contain img { height: auto; padding: var(--space-2); object-fit: contain; }
-.modal-media-item.is-motion-media { background: #0c0c0c; }
+.modal-media-item.is-motion-media { background: transparent; }
 .modal-media-item.is-motion-media img { height: auto; object-fit: contain; }
 /* The caption bar is lighter than the sheet, so the sheet's grey sat at only
    5.6:1 on it -- the faintest words on the site. This grey holds 9:1. */
@@ -723,9 +715,9 @@ main { padding-top: 0; }
 .projects-grid { gap: var(--gutter); border: 0; }
 .project-card { background: var(--glass-surface); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
 .project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
-.project-image-wrapper { height: var(--project-image-height); background: #1f1f1f; }
+.project-image-wrapper { height: var(--project-image-height); background: transparent; }
 .project-card:hover .project-image { transform: scale(1.035); }
-.project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: #0c0c0c; }
+.project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: transparent; }
 /* 14px, not 12.5: the condensed face is the hardest one on the page to read
    small, and this is the one place it sat below its floor. */
 .project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: var(--font-display); font-size: .875rem; letter-spacing: .08em; }
@@ -758,7 +750,6 @@ footer { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .background-grid { transform: none !important; }
-    .galaxy-field { transform: none !important; }
     .galaxy-nebula { transform: none !important; opacity: .54; }
     .cursor-spark, .cursor-ripple { display: none; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -1640,39 +1631,30 @@ html:is([data-effects="medium"], [data-effects="high"]) .project-carousel.is-dra
     }
 }
 
-/* ---- The backdrop without the sky -----------------------------------------
-   Low and Medium FX draw no sky. The lattice stands in for it, still, on one
-   fixed layer painted once: a scroll moves the page over it and never paints
-   it again. portfolio.js sets data-look on it to the level (and holds the
-   level's look under the sky while the sky fades in over it); with no
-   data-look -- High FX -- it is not drawn at all. The cursor's dot and
-   sparks, and the layers a shooting star or a feeding hole cross on, belong
-   to the sky and go with it. The sky's canvas is hidden by portfolio.js
-   once it has faded out, and its memory handed back. */
+/* ---- The backdrop ----------------------------------------------------------
+   Every level lays down a still sky (setupStillSky, portfolio.js) on one fixed
+   layer painted once: a scroll moves the page over it and never paints it
+   again. portfolio.js sets data-look on it to the level. Medium and High draw
+   the living sky over it (.cosmos, cosmos.js). The cursor's dot and sparks
+   belong to High. */
+/* Deep space, for the moment before the galaxy's picture arrives. */
 .background-grid[data-look] {
     display: block;
-    background-image:
-        linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.095) 1px, transparent 1px),
-        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px);
-    background-size: 3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem;
-    opacity: .78;
+    background: radial-gradient(ellipse 75% 65% at 76% 50%, #08080c, #030305 45%, #000000);
+    opacity: 1;
 }
-html:is([data-effects="low"], [data-effects="medium"]) :is(.galaxy-nebula, .galaxy-streak,
-    .cursor-dot, .cursor-spark, .cursor-ripple) {
+html:is([data-effects="low"], [data-effects="medium"]) :is(.galaxy-nebula, .cursor-dot, .cursor-spark, .cursor-ripple) {
     display: none !important;
 }
-/* Medium FX lays a still sky on the same layer as the lattice: stars in
-   High's colours, a band where they crowd, two clusters and a few soft
-   clouds, drawn once by setupStillSky (portfolio.js) and handed over as
-   --still-sky. It is part of the layer's one painting, so a scroll moves
-   it without drawing it again, and Medium costs what Low does at rest. It
-   fades in once the picture is ready (data-sky) and out on the way down
-   to Low; going up to High, the moving sky fades in over it. The washes
-   Medium used to wear were a tint across the page with nothing in them;
-   this is the sky itself, stopped. */
-.background-grid::before {
+html[data-effects="high"] .galaxy-nebula { display: none; }
+/* The still sky: deep space, nebulae, a band of stars and thousands more,
+   drawn once by setupStillSky (portfolio.js) and handed over as --still-sky.
+   It is part of the layer's one painting, so a scroll moves the page over it
+   without drawing it again. It fades in once the picture is ready (data-sky);
+   a new picture taking the place of another -- a change of level, or of the
+   window's shape -- fades in over it, the old one held on ::after as it goes. */
+.background-grid::before,
+.background-grid::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -1680,101 +1662,222 @@ html:is([data-effects="low"], [data-effects="medium"]) :is(.galaxy-nebula, .gala
     opacity: 0;
     transition: opacity .6s ease;
 }
-.background-grid[data-look="medium"][data-sky]::before {
+.background-grid::after {
+    background-image: var(--still-sky-old, none);
+    transition: none;
+}
+.background-grid[data-look][data-sky]::before {
     opacity: 1;
 }
+.background-grid[data-swap]::after { animation: sky-swap .8s ease both; }
+@keyframes sky-swap { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
     .background-grid::before { transition-duration: 0s; }
+    .background-grid[data-swap]::after { animation: none; }
 }
-
-/* High FX paints the grid on the galaxy canvas instead, so it bends with the
-   rest of the sheet when a touch presses into it. A CSS background cannot be
-   warped locally, and a dead-straight lattice over a sagging field was the one
-   thing giving away that the backdrop was layers rather than a surface. And it
-   paints the veil and the page's background into that canvas too, as one
-   opaque layer (see setupGalaxyField). Laid over the sky as an element of its
-   own, the veil -- and the canvas at 94% over the background -- were two more
-   full-screen layers the browser blended into every frame the sky drew. */
-html[data-effects="high"] .galaxy-nebula {
-    display: none;
-}
-html[data-effects="high"] .galaxy-field {
-    opacity: 1;
-}
-/* Fading out to a lower level, and back in over it (portfolio.js), in
-   step with SKY_FADE_MS there. The fade is the only time the sky is not
-   one opaque layer. */
-html[data-effects] .galaxy-field.is-faded {
-    opacity: 0;
-}
-.galaxy-field.is-faded,
-.galaxy-field.is-arriving {
-    transition-duration: .45s;
-}
-@media (prefers-reduced-motion: reduce) {
-    .galaxy-field.is-faded,
-    .galaxy-field.is-arriving {
-        transition-duration: 0s;
-    }
-}
-/* A shooting star crosses on a small canvas of its own, carried along under
-   it, and a black hole that is feeding eats on one; neither needs the sky
-   redrawn to move (see drawStreaks and drawHoleLayers). */
-.galaxy-streak {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 0;
-    display: none;
-    pointer-events: none;
-    will-change: transform;
-    transition: opacity 1.4s ease;
-}
+/* High's eye brings a backdrop of its own and wants nothing under it. */
+html[data-effects="high"][data-ego] .background-grid { display: none; }
 @media (max-width: 900px) {
     .nav-links { display: flex; }
     .nav-links > li:not(.performance-control) { display: none; }
 }
 
-/* The lattice is the same one the canvas draws in High FX -- the same two
-   densities, the same blue major and white minor -- so switching levels
-   changes how the backdrop moves, not what it is. This used to replace that
-   lattice outright with three fields of scattered dots, which read as a
-   starfield with no grid in it at all. The two soft clouds stay: they are the
-   depth, and they sit behind the lines rather than instead of them. */
-.background-grid[data-look] {
-    background-image:
-        linear-gradient(rgba(145,200,255,.095) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(145,200,255,.095) 1px, transparent 1px),
-        linear-gradient(rgba(255,255,255,.032) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.032) 1px, transparent 1px),
-        radial-gradient(ellipse at 16% 24%, rgba(134,160,190,.055), transparent 35%),
-        radial-gradient(ellipse at 85% 66%, rgba(175,151,125,.035), transparent 30%);
-    background-size:
-        3rem 3rem, 3rem 3rem, .75rem .75rem, .75rem .75rem,
-        100% 100%, 100% 100%;
-}
-
-/* Left alone, the whole backdrop goes to black together. Every layer fades on
-   exactly the same curve and the same clock as the grid -- one of them lagging
-   behind is what makes the page look like a stack of effects rather than a
-   single view that is settling. */
-html.effects-background-idle .background-grid,
-html.effects-background-idle .galaxy-field,
-html.effects-background-idle .galaxy-nebula,
-html.effects-background-idle .galaxy-streak {
+/* Left alone, the whole backdrop goes to black together: a few seconds after
+   anyone last moved (portfolio.js, IDLE_DARK_MS), and when the tab goes away. Every layer fades on exactly the same curve
+   and the same clock -- one of them lagging behind is what makes the page
+   look like a stack of effects rather than a single view that is settling --
+   and they come back together, a little quicker, when someone moves. */
+html.effects-background-idle :is(.background-grid, .sky-life, .cosmos, .galaxy-nebula) {
     opacity: 0;
     transition-duration: 1.4s;
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
-html.effects-background-click-fading .background-grid,
-html.effects-background-click-fading .galaxy-field,
-html.effects-background-click-fading .galaxy-nebula,
-html.effects-background-click-fading .galaxy-streak {
+html.effects-background-click-fading :is(.background-grid, .sky-life, .cosmos, .galaxy-nebula) {
     opacity: 0;
     transition-duration: 3.5s;
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
-
+/* ---- What moves on the still sky (Low FX) ----------------------------------------
+   setupStillSky (portfolio.js) draws the sky once into the layer above; these are the
+   few things on it that move at Low, all of them the compositor's: four stars brighten
+   and fade over half a minute, a step at a time, and a slow shooting star comes by
+   seldom. Medium and High have the living sky over it instead (.cosmos, cosmos.js). */
+.sky-life {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.sky-life[hidden],
+html:is([data-y2k], [data-iris], [data-vapor], [data-ego]) .sky-life { display: none; }
+.sky-glint {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: -.625rem 0 0 -.625rem;
+    background:
+        radial-gradient(circle, #ffffff 0 7%, rgba(196, 214, 255, .55) 14%, transparent 40%),
+        linear-gradient(transparent 47%, rgba(214, 228, 255, .8) 50%, transparent 53%),
+        linear-gradient(90deg, transparent 47%, rgba(214, 228, 255, .8) 50%, transparent 53%);
+    -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+    mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+    opacity: .45;
+    transform: scale(.5);
+    animation: sky-glint var(--period, 7s) var(--delay, 0s) infinite;
+    will-change: transform, opacity;
+}
+@keyframes sky-glint {
+    0%, 82%, 100% { opacity: .45; transform: scale(.5); animation-timing-function: steps(1, end); }
+    84% { opacity: .8; transform: scale(.85) rotate(12deg); animation-timing-function: steps(1, end); }
+    87% { opacity: 1; transform: scale(1.3) rotate(26deg); animation-timing-function: steps(1, end); }
+    90% { opacity: .9; transform: scale(1.05) rotate(36deg); animation-timing-function: steps(1, end); }
+    94% { opacity: .7; transform: scale(.75) rotate(44deg); animation-timing-function: steps(1, end); }
+}
+/* At Low, only four, and those slow: up over six seconds in twelve steps, held, and down
+   again the same way. */
+html[data-effects="low"] .sky-glint:nth-of-type(n + 5) { display: none; }
+html[data-effects="low"] .sky-glint { animation: sky-breathe var(--slow, 22s) var(--delay, 0s) infinite steps(1, end); }
+@keyframes sky-breathe {
+    0%, 60%, 100% { opacity: .12; transform: scale(.4); }
+    62% { opacity: .2; transform: scale(.48); }
+    64% { opacity: .3; transform: scale(.56); }
+    66% { opacity: .42; transform: scale(.64); }
+    68% { opacity: .55; transform: scale(.72); }
+    70% { opacity: .66; transform: scale(.8); }
+    72% { opacity: .75; transform: scale(.86); }
+    78% { opacity: .66; transform: scale(.8); }
+    80% { opacity: .55; transform: scale(.72); }
+    82% { opacity: .42; transform: scale(.64); }
+    84% { opacity: .3; transform: scale(.56); }
+    86% { opacity: .2; transform: scale(.48); }
+}
+.sky-shooting {
+    position: absolute;
+    left: calc(var(--from-x, 80vw) - 14rem);
+    top: var(--from-y, 10vh);
+    width: 14rem;
+    height: 2px;
+    margin-top: -1px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(190, 210, 255, .45) 70%, #ffffff);
+    opacity: 0;
+    transform-origin: 100% 50%;
+    transform: rotate(var(--angle, 150deg));
+}
+.sky-shooting.is-shooting { animation: sky-shoot .9s cubic-bezier(.3, .1, .6, 1) both; }
+html[data-effects="low"] .sky-shooting.is-shooting { animation-duration: 2.6s; animation-timing-function: cubic-bezier(.25, .1, .4, 1); }
+@keyframes sky-shoot {
+    0% { opacity: 0; transform: rotate(var(--angle, 150deg)) translateX(0) scaleX(.2); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--angle, 150deg)) translateX(var(--travel, 30vmax)) scaleX(1); }
+}
+/* Medium's and High's stars move in cosmos.js. */
+html:is([data-effects="medium"], [data-effects="high"]) .sky-life { display: none; }
+/* The same sky at Low, its stars dimmer. */
+html[data-effects="low"] .background-grid[data-look][data-sky]::before { opacity: .62; }
+.sky-life.is-resting *,
+html.effects-background-idle .sky-life * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+    .sky-life * { animation: none !important; }
+    .sky-shooting { display: none; }
+}
+.cosmos {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    transition: opacity .9s cubic-bezier(.16, .85, .3, 1);
+}
+.cosmos[hidden],
+html:is([data-y2k], [data-iris], [data-vapor], [data-ego]) .cosmos { display: none; }
+/* ---- Every switch is seen to happen -----------------------------------------
+   portfolio.js (shift) holds a snapshot of the page as it was and uncovers the
+   new one under it; html[data-shift] says how. The higher the level it goes
+   to, the more happens. A press goes straight through to the page under it. */
+::view-transition { pointer-events: none; }
+html[data-shift]::view-transition-old(root),
+html[data-shift]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+/* Up to Medium the page spreads out from the slider; down, it draws back into it. */
+html[data-shift="rise"]::view-transition-new(root) { animation: shift-spread .62s cubic-bezier(.65, 0, .2, 1) both; }
+html[data-shift="fall"]::view-transition-old(root) { z-index: 1; animation: shift-gather .56s cubic-bezier(.65, 0, .35, 1) both; }
+/* Up to High it bursts out of the slider, blinding at first and swelling as it
+   comes, while the page it leaves falls away into the dark behind it. */
+html[data-shift="surge"]::view-transition-old(root) { animation: shift-recede .95s cubic-bezier(.5, 0, .75, 0) both; }
+html[data-shift="surge"]::view-transition-new(root) { z-index: 1; animation: shift-surge .95s cubic-bezier(.16, .85, .3, 1) both; }
+/* The desk breaks in torn across, and leaving it switches off like an old screen. */
+html[data-shift="glitch"]::view-transition-new(root) { animation: shift-glitch .5s both; }
+html[data-shift="glitch"]::view-transition-old(root) { animation: shift-shake .5s both; }
+html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift-off .5s cubic-bezier(.5, 0, .9, .3) both; }
+@keyframes shift-spread {
+    from { clip-path: circle(0 at var(--shift-x) var(--shift-y)); }
+    to { clip-path: circle(150vmax at var(--shift-x) var(--shift-y)); }
+}
+@keyframes shift-gather {
+    from { clip-path: circle(150vmax at var(--shift-x) var(--shift-y)); }
+    to { clip-path: circle(0 at var(--shift-x) var(--shift-y)); }
+}
+@keyframes shift-recede {
+    to { transform: scale(.82) rotate(-2deg); filter: brightness(.15) blur(4px); }
+}
+@keyframes shift-surge {
+    0% { clip-path: circle(0 at var(--shift-x) var(--shift-y)); transform-origin: var(--shift-x) var(--shift-y); transform: scale(1.25); filter: brightness(3.5) saturate(1.6) contrast(1.3); }
+    40% { filter: brightness(1.8) saturate(1.3); }
+    70% { transform: scale(.985); filter: brightness(1.15); }
+    100% { clip-path: circle(150vmax at var(--shift-x) var(--shift-y)); transform-origin: var(--shift-x) var(--shift-y); transform: none; filter: none; }
+}
+/* Between the stars and the eye (portfolio.js, warp): the canvas the burst, the
+   blocks and the light pouring into an eye are drawn on, over the backdrop and under
+   the page, there only while one plays; and at Low, where the old backdrop went. */
+.switch-fx {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.warp-flash {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 0;
+    width: 60vmax;
+    height: 60vmax;
+    margin: -30vmax 0 0 -30vmax;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, #ffffff 0 2%, rgba(255, 226, 196, .8) 5%, rgba(255, 150, 90, .32) 16%, rgba(120, 60, 160, .12) 34%, transparent 62%);
+    opacity: 0;
+}
+@keyframes shift-glitch {
+    0% { clip-path: inset(0 0 100% 0); animation-timing-function: steps(1, end); }
+    12% { clip-path: inset(18% 0 62% 0); translate: -2vw 0; animation-timing-function: steps(1, end); }
+    24% { clip-path: inset(0 0 70% 0); translate: 1.5vw 0; animation-timing-function: steps(1, end); }
+    36% { clip-path: inset(40% 0 25% 0); translate: -1vw 0; animation-timing-function: steps(1, end); }
+    48% { clip-path: inset(0 0 35% 0); translate: 2vw 0; animation-timing-function: steps(1, end); }
+    60% { clip-path: inset(55% 0 0 0); translate: -.6vw 0; animation-timing-function: steps(1, end); }
+    72% { clip-path: inset(0 0 12% 0); translate: .8vw 0; animation-timing-function: steps(1, end); }
+    84% { clip-path: inset(0); translate: -.3vw 0; animation-timing-function: steps(1, end); }
+    100% { clip-path: inset(0); translate: 0 0; }
+}
+@keyframes shift-shake {
+    0%, 100% { translate: 0 0; animation-timing-function: steps(1, end); }
+    20% { translate: 1vw 0; animation-timing-function: steps(1, end); }
+    40% { translate: -1.4vw 0; animation-timing-function: steps(1, end); }
+    60% { translate: .8vw 0; animation-timing-function: steps(1, end); }
+    80% { translate: -.4vw 0; animation-timing-function: steps(1, end); }
+}
+@keyframes shift-off {
+    0% { transform: none; filter: none; }
+    55% { transform: scale(1, .004); filter: brightness(2.6); }
+    100% { transform: scale(0, .004); filter: brightness(3); }
+}
 /* ---- The page grid --------------------------------------------------------
    Every three-up region on the page runs on one track definition and one
    gutter, so About, Skills, Projects and Contact resolve to identical column
