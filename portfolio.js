@@ -516,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_CYCLE_PRESSES = 2;
     const SKY_UNLOCK_QUIET_MS = 2500;
     const SKY_CYCLE_QUIET_MS = 700;
-    const SKY_VERSION = '20261102c';
+    const SKY_VERSION = '20261102f';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         vapor: { level: 'medium', script: 'portfolioVapor', file: 'vapor.js' },

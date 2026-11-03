@@ -1,9 +1,8 @@
-/* The dark sky's look on the page (ego.js has the picture itself). Not fetched until
-   a visitor asks for it, and every rule answers only to html[data-ego],
-   which portfolio.js sets only in High FX, so nothing here reaches Low or Medium.
-   Nothing about how anything moves or answers is touched: the lean, the lift, the
-   bend, the rings and the rims are the page's own. Only their colours change, to
-   black glass, gunmetal and a cold thin light. */
+/* The eye's look on the page (ego.js has the eye itself): Low's other look (y2k.css),
+   rule for rule, with High's glass kept. Not fetched until a visitor asks for it, and
+   every rule answers only to html[data-ego], which portfolio.js sets only in High FX,
+   so nothing here reaches Low or Medium. The lean, the lift, the bend, the frost, the
+   rings and the rims are the page's own and keep working as they do. */
 .ego-scene {
     position: fixed;
     inset: 0;
@@ -14,144 +13,246 @@
     pointer-events: none;
 }
 .ego-scene[hidden] { display: none; }
-
 /* A press goes straight through the crossfade to the page under it. */
 ::view-transition { pointer-events: none; }
 ::view-transition-old(root),
 ::view-transition-new(root) {
-    animation-duration: 1.2s;
+    animation-duration: .9s;
 }
 
 html[data-effects="high"][data-ego] {
-    --bg: #000102;
-    --surface: rgba(3, 7, 12, .66);
-    --surface-raised: rgba(6, 11, 17, .84);
-    --ink: #e9f5fa;
-    --muted: #a5bcc7;
-    --line: rgba(150, 210, 235, .16);
-    --blue: #9fe6ff;
-    --blue-light: #a6ecff;
-    --blue-soft: #8cc6dd;
-    --red: #ff8a70;
-    --yellow: #c9e6f2;
-    --ego-halo: 0 0 .5em rgba(0, 2, 6, .95), 0 1px .14em rgba(0, 0, 0, .95);
+    --bg: #040209;
+    /* Everything that can be seen through is seen through by exactly this much. */
+    --y2k-pane: rgba(12, 7, 26, .84);
+    --y2k-bar: rgba(78, 44, 200, .84);
+    --surface: var(--y2k-pane);
+    --surface-raised: var(--y2k-pane);
+    --ink: #f4f0ff;
+    --muted: #c3b8df;
+    --line: rgba(190, 165, 255, .28);
+    --blue: #c4a8ff;
+    --blue-light: #cdb6ff;
+    --blue-soft: #e3b3ff;
+    --red: #ff9d8a;
+    --yellow: #eadfff;
+    --radius-card: .625rem;
+    --radius-control: 999px;
+    --radius-surface: .75rem;
+    --glass-surface: var(--y2k-pane);
+    --glass-surface-dense: rgba(16, 10, 32, .96);
+    --glass-edge-paint: transparent;
+    --glass-edge-lights: inset 0 0 0 0 transparent;
+    --glass-sheen: none;
+    --glass-shadow: none;
+    --glass-lit-body: #5a3bd0;
+    --glass-lit: linear-gradient(#7c5cf0 0, #4a2bc0 48%, #38209c 52%, #5c3cd8 100%);
+    --glass-lit-glow: none;
+    --glass-lit-ink: #ffffff;
+    /* A wet gel button with a light inside it. */
+    --y2k-gel: linear-gradient(#49397e 0, #2a1f58 47%, #1c1340 53%, #33255f 100%);
+    --y2k-gel-lit: linear-gradient(#8a6cff 0, #5533d0 47%, #3f22a8 53%, #6a48e6 100%);
+    --y2k-gel-shine: inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 -1px 1px rgba(200, 170, 255, .22);
+    --y2k-aura: 0 0 16px rgba(130, 84, 255, .26);
+    --y2k-aura-lit: 0 0 26px rgba(150, 100, 255, .55);
     background-color: var(--bg);
-    /* Black glass, frosted enough that the words on a card are read against dark. */
-    --glass-surface: rgba(2, 5, 9, .62);
-    --glass-surface-dense: rgba(3, 7, 12, .95);
-    --glass-blur: 9px;
-    --glass-brightness: .62;
-    --glass-edge-ring: rgba(170, 215, 240, .14);
-    --glass-edge: linear-gradient(135deg,
-        rgba(225, 245, 255, .62),
-        rgba(130, 170, 195, .24) 22%,
-        rgba(30, 40, 50, .16) 48%,
-        rgba(120, 190, 225, .18) 78%,
-        rgba(225, 245, 255, .42));
-    --glass-edge-blend: normal;
-    --glass-edge-lights:
-        inset 0 1px 1px rgba(225, 245, 255, .26),
-        inset 0 -1px 1px rgba(120, 190, 225, .1);
-    --glass-sheen:
-        radial-gradient(14rem 3rem at var(--glass-glint, 24%) 0%, rgba(200, 235, 255, .12), transparent 72%),
-        linear-gradient(180deg, rgba(200, 235, 255, .07), rgba(200, 235, 255, .015) 2.4rem, rgba(200, 235, 255, 0) 2.45rem);
-    --glass-volume:
-        inset 2px 3px 7px rgba(200, 235, 255, .05),
-        inset -2px -3px 7px rgba(0, 0, 0, .3);
-    --glass-shadow: var(--glass-volume), 0 10px 30px rgba(0, 0, 0, .7);
-    --glass-lit-body: rgba(40, 90, 120, .82);
-    --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(200, 240, 255, .28), rgba(200, 240, 255, 0) 55%), var(--glass-lit-body);
-    --glass-lit-glow: var(--glass-volume), 0 0 26px -4px rgba(120, 210, 250, .55);
-    --glass-lit-ink: #f4fbff;
 }
-html[data-ego] body { background: #000102; }
+html[data-effects="high"][data-ego] body { background: var(--bg); }
 
-/* The big lettering is gunmetal with one line of light on it. */
-html[data-ego] :is(.hero-name, .section-title, .library-heading h3) {
-    color: #dfeaf0;
-    background: linear-gradient(180deg, #f4fafd 0%, #c3d1da 38%, #7d8d98 50%, #4c5a64 55%, #a7b7c2 72%, #e4eef4 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    /* A text shadow would lie over metal painted as a background. */
-    text-shadow: none;
-    filter: drop-shadow(0 .02em .05em rgba(0, 0, 0, .95));
+/* The big lettering gives off light. Painted once with the rest of the page. */
+html[data-effects="high"][data-ego] :is(.hero-name, .section-title, .library-heading h3) {
+    color: #faf7ff;
+    text-shadow: 0 0 .16em rgba(176, 130, 255, .72), 0 0 .5em rgba(110, 60, 255, .4);
 }
-html[data-ego] :is(.hero-badge, .hero-tagline, .bio-text, .section-label, .section-subtitle, .library-heading p,
-    .contact-desc, .collection-copy strong, .collection-copy small, .collection-index, .carousel-controls, footer,
-    .navbar .logo, .navbar .nav-links > li > a) {
-    text-shadow: var(--ego-halo);
+html[data-effects="high"][data-ego] :is(.hero-badge, .section-label) {
+    color: #e2d4ff;
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
 }
-html[data-ego] :is(.hero-tagline, .bio-text) { color: var(--ink); }
-html[data-ego] .collection-toggle:hover { color: var(--blue); }
-html[data-ego] .project-library { border-top-color: rgba(150, 210, 235, .3); }
+html[data-effects="high"][data-ego] :is(.navbar .logo, .navbar .nav-links > li > a) {
+    text-shadow: 0 0 .25em rgba(4, 2, 9, .98), 0 0 .7em rgba(4, 2, 9, .9);
+}
+html[data-effects="high"][data-ego] :is(.hero-tagline, .bio-text, .section-subtitle, .library-heading p, .contact-desc) {
+    color: #f2eeff;
+    text-shadow: 0 0 .2em rgba(4, 2, 9, .98), 0 0 .6em rgba(4, 2, 9, .92);
+}
+html[data-effects="high"][data-ego] .collection-toggle:hover { color: #ffffff; }
+html[data-effects="high"][data-ego] .project-library { border-top-color: rgba(190, 165, 255, .3); }
 
-/* The bar. */
-html[data-effects="high"][data-ego] .navbar { --nav-tint: rgba(2, 5, 9, .6); --nav-muted: var(--ink); }
-html[data-ego] .has-scrolled .navbar { --nav-muted: var(--ink); }
+/* The cards: dialogs of the period, in dark glass with a soft light in the corner
+   and a glow around them. */
+html[data-effects="high"][data-ego] :is(.about-highlight, .skill-group, .project-card) {
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-card);
+    box-shadow: var(--y2k-aura);
+}
+html[data-effects="high"][data-ego] :is(.about-highlight, .skill-group, .project-card):hover {
+    background: var(--y2k-pane);
+    border-color: rgba(214, 196, 255, .8);
+    box-shadow: var(--y2k-aura-lit);
+}
+html[data-effects="high"][data-ego] :is(.about-highlight, .skill-group, .project-card)::before { box-shadow: none; }
+
+/* A title bar made of what each card already holds. */
+html[data-effects="high"][data-ego] :is(.about-highlight > .about-highlight-label, .skill-group-title, .project-category-badge) {
+    background-color: transparent;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23f4f0ff' stroke-width='1.4'%3E%3Cpath d='M2 2l8 8M10 2l-8 8'/%3E%3C/svg%3E"),
+        linear-gradient(var(--y2k-bar), var(--y2k-bar));
+    background-repeat: no-repeat;
+    background-size: 12px 12px, 100% 100%;
+    background-position: calc(100% - .7rem) 50%, 0 0;
+    color: #ffffff;
+    text-align: left;
+    text-shadow: 0 0 .7em rgba(214, 190, 255, .7);
+    border-bottom: 1px solid rgba(214, 196, 255, .34);
+}
+/* A label's box grows up into the card's padding and out to its sides, and gives
+   back below what it took, so the words under it stay where they were. */
+html[data-effects="high"][data-ego] .about-highlight > .about-highlight-label {
+    --y2k-bar-height: 1.875rem;
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) max(var(--rhythm-label), calc(var(--rhythm-label) + var(--pad-card) + 1.55 * var(--type-eyebrow-sm) - var(--y2k-bar-height)));
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: var(--y2k-bar-height);
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="high"][data-ego] .skill-group-title {
+    margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) auto;
+    padding: 0 2.25rem 0 var(--pad-card);
+    min-height: 1.875rem;
+    display: flex;
+    align-items: center;
+    font-size: var(--type-eyebrow-sm);
+    line-height: 1.1;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+}
+html[data-effects="high"][data-ego] .skill-group .skill-tags {
+    margin-block: auto;
+    padding-top: var(--rhythm-heading);
+}
+html[data-effects="high"][data-ego] .project-category-badge {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    padding: .34rem 2.25rem .34rem var(--pad-card);
+    font-family: var(--font-display);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    border-radius: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+html[data-effects="high"][data-ego] :is(.project-image-wrapper, .project-image) { background: transparent; }
+html[data-effects="high"][data-ego] .project-card:hover .project-image.is-motion-active { background: transparent; }
+html[data-effects="high"][data-ego] .project-image-wrapper { border-bottom: 1px solid rgba(196, 172, 255, .24); }
+
+/* Tags are the lit readouts of a media player; every control is a wet gel button. */
+html[data-effects="high"][data-ego] .tag {
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .3);
+    color: #e2d6ff;
+}
+html[data-effects="high"][data-ego] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close) {
+    background: var(--y2k-gel);
+    border: 1px solid rgba(214, 196, 255, .46);
+    border-radius: 999px;
+    color: #ffffff;
+    box-shadow: var(--y2k-gel-shine), var(--y2k-aura);
+}
+html[data-effects="high"][data-ego] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):hover {
+    background: var(--y2k-gel-lit);
+    color: #ffffff;
+    border-color: rgba(235, 225, 255, .85);
+    box-shadow: var(--y2k-gel-shine), var(--y2k-aura-lit);
+}
+html[data-effects="high"][data-ego] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .link-btn, .carousel-arrow, .icon-control, .modal-quick-link, .modal-close):active {
+    background: linear-gradient(#2a1a70, #3f22a8);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6);
+}
+html[data-effects="high"][data-ego] :is(.hero-buttons > .btn, .contact-links > .btn, .social-links > a, .social-links > .resume-icon-unavailable, .carousel-arrow, .icon-control)::before {
+    box-shadow: none;
+}
+
+/* The bar: the same pane as the cards, with its links lit up under the cursor. */
+html[data-effects="high"][data-ego] .navbar { --nav-muted: #f4f0ff; }
+html[data-effects="high"][data-ego] .has-scrolled .navbar { --nav-muted: #f4f0ff; }
 html[data-effects="high"][data-ego] .navbar .nav-content::before {
-    box-shadow: var(--glass-volume), 0 12px 34px rgba(0, 0, 0, .75);
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .34);
+    border-radius: var(--radius-surface);
+    box-shadow: inset 0 1px 0 rgba(235, 225, 255, .3), 0 0 22px rgba(120, 80, 255, .26);
 }
+html[data-effects="high"][data-ego] .navbar .nav-content { border-radius: var(--radius-surface); }
+html[data-effects="high"][data-ego] .navbar .nav-content::after { display: none; }
+html[data-effects="high"][data-ego] .has-scrolled .navbar .logo,
+html[data-effects="high"][data-ego] .has-scrolled .navbar .nav-links > li > a { text-shadow: none; }
+html[data-effects="high"][data-ego] .navbar .logo:hover,
+html[data-effects="high"][data-ego] .navbar .nav-links > li > a:hover { color: #d9c8ff; text-shadow: 0 0 .8em rgba(190, 150, 255, .95); }
 html[data-effects="high"][data-ego] .navbar .fx-slider {
-    --fx-fill: rgba(120, 200, 235, .4);
-    --fx-edge: rgba(150, 215, 240, .5);
-    --fx-ground: rgba(2, 6, 10, .85);
-    --fx-bead: #a6ecff;
-    --fx-glow: 0 0 9px rgba(140, 220, 250, .7);
+    --fx-fill: rgba(150, 100, 255, .3);
+    --fx-edge: rgba(214, 196, 255, .5);
+    --fx-ground: rgba(8, 5, 18, .9);
+    --fx-bead: #d3bdff;
+    --fx-glow: 0 0 9px rgba(190, 150, 255, .9);
 }
-html[data-ego] .navbar .fx-slider-stop { background: rgba(200, 235, 250, .4); }
+html[data-effects="high"][data-ego] .navbar .fx-slider-stop { background: rgba(214, 196, 255, .5); }
 
-html[data-ego] :is(.carousel-arrow, .icon-control) { color: var(--ink); }
-html[data-ego] .project-category-badge {
-    color: #d7edf6;
-    background: linear-gradient(180deg, #2a3640 0, #151c23 48%, #0b1015 52%, #182028 100%);
-    box-shadow: inset 0 1px 0 rgba(225, 245, 255, .3);
-}
-html[data-ego] .tag { border-color: rgba(150, 210, 235, .3); }
-html[data-ego] .link-btn:hover,
-html[data-ego] .modal-quick-link:hover { color: #f4fbff; background: rgba(40, 90, 120, .85); border-color: rgba(150, 215, 240, .6); }
-html[data-ego] .page-scroll-track { background: rgba(170, 215, 240, .14); }
-html[data-ego] .page-scroll-fill { background: #a6ecff; box-shadow: 0 0 7px rgba(140, 220, 250, .7); }
-html[data-ego] .page-scroll-progress::before,
-html[data-ego] .page-scroll-progress::after { background: rgba(150, 215, 240, .45); }
-html[data-ego] :is(.project-image-wrapper, .project-image, .modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
-    background: rgba(1, 3, 6, .78);
-}
+/* The scroll indicator: an LCD's level meter. */
+html[data-effects="high"][data-ego] .page-scroll-track { background: rgba(196, 172, 255, .18); }
+html[data-effects="high"][data-ego] .page-scroll-fill { background: #d3bdff; }
+html[data-effects="high"][data-ego] .page-scroll-progress::before,
+html[data-effects="high"][data-ego] .page-scroll-progress::after { background: rgba(214, 196, 255, .55); }
 
-/* The cursor: a cold point of light. */
+/* A project's sheet: one big dialog. */
+html[data-effects="high"][data-ego] .modal-overlay { background: rgba(4, 2, 9, .95); }
+html[data-effects="high"][data-ego] .modal-card {
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .36);
+    border-radius: var(--radius-card);
+    box-shadow: 0 0 44px rgba(120, 80, 255, .3);
+}
+html[data-effects="high"][data-ego] .modal-overview {
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .26);
+}
+html[data-effects="high"][data-ego] .modal-overview-item {
+    background: var(--y2k-pane);
+    border: 1px solid rgba(196, 172, 255, .24);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+}
+html[data-effects="high"][data-ego] :is(.modal-image, .modal-image.is-certificate, .modal-image.has-motion-media, .modal-media-item, .modal-media-item.media-contain, .modal-media-item.is-motion-media) {
+    background: var(--y2k-pane);
+}
+html[data-effects="high"][data-ego] .modal-media-item figcaption { background: var(--y2k-pane); color: var(--ink); }
+
+/* High's own: panes a good deal clearer than Low's, since here they frost what is behind
+   them, and its cursor in the same light. */
+html[data-effects="high"][data-ego] {
+    --y2k-pane: rgba(12, 7, 26, .56);
+    --y2k-bar: rgba(78, 44, 200, .62);
+    --glass-surface: var(--y2k-pane);
+    --glass-blur: 9px;
+    --glass-brightness: .72;
+    --glass-edge-ring: rgba(196, 172, 255, .24);
+    --glass-edge: linear-gradient(135deg, rgba(235, 225, 255, .8), rgba(170, 130, 255, .3) 24%, rgba(70, 40, 150, .2) 52%, rgba(255, 130, 220, .36) 80%, rgba(235, 225, 255, .6));
+    --glass-edge-blend: normal;
+    --glass-edge-lights: inset 0 1px 1px rgba(235, 225, 255, .34), inset 0 -1px 1px rgba(170, 130, 255, .14);
+}
 html[data-ego] .cursor-dot {
-    background: #bff1ff;
-    box-shadow: 0 0 0 1px rgba(0, 4, 8, .9), 0 0 12px rgba(130, 220, 255, .95);
+    background: #e2d4ff;
+    box-shadow: 0 0 0 1px rgba(4, 2, 9, .9), 0 0 13px rgba(190, 150, 255, 1);
 }
-html[data-ego] .cursor-dot.is-interactive { background: #ffffff; box-shadow: 0 0 0 1px rgba(0, 4, 8, .9), 0 0 14px rgba(170, 235, 255, 1); }
-html[data-ego] .cursor-ripple { border-color: rgba(166, 236, 255, .8); box-shadow: 0 0 6px rgba(130, 220, 255, .6); }
-html[data-ego] .cursor-spark { background: #d5f6ff; box-shadow: 0 0 5px rgba(130, 220, 255, .9); }
-
-/* A project's sheet: a pane of black glass. */
-html[data-ego] .modal-overlay { background: rgba(0, 1, 3, .93); }
-html[data-ego] .modal-card {
-    background: linear-gradient(180deg, rgba(8, 13, 19, .98), rgba(2, 4, 7, .98) 18rem);
-    border-color: rgba(170, 215, 240, .24);
-    box-shadow: inset 0 1px 0 rgba(225, 245, 255, .2), 0 26px 70px rgba(0, 0, 0, .9);
-}
-html[data-ego] .modal-overview {
-    background: linear-gradient(145deg, rgba(120, 190, 225, .06), rgba(5, 9, 14, .6) 44%, rgba(125, 103, 255, .05));
-    border-color: rgba(150, 210, 235, .18);
-}
-html[data-ego] .modal-overview-item {
-    background: linear-gradient(170deg, rgba(14, 20, 27, .96), rgba(4, 7, 11, .96));
-    border-color: rgba(170, 215, 240, .12);
-}
-html[data-ego] .modal-media-item figcaption { background: rgba(4, 8, 13, .96); color: var(--ink); }
-html[data-ego] .navbar[data-nav-open] { --nav-muted: var(--ink); }
-
+html[data-ego] .cursor-dot.is-interactive { background: #ffffff; box-shadow: 0 0 0 1px rgba(4, 2, 9, .9), 0 0 16px rgba(255, 150, 230, 1); }
+html[data-ego] .cursor-ripple { border-color: rgba(214, 196, 255, .85); box-shadow: 0 0 7px rgba(190, 150, 255, .7); }
+html[data-ego] .cursor-spark { background: #f0e6ff; box-shadow: 0 0 5px rgba(190, 150, 255, .95); }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    html[data-effects="high"][data-ego] {
-        --surface: #05090e;
-        --glass-surface: #05090e;
-        --glass-surface-dense: #05090e;
-        --glass-sheen: none;
-        --muted: #e9f5fa;
-    }
-    html[data-ego] .navbar .nav-content::before { background: #05090e !important; }
+    html[data-effects="high"][data-ego] { --y2k-pane: #0c071a; --glass-surface: #0c071a; }
+    html[data-ego] .navbar .nav-content::before { background: #0c071a !important; }
 }

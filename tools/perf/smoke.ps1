@@ -234,7 +234,7 @@ try {
     & $presses 1 3 90
     $waited = & $waitFor 'vapor'
     Start-Sleep -Milliseconds 800
-    Check 'ten quick presses on Medium bring up its desk' ((& $look) -eq 'vapor' -and (& $js "document.querySelectorAll('.vapor-win').length === 4")) "$waited ms after the last press"
+    Check 'ten quick presses on Medium bring up its desk' ((& $look) -eq 'vapor' -and (& $js "document.querySelectorAll('.vapor-win:not(.vapor-note)').length === 4")) "$waited ms after the last press"
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'high' | Out-Null
     Start-Sleep -Milliseconds 800
@@ -251,7 +251,21 @@ try {
     & $twice 2
     $waited = & $waitFor 'ego'
     $sky = & $js "JSON.stringify({ dark: !!document.querySelector('.ego-scene'), bright: !!document.querySelector('.aero-scene'), bend: getComputedStyle(document.querySelector('.about-highlight')).backdropFilter !== 'none' })" | ConvertFrom-Json
-    Check 'two more bring up the dark sky in its place' ((& $look) -eq 'ego' -and $sky.dark -and -not $sky.bright -and $sky.bend) "$waited ms after the last press"
+    Check 'two more bring up the eye in its place' ((& $look) -eq 'ego' -and $sky.dark -and -not $sky.bright -and $sky.bend) "$waited ms after the last press"
+    # Pressed twice on an empty part of the page, it fixes on the cursor.
+    $empty = & $js "[innerWidth * .62, innerHeight * .2]"
+    Check 'the eye does not start out following' (-not (& $js "'following' in document.querySelector('.ego-scene').dataset"))
+    if ($Software) {
+        & $js "(() => { const t = document.elementFromPoint(innerWidth * .62, innerHeight * .2); for (let n = 0; n < 2; n++) t.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, pointerType: 'mouse', clientX: innerWidth * .62, clientY: innerHeight * .2 })); return 1; })()" | Out-Null
+    } else {
+        foreach ($n in 1, 2) {
+            Send-Mouse $page 'mouseMoved' $empty[0] $empty[1]
+            Send-Mouse $page 'mousePressed' $empty[0] $empty[1] 'left' 1 1
+            Send-Mouse $page 'mouseReleased' $empty[0] $empty[1] 'left' 0 1
+        }
+    }
+    Start-Sleep -Milliseconds 700
+    Check 'two presses on it make it follow the cursor' (& $js "'following' in document.querySelector('.ego-scene').dataset")
     Start-Sleep -Seconds 3
     Set-EffectsLevel $page 'medium' | Out-Null
     $waited = & $waitFor 'vapor'
@@ -267,7 +281,7 @@ try {
     Check 'two more on Medium put its still sky back' ((& $look) -eq '' -and (& $stillBack)) "$($polls * 250) ms after the swap"
     Set-EffectsLevel $page 'high' | Out-Null
     $waited = & $waitFor 'ego'
-    Check 'coming back up to High brings the dark sky back' ((& $look) -eq 'ego' -and (& $js "!!document.querySelector('.ego-scene')"))
+    Check 'coming back up to High brings the eye back' ((& $look) -eq 'ego' -and (& $js "!!document.querySelector('.ego-scene')"))
     Start-Sleep -Seconds 3
     & $twice 2
     # Building the stars again takes a machine with no graphics a while.

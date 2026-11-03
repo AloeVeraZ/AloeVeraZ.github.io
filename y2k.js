@@ -2,7 +2,8 @@
 
    One great eye in hard dither, the kind of picture a dialog box showed at the turn
    of the century, drawn on a very small canvas and blown up with its pixels showing.
-   It follows the cursor and now and then it blinks. This is the one thing in Low's
+   It is a ball that turns to follow the cursor, the iris narrowing as it comes round to
+   the edge, and now and then it blinks. This is the one thing in Low's
    other look that runs, and it is built to ask almost nothing: everything that can
    be is worked out once, a frame looks up what it needs, only the cells that changed
    are drawn, and there are no frames at all unless the eye is actually moving. It
@@ -16,6 +17,8 @@
         3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21
     ];
     const FRAME_MS = 60;
+    // How far the ball can turn, in radians: a long way to the sides, less up and down.
+    const MOST_YAW = .72, MOST_PITCH = .3;
     const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
     const smooth = (low, high, value) => {
         const t = clamp((value - low) / (high - low), 0, 1);
@@ -23,26 +26,35 @@
     };
 
     let canvas = null, context = null, image = null, shown = false;
-    let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, spriteSize = 0;
-    let threshold = null, skinTone = null, whiteTone = null, tintR = null, tintG = null, tintB = null, edge = null, dimming = null;
+    let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, spriteSize = 0;
+    let threshold = null, skinTone = null, whiteTone = null, tintR = null, tintG = null, tintB = null, edge = null, dimming = null, ballZ = null, ballShade = null;
     let irisTone = null, irisR8 = null, irisG8 = null, irisB8 = null;
     let open = 1, drawnOpen = -1, drawnX = 1e9, drawnY = 1e9;
-    let lookX = 0, lookY = 0, wantX = 0, wantY = 0;
-    let frame = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0;
+    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, lookX = 0, lookY = 0, mostYaw = MOST_YAW;
+    let frame = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
     let underProject = false, pointerSeen = false, reducedMotion = null;
 
     const build = () => {
         const width = Math.max(320, document.documentElement.clientWidth), height = Math.max(320, window.innerHeight);
-        const portrait = height > width * 1.1;
-        cell = Math.max(3, width / (portrait ? 130 : 400));
+        builtWidth = document.documentElement.clientWidth;
+        builtHeight = window.innerHeight;
+        // From wide to tall with no jump on the way, and the same few cells at any size or shape.
+        const tallness = smooth(.9, 1.4, height / width);
+        const shaped = (wide, narrow) => wide + (narrow - wide) * tallness;
+        cell = Math.max(3, Math.sqrt(width * height / 100000));
         cols = Math.ceil(width / cell);
         rows = Math.ceil(height / cell);
-        cx = cols * (portrait ? .5 : .56);
-        cy = rows * (portrait ? .44 : .5);
-        A = cols * (portrait ? .86 : .62);
-        upper = rows * (portrait ? .3 : .44);
-        lower = rows * (portrait ? .25 : .38);
-        irisR = Math.min(rows * (portrait ? .2 : .36), A * .52);
+        cx = cols * shaped(.56, .5);
+        cy = rows * shaped(.5, .44);
+        // On a very wide monitor it stops short of being a slit.
+        A = Math.min(cols * shaped(.62, .86), rows * 1.55);
+        upper = rows * shaped(.44, .3);
+        lower = rows * shaped(.38, .25);
+        irisR = Math.min(rows * shaped(.36, .2), A * .52);
+        // A little smaller than the opening is wide, so its round edge shows in the corners.
+        ball = Math.max(A * .8, upper * 1.25, irisR * 2.1);
+        // On a narrow screen it turns no further than keeps the iris in sight.
+        mostYaw = Math.min(MOST_YAW, Math.asin(clamp((Math.min(cx, cols - cx) - irisR * .35) / ball, 0, 1)));
         const count = cols * rows;
         threshold = new Uint8Array(count);
         skinTone = new Uint8Array(count);
@@ -51,6 +63,8 @@
         tintG = new Uint8Array(count);
         tintB = new Uint8Array(count);
         dimming = new Float32Array(count);
+        ballZ = new Float32Array(count);
+        ballShade = new Float32Array(count);
         edge = new Float32Array(cols);
         for (let x = 0; x < cols; x++) {
             const u = clamp((x - cx) / A, -1, 1);
@@ -62,13 +76,17 @@
                 threshold[i] = (BAYER[(y & 7) * 8 + (x & 7)] + .5) * 4;
                 // Quiet where the page's words run: down the left, across the top under
                 // the bar, and on a tall screen all the way over.
-                const dim = (portrait ? .46 : .24 + .76 * smooth(.14, .68, x / cols)) * (.3 + .7 * smooth(.05, .17, y / rows));
+                const dim = shaped(.24 + .76 * smooth(.14, .68, x / cols), .46) * (.3 + .7 * smooth(.05, .17, y / rows));
                 dimming[i] = dim;
-                const u = (x - cx) / A, v = (y - cy) / rows;
                 const top = cy - upper * edge[x], foot = cy + lower * edge[x];
-                // The white: bright in the middle of it, turning away at the corners
-                // and under the lid.
-                whiteTone[i] = 255 * dim * clamp(.52 - Math.abs(u) * .3 - Math.max(0, -v) * .3, .06, 1);
+                // The ball under its light, from above and to the right, off the page's words: bright
+                // where it faces that, turning away all round, and past its edge the dark.
+                const nx = (x - cx) / ball, ny = (y - cy) / ball, reach = nx * nx + ny * ny;
+                const z = reach < 1 ? Math.sqrt(1 - reach) : 0;
+                const light = Math.max(0, nx * .26 + ny * -.34 + z * .9);
+                ballZ[i] = z;
+                ballShade[i] = clamp(.42 + .72 * light, 0, 1);
+                whiteTone[i] = 255 * dim * (reach < 1 ? clamp(.05 + .6 * Math.pow(light, 1.5) + .6 * Math.pow(1 - z, 2.6), 0, 1) : .025);
                 // The skin round it, and the lid when it comes down: a crease above,
                 // a fold below, and the dark falling away beyond them.
                 const crease = cy - (upper + rows * .085) * Math.pow(edge[x], .8);
@@ -85,7 +103,7 @@
                 tintB[i] = clamp(255 - warm * 14, 0, 255);
             }
         }
-        // The iris, once, as a sprite that only has to be moved.
+        // The iris, once, as it would look from straight on. A frame reads it through the ball.
         spriteSize = Math.ceil(irisR) * 2 + 1;
         const spriteCount = spriteSize * spriteSize;
         irisTone = new Int16Array(spriteCount).fill(-1);
@@ -110,15 +128,6 @@
                 }
                 if (d < pupil) tone = 0;
                 else tone = Math.max(tone, .14 * smooth(pupil * 1.3, pupil, d));
-                // The window it reflects.
-                const glint = Math.hypot(dx + irisR * .3, dy + irisR * .34);
-                if (glint < irisR * .09) {
-                    tone = 1;
-                    r = g = b = 255;
-                } else if (Math.hypot(dx - irisR * .24, dy - irisR * .3) < irisR * .035) {
-                    tone = .8;
-                    r = g = b = 255;
-                }
                 irisTone[i] = 255 * clamp(tone, 0, 1);
                 irisR8[i] = r;
                 irisG8[i] = g;
@@ -135,7 +144,11 @@
     // Only the cells inside the box given.
     const paint = (x0, y0, x1, y1) => {
         const data = image.data;
-        const irisX = Math.round(cx + lookX), irisY = Math.round(cy + lookY);
+        const yawS = Math.sin(yaw), yawC = Math.cos(yaw), pitchS = Math.sin(pitch), pitchC = Math.cos(pitch);
+        // The window it reflects stays with the room, and only slides a little as the
+        // bulge of the eye comes round under it.
+        const shineX = cx + lookX * .28, shineY = cy + lookY * .28;
+        const big = irisR * .09, small = irisR * .035;
         const half = (spriteSize - 1) / 2;
         const shade = rows * .06;
         for (let y = y0; y < y1; y++) {
@@ -145,14 +158,31 @@
                 let tone, r = tintR[i], g = tintG[i], b = tintB[i];
                 if (y > top && y < foot) {
                     tone = whiteTone[i];
-                    const sx = x - irisX + half, sy = y - irisY + half;
-                    if (sx >= 0 && sy >= 0 && sx < spriteSize && sy < spriteSize) {
-                        const s = sy * spriteSize + sx;
-                        if (irisTone[s] >= 0) {
-                            tone = irisTone[s] * (.35 + .65 * dimming[i]);
-                            r = irisR8[s];
-                            g = irisG8[s];
-                            b = irisB8[s];
+                    const z = ballZ[i];
+                    if (z > 0) {
+                        // The part of the ball that has turned to face this cell.
+                        const nx = (x - cx) / ball, ny = (y - cy) / ball;
+                        if (yawS * pitchC * nx + pitchS * ny + yawC * pitchC * z > 0) {
+                            const sx = Math.round(half + (yawC * nx - yawS * z) * ball);
+                            const sy = Math.round(half + (-yawS * pitchS * nx + pitchC * ny - yawC * pitchS * z) * ball);
+                            if (sx >= 0 && sy >= 0 && sx < spriteSize && sy < spriteSize) {
+                                const s = sy * spriteSize + sx;
+                                if (irisTone[s] >= 0) {
+                                    tone = irisTone[s] * (.35 + .65 * dimming[i]) * ballShade[i];
+                                    r = irisR8[s];
+                                    g = irisG8[s];
+                                    b = irisB8[s];
+                                }
+                            }
+                        }
+                        const bigX = x - shineX - irisR * .3, bigY = y - shineY + irisR * .34;
+                        const smallX = x - shineX + irisR * .24, smallY = y - shineY - irisR * .3;
+                        if (bigX * bigX + bigY * bigY < big * big) {
+                            tone = 255;
+                            r = g = b = 255;
+                        } else if (smallX * smallX + smallY * smallY < small * small) {
+                            tone = 204;
+                            r = g = b = 255;
                         }
                     }
                     // The shadow the upper lid throws.
@@ -189,9 +219,12 @@
             const x0 = Math.floor(cx - A), x1 = Math.ceil(cx + A);
             paint(clamp(x0, 0, cols), clamp(y0, 0, rows), clamp(x1, 0, cols), clamp(y1, 0, rows));
         } else {
-            const half = spriteSize / 2 + 2;
-            const x0 = Math.floor(cx + Math.min(lookX, drawnX) - half), x1 = Math.ceil(cx + Math.max(lookX, drawnX) + half);
-            const y0 = Math.floor(cy + Math.min(lookY, drawnY) - half), y1 = Math.ceil(cy + Math.max(lookY, drawnY) + half);
+            // The iris, a shade wider than from straight on at some angles, and the window
+            // it reflects, which can be out on the white by now.
+            const half = irisR * 1.06 + 3, shine = irisR * .46;
+            const lowX = Math.min(lookX, drawnX), highX = Math.max(lookX, drawnX), lowY = Math.min(lookY, drawnY), highY = Math.max(lookY, drawnY);
+            const x0 = Math.floor(cx + Math.min(lowX - half, lowX * .28 - shine)), x1 = Math.ceil(cx + Math.max(highX + half, highX * .28 + shine));
+            const y0 = Math.floor(cy + Math.min(lowY - half, lowY * .28 - shine)), y1 = Math.ceil(cy + Math.max(highY + half, highY * .28 + shine));
             paint(clamp(x0, 0, cols), clamp(y0, 0, rows), clamp(x1, 0, cols), clamp(y1, 0, rows));
         }
         drawnX = lookX;
@@ -210,9 +243,11 @@
         const dt = lastDraw ? Math.min(.1, (now - lastDraw) / 1000) : .04;
         lastDraw = now;
         const pull = Math.min(1, dt * 9);
-        lookX += (wantX - lookX) * pull;
-        lookY += (wantY - lookY) * pull;
-        let moving = Math.abs(wantX - lookX) > .4 || Math.abs(wantY - lookY) > .4;
+        yaw += (wantYaw - yaw) * pull;
+        pitch += (wantPitch - pitch) * pull;
+        lookX = ball * Math.sin(yaw) * Math.cos(pitch);
+        lookY = ball * Math.sin(pitch);
+        let moving = Math.abs(wantYaw - yaw) > .4 / ball || Math.abs(wantPitch - pitch) > .4 / ball;
         if (blinkAt >= 0) {
             const age = now - blinkAt;
             if (age < 110) open = 1 - .96 * (age / 110);
@@ -232,9 +267,9 @@
         if (!frame && shown && !underProject && !document.hidden) frame = requestAnimationFrame(step);
     };
     const aim = (x, y) => {
-        const dx = x / cell - cx, dy = y / cell - cy;
-        wantX = clamp(dx * .62, -(A - irisR) * .62, (A - irisR) * .62);
-        wantY = clamp(dy * .46, -upper * .34, lower * .34);
+        // Turned until the pupil is on the cursor, as far as a ball can turn.
+        wantYaw = clamp(Math.asin(clamp((x / cell - cx) / ball, -1, 1)), -mostYaw, mostYaw);
+        wantPitch = clamp(Math.asin(clamp((y / cell - cy) / ball, -1, 1)), -MOST_PITCH, MOST_PITCH);
         wake();
     };
     const scheduleBlink = () => {
@@ -273,6 +308,8 @@
         clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(() => {
             if (!shown) return;
+            // A phone's address bar coming and going is not a new screen.
+            if (document.documentElement.clientWidth === builtWidth && Math.abs(window.innerHeight - builtHeight) < builtHeight * .16) return;
             build();
             whole();
         }, 260);
@@ -291,7 +328,7 @@
             }
             shown = true;
             open = 1;
-            lookX = lookY = wantX = wantY = 0;
+            yaw = pitch = wantYaw = wantPitch = lookX = lookY = 0;
             build();
             whole();
             window.addEventListener('resize', onResize, { passive: true });
@@ -324,7 +361,7 @@
             canvas = null;
             context = null;
             image = null;
-            threshold = skinTone = whiteTone = tintR = tintG = tintB = edge = dimming = irisTone = irisR8 = irisG8 = irisB8 = null;
+            threshold = skinTone = whiteTone = tintR = tintG = tintB = edge = dimming = ballZ = ballShade = irisTone = irisR8 = irisG8 = irisB8 = null;
         }
     };
 })();

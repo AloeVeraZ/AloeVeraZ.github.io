@@ -1626,22 +1626,30 @@ once into lookups, the iris is a sprite, a frame draws only the cells that chang
 a few gradients on the lattice's fixed layer, painted once. It dims where the page's words
 run. Panes are one colour at one transparency everywhere.
 
+It was then sent back for sliding: an eye is a ball, and has to move by turning. So the iris
+sprite is now read through a ball, each cell in the changed box turning its point on the ball
+by the gaze (a handful of multiplications and one lookup), which narrows the iris as it comes
+round to the edge. The shading is worked out once as before, and the window it reflects stays
+with the room. The ball is a little narrower than the opening, so its round edge shows in the
+corners.
+
 **Implementation:** `y2k.js`, `y2k.css`.
 
 **Before / after (Low against this look, 3x, native, two interleaved rounds):**
 
 | | Plain | This look |
 | --- | --- | --- |
-| Scroll: dropped | 5.6% | 7.8% |
-| Scroll: main thread | 135 ms/s | 80 ms/s |
-| At rest: main thread | 2 ms/s | 15 ms/s |
-| Cursor over cards: dropped | 1.2% | 4.2% |
-| Cursor over cards: main thread | 110 ms/s | 148 ms/s |
-| Ring turning: dropped | 1.7% | 2.2% |
-| Ring turning: GPU 3D engine | 33% | 19% |
+| Scroll: dropped | 4.6% | 3.3% |
+| Scroll: main thread | 120 ms/s | 88 ms/s |
+| At rest: main thread | 1 ms/s | 17 ms/s |
+| Cursor over cards: dropped | 5.9% | 3.3% |
+| Cursor over cards: main thread | 99 ms/s | 153 ms/s |
+| Ring turning: dropped | 0.8% | 1.2% |
+| Ring turning: GPU 3D engine | 33% | 21% |
 
-So it does cost something now, which the earlier versions did not: about 40 ms a second while
-the cursor moves, a few frames at each blink. The at-rest row has the eye looking about for
+So it does cost something now, which the earlier versions did not: about 50 ms a second while
+the cursor moves, a few frames at each blink. Turning a ball costs no more than sliding a
+sprite did, within what these runs can tell apart. The at-rest row has the eye looking about for
 itself, as it does with no cursor seen; with a cursor it is only the blinks. This is the one
 hidden look that asks anything of Low.
 
@@ -1656,63 +1664,106 @@ and made four windows work on top of it. It was sent back as clutter: pop-ups be
 everything, like a virus. So everything that could not be used went, and the picture with it:
 the backdrop is only the lattice on pink.
 
-**Proposed modification:** plain elements lying over the page at its top, in the empty places
-beside the name, scrolling away with it, every one of them able to be dragged. Nothing runs
-unless a hand is on it. The infill window redraws only as its slider moves, and draws what a
-slicer would: walls of one width, set further apart as density falls, thickening above about
-half and closing up at 100%. The print job's bar is a plain `steps()` animation. Only holding
-the torque window asks for frames, and it stops when it has run down. On a tall screen, which
-has no empty places, they all start on a bar at the foot.
+**Proposed modification:** plain elements on one fixed layer behind the page, so they stay with
+the visitor all the way down. Fourteen come out in the first seven seconds, one every half
+second, the real windows dealt in among short notes at random; then one every five to thirty
+seconds, never more than twenty out at once. Nothing else runs unless a hand is on it. The
+infill window redraws only as its slider moves, and draws what a slicer would: walls of one
+width, set further apart as density falls, thickening above about half and closing up at 100%.
+The print job's bar is a plain `steps()` animation. Only holding the torque window asks for
+frames, and it stops when it has run down.
+
+Anything on the desk is moved by a press and hold of 220 ms. What is held comes up over the page,
+so it can be seen on its way, and sinks back behind when it is let go. A swipe that sets off at
+once is not a hold, so a phone still scrolls across a screen full of windows; only once something
+has been lifted does a finger stop moving the page. The first version listened for moves on the
+desk itself and lost the drag when a quick flick left the title bar before the first move
+arrived; worse, the drag stayed set and took the next press with it, so a window would not close.
+It now listens on the window from the moment of the press.
 
 **Implementation:** `vapor.js`, `vapor.css`.
 
-**Before / after (Medium against this look, 3x, native, two interleaved rounds):**
+**Before / after (Medium against this look, 3x, native, two interleaved rounds, the burst
+included):**
 
 | | Plain | This look |
 | --- | --- | --- |
-| Scroll: dropped | 9.4% | 4.6% |
-| Scroll: GPU 3D engine | 47% | 30% |
+| Scroll: dropped | 10.2% | 2.9% |
+| Scroll: GPU 3D engine | 36% | 34% |
 | At rest: frames | 0 | 0 |
-| Cursor over cards: dropped | 3.4% | 0.1% |
-| Ring turning: dropped | 0.8% | 1.6% |
-| Ring turning: main thread | 171 ms/s | 222 ms/s |
+| Cursor over cards: dropped | 2.8% | 0.1% |
+| Ring turning: dropped | 1.0% | 0.2% |
+| Ring turning: main thread | 275 ms/s | 292 ms/s |
 
 **Result:** Adopted.
 
 ---
 
-## Cycle 43: High's dark sky (adopted)
+## Cycle 43: High's eye, and a richer bright sky (adopted)
 
-**Identified bottleneck:** none: new. A neon city in lime was sent back as too green and too
-much of a cityscape, wanted darker and more mysterious without going gothic. It is now the
-bright sky's opposite: black water and a great lens that breathes and turns to look at the
-cursor. Then, on seeing that: no lettering anywhere in it, the bubbles to carry real CAD and
-projects, the lens to drift away left as the page scrolls, and the arm to sink.
+**Identified bottleneck:** none: new. A neon city in lime and then a dark lake with a great lens
+were both sent back, and the dark sky was dropped in favour of Low's eye with everything High can
+spend on it. The bright sky was called cheap: flat, with generic icons in its bubbles.
 
-**Proposed modification:** `aero.js`'s rules: sprites once, then a frame of them moving. At
-first it dropped three times the frames of plain High on a turning ring. So its resolution is
-capped at 1.6x where the bright sky's is 2x (soft dark light has few edges to keep), and its
-shafts, vignette and scan lines went into the one backdrop picture, which took two blends of
-the whole screen out of every frame. A CAD render's black is made clear when its sprite is
-made, once, so it floats in the bubble as a bare part.
+**Proposed modification:** the eye is two passes on the graphics card. The first draws it one
+dither cell at a time on a small picture, and because a fragment shader does this anyway it can
+afford the real thing: a ball with a turning matrix, an iris that foreshortens, veins and faint
+globe lines fixed to the surface so they go round with it, a light and a reflected window that
+stay put, lids that go a little way with it, a lit rim. The second lays that on the screen with
+split colour, bloom from the mip chain and shafts off the pupil. It looks about for itself, and
+two presses set it following the cursor for fifteen seconds. The bright sky takes a downscaled
+copy of each frame for light through the clouds, a lake that reflects, refraction inside the
+larger bubbles and bloom, and its bubbles carry this portfolio's own CAD and project photos.
 
-**Implementation:** `ego.js`, `ego.css`.
+**Implementation:** `ego.js`, `ego.css`, `aero.js`, `aero.css`.
 
-**Before / after (High against this sky, 3x, native, two interleaved rounds):**
+**Before / after (High against each, 3x, native, two interleaved rounds):**
 
-| | Stars | This sky |
-| --- | --- | --- |
-| Scroll: dropped | 35.9% | 21.1% |
-| At rest on the projects: dropped | 1.5% | 0% |
-| At rest: GPU 3D engine | 39% | 43% |
-| Cursor over cards: dropped | 20.0% | 21.9% |
-| Ring turning: dropped | 20.4% | 31.4% |
-| Ring turning: GPU 3D engine | 65% | 75% |
+| | Stars | Eye | Stars | Bright sky |
+| --- | --- | --- | --- | --- |
+| Scroll: dropped | 32.5% | 19.1% | 27.1% | 22.3% |
+| At rest on the projects: dropped | 2.2% | 0% | 1.7% | 0% |
+| At rest: GPU 3D engine | 32% | 40% | 31% | 52% |
+| Cursor over cards: dropped | 19.8% | 14.4% | 26.7% | 33.7% |
+| Ring turning: dropped | 16.0% | 25.7% | 16.8% | 25.4% |
+| Ring turning: GPU 3D engine | 74% | 82% | 73% | 77% |
 
-Better on a scroll, level at rest and under the cursor, and still heavier than the stars on a
-turning ring.
+Better than the stars on a scroll and at rest. Both are heavier on a turning ring, and the bright
+sky is heavier under the cursor too.
 
-**Result:** Adopted, as High, with that one cost.
+**Result:** Adopted, as High, with those costs.
+
+---
+
+## Cycle 44: The hidden looks on any screen (adopted)
+
+**Identified bottleneck:** seven looks photographed at seventeen screens, from a folding phone
+(280x653) to a very wide monitor (3840x1080), showed what the layout audit cannot see.
+
+- The eyes chose between two shapes at a height of 1.1 widths, so a screen just past that line
+  jumped from fine cells to cells two and a half times the size, and a tablet held upright was
+  coarse. On a phone the eye turned until its iris was off the screen.
+- The eyes' cost and grain followed the width alone, so a very wide monitor's cells were larger
+  than they needed to be.
+- The light behind the eye fell directly behind the name.
+- Medium's windows were sized in `vw` and `vh` and its notes and lettering in fixed units, so on a
+  very wide monitor a window dwarfed the note beside it and cut off the robot's feet, and on a phone
+  held sideways they were too large to leave any room. Running words could not be read over what
+  had popped up behind them.
+- The address bar of a phone sliding away rebuilt the eye.
+
+**Proposed modification:** the eye's shape now eases from wide to tall with no jump, and on a very
+wide monitor it stops short of being a slit. Its cell comes from the screen's area, so there are
+about 100,000 cells at any size or shape and the same work to do. It turns no further than keeps
+the iris in sight. The light and the reflected window moved to the right, off the page's words. A
+change of height under 16% no longer rebuilds it, as the bright sky already did. Everything on the
+desk is measured in one size that follows the screen's shorter way, so it all keeps its proportions,
+and on a touch screen its small controls answer a good way beyond their edges. Words that have to
+be read stand on a plain label of the desk's own pink.
+
+**Implementation:** `y2k.js`, `ego.js`, `vapor.css`.
+
+**Result:** Adopted. The bright sky needed nothing: 1.7 s to come up at 1920x1080 and at 3440x1440.
 
 ---
 
@@ -1735,19 +1786,28 @@ On the merged tree, not the branches:
 - Not measured: the lines of cycle 39 on the machine that showed them, a real phone, or any
   browser but Chrome.
 
-Cycles 41-43, on the finished tree:
+Cycles 41-44, on the finished tree:
 
-- `smoke.ps1`: 45 of 45 with graphics acceleration and 43 of 43 without, including ten presses
-  finding each look, two going round them, leaving and coming back through the levels, each
-  level's own backdrop returning, and a reload forgetting all of it. With no graphics the
-  two-press steps are handed to the slider together, as presses sent one at a time arrive
-  further apart there than any hand's.
+- `smoke.ps1`: 47 of 47 with graphics acceleration and 45 of 45 without, including ten presses
+  finding each look, two going round them, a double press setting the eye following, leaving and
+  coming back through the levels, each level's own backdrop returning, and a reload forgetting all
+  of it. With no graphics the two-press steps are handed to the slider together, as presses sent
+  one at a time arrive further apart there than any hand's.
 - `layout-audit.ps1 -Level low|medium|high`: 0 of 24 screens with problems at each, with the
-  page's own looks. Each hidden look at a phone, a tablet and a desktop: no sideways overflow,
-  no clipped titles, no script errors.
-- The Medium desk, with real presses, 14 of 14: the slider from 1% to near 100%, the arrows,
-  the ink following them, a poke, a drag by the title bar, a print ending in its dialog, a
-  window closing and coming back by itself, one minimising to the bar and restored from it,
-  the page's own buttons still answering.
-- Not measured: touch on a real phone, or any browser but Chrome. The custom cursors could not
-  be seen in a captured screenshot.
+  page's own looks. With each hidden look on: Low's eye, High's eye and the bright sky 0 of 24. The
+  Medium desk reports 13 of 24, every one a touch screen and every report the same: its small retro
+  controls are small to look at. They answer beyond their edges, which that check does not measure.
+- Seven looks at seventeen screens, photographed and looked at: no sideways overflow, nothing
+  stranded off the screen, no script errors.
+- The Medium desk, with real presses, 26 of 26: nothing out to begin with, seven at about three and
+  a half seconds, fourteen at seven, then a pause; all six real things among them; fixed as the page
+  scrolls and behind it; a press that moves straight off carrying nothing; a hold lifting one; a
+  fast flick carrying it over the page and under the navigation; sinking back when let go; a slow
+  press on a button still pressing it; the gaps after the burst all 5 to 30 s; twenty and no more.
+- The same with real touch events at a phone's size, 11 of 11: a swipe across a window scrolling the
+  page and leaving it where it was; a hold lifting it; the finger carrying it with the page not
+  scrolling; a tap just off a small key closing the note.
+- Not measured: a real phone or tablet, or any browser but Chrome, so nothing here has seen Safari on
+  an iPhone or a Mac. A real 4K monitor: at 3840x2160 under emulation the test browser stalls for tens
+  of seconds in waits with no painting in them, which 3440x1440 does not, so the figure says more
+  about the emulation than the page. The custom cursors could not be seen in a captured screenshot.

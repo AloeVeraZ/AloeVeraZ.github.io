@@ -8,14 +8,17 @@
    It is a desktop for this portfolio. The infill window's slider takes a part from 1%
    to solid. The print job takes that part and prints it, taking longer and using more
    plastic the denser it is. The robot pulls a face when it is poked. Holding the torque
-   window winds it up. Close a window and it comes back on its own; minimise one and it
+   window winds it up. Close a window and it comes back in a while; minimise one and it
    waits on the bar at the foot.
 
-   It holds to what Medium promises. These are plain elements lying on the page at its
-   top, in the empty places beside the words, and they scroll away with it. Nothing on
-   them runs unless someone is using it, so at rest the page still asks for no frames at
-   all. This file is not fetched until someone asks, and leaving Medium hands all of it
-   back. */
+   Nothing is there to begin with. Things pop up one at a time at random places, every
+   five seconds until four have come, and after that every thirty seconds to two minutes.
+   They stand on one fixed layer behind the page, so they stay with the visitor down the
+   page and everything on the page stays in front of them.
+
+   It holds to what Medium promises. These are plain elements, and nothing on them runs
+   unless someone is using it, so at rest the page still asks for no frames at all. This
+   file is not fetched until someone asks, and leaving Medium hands all of it back. */
 (function () {
     'use strict';
 
@@ -161,9 +164,29 @@
     const HEART = ['.##...##.', '#..#.#..#', '#...#...#', '#.......#', '.#.....#.', '..#...#..', '...#.#...', '....#....'];
     const PAGE = ['#########..', '#.......##.', '#.......#.#', '#.......###', '#..#####..#', '#.........#', '#..#####..#', '#.........#', '#..#####..#', '#.........#', '#.........#', '###########'];
     const COLOURS = { teal: '#5ff0d8', yellow: '#f5ea5a', purple: '#b18be8' };
-    // A tall screen has no empty places beside its words, so there everything waits
-    // on the bar until it is asked for.
+    // On a tall screen the words run right across, so what goes behind them is paler.
     const isTall = () => window.innerHeight > window.innerWidth * 1.1;
+    // What pops up between everything else: the sort of thing a printer says.
+    const NOTES = [
+        ['FILAMENT', 'RUNNING LOW.', 'OK'], ['BED LEVEL', 'ARE YOU SURE?', 'CHECK'], ['CAD', 'DID YOU SAVE?', 'SAVED'],
+        ['M3 SCREWS', '0 REMAINING.', 'ORDER'], ['STRINGING', 'RETRACT MORE.', 'FINE'], ['TOLERANCE', 'PLUS OR MINUS WHAT?', 'SURE'],
+        ['FIRST LAYER', 'LOOKS BAD.', 'AGAIN'], ['REMINDER', 'ALWAYS BUILD.', 'OK'], ['NOZZLE', 'CLOGGED AGAIN.', 'SIGH'],
+        ['SUPPORTS', 'WILL NOT COME OFF.', 'PLIERS'], ['SERVO', 'STALLED.', 'RESET'], ['RENDER', '98% FOREVER.', 'WAIT'],
+        ['ASSEMBLY', 'PARTS INTERFERE.', 'IGNORE'], ['BATTERY', 'LOW VOLTAGE.', 'CHARGE']
+    ];
+    // A burst to begin with, one every half second for seven seconds. After that one now
+    // and then, and never more out at once than this.
+    const BURST_COUNT = 14, BURST_GAP_MS = 500, LATER_GAP_MS = 5000, LATER_SPREAD_MS = 25000, MOST_OUT = 20;
+    // How long a press has to stay still before what is under it comes up, and how far it
+    // may wander meanwhile before it counts as something else, like a swipe.
+    const HOLD_MS = 220, HOLD_SLOP = 8;
+    const shuffled = list => {
+        for (let i = list.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [list[i], list[j]] = [list[j], list[i]];
+        }
+        return list;
+    };
 
     const buildDesk = () => {
         const root = document.createElement('div');
@@ -188,6 +211,20 @@
             item.style.setProperty('--dx', `${dx}px`);
             item.style.setProperty('--dy', `${dy}px`);
         };
+        // Anywhere at all, so long as enough of it stays on the screen to get hold of again.
+        const keepReachable = (item, x, y) => {
+            const box = item.getBoundingClientRect();
+            const left = box.left - (parseFloat(item.dataset.dx) || 0), top = box.top - (parseFloat(item.dataset.dy) || 0);
+            return [
+                Math.min(Math.max(x, 48 - box.width - left), window.innerWidth - 48 - left),
+                Math.min(Math.max(y, -top), window.innerHeight - 32 - top)
+            ];
+        };
+        let hold = null;
+        // While something is up in the air a finger moves that, not the page.
+        const stayPut = event => {
+            if (hold?.lifted && event.cancelable) event.preventDefault();
+        };
 
         const makeWindow = (name, title, bar, parent = root) => {
             const win = document.createElement('section');
@@ -196,9 +233,9 @@
             win.dataset.item = '';
             win.setAttribute('aria-label', title);
             win.style.setProperty('--vapor-win-bar', COLOURS[bar]);
+            win.addEventListener('touchmove', stayPut, { passive: false });
             const head = document.createElement('header');
             head.className = 'vapor-bar';
-            head.dataset.handle = '';
             const dots = document.createElement('span');
             dots.className = 'vapor-dots';
             for (const [act, label] of [['close', 'Close'], ['tuck', 'Minimise'], ['hop', 'Send across the desk']]) {
@@ -304,6 +341,7 @@
                 const m = Math.abs(value) % span;
                 return m < size - 1 ? m : span - m;
             };
+            const ink = isTall() ? [120, 88, 170] : [12, 10, 20];
             const c = pattern.getContext('2d');
             const image = c.createImageData(px, py);
             const data = image.data;
@@ -315,9 +353,9 @@
                     const value = a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty;
                     const on = Math.abs(value) < cut;
                     const k = (j * px + i) * 4;
-                    data[k] = on ? 12 : 255;
-                    data[k + 1] = on ? 10 : 255;
-                    data[k + 2] = on ? 20 : 255;
+                    data[k] = on ? ink[0] : 255;
+                    data[k + 1] = on ? ink[1] : 255;
+                    data[k + 2] = on ? ink[2] : 255;
                     data[k + 3] = 255;
                 }
             }
@@ -425,7 +463,7 @@
             const offset = ((phase % 1) + 1) % 1;
             let dark = Math.floor(R / step) % 2 === 0;
             for (let r = R + step * (1 - offset); r > 0; r -= step, dark = !dark) {
-                c.fillStyle = dark ? '#0c0a14' : '#ffffff';
+                c.fillStyle = dark ? (isTall() ? 'rgb(120,88,170)' : '#0c0a14') : '#ffffff';
                 c.beginPath();
                 c.arc(cx, cy, r, 0, Math.PI * 2);
                 c.fill();
@@ -457,7 +495,7 @@
         const hearts = document.createElement('div');
         hearts.className = 'vapor-hearts';
         hearts.dataset.item = '';
-        hearts.dataset.handle = '';
+        hearts.addEventListener('touchmove', stayPut, { passive: false });
         const heartColours = ['#b18be8', '#5ff0d8', '#f5ea5a'];
         const drawHeart = (canvas, on, colour) => {
             const c = canvas.getContext('2d');
@@ -491,7 +529,7 @@
         file.className = 'vapor-file';
         file.dataset.act = 'file';
         file.dataset.item = '';
-        file.dataset.handle = '';
+        file.addEventListener('touchmove', stayPut, { passive: false });
         file.setAttribute('aria-label', 'Print robot.stl');
         const glyph = document.createElement('canvas');
         glyph.className = 'vapor-file-icon';
@@ -527,54 +565,74 @@
             tray.appendChild(chip);
         };
         const chipFor = win => tray.querySelector(`[data-restore="${win.dataset.win}"]`);
-        // The page may have scrolled on since this window was last seen.
-        const intoView = win => {
-            const box = win.getBoundingClientRect();
-            const room = window.innerHeight;
-            if (box.top >= 56 && box.bottom <= room - 8) return;
-            const dy = parseFloat(win.dataset.dy) || 0;
-            const to = Math.max(64, Math.min(room * .14, room - box.height - 8));
-            place(win, parseFloat(win.dataset.dx) || 0, dy + to - box.top);
+        // Everything starts put away, in a random order, and comes out one at a time.
+        const waiting = shuffled([...windows, hearts, file]);
+        waiting.forEach(item => {
+            item.hidden = true;
+            item.classList.add('is-gone');
+        });
+        // Somewhere on the screen, as clear of what is already out as a few tries find.
+        const findPlace = item => {
+            const box = item.getBoundingClientRect();
+            const others = [...root.querySelectorAll('[data-item]')].filter(other => other !== item && !other.hidden).map(other => other.getBoundingClientRect());
+            let best = [8, 72], least = Infinity;
+            for (let i = 0; i < 14; i++) {
+                const x = 8 + Math.random() * Math.max(0, window.innerWidth - box.width - 20);
+                const y = 72 + Math.random() * Math.max(0, window.innerHeight - box.height - 84);
+                let overlap = 0;
+                for (const other of others) {
+                    overlap += Math.max(0, Math.min(x + box.width, other.right) - Math.max(x, other.left)) * Math.max(0, Math.min(y + box.height, other.bottom) - Math.max(y, other.top));
+                }
+                if (overlap < least) {
+                    least = overlap;
+                    best = [x, y];
+                }
+            }
+            return best;
         };
-        const open = (win, bringIt) => {
-            if (!win.hidden && !win.classList.contains('is-gone')) {
-                raise(win);
-                if (bringIt) intoView(win);
+        const open = (item, somewhereNew) => {
+            if (!item.hidden && !item.classList.contains('is-gone')) {
+                raise(item);
                 return;
             }
-            win.hidden = false;
-            win.classList.remove('is-gone');
-            win.classList.add('is-opening');
-            raise(win);
-            later(() => win.classList.remove('is-opening'), 260);
-            chipFor(win)?.remove();
-            if (bringIt) intoView(win);
-            if (win === infillWin.win) askPattern();
-            if (win === torqueWin.win) drawRings();
+            item.hidden = false;
+            item.classList.remove('is-gone');
+            if (somewhereNew || !item.dataset.placed) {
+                place(item, ...findPlace(item));
+                item.dataset.placed = '1';
+            }
+            item.classList.add('is-opening');
+            raise(item);
+            later(() => item.classList.remove('is-opening'), 260);
+            if (item.dataset.win) chipFor(item)?.remove();
+            const queued = waiting.indexOf(item);
+            if (queued > -1) waiting.splice(queued, 1);
+            if (item === infillWin.win) askPattern();
+            if (item === torqueWin.win) drawRings();
         };
         const hide = win => {
             win.classList.add('is-gone');
             later(() => { if (win.classList.contains('is-gone')) win.hidden = true; }, 200);
         };
-        const allGone = () => windows.every(win => win.classList.contains('is-gone'));
+        let popped = 0;
+        const allGone = () => popped >= BURST_COUNT && windows.every(win => win.classList.contains('is-gone'));
         const afterHiding = () => {
-            if (!isTall() && allGone()) later(() => {
+            if (allGone()) later(() => {
                 if (allGone()) popup('NOTHING LEFT', 'NOW WHAT?', 'ALWAYS BUILD', () => windows.forEach(win => open(win, true)));
             }, 500);
         };
         const tuck = win => {
             hide(win);
+            const queued = waiting.indexOf(win);
+            if (queued > -1) waiting.splice(queued, 1);
             if (!chipFor(win)) addChip(win);
             afterHiding();
         };
+        // It does not stay closed. Nothing on this desk ever did: it goes to the back of
+        // the queue and comes out again in its turn.
         const close = win => {
-            if (isTall()) {
-                tuck(win);
-                return;
-            }
             hide(win);
-            // It does not stay closed. Nothing on this desk ever did.
-            later(() => { if (win.classList.contains('is-gone') && !chipFor(win)) open(win); }, 7000 + Math.random() * 9000);
+            if (!waiting.includes(win)) waiting.push(win);
             afterHiding();
         };
         const popups = new Set();
@@ -602,9 +660,46 @@
             return made.win;
         };
 
-        /* Hands on. Anything with a handle can be picked up. A press that does not move
-           is still only a press, so a heart can be pressed or carried off. */
-        let drag = null, swallowClick = false;
+        /* Hands on. A quick press is only a press, and a swipe still scrolls the page. Hold
+           still for a moment and what is under the pointer comes up off the desk, and goes
+           wherever the pointer goes, over the page and everything on it, until it is let go
+           and sinks back behind. It is watched from the window, because a pointer in a
+           hurry is off the thing it was holding before the first move is even heard. */
+        let swallowClick = false;
+        const letGo = event => {
+            if (!hold || (event && event.pointerId !== hold.id)) return;
+            clearTimeout(hold.timer);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', letGo);
+            window.removeEventListener('pointercancel', letGo);
+            hold.item.classList.remove('is-held');
+            if (hold.carrying) {
+                hold.home.appendChild(hold.item);
+                swallowClick = true;
+                later(() => { swallowClick = false; }, 50);
+            }
+            hold = null;
+        };
+        const onPointerMove = event => {
+            if (!hold || event.pointerId !== hold.id) return;
+            if (!event.buttons) {
+                letGo(event);
+                return;
+            }
+            const far = Math.hypot(event.clientX - hold.fromX, event.clientY - hold.fromY);
+            if (!hold.lifted) {
+                if (far > HOLD_SLOP) letGo(event);
+                return;
+            }
+            if (!hold.carrying) {
+                if (far < 3) return;
+                // Only now, so a slow press that never moves is still a click on what it hit.
+                hold.carrying = true;
+                over.appendChild(hold.item);
+                hold.item.setPointerCapture?.(event.pointerId);
+            }
+            place(hold.item, ...keepReachable(hold.item, event.clientX - hold.x, event.clientY - hold.y));
+        };
         const onPointerDown = event => {
             const item = event.target.closest('[data-item]');
             if (item) raise(item);
@@ -614,36 +709,23 @@
                 windRings();
                 return;
             }
-            const handle = event.target.closest('[data-handle]');
-            if (!handle || event.button) return;
-            if (handle.classList.contains('vapor-bar') && event.target.closest('button')) return;
-            drag = {
-                item, handle, id: event.pointerId, moved: false, fromX: event.clientX, fromY: event.clientY,
+            if (!item || event.button || event.target === slider) return;
+            letGo();
+            hold = {
+                item, home: item.parentElement, id: event.pointerId, lifted: false, carrying: false,
+                fromX: event.clientX, fromY: event.clientY,
                 x: event.clientX - (parseFloat(item.dataset.dx) || 0),
-                y: event.clientY - (parseFloat(item.dataset.dy) || 0)
+                y: event.clientY - (parseFloat(item.dataset.dy) || 0),
+                timer: window.setTimeout(() => {
+                    hold.lifted = true;
+                    item.classList.add('is-held');
+                }, HOLD_MS)
             };
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', letGo);
+            window.addEventListener('pointercancel', letGo);
         };
-        const onPointerMove = event => {
-            if (!drag || event.pointerId !== drag.id) return;
-            if (!drag.moved) {
-                if (Math.hypot(event.clientX - drag.fromX, event.clientY - drag.fromY) < 4) return;
-                drag.moved = true;
-                drag.handle.setPointerCapture?.(event.pointerId);
-                drag.item.classList.add('is-held');
-            }
-            place(drag.item, event.clientX - drag.x, event.clientY - drag.y);
-        };
-        const onPointerUp = event => {
-            holding = false;
-            if (drag && event.pointerId === drag.id) {
-                if (drag.moved) {
-                    swallowClick = true;
-                    later(() => { swallowClick = false; }, 50);
-                }
-                drag.item.classList.remove('is-held');
-                drag = null;
-            }
-        };
+        const stopWinding = () => { holding = false; };
         const onClick = event => {
             if (swallowClick) {
                 swallowClick = false;
@@ -653,6 +735,10 @@
             if (!target) return;
             const win = target.closest('.vapor-win');
             const act = target.dataset.act;
+            if (win && win.classList.contains('vapor-note') && (act === 'close' || act === 'tuck' || act === 'dismiss')) {
+                win.remove();
+                return;
+            }
             if (act === 'close' || act === 'tuck' || act === 'dismiss') {
                 if (win.classList.contains('vapor-popup')) {
                     const then = win.then;
@@ -663,7 +749,7 @@
                 else tuck(win);
             } else if (act === 'hop') {
                 win.classList.add('is-hopping');
-                place(win, (Math.random() - .5) * window.innerWidth * .34, (Math.random() - .5) * window.innerHeight * .34);
+                place(win, ...findPlace(win));
                 later(() => win.classList.remove('is-hopping'), 400);
             } else if (act === 'grow') {
                 win.classList.toggle('is-big');
@@ -681,7 +767,7 @@
                 else if (printJob.state === 'printing') printJob.pause();
                 else printJob.resume();
             } else if (act === 'restore') {
-                open(windows.find(w => w.dataset.win === target.dataset.restore), true);
+                open(windows.find(w => w.dataset.win === target.dataset.restore));
             } else if (act === 'file') {
                 open(printWin.win, true);
                 if (printJob.state === 'idle') printJob.start();
@@ -698,28 +784,62 @@
         };
         for (const surface of [root, over]) {
             surface.addEventListener('pointerdown', onPointerDown);
-            surface.addEventListener('pointermove', onPointerMove);
-            surface.addEventListener('pointerup', onPointerUp);
-            surface.addEventListener('pointercancel', onPointerUp);
+            surface.addEventListener('pointerup', stopWinding);
+            surface.addEventListener('pointercancel', stopWinding);
             surface.addEventListener('click', onClick);
+            // A long press on a phone asks for a menu. While holding something, it does not get one.
+            surface.addEventListener('contextmenu', event => { if (hold) event.preventDefault(); });
         }
         root.addEventListener('input', onInput);
-        document.body.append(root, over);
+        const layer = document.querySelector('.background-grid');
+        if (layer) layer.after(root);
+        else document.body.prepend(root);
+        document.body.appendChild(over);
 
         printJob.describe();
-        if (isTall()) {
-            windows.forEach(win => {
-                win.classList.add('is-gone');
-                win.hidden = true;
-                addChip(win);
-            });
-        }
+
+        /* The next thing out, whenever it is due: the burst first, with the real things dealt
+           in among the notes at random, then one now and then, up to the most it will show. */
+        const noteBag = [];
+        const note = () => {
+            if (!noteBag.length) noteBag.push(...shuffled([...NOTES]));
+            const [title, text, answer] = noteBag.pop();
+            const made = makeWindow('note', title, 'yellow');
+            made.win.classList.add('vapor-popup', 'vapor-note', 'is-opening');
+            const words = pixelCanvas(text);
+            const key = document.createElement('button');
+            key.type = 'button';
+            key.className = 'vapor-key';
+            key.dataset.act = 'dismiss';
+            key.appendChild(pixelCanvas(answer));
+            made.pane.append(words, key);
+            place(made.win, ...findPlace(made.win));
+            raise(made.win);
+            later(() => made.win.classList.remove('is-opening'), 260);
+        };
+        const outNow = () => root.querySelectorAll('[data-item]:not([hidden])').length + over.querySelectorAll('[data-item]:not([hidden])').length;
+        const popNext = () => {
+            if (!document.hidden && outNow() < MOST_OUT) {
+                const realThing = popped < BURST_COUNT ? Math.random() < waiting.length / (BURST_COUNT - popped) : waiting.length > 0;
+                if (realThing) open(waiting[0], true);
+                else note();
+                popped += 1;
+            }
+            later(popNext, popped < BURST_COUNT ? BURST_GAP_MS : LATER_GAP_MS + Math.random() * LATER_SPREAD_MS);
+        };
+        later(popNext, BURST_GAP_MS);
+
         return {
             redraw() {
                 askPattern();
                 drawRings();
+                // A smaller window must not strand anything out of reach.
+                root.querySelectorAll('[data-item]:not([hidden])').forEach(item => {
+                    place(item, ...keepReachable(item, parseFloat(item.dataset.dx) || 0, parseFloat(item.dataset.dy) || 0));
+                });
             },
             remove() {
+                letGo();
                 timers.forEach(id => clearTimeout(id));
                 timers.clear();
                 if (patternFrame) cancelAnimationFrame(patternFrame);

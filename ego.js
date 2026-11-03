@@ -1,990 +1,426 @@
-/* The dark sky: the third of High FX's backdrops.
+/* The eye, in full: the third of High FX's backdrops.
 
    Ten quick presses on the effects slider's High stop find High's other skies, and
    after that two quick presses go round them: the stars, the bright Frutiger Aero sky
-   (aero.js), this, and the stars again (the slider code in portfolio.js). This is that
-   sunlit daydream's other side, a long way down where the light gives out. Black water,
-   a few thin currents of light, and specks that wake near the cursor. Bubbles carry up
-   the projects on these pages, as CAD and as photographs. Out of the dark a great lens,
-   slowly breathing, turns to look at whatever the visitor is looking at, and as the
-   page goes by it drifts away to the left while the arm that blew the bubbles sinks.
+   (aero.js), this, and the stars again (the slider code in portfolio.js). It is the same
+   dithered eye as Low's other look (y2k.js), with all that High can spend on it.
 
-   Nothing here is fetched until someone asks, and leaving it hands everything back.
-   Everything is painted once into sprites, and a frame is those sprites being moved
-   with a few short paths for the tentacles and the sonar. The glass in front is the
-   page's own and frosts and bends this as it does the stars. */
+   It is a ball, and it moves by turning. The iris lies on the ball and narrows as it comes
+   round to the edge, the veins go round with it, its light and the window it reflects stay
+   where they are, and the lids go a little way with it. It looks about for itself, and
+   blinks. Pressed twice, anywhere the page itself does not answer, it turns to fix on the
+   cursor for fifteen seconds and then goes back to looking about.
+
+   It is two passes on the graphics card. The first draws the eye one dither cell at a
+   time on a very small picture: moving fibres, waves going out from the pupil, veins
+   that light up, sparks going round it, an aura that flows. The second lays that on the
+   screen with its pixels showing, its colours pulled apart, light bleeding from it and
+   shafts coming off the pupil, and tears it now and then. Not fetched until someone asks,
+   and leaving it hands everything back. The glass in front is the page's own and frosts
+   and bends this as it does the stars. */
 (function () {
     'use strict';
 
-    const TAU = Math.PI * 2;
     const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
-    const seeded = seed => {
-        let s = seed >>> 0;
-        return () => {
-            s = (s + 0x6D2B79F5) | 0;
-            let t = Math.imul(s ^ (s >>> 15), 1 | s);
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
+    const smooth = (low, high, value) => {
+        const t = clamp((value - low) / (high - low), 0, 1);
+        return t * t * (3 - 2 * t);
     };
-    const blank = (width, height) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.ceil(width));
-        canvas.height = Math.max(1, Math.ceil(height));
-        return canvas;
-    };
-    const breathe = () => new Promise(resolve => setTimeout(resolve));
-    const linear = (context, x0, y0, x1, y1, stops) => {
-        const gradient = context.createLinearGradient(x0, y0, x1, y1);
-        stops.forEach(([at, color]) => gradient.addColorStop(at, color));
-        return gradient;
-    };
-    const radial = (context, x0, y0, r0, x1, y1, r1, stops) => {
-        const gradient = context.createRadialGradient(x0, y0, r0, x1, y1, r1);
-        stops.forEach(([at, color]) => gradient.addColorStop(at, color));
-        return gradient;
-    };
-    const ICE = '#a6ecff';
-    // Metal with almost no light on it: a thin bright line and a lot of black.
-    const metal = (c, x0, y0, x1, y1) => linear(c, x0, y0, x1, y1, [[0, '#9aa7b3'], [.1, '#4b5660'], [.34, '#171c22'], [.5, '#05070a'], [.62, '#232a31'], [.84, '#6c7985'], [1, '#191e24']]);
+    const FOLLOW_MS = 15000;
+    const DOUBLE_PRESS_MS = 450;
+    // How far the ball can turn, in radians: a long way to the sides, less up and down.
+    const MOST_YAW = .72, MOST_PITCH = .3;
+    const turnFor = (offset, most) => clamp(Math.asin(clamp(offset, -1, 1)), -most, most);
 
-    /* ---- Sprites ----------------------------------------------------------- */
-    let scale = 1;
-    const sprite = (width, height, anchorX, anchorY, paint) => {
-        const canvas = blank(width * scale, height * scale);
-        const context = canvas.getContext('2d');
-        context.scale(scale, scale);
-        context.translate(anchorX, anchorY);
-        paint(context);
-        return { canvas, width, height, anchorX, anchorY };
-    };
-    const disc = (c, x, y, r, fill) => {
-        c.fillStyle = fill;
-        c.beginPath();
-        c.arc(x, y, r, 0, TAU);
-        c.fill();
-    };
-    const ring = (c, r, color, width) => {
-        c.strokeStyle = color;
-        c.lineWidth = width;
-        c.beginPath();
-        c.arc(0, 0, r, 0, TAU);
-        c.stroke();
-    };
-    const shellPath = (c, length, r0, r1) => {
-        c.beginPath();
-        c.arc(0, 0, r0, Math.PI / 2, -Math.PI / 2);
-        c.lineTo(length, -r1);
-        c.arc(length, 0, r1, -Math.PI / 2, Math.PI / 2);
-        c.closePath();
-    };
+    const QUAD = `#version 300 es
+        void main() {
+            vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+            gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+        }`;
 
-    /* ---- The arm, out of the dark ------------------------------------------ */
-    const armLink = (length, r0, r1) => {
-        const reach = Math.max(r0, r1) + 3;
-        return sprite(length + r0 + r1 + 6, reach * 2, r0 + 3, reach, c => {
-            shellPath(c, length, r0, r1);
-            c.fillStyle = metal(c, 0, -reach, 0, reach);
-            c.fill();
-            c.save();
-            shellPath(c, length, r0, r1);
-            c.clip();
-            c.fillStyle = 'rgba(0,0,0,.72)';
-            c.fillRect(length * .1, -reach * .24, length * .8, reach * .48);
-            c.fillStyle = ICE;
-            c.globalAlpha = .75;
-            c.shadowColor = ICE;
-            c.shadowBlur = reach * .5;
-            c.fillRect(length * .16, -reach * .022, length * .68, Math.max(1, reach * .044));
-            c.restore();
-        });
-    };
-    const joint = radius => sprite(radius * 2 + 16, radius * 2 + 16, radius + 8, radius + 8, c => {
-        disc(c, 0, 0, radius, metal(c, -radius, -radius, radius, radius));
-        disc(c, 0, 0, radius * .72, '#030406');
-        c.shadowColor = ICE;
-        c.shadowBlur = radius * .7;
-        disc(c, 0, 0, radius * .17, ICE);
-        c.shadowBlur = 0;
-    });
-    const armBase = size => sprite(size * 2.4, size * 1.5, size * 1.2, size * 1.2, c => {
-        c.fillStyle = metal(c, -size, 0, size, 0);
-        c.beginPath();
-        c.moveTo(-size, size * .1);
-        c.quadraticCurveTo(-size * .9, -size * .32, -size * .52, -size * .5);
-        c.lineTo(size * .52, -size * .5);
-        c.quadraticCurveTo(size * .9, -size * .32, size, size * .1);
-        c.quadraticCurveTo(0, size * .3, -size, size * .1);
-        c.fill();
-    });
-    const wand = radius => sprite(radius * 3.4 + 14, radius * 2.4 + 14, radius * .6 + 7, radius * 1.2 + 7, c => {
-        c.strokeStyle = metal(c, 0, -radius * .2, 0, radius * .2);
-        c.lineWidth = radius * .16;
-        c.lineCap = 'round';
-        c.beginPath();
-        c.moveTo(0, 0);
-        c.lineTo(radius * .95, 0);
-        c.stroke();
-        const cx = radius * 1.75;
-        c.strokeStyle = 'rgba(166,236,255,.8)';
-        c.shadowColor = ICE;
-        c.shadowBlur = radius * .3;
-        c.lineWidth = Math.max(1, radius * .05);
-        c.beginPath();
-        c.arc(cx, 0, radius, 0, TAU);
-        c.stroke();
-        c.shadowBlur = 0;
-    });
-    // The kiwi drive, a long way from anywhere, with one headlamp.
-    const kiwiBot = size => sprite(size * 2.8, size * 2, size * 1.4, size * 1.5, c => {
-        for (const [x, y, r] of [[0, size * .04, size * .26], [-size * .78, size * .12, size * .32], [size * .78, size * .12, size * .32]]) {
-            c.fillStyle = radial(c, x - r * .25, y - r * .3, r * .1, x, y, r, [[0, '#20262d'], [.7, '#0a0d11'], [1, '#020304']]);
-            c.beginPath();
-            c.ellipse(x, y, r * .78, r, 0, 0, TAU);
-            c.fill();
+    const EYE = `#version 300 es
+        precision highp float;
+        uniform vec2 uGrid, uEye, uLookAt, uLid;
+        uniform vec3 uSize;
+        uniform mat3 uTurn;
+        uniform float uBall, uCap, uIris, uTime, uOpen, uPupil, uShock, uTall, uFollow;
+        out vec4 outColor;
+        const float TAU = 6.2831853;
+        const vec3 LIGHT = vec3(0.26, -0.34, 0.9);
+        float hash(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
         }
-        c.fillStyle = metal(c, 0, -size * .52, 0, size * .32);
-        c.beginPath();
-        c.ellipse(0, -size * .1, size * 1.02, size * .42, 0, 0, TAU);
-        c.fill();
-        c.fillStyle = linear(c, 0, -size * .82, 0, -size * .1, [[0, '#14191f'], [1, '#020304']]);
-        c.beginPath();
-        c.ellipse(0, -size * .34, size * .62, size * .48, 0, Math.PI, 0);
-        c.closePath();
-        c.fill();
-        c.fillStyle = ICE;
-        c.shadowColor = ICE;
-        c.shadowBlur = size * .3;
-        c.beginPath();
-        c.ellipse(size * .5, -size * .4, size * .09, size * .06, 0, 0, TAU);
-        c.fill();
-        c.shadowBlur = 0;
-    });
-    const headlamp = size => sprite(size * 7, size * 3, 0, size * 1.5, c => {
-        c.fillStyle = linear(c, 0, 0, size * 7, 0, [[0, 'rgba(166,236,255,.3)'], [.5, 'rgba(120,210,255,.07)'], [1, 'rgba(120,210,255,0)']]);
-        c.beginPath();
-        c.moveTo(0, -size * .05);
-        c.lineTo(size * 7, -size * 1.3);
-        c.lineTo(size * 7, size * 1.3);
-        c.lineTo(0, size * .05);
-        c.closePath();
-        c.fill();
-    });
-    // A robot of the depths: a pulsing bell of light with one instrument in it.
-    const jellyBell = (size, rgb) => sprite(size * 3, size * 3, size * 1.5, size * 1.5, c => {
-        c.fillStyle = radial(c, 0, 0, 0, 0, 0, size * 1.5, [[0, `rgba(${rgb},.3)`], [.45, `rgba(${rgb},.08)`], [1, `rgba(${rgb},0)`]]);
-        c.fillRect(-size * 1.5, -size * 1.5, size * 3, size * 3);
-        c.beginPath();
-        c.ellipse(0, 0, size, size * .78, 0, Math.PI, 0);
-        c.quadraticCurveTo(0, size * .24, -size, 0);
-        c.closePath();
-        c.fillStyle = radial(c, 0, -size * .4, size * .05, 0, -size * .2, size, [[0, `rgba(${rgb},.42)`], [.7, `rgba(${rgb},.14)`], [1, `rgba(${rgb},.3)`]]);
-        c.fill();
-        c.strokeStyle = `rgba(${rgb},.75)`;
-        c.lineWidth = 1;
-        c.stroke();
-        disc(c, 0, -size * .28, size * .1, 'rgba(255,255,255,.92)');
-    });
-
-    /* ---- What the bubbles carry --------------------------------------------
-       Things actually made for these pages. A CAD render sits on black, so its black
-       is made clear and it floats in the bubble as a bare part. A photograph is cut
-       to a circle and graded down into the cold. */
-    const PROJECTS = [
-        { file: 'assembly-render.webp', cad: true },
-        { file: 'omni-bot-cad-900.webp', cad: true },
-        { file: 'cad-lower-mecanum-section-900.webp', cad: true },
-        { file: 'omnibot-assembled-900.webp' },
-        { file: 'zerog-hydra-900.webp' },
-        { file: 'a-eye-animatronic-900.webp' },
-        { file: 'a301-swerve-wheel-assembly-900.webp' },
-        { file: 'digital-camera-enclosure.webp' },
-        { file: 'final-robot-900.webp' },
-        { file: 'kiwi-swerve-prototype-900.webp' }
-    ];
-    const SPRITE_SIZE = 360;
-    const fetchPicture = file => new Promise(resolve => {
-        const picture = new Image();
-        picture.onload = () => resolve(picture);
-        picture.onerror = () => resolve(null);
-        picture.src = `assets/${file}`;
-    });
-    const cadSprite = picture => {
-        // How much of the frame is really the part: a render has a lot of black to spare.
-        const probe = blank(96, 96);
-        const pc = probe.getContext('2d', { willReadFrequently: true });
-        pc.fillStyle = '#000';
-        pc.fillRect(0, 0, 96, 96);
-        const fit = 96 / Math.max(picture.width, picture.height);
-        const pw = picture.width * fit, ph = picture.height * fit, ox = (96 - pw) / 2, oy = (96 - ph) / 2;
-        pc.drawImage(picture, ox, oy, pw, ph);
-        const seen = pc.getImageData(0, 0, 96, 96).data;
-        let x0 = 96, y0 = 96, x1 = 0, y1 = 0;
-        for (let y = 0; y < 96; y++) {
-            for (let x = 0; x < 96; x++) {
-                const i = (y * 96 + x) * 4;
-                if (seen[i] + seen[i + 1] + seen[i + 2] < 60) continue;
-                if (x < x0) x0 = x;
-                if (y < y0) y0 = y;
-                if (x > x1) x1 = x;
-                if (y > y1) y1 = y;
+        float noise(vec2 p) {
+            vec2 i = floor(p), f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+        }
+        float fbm(vec2 p) {
+            float a = 0.5, s = 0.0;
+            for (int i = 0; i < 4; i++) {
+                s += a * noise(p);
+                p = p * 2.03 + 17.1;
+                a *= 0.5;
             }
+            return s;
         }
-        if (x1 <= x0 || y1 <= y0) return null;
-        const side = Math.max(x1 - x0, y1 - y0) * 1.06 / fit;
-        const midX = ((x0 + x1) / 2 - ox) / fit, midY = ((y0 + y1) / 2 - oy) / fit;
-        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
-        const c = canvas.getContext('2d', { willReadFrequently: true });
-        c.fillStyle = '#000';
-        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        c.drawImage(picture, midX - side / 2, midY - side / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        const image = c.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        const d = image.data;
-        for (let i = 0; i < d.length; i += 4) {
-            const light = (d[i] + d[i + 1] + d[i + 2]) / 3;
-            d[i + 3] = Math.min(255, Math.max(0, (light - 8) * 5));
-            d[i] = Math.min(255, d[i] * 1.2);
-            d[i + 1] = Math.min(255, d[i + 1] * 1.32);
-            d[i + 2] = Math.min(255, d[i + 2] * 1.48);
+        float bayer(vec2 p) {
+            ivec2 c = ivec2(mod(p, 8.0));
+            int x = c.x, y = c.y, z = x ^ y;
+            int v = ((z & 1) << 5) | ((y & 1) << 4) | ((z & 2) << 2) | ((y & 2) << 1) | ((z & 4) >> 1) | ((y & 4) >> 2);
+            return (float(v) + 0.5) / 64.0;
         }
-        c.putImageData(image, 0, 0);
-        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: SPRITE_SIZE / 2, anchorY: SPRITE_SIZE / 2, cad: true };
+        void main() {
+            vec2 cell = vec2(floor(gl_FragCoord.x), uGrid.y - 1.0 - floor(gl_FragCoord.y));
+            vec2 r = cell / uGrid;
+            float x = cell.x, y = cell.y;
+            // The lids go a little way with the ball, as lids do.
+            float u = clamp((x - uEye.x - uLid.x) / uSize.x, -1.0, 1.0);
+            float edge = pow(1.0 - u * u, 1.08);
+            float middle = uEye.y + uLid.y;
+            float top = middle - uOpen * uSize.y * edge, foot = middle + uOpen * uSize.z * edge;
+            float dim = mix(0.24 + 0.76 * smoothstep(0.14, 0.68, r.x), 0.46, uTall) * (0.3 + 0.7 * smoothstep(0.05, 0.17, r.y));
+            float warm = smoothstep(0.25, 0.95, r.x) * smoothstep(0.8, 0.1, r.y);
+            float cool = smoothstep(0.7, 0.1, r.x) * smoothstep(0.3, 1.0, r.y);
+            vec3 tint = vec3(206.0 + warm * 49.0 - cool * 90.0, 190.0 - warm * 70.0 - cool * 20.0, 255.0 - warm * 14.0) / 255.0;
+            vec3 color = tint;
+            float tone;
+            vec2 toEye = cell - uEye;
+            float ringAt = length(toEye) / (uIris * 0.1), angle = atan(toEye.y, toEye.x);
+            if (y > top && y < foot) {
+                // The ball. Where this cell lands on it is n, and p is the part of the ball
+                // that has turned to face it, so everything painted by p goes round with it.
+                vec2 flat2 = toEye / uBall;
+                float reach = dot(flat2, flat2);
+                if (reach < 1.0) {
+                    vec3 n = vec3(flat2, sqrt(1.0 - reach));
+                    vec3 p = uTurn * n;
+                    float away = acos(clamp(p.z, -1.0, 1.0));
+                    float k = away / uCap;
+                    angle = atan(p.y, p.x);
+                    ringAt = k * 10.0;
+                    float light = max(0.0, dot(n, LIGHT));
+                    // The white, round under its light, with veins in it that flare and fade.
+                    tone = 0.05 + 0.6 * pow(light, 1.5);
+                    float rn = fbm(p.xy / (1.0 + max(p.z, -0.6)) * 13.0);
+                    float vein = pow(1.0 - abs(rn * 2.0 - 1.0), 18.0) * smoothstep(0.75, 1.9, k);
+                    float flare = 0.4 + 0.6 * pow(0.5 + 0.5 * sin(uTime * 1.3 + rn * 22.0), 3.0);
+                    if (vein * flare > 0.12) {
+                        tone = max(tone, vein * flare * 1.4);
+                        color = mix(color, vec3(1.0, 0.36, 0.72), 0.85);
+                    }
+                    // Faint lines round it, like a globe's, that wrap as it turns.
+                    float lat = smoothstep(0.92, 1.0, abs(fract(away * 5.2 - uTime * 0.03) - 0.5) * 2.0);
+                    float lon = smoothstep(0.95, 1.0, abs(fract(angle / TAU * 16.0) - 0.5) * 2.0);
+                    if (k > 1.04) tone += (0.1 * lat + 0.07 * lon) * (0.3 + light);
+                    if (k < 1.0) {
+                        float pupil = 0.36 + uPupil;
+                        float fibre = 0.5 + 0.5 * sin(angle * 34.0 + sin(angle * 9.0 + uTime * 0.3) * 1.6 + uTime * 0.25);
+                        float fine = 0.5 + 0.5 * sin(angle * 71.0 - uTime * 0.7);
+                        tone = 0.2 + 0.62 * fibre * smoothstep(pupil - 0.06, 0.7, k) * smoothstep(1.0, 0.78, k);
+                        tone += 0.24 * exp(-pow((k - 0.48) / 0.07, 2.0)) + 0.12 * fine * smoothstep(1.0, 0.6, k);
+                        // Waves going out from the pupil.
+                        tone += 0.55 * exp(-pow((k - fract(uTime * 0.17) * 1.25) / 0.045, 2.0));
+                        tone += 0.3 * exp(-pow((k - fract(uTime * 0.17 + 0.5) * 1.25) / 0.03, 2.0));
+                        tone *= smoothstep(1.0, 0.9, k) * 0.9 + 0.1;
+                        color = mix(vec3(1.0, 0.5 + k * 0.24, 0.84), vec3(0.74, 0.5, 1.0), smoothstep(0.42, 0.7, k));
+                        color = mix(color, vec3(0.42, 0.9, 1.0), 0.42 * (0.5 + 0.5 * sin(angle * 3.0 + uTime * 0.8)) * smoothstep(0.5, 0.92, k));
+                        color = mix(color, vec3(1.0, 0.32, 0.56), uFollow * 0.55);
+                        tone += uFollow * 0.1;
+                        if (k < pupil) tone = 0.0;
+                        else tone = max(tone, 0.14 * smoothstep(pupil * 1.3, pupil, k));
+                        tone *= 0.42 + 0.72 * light;
+                    }
+                    // Light caught round the edge of the ball, where it turns away.
+                    float rim = pow(1.0 - n.z, 2.6);
+                    tone += rim * 0.6;
+                    color = mix(color, vec3(0.62, 0.42, 1.0), min(1.0, rim * 1.4));
+                    // The window it reflects stays with the room, and only slides a little
+                    // as the bulge of the eye comes round under it.
+                    vec2 glint = (toEye - (uLookAt - uEye) * 0.28) / uIris;
+                    if (length(glint - vec2(0.3, -0.34)) < 0.09 || length(glint + vec2(0.24, -0.3)) < 0.035) {
+                        tone = 1.0;
+                        color = vec3(1.0);
+                    }
+                } else tone = 0.025;
+                // The shadows the lids throw on it.
+                float under = (y - top) / (uGrid.y * 0.07);
+                if (under < 1.0) tone *= 0.15 + 0.85 * under;
+                float above = (foot - y) / (uGrid.y * 0.03);
+                if (above < 1.0) tone *= 0.5 + 0.5 * above;
+            } else {
+                // The skin round it, lit by an aura that flows.
+                float crease = middle - (uSize.y + uGrid.y * 0.085) * pow(edge, 0.8);
+                float fold = middle + (uSize.z + uGrid.y * 0.07) * pow(edge, 0.8);
+                tone = 0.05 + 0.2 * exp(-pow((y - top) / (uGrid.y * 0.16), 2.0)) + 0.16 * exp(-pow((y - foot) / (uGrid.y * 0.1), 2.0));
+                tone += 0.46 * exp(-pow((y - crease) / (uGrid.y * 0.009 + 0.9), 2.0)) * min(1.0, edge * 2.6);
+                tone += 0.24 * exp(-pow((y - fold) / (uGrid.y * 0.007 + 0.8), 2.0)) * min(1.0, edge * 2.6);
+                float flow = fbm(cell * 0.016 + vec2(uTime * 0.05, -uTime * 0.035) + fbm(cell * 0.01 - uTime * 0.03) * 2.4);
+                tone += 0.34 * smoothstep(0.42, 0.78, flow);
+                color = mix(color, vec3(0.5, 0.42, 1.0), smoothstep(0.42, 0.72, flow) * 0.6);
+                float toLid = min(abs(y - top), abs(y - foot));
+                if (edge > 0.02 && toLid < 1.3) tone = abs(y - top) < 1.3 ? 0.92 : 0.6;
+            }
+            // Sparks going round it, ring by ring: on the ball they ride it as it turns.
+            float ring = floor(ringAt);
+            if (ring > 10.0) {
+                float way = mod(ring, 2.0) * 2.0 - 1.0;
+                float count = 16.0 + ring * 2.0;
+                float at = floor((angle / TAU + 0.5 + uTime * way * (0.012 + 0.03 * hash(vec2(ring, 3.0)))) * count);
+                float life = hash(vec2(ring, at));
+                if (life > 0.9 && fract(ringAt) < 0.34) {
+                    tone = max(tone, 0.55 + 0.45 * sin(uTime * 3.0 + life * 40.0));
+                    color = mix(color, vec3(1.0), 0.6);
+                }
+            }
+            // A press sends a ring out from it across everything.
+            if (uShock >= 0.0) {
+                float wave = exp(-pow((length(cell - uLookAt) / uGrid.x - uShock * 1.5) / 0.018, 2.0)) * (1.0 - uShock);
+                tone += wave * 1.3;
+                color = mix(color, vec3(1.0, 0.78, 0.96), min(1.0, wave * 2.0));
+            }
+            bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
+            outColor = vec4(on ? color * (0.38 + 0.62 * dim) : vec3(0.0), 1.0);
+        }`;
+
+    const SCREEN = `#version 300 es
+        precision highp float;
+        uniform sampler2D uScene;
+        uniform vec2 uGrid, uRes, uPupilAt;
+        uniform float uTime, uGlitch, uTall, uFollow;
+        out vec4 outColor;
+        float hash(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+        }
+        vec3 cell(vec2 uv) {
+            ivec2 at = ivec2(clamp(uv, vec2(0.0), vec2(0.9999)) * uGrid);
+            return texelFetch(uScene, at, 0).rgb;
+        }
+        void main() {
+            vec2 uv = gl_FragCoord.xy / uRes;
+            float beat = floor(uTime * 24.0);
+            float band = floor(uv.y * 44.0);
+            float tear = (hash(vec2(band, beat)) - 0.5) * uGlitch * step(0.7, hash(vec2(band * 3.1, beat))) * 0.14;
+            vec2 at = uv + vec2(tear, 0.0);
+            float split = 0.0009 + 0.0012 * length(uv - 0.5) + 0.007 * uGlitch;
+            vec3 crisp = vec3(cell(at + vec2(split, 0.0)).r, cell(at).g, cell(at - vec2(split, 0.0)).b);
+            // The aura underneath, breathing.
+            float wide = uRes.x / uRes.y;
+            vec2 q = (uv - vec2(0.6, 0.52)) * vec2(wide, 1.0);
+            float breath = 0.86 + 0.14 * sin(uTime * 0.5);
+            vec3 base = vec3(0.016, 0.008, 0.035);
+            base += vec3(0.33, 0.14, 0.84) * 0.56 * breath * exp(-dot(q, q) * 2.2);
+            vec2 w = (uv - vec2(0.9, 0.88)) * vec2(wide, 1.0);
+            base += vec3(0.84, 0.2, 0.78) * 0.3 * exp(-dot(w, w) * 4.5);
+            vec2 z = (uv - vec2(0.2, 0.08)) * vec2(wide, 1.0);
+            base += vec3(0.13, 0.27, 0.94) * 0.3 * exp(-dot(z, z) * 4.0);
+            // Light bleeding out of the bright places.
+            vec3 bloom = textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7;
+            // Shafts coming off the pupil.
+            vec3 shafts = vec3(0.0);
+            vec2 toPupil = (uPupilAt - uv) / 9.0;
+            vec2 walk = uv + toPupil * hash(gl_FragCoord.xy + uTime);
+            float fall = 1.0;
+            for (int i = 0; i < 9; i++) {
+                shafts += textureLod(uScene, walk, 3.0).rgb * fall;
+                walk += toPupil;
+                fall *= 0.9;
+            }
+            shafts *= 0.09 * (0.8 + 0.5 * uFollow);
+            float quiet = mix(0.38 + 0.62 * smoothstep(0.1, 0.66, uv.x), 0.6, uTall);
+            vec3 color = base + crisp + (bloom * 0.62 + shafts) * quiet;
+            color *= 0.955 + 0.045 * sin(gl_FragCoord.y * 2.2);
+            vec2 edge = uv - 0.5;
+            color *= 1.0 - dot(edge, edge) * 0.72;
+            outColor = vec4(color, 1.0);
+        }`;
+
+    let canvas = null, gl = null, scene = null, target = null, eyeProgram = null, screenProgram = null, eyeUniforms = null, screenUniforms = null, vao = null;
+    let shown = false, frame = 0, lastFrame = 0, clock = 0, underProject = false, underProjectTimer = 0, resizeTimer = 0;
+    let reducedMotion = null;
+    let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, tall = 0, builtWidth = 0, builtHeight = 0;
+    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false;
+    let open = 1, blinkAt = -1, nextBlink = 3, secondBlink = false, nextLook = 1, shockAt = -9, glitchUntil = -1, nextGlitch = 6;
+    let followUntil = 0, followAmount = 0, lastPress = -1e9, pupil = 0;
+    const turn = new Float32Array(9);
+
+    const compile = (type, source) => {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+        return shader;
     };
-    const photoSprite = picture => {
-        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
-        const c = canvas.getContext('2d');
-        const side = Math.min(picture.width, picture.height);
-        c.filter = 'saturate(.72) brightness(.66) contrast(1.14)';
-        c.drawImage(picture, (picture.width - side) / 2, (picture.height - side) / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        c.filter = 'none';
-        c.globalCompositeOperation = 'multiply';
-        c.fillStyle = 'rgb(150,195,225)';
-        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        c.globalCompositeOperation = 'destination-in';
-        const r = SPRITE_SIZE / 2;
-        c.fillStyle = radial(c, r, r, r * .62, r, r, r, [[0, 'rgba(0,0,0,1)'], [.7, 'rgba(0,0,0,.92)'], [1, 'rgba(0,0,0,0)']]);
-        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: r, anchorY: r, cad: false };
+    const link = (fragment, names) => {
+        const program = gl.createProgram();
+        gl.attachShader(program, compile(gl.VERTEX_SHADER, QUAD));
+        gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment));
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+        const uniforms = {};
+        for (const name of names) uniforms[name] = gl.getUniformLocation(program, name);
+        return { program, uniforms };
     };
-    const loadProjects = async () => {
-        const pictures = await Promise.all(PROJECTS.map(project => fetchPicture(project.file)));
-        const made = [];
-        for (let i = 0; i < PROJECTS.length; i++) {
-            if (!pictures[i]) continue;
-            await breathe();
-            const sprite_ = PROJECTS[i].cad ? cadSprite(pictures[i]) : photoSprite(pictures[i]);
-            if (sprite_) made.push(sprite_);
-        }
-        return made;
+    const setUp = () => {
+        canvas = document.createElement('canvas');
+        canvas.className = 'ego-scene';
+        canvas.setAttribute('aria-hidden', 'true');
+        gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
+        if (!gl) throw new Error('no WebGL 2');
+        const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow']);
+        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow']);
+        eyeProgram = eye.program;
+        eyeUniforms = eye.uniforms;
+        screenProgram = screen.program;
+        screenUniforms = screen.uniforms;
+        vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+        scene = gl.createTexture();
+        target = gl.createFramebuffer();
+    };
+    const size = () => {
+        const width = Math.max(320, document.documentElement.clientWidth), height = Math.max(320, window.innerHeight);
+        builtWidth = document.documentElement.clientWidth;
+        builtHeight = window.innerHeight;
+        // From wide to tall with no jump on the way, and the same few cells at any size or shape.
+        tall = smooth(.9, 1.4, height / width);
+        const shaped = (wide, narrow) => wide + (narrow - wide) * tall;
+        cell = Math.max(3, Math.sqrt(width * height / 100000));
+        cols = Math.ceil(width / cell);
+        rows = Math.ceil(height / cell);
+        cx = cols * shaped(.56, .5);
+        cy = rows * shaped(.5, .44);
+        // On a very wide monitor it stops short of being a slit.
+        A = Math.min(cols * shaped(.62, .86), rows * 1.55);
+        upper = rows * shaped(.44, .3);
+        lower = rows * shaped(.38, .25);
+        irisR = Math.min(rows * shaped(.36, .2), A * .52);
+        // A little smaller than the opening is wide, so its round edge shows in the corners.
+        ball = Math.max(A * .8, upper * 1.25, irisR * 2.1);
+        // On a narrow screen it turns no further than keeps the iris in sight.
+        mostYaw = Math.min(MOST_YAW, Math.asin(clamp((Math.min(cx, cols - cx) - irisR * .35) / ball, 0, 1)));
+        // The look of it is in its large pixels, so the screen needs no more than this.
+        const ratio = Math.min(window.devicePixelRatio || 1, document.documentElement.dataset.effectsPace ? 1 : 1.25);
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        gl.bindTexture(gl.TEXTURE_2D, scene);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, scene, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     };
 
-    /* ---- Light in the dark ---------------------------------------------------- */
-    // A bubble is seen only by what catches its rim: drawn additively, it is nothing
-    // in the middle, a cold line round the edge and one small window of light.
-    const bubbleGlass = pixels => {
-        const canvas = blank(pixels, pixels);
-        const c = canvas.getContext('2d');
-        const r = pixels / 2, R = r * .96;
-        c.translate(r, r);
-        c.fillStyle = radial(c, 0, 0, R * .7, 0, 0, R, [[0, 'rgba(60,150,190,0)'], [.8, 'rgba(70,170,210,.05)'], [.96, 'rgba(110,210,240,.18)'], [1, 'rgba(190,240,255,.3)']]);
-        c.beginPath();
-        c.arc(0, 0, R, 0, TAU);
-        c.fill();
-        if (c.createConicGradient) {
-            const film = c.createConicGradient(.7, 0, 0);
-            [[0, 'rgba(166,236,255,.8)'], [.3, 'rgba(70,200,190,.22)'], [.55, 'rgba(125,103,255,.5)'], [.8, 'rgba(60,120,255,.2)'], [1, 'rgba(166,236,255,.8)']]
-                .forEach(([at, color]) => film.addColorStop(at, color));
-            c.strokeStyle = film;
-        } else c.strokeStyle = 'rgba(166,236,255,.5)';
-        c.lineWidth = Math.max(1, R * .018);
-        c.beginPath();
-        c.arc(0, 0, R * .985, 0, TAU);
-        c.stroke();
-        c.save();
-        c.rotate(-.72);
-        c.fillStyle = radial(c, 0, -R * .74, 0, 0, -R * .74, R * .42, [[0, 'rgba(225,248,255,.42)'], [.5, 'rgba(190,235,255,.1)'], [1, 'rgba(190,235,255,0)']]);
-        c.beginPath();
-        c.ellipse(0, -R * .74, R * .4, R * .1, 0, 0, TAU);
-        c.fill();
-        c.restore();
-        return canvas;
-    };
-    const glowSprite = (pixels, rgb) => {
-        const canvas = blank(pixels, pixels);
-        const c = canvas.getContext('2d');
-        c.fillStyle = radial(c, pixels / 2, pixels / 2, 0, pixels / 2, pixels / 2, pixels / 2, [[0, 'rgba(255,255,255,.95)'], [.14, `rgba(${rgb},.7)`], [1, `rgba(${rgb},0)`]]);
-        c.fillRect(0, 0, pixels, pixels);
-        return canvas;
-    };
-    const softSprite = (pixels, rgb) => {
-        const canvas = blank(pixels, pixels);
-        const c = canvas.getContext('2d');
-        c.fillStyle = radial(c, pixels / 2, pixels / 2, 0, pixels / 2, pixels / 2, pixels / 2, [[0, `rgba(${rgb},.5)`], [.5, `rgba(${rgb},.13)`], [1, `rgba(${rgb},0)`]]);
-        c.fillRect(0, 0, pixels, pixels);
-        return canvas;
-    };
-
-    /* ---- The lens --------------------------------------------------------------
-       A body that never moves, an iris that turns toward the cursor and slowly
-       opens and closes, and the coloured ghosts on the glass, which slide the other
-       way, as reflections do. */
-    const lensBody = R => sprite(R * 2.7, R * 2.7, R * 1.35, R * 1.35, c => {
-        c.fillStyle = radial(c, 0, 0, R * .92, 0, 0, R * 1.34, [[0, 'rgba(50,120,190,.2)'], [.4, 'rgba(50,110,190,.06)'], [1, 'rgba(50,110,190,0)']]);
-        c.fillRect(-R * 1.35, -R * 1.35, R * 2.7, R * 2.7);
-        disc(c, 0, 0, R, metal(c, -R, -R, R, R));
-        disc(c, 0, 0, R * .955, '#020406');
-        // Knurling round the barrel, seen only where the light rakes it.
-        for (let i = 0; i < 220; i++) {
-            const a = i / 220 * TAU;
-            c.strokeStyle = `rgba(190,225,245,${.05 + .3 * Math.pow(Math.max(0, Math.cos(a + 2.3)), 4)})`;
-            c.lineWidth = 1;
-            c.beginPath();
-            c.moveTo(Math.cos(a) * R * .93, Math.sin(a) * R * .93);
-            c.lineTo(Math.cos(a) * R * .955, Math.sin(a) * R * .955);
-            c.stroke();
-        }
-        disc(c, 0, 0, R * .92, linear(c, -R, -R, R, R, [[0, '#10171d'], [.5, '#030507'], [1, '#0a0f14']]));
-        ring(c, R * .92, 'rgba(170,215,240,.25)', 1);
-        disc(c, 0, 0, R * .78, radial(c, -R * .2, -R * .26, R * .04, 0, 0, R * .78, [[0, '#0b151e'], [.55, '#040a10'], [1, '#010203']]));
-        ring(c, R * .78, 'rgba(160,205,235,.32)', 1.2);
-        ring(c, R * .66, 'rgba(160,205,235,.12)', 1);
-    });
-    const irisSprite = R => sprite(R * 1.5, R * 1.5, R * .75, R * .75, c => {
-        const outer = R * .62, hole = R * .2;
-        c.save();
-        c.beginPath();
-        c.arc(0, 0, outer, 0, TAU);
-        c.clip();
-        disc(c, 0, 0, outer, radial(c, 0, 0, hole, 0, 0, outer, [[0, '#0c2230'], [.5, '#06121b'], [1, '#02060a']]));
-        const blades = 9;
-        for (let i = 0; i < blades; i++) {
-            const a = i / blades * TAU;
-            const at = (radius, angle) => [Math.cos(a + angle) * radius, Math.sin(a + angle) * radius];
-            c.beginPath();
-            c.moveTo(...at(hole, 0));
-            c.lineTo(...at(outer * 1.1, .55));
-            c.lineTo(...at(outer * 1.1, 1.5));
-            c.lineTo(...at(hole, .74));
-            c.closePath();
-            c.fillStyle = linear(c, ...at(hole, .2), ...at(outer, 1), [[0, 'rgba(26,58,78,.92)'], [.5, 'rgba(9,22,32,.9)'], [1, 'rgba(3,8,12,.8)']]);
-            c.fill();
-            c.strokeStyle = 'rgba(150,215,245,.26)';
-            c.lineWidth = 1;
-            c.stroke();
-        }
-        c.restore();
-        // The opening, ringed with a cold light, and the dark inside it.
-        c.fillStyle = radial(c, 0, 0, hole * .86, 0, 0, hole * 1.7, [[0, 'rgba(110,210,255,.42)'], [1, 'rgba(110,210,255,0)']]);
-        c.beginPath();
-        c.arc(0, 0, hole * 1.7, 0, TAU);
-        c.fill();
-        disc(c, 0, 0, hole, radial(c, -hole * .2, -hole * .3, 0, 0, 0, hole, [[0, '#0a0d12'], [1, '#000000']]));
-    });
-    const lensGhosts = R => sprite(R * 2.4, R * 2.4, R * 1.2, R * 1.2, c => {
-        const arc = (radius, from, to, rgb, alpha, width) => {
-            c.strokeStyle = `rgba(${rgb},${alpha})`;
-            c.lineWidth = R * width;
-            c.lineCap = 'round';
-            c.beginPath();
-            c.arc(0, 0, radius, from, to);
-            c.stroke();
-        };
-        arc(R * .7, 3.5, 4.5, '125,103,255', .4, .022);
-        arc(R * .62, 3.7, 4.2, '70,220,190', .32, .012);
-        arc(R * .73, .3, 1.1, '60,130,255', .3, .018);
-        arc(R * .56, .5, .9, '125,103,255', .26, .01);
-        c.fillStyle = radial(c, -R * .36, -R * .42, 0, -R * .36, -R * .42, R * .3, [[0, 'rgba(200,240,255,.16)'], [1, 'rgba(200,240,255,0)']]);
-        c.fillRect(-R, -R, R * 2, R * 2);
-        for (const [x, y, r, rgb, a] of [[.26, .3, .06, '70,220,190', .16], [.42, .46, .03, '125,103,255', .26], [-.2, .36, .025, '110,190,255', .22]]) {
-            c.fillStyle = `rgba(${rgb},${a})`;
-            c.beginPath();
-            c.arc(R * x, R * y, R * r, 0, TAU);
-            c.fill();
-        }
-    });
-    const dialSprite = (R, ticks, arcs) => sprite(R * 2 + 6, R * 2 + 6, R + 3, R + 3, c => {
-        c.strokeStyle = 'rgba(150,215,245,.32)';
-        c.lineWidth = 1;
-        for (let i = 0; i < ticks; i++) {
-            const a = i / ticks * TAU, long = i % 5 === 0 ? .96 : .98;
-            c.beginPath();
-            c.moveTo(Math.cos(a) * R * long, Math.sin(a) * R * long);
-            c.lineTo(Math.cos(a) * R, Math.sin(a) * R);
-            c.stroke();
-        }
-        c.lineWidth = 1.6;
-        c.strokeStyle = 'rgba(166,236,255,.42)';
-        for (const [from, to] of arcs) {
-            c.beginPath();
-            c.arc(0, 0, R * .94, from, to);
-            c.stroke();
-        }
-    });
-    const streakSprite = R => sprite(R * 5, R * .3, R * 2.5, R * .15, c => {
-        c.fillStyle = linear(c, -R * 2.5, 0, R * 2.5, 0, [[0, 'rgba(70,140,255,0)'], [.5, 'rgba(140,210,255,.55)'], [1, 'rgba(70,140,255,0)']]);
-        c.beginPath();
-        c.ellipse(0, 0, R * 2.5, R * .012, 0, 0, TAU);
-        c.fill();
-    });
-
-    /* ---- The water ------------------------------------------------------------- */
-    let canvas = null, context = null;
-    let W = 0, H = 0, unit = 1, portrait = false;
-    let ready = false, preparing = null, shown = false, frame = 0, lastFrame = 0, clock = 0;
-    let underProject = false, underProjectTimer = 0;
-    let scene = null, reducedMotion = null, rebuilding = 0, resizeTimer = 0;
-    let pointerX = 0, pointerY = 0, pointerSeen = false, lookX = 0, lookY = 0, scrolled = 0, sinking = 0;
-    let projectSprites = null, scrollRoom = 1, roomMeasured = -10;
-
-    const floorCurve = () => {
-        const crest = portrait ? .93 : .9;
-        return x => H * (crest + .02 * Math.sin(x / W * 2.4 + 3.2) + .011 * Math.sin(x / W * 6.3 + .6) + .004 * Math.sin(x / W * 19 + 1.2));
-    };
-    // Long tapered sweeps of the sort Metro laid across everything, here only just there.
-    const swoosh = (c, x0, y0, cx, cy, x1, y1, thick, color) => {
-        c.fillStyle = color;
-        c.beginPath();
-        c.moveTo(x0, y0);
-        c.quadraticCurveTo(cx, cy - thick, x1, y1);
-        c.quadraticCurveTo(cx, cy + thick, x0, y0);
-        c.fill();
-    };
-    const paintWater = lens => {
-        const sky = blank(W * scale, H * scale);
-        const c = sky.getContext('2d', { alpha: false });
-        c.scale(scale, scale);
-        c.fillStyle = linear(c, 0, 0, 0, H, [[0, '#031019'], [.22, '#020a11'], [.55, '#01050a'], [1, '#000102']]);
-        c.fillRect(0, 0, W, H);
-        const span = Math.max(W, H);
-        for (const [x, y, r, rgb, a] of [[W * .42, -H * .1, span * .55, '30,110,140', .2], [lens.x, lens.y, span * .46, '30,70,170', .16], [W * .08, H * .84, span * .4, '70,40,170', .13]]) {
-            c.fillStyle = radial(c, x, y, 0, x, y, r, [[0, `rgba(${rgb},${a})`], [1, `rgba(${rgb},0)`]]);
-            c.fillRect(0, 0, W, H);
-        }
-        c.globalCompositeOperation = 'lighter';
-        swoosh(c, -W * .05, H * .68, W * .36, H * .34, W * 1.04, H * .26, H * .007, 'rgba(120,210,255,.1)');
-        swoosh(c, -W * .05, H * .74, W * .44, H * .46, W * 1.04, H * .4, H * .004, 'rgba(160,230,255,.1)');
-        swoosh(c, W * .1, H * .9, W * .52, H * .62, W * 1.04, H * .62, H * .006, 'rgba(125,103,255,.11)');
-        c.globalCompositeOperation = 'source-over';
-        // The shafts, the vignette and the scan lines go into this one picture rather
-        // than over each frame: each would be another blend of the whole screen.
-        c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = .85;
-        c.drawImage(paintShafts(), 0, 0, W, H);
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-        c.fillStyle = 'rgba(0,0,0,.07)';
-        for (let y = 0; y < H; y += 3) c.fillRect(0, y, W, 1);
-        c.fillStyle = radial(c, W / 2, H * .46, Math.min(W, H) * .38, W / 2, H * .46, Math.max(W, H) * .74, [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.72)']]);
-        c.fillRect(0, 0, W, H);
-        return sky;
-    };
-    // Shafts of what little light gets down here.
-    const paintShafts = () => {
-        const shafts = blank(W, H);
-        const c = shafts.getContext('2d');
-        const random = seeded(4711);
-        c.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 9; i++) {
-            const x = W * (.05 + random() * .9), lean = (random() - .5) * W * .22, width = W * (.012 + random() * .05), reach = H * (.45 + random() * .4);
-            c.fillStyle = linear(c, 0, 0, 0, reach, [[0, `rgba(90,185,215,${.07 + random() * .09})`], [1, 'rgba(90,185,215,0)']]);
-            c.beginPath();
-            c.moveTo(x - width * .3, -4);
-            c.lineTo(x + width * .3, -4);
-            c.lineTo(x + lean + width, reach);
-            c.lineTo(x + lean - width, reach);
-            c.closePath();
-            c.fill();
-        }
-        return shafts;
-    };
-    const paintFog = (size, rgb, seed) => {
-        const fog = blank(size, size * .6);
-        const c = fog.getContext('2d');
-        const random = seeded(seed);
-        c.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 26; i++) {
-            const x = size * (.12 + random() * .76), y = size * .6 * (.25 + random() * .5), r = size * (.06 + random() * .16);
-            c.fillStyle = radial(c, x, y, 0, x, y, r, [[0, `rgba(${rgb},.11)`], [1, `rgba(${rgb},0)`]]);
-            c.fillRect(x - r, y - r, r * 2, r * 2);
-        }
-        return fog;
-    };
-    // A current: fine strands of light, whole waves across its width so that two
-    // side by side join up and it can slide for ever.
-    const ribbonTile = (width, height, seed, rgb, strands, amplitude) => {
-        const tile = blank(width, height);
-        const c = tile.getContext('2d');
-        const random = seeded(seed);
-        const f1 = 1 + Math.floor(random() * 2), f2 = f1 + 1 + Math.floor(random() * 2);
-        const p1 = random() * TAU, p2 = random() * TAU;
-        const curve = (x, k) => height * .5
-            + amplitude * Math.sin(x / width * TAU * f1 + p1 + k * 1.1)
-            + amplitude * .42 * Math.sin(x / width * TAU * f2 + p2 - k * 1.7)
-            + (k - .5) * height * .16 * (1 + .6 * Math.sin(x / width * TAU * f1 + p2));
-        c.globalCompositeOperation = 'lighter';
-        c.lineWidth = 1;
-        for (let n = 0; n <= strands; n++) {
-            const k = n / strands, edge = Math.sin(k * Math.PI);
-            c.strokeStyle = `rgba(${rgb},${.03 + .12 * edge * edge})`;
-            c.beginPath();
-            for (let x = -4; x <= width + 4; x += 8) c.lineTo(x, curve(x, k));
-            c.stroke();
-        }
-        return { canvas: tile, center: x => curve(x, .5) };
-    };
-    const paintFloor = curve => {
-        const top = H * .78, height = H * .22 + 60;
-        const layer = blank((W + 80) * scale, height * scale);
-        const c = layer.getContext('2d');
-        c.scale(scale, scale);
-        c.translate(40, -top);
-        c.beginPath();
-        c.moveTo(-40, H + 60);
-        for (let x = -40; x <= W + 40; x += 6) c.lineTo(x, curve(x));
-        c.lineTo(W + 40, H + 60);
-        c.closePath();
-        c.fillStyle = linear(c, 0, top, 0, H, [[0, '#04090d'], [.5, '#020407'], [1, '#000000']]);
-        c.fill();
-        c.beginPath();
-        for (let x = -40; x <= W + 40; x += 6) c.lineTo(x, curve(x));
-        c.strokeStyle = 'rgba(120,200,235,.2)';
-        c.lineWidth = 1;
-        c.stroke();
-        return { layer, top, height };
-    };
-
-    const build = async () => {
-        W = Math.max(320, document.documentElement.clientWidth);
-        H = Math.max(320, window.innerHeight);
-        portrait = H > W * 1.1;
-        unit = Math.min(W, H * 1.35) / 1000;
-        const paced = document.documentElement.dataset.effectsPace;
-        // Soft dark light has few edges to keep, and fewer pixels leave the glass in
-        // front of it more of the frame.
-        scale = Math.min(window.devicePixelRatio || 1, paced ? 1.25 : 1.6);
-        const lens = portrait ? { x: W * .68, y: H * .3, r: W * .46 } : { x: W * .78, y: H * .4, r: Math.min(H * .37, W * .23) };
-
-        const sky = paintWater(lens);
-        await breathe();
-        const fogSize = Math.ceil(Math.max(W, H) * .7);
-        const fog = [
-            { image: paintFog(fogSize, '50,150,190', 31), x: W * .1, y: H * .5, speed: 4 },
-            { image: paintFog(fogSize, '80,60,190', 67), x: W * .6, y: H * .12, speed: -3 },
-            { image: paintFog(fogSize, '40,110,170', 97), x: -W * .2, y: H * .7, speed: 2.5 }
-        ];
-        await breathe();
-        const tileWidth = Math.ceil(Math.max(W, 900)), tileHeight = Math.ceil(H * .6);
-        const ribbons = [
-            { tile: ribbonTile(tileWidth, tileHeight, 71, '90,190,235', 44, H * .07), y: H * -.02, speed: 6, alpha: .7 },
-            { tile: ribbonTile(tileWidth, tileHeight, 167, '110,90,240', 30, H * .06), y: H * .32, speed: -4, alpha: .55 }
-        ];
-        await breathe();
-        const curve = floorCurve();
-        const floor = paintFloor(curve);
-        const lensParts = {
-            body: lensBody(lens.r), iris: irisSprite(lens.r), ghosts: lensGhosts(lens.r), streak: streakSprite(lens.r),
-            dials: [dialSprite(lens.r * 1.14, 90, [[.3, 1.1], [2.5, 3.2], [4.4, 5.6]]), dialSprite(lens.r * 1.26, 120, [[1.1, 1.5], [3.6, 4.8]])]
-        };
-        await breathe();
-
-        const armScale = unit * (portrait ? 1.05 : 1.2);
-        const armX = portrait ? W * .2 : W * .56;
-        const sprites = {
-            base: armBase(58 * armScale),
-            upper: armLink(150 * armScale, 25 * armScale, 19 * armScale),
-            fore: armLink(122 * armScale, 18 * armScale, 13 * armScale),
-            shoulder: joint(26 * armScale),
-            elbow: joint(19 * armScale),
-            wrist: joint(13 * armScale),
-            wand: wand(24 * armScale),
-            kiwi: kiwiBot(30 * unit * 1.2),
-            lamp: headlamp(30 * unit * 1.2),
-            bells: [jellyBell(30 * unit, '110,220,255'), jellyBell(22 * unit, '140,120,255'), jellyBell(16 * unit, '90,230,210')]
-        };
-        const arm = {
-            x: armX, y: curve(armX) + 4 * armScale,
-            upper: 150 * armScale, fore: 122 * armScale, wandReach: 42 * armScale,
-            shoulderHeight: 44 * armScale, shoulder: [0, 0], elbow: [0, 0], wrist: [0, 0], ring: [0, 0], angles: [0, 0, 0]
-        };
-        await breathe();
-
-        const glassSizes = [96, 192, 384].map(size => ({ size, canvas: bubbleGlass(size) }));
-        projectSprites = projectSprites || await loadProjects();
-        const icons = projectSprites;
-        await breathe();
-        const speck = glowSprite(32, '130,230,255');
-        const speckViolet = glowSprite(32, '150,130,255');
-        const torch = softSprite(256, '110,210,245');
-
-        const random = seeded(2718);
-        const count = portrait ? 14 : Math.round(clamp(W * H / 42000, 16, 30));
-        const bubbles = [];
-        for (let i = 0; i < Math.max(count, icons.length + 4); i++) {
-            const carrying = i < icons.length;
-            const radius = (carrying ? 50 + random() * 26 : 6 + Math.pow(random(), 2.2) * 40) * unit * (portrait ? 1.1 : 1.15);
-            bubbles.push({
-                x: random() * W, y: random() * (H + 200) - 100,
-                r: radius, grown: 1, depth: .25 + random() * .75,
-                rise: (carrying ? 6 : 10) + random() * 13,
-                sway: 6 + random() * 18, swayRate: .14 + random() * .3, phase: random() * TAU,
-                icon: carrying ? icons[i] : null,
-                turn: 0, turnRate: (random() - .5) * .3, pop: 0, drawnX: 0, drawnY: 0
-            });
-        }
-        const specks = [];
-        const speckCount = portrait ? 90 : Math.round(clamp(W * H / 7000, 90, 220));
-        for (let i = 0; i < speckCount; i++) {
-            specks.push({ x: random() * W, y: random() * H, size: (1.4 + random() * random() * 5) * Math.max(.8, unit), drift: 2 + random() * 8, rate: .25 + random() * .9, phase: random() * TAU, violet: random() > .78, depth: .2 + random() * .8 });
-        }
-        const jellies = [
-            { bell: 0, x: portrait ? .24 : .3, y: .3, spanX: .1, spanY: .08, rate: .05, phase: 1, depth: .5, size: 30 * unit },
-            { bell: 1, x: portrait ? .8 : .44, y: .68, spanX: .08, spanY: .06, rate: .07, phase: 3, depth: .3, size: 22 * unit },
-            { bell: 2, x: portrait ? .5 : .08, y: .55, spanX: .05, spanY: .1, rate: .09, phase: 5, depth: .22, size: 16 * unit }
-        ];
-
-        scene = {
-            lens, lensAt: { x: lens.x, y: lens.y }, lensK: 0, armAway: 0, sky, fog, ribbons, floor, curve, lensParts, arm, sprites, glassSizes, speck, speckViolet, torch,
-            bubbles, specks, jellies, sparks: [], irisX: 0, irisY: 0, pingAt: 4,
-            kiwi: { x: W * (portrait ? .6 : .2), dir: 1, wait: 0 },
-            nextWandBubble: 2, nextGlitch: 11
-        };
-        const first = bubbles.find(b => !b.icon);
-        first.grown = 0;
-        first.depth = 1;
-    };
-
-    /* ---- A frame --------------------------------------------------------------- */
-    const put = (s, x, y, angle = 0, flip = 1, size = 1) => {
-        const cos = Math.cos(angle) * size, sin = Math.sin(angle) * size;
-        context.setTransform(scale * cos * flip, scale * sin * flip, -scale * sin, scale * cos, scale * x, scale * y);
-        context.drawImage(s.canvas, -s.anchorX, -s.anchorY, s.width, s.height);
-    };
-    const glassFor = (s, r) => {
-        const wanted = r * 2 * scale;
-        for (const glass of s.glassSizes) if (glass.size >= wanted) return glass.canvas;
-        return s.glassSizes[s.glassSizes.length - 1].canvas;
-    };
-    const scrollShift = bubble => scrolled * .16 * bubble.depth;
-
+    const following = () => performance.now() < followUntil;
     const update = dt => {
-        const s = scene, t = clock;
-        lookX += ((pointerSeen ? pointerX / W - .5 : 0) - lookX) * Math.min(1, dt * 1.6);
-        lookY += ((pointerSeen ? pointerY / H - .5 : 0) - lookY) * Math.min(1, dt * 1.6);
-        sinking += (Math.min(scrolled * .09, H * .17) - sinking) * Math.min(1, dt * 6);
-
-        // As the page goes by, the lens drifts off to the left, through the middle of
-        // the screen, until it is half out of the far side; and the arm goes down.
-        if (t - roomMeasured > 1) {
-            roomMeasured = t;
-            scrollRoom = Math.max(1, document.documentElement.scrollHeight - H);
+        const t = clock;
+        const fixed = following();
+        if (canvas) {
+            if (fixed && !canvas.dataset.following) canvas.dataset.following = '';
+            else if (!fixed && canvas.dataset.following !== undefined) delete canvas.dataset.following;
         }
-        const wantK = clamp(scrolled / (scrollRoom * .7), 0, 1);
-        s.lensK += (wantK - s.lensK) * Math.min(1, dt * 2.6);
-        const eased = s.lensK * s.lensK * (3 - 2 * s.lensK);
-        const leftmost = W * (portrait ? .1 : .04);
-        s.lensAt.x = s.lens.x + (leftmost - s.lens.x) * eased;
-        s.lensAt.y = s.lens.y + (H * .5 - s.lens.y) * Math.min(1, eased * 1.4);
-        s.armAway = clamp(scrolled / (H * .85), 0, 1);
-
-        // The iris turns toward the cursor, unhurried; with nothing to look at, it
-        // looks about for itself.
-        const reach = s.lens.r * .085;
-        let wantX = Math.sin(t * .17) * reach * .6, wantY = Math.sin(t * .23 + 1) * reach * .5;
-        if (pointerSeen) {
-            const dx = pointerX - s.lensAt.x, dy = pointerY - s.lensAt.y, d = Math.hypot(dx, dy) || 1;
-            const pull = Math.min(1, d / (s.lens.r * 1.4));
-            wantX = dx / d * reach * pull;
-            wantY = dy / d * reach * pull;
+        followAmount += ((fixed ? 1 : 0) - followAmount) * Math.min(1, dt * 4);
+        if (fixed && pointerSeen) {
+            // Turned until the pupil is on the cursor, as far as a ball can turn.
+            wantYaw = turnFor((pointerX / cell - cx) / ball, mostYaw);
+            wantPitch = turnFor((pointerY / cell - cy) / ball, MOST_PITCH);
+        } else if (t > nextLook) {
+            // A dart somewhere, and a while looking at it. Now and then back to the middle.
+            if (Math.random() < .25) {
+                wantYaw = (Math.random() - .5) * mostYaw * .3;
+                wantPitch = (Math.random() - .5) * MOST_PITCH * .3;
+            } else {
+                wantYaw = (Math.random() * 2 - 1) * mostYaw;
+                wantPitch = (Math.random() * 2 - 1) * MOST_PITCH;
+            }
+            nextLook = t + .7 + Math.random() * Math.random() * 3.6;
         }
-        s.irisX += (wantX - s.irisX) * Math.min(1, dt * 1.8);
-        s.irisY += (wantY - s.irisY) * Math.min(1, dt * 1.8);
-
-        const arm = s.arm;
-        const a0 = -1.34 + .1 * Math.sin(t * .23);
-        const a1 = a0 + .86 + .2 * Math.sin(t * .33 + 1.1);
-        const a2 = a1 + .42 + .3 * Math.sin(t * .43 + 2.3);
-        arm.angles = [a0, a1, a2];
-        arm.shoulder = [arm.x, arm.y - arm.shoulderHeight];
-        arm.elbow = [arm.shoulder[0] + Math.cos(a0) * arm.upper, arm.shoulder[1] + Math.sin(a0) * arm.upper];
-        arm.wrist = [arm.elbow[0] + Math.cos(a1) * arm.fore, arm.elbow[1] + Math.sin(a1) * arm.fore];
-        arm.ring = [arm.wrist[0] + Math.cos(a2) * arm.wandReach, arm.wrist[1] + Math.sin(a2) * arm.wandReach];
-
-        const fromBelow = b => {
-            b.pop = 0;
-            b.grown = 1;
-            b.y = H + b.r + Math.random() * 160 + scrollShift(b);
-            b.x = Math.random() * W;
-        };
-        for (const b of s.bubbles) {
-            if (b.pop) {
-                b.pop += dt / .32;
-                if (b.pop >= 1) fromBelow(b);
-                continue;
-            }
-            if (b.grown < 1) {
-                // Let go of if the arm is on its way down.
-                b.grown = s.armAway > .55 ? 1 : Math.min(1, b.grown + dt / 1.8);
-                b.x = arm.ring[0] + (lookX * 26 * b.depth - lookX * 26 * .62);
-                b.y = arm.ring[1] + (lookY * 14 * b.depth - lookY * 14 * .62) + sinking + scrollShift(b) + s.armAway * s.armAway * H * .8;
-                if (b.grown >= 1) {
-                    b.x += Math.cos(arm.angles[2]) * b.r * .9;
-                    b.y += Math.sin(arm.angles[2]) * b.r * .9 - b.r * .3;
-                }
-                continue;
-            }
-            b.y -= b.rise * dt * unit * 1.4;
-            b.x += Math.cos(t * b.swayRate + b.phase) * b.sway * dt;
-            b.turn += b.turnRate * dt;
-            if (pointerSeen) {
-                const dx = b.drawnX - pointerX, dy = b.drawnY - pointerY, near = b.r + 54;
-                const d2 = dx * dx + dy * dy;
-                if (d2 < near * near) {
-                    const d = Math.sqrt(d2) || 1, push = (1 - d / near) * 90 * dt;
-                    b.x += dx / d * push;
-                    b.y += dy / d * push;
-                }
-            }
-            if (b.y + b.r < scrollShift(b) - 60) {
-                if (!b.icon && s.armAway < .5 && t > s.nextWandBubble) {
-                    b.grown = 0;
-                    b.depth = 1;
-                    b.r = (14 + Math.random() * 26) * unit * 1.15;
-                    s.nextWandBubble = t + 3 + Math.random() * 2.4;
-                } else fromBelow(b);
+        const pull = Math.min(1, dt * (fixed ? 7 : 11));
+        yaw += (wantYaw - yaw) * pull;
+        pitch += (wantPitch - pitch) * pull;
+        const wantPupil = .03 * Math.sin(t * .4) + (fixed ? -.1 : 0);
+        pupil += (wantPupil - pupil) * Math.min(1, dt * 2.4);
+        if (blinkAt < 0 && t > nextBlink) {
+            blinkAt = t;
+            secondBlink = Math.random() < .22;
+            nextBlink = t + 2.4 + Math.random() * 5;
+        }
+        if (blinkAt >= 0) {
+            const age = t - blinkAt;
+            if (age < .11) open = 1 - .96 * (age / .11);
+            else if (age < .15) open = .04;
+            else if (age < .34) open = .04 + .96 * ((age - .15) / .19);
+            else {
+                open = 1;
+                blinkAt = secondBlink ? t + .09 : -1;
+                secondBlink = false;
             }
         }
-        for (let i = s.sparks.length - 1; i >= 0; i--) {
-            const d = s.sparks[i];
-            d.life -= dt / .5;
-            if (d.life <= 0) { s.sparks.splice(i, 1); continue; }
-            d.vy -= 60 * dt;
-            d.x += d.vx * dt;
-            d.y += d.vy * dt;
-        }
-        for (const speck of s.specks) {
-            speck.y -= speck.drift * dt * .6;
-            speck.x += Math.sin(t * speck.rate + speck.phase) * speck.drift * dt * .5;
-            if (speck.y < -8) {
-                speck.y = H + 8;
-                speck.x = Math.random() * W;
-            }
-        }
-        const kiwi = s.kiwi;
-        if (kiwi.wait > 0) kiwi.wait -= dt;
-        else {
-            kiwi.x += kiwi.dir * 18 * unit * dt;
-            const low = W * (portrait ? .36 : .06), high = W * (portrait ? .94 : .44);
-            if (kiwi.x > high || kiwi.x < low) {
-                kiwi.dir = kiwi.x > high ? -1 : 1;
-                kiwi.wait = 3 + Math.random() * 4;
-            }
+        if (t > nextGlitch) {
+            glitchUntil = t + .07 + Math.random() * .16;
+            nextGlitch = t + 4 + Math.random() * 7;
         }
     };
-
     const draw = () => {
-        const s = scene, c = context, t = clock;
-        const lookAt = depth => [-lookX * 26 * depth, -lookY * 14 * depth];
-        const flat = () => c.setTransform(scale, 0, 0, scale, 0, 0);
-        flat();
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-        c.drawImage(s.sky, 0, 0, W, H);
-
-        c.globalCompositeOperation = 'lighter';
-        for (const fog of s.fog) {
-            const width = fog.image.width, span = W + width;
-            const x = ((fog.x + t * fog.speed * unit) % span + span) % span - width;
-            c.globalAlpha = .85;
-            c.drawImage(fog.image, x, fog.y - sinking * .2, width, fog.image.height);
-        }
-        s.ribbons.forEach((ribbon, i) => {
-            const tile = ribbon.tile.canvas;
-            const [ox, oy] = lookAt(.1 + i * .08);
-            const shift = ((t * ribbon.speed * unit) % tile.width + tile.width) % tile.width;
-            c.globalAlpha = ribbon.alpha;
-            c.drawImage(tile, -shift + ox, ribbon.y + oy, tile.width, tile.height);
-            c.drawImage(tile, tile.width - shift + ox, ribbon.y + oy, tile.width, tile.height);
-        });
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-
-        // The lens.
-        const L = s.lens, P = s.lensParts;
-        const [lx, ly] = lookAt(.3);
-        const lensX = s.lensAt.x + lx, lensY = s.lensAt.y + ly;
-        put(P.body, lensX, lensY);
-        // Opening and closing, as slowly as breath.
-        put(P.iris, lensX + s.irisX, lensY + s.irisY, t * .012, 1, 1 + .055 * Math.sin(t * .31));
-        // Deep in the dark of it, one coal.
-        flat();
-        c.globalCompositeOperation = 'lighter';
-        const coal = .55 + .3 * Math.sin(t * .47) + .1 * Math.sin(t * 2.3);
-        const coalSize = L.r * .13;
-        c.globalAlpha = coal;
-        c.fillStyle = radial(c, lensX + s.irisX, lensY + s.irisY, 0, lensX + s.irisX, lensY + s.irisY, coalSize, [[0, 'rgba(255,190,150,.95)'], [.12, 'rgba(255,70,40,.75)'], [1, 'rgba(255,30,20,0)']]);
-        c.fillRect(lensX + s.irisX - coalSize, lensY + s.irisY - coalSize, coalSize * 2, coalSize * 2);
-        c.globalAlpha = .85;
-        put(P.ghosts, lensX - s.irisX * 1.3, lensY - s.irisY * 1.3);
-        c.globalAlpha = .55;
-        put(P.dials[0], lensX, lensY, t * .05);
-        put(P.dials[1], lensX, lensY, -t * .03);
-        c.globalAlpha = .35 + .2 * Math.sin(t * .31);
-        put(P.streak, lensX + s.irisX, lensY + s.irisY);
-        c.globalAlpha = 1;
-
-        // A ping, now and again, going out from it into nothing.
-        flat();
-        const pingAge = ((t - s.pingAt) % 11 + 11) % 11;
-        if (t > s.pingAt && pingAge < 5) {
-            const k = pingAge / 5;
-            c.strokeStyle = `rgba(150,225,250,${(1 - k) * (1 - k) * .3})`;
-            c.lineWidth = 1.2;
-            c.beginPath();
-            c.arc(lensX, lensY, L.r * (1 + k * 2.4), 0, TAU);
-            c.stroke();
-        }
-
-        // The small lights that drift about out here.
-        const jelly = (j, far) => {
-            if ((j.depth < .4) !== far) return;
-            const [jx, jy] = lookAt(j.depth);
-            const x = W * (j.x + j.spanX * Math.sin(t * j.rate + j.phase)) + jx;
-            const y = H * (j.y + j.spanY * Math.sin(t * j.rate * 1.7 + j.phase)) + jy - sinking * j.depth * .3;
-            const beat = Math.sin(t * .9 + j.phase);
-            const squash = 1 + beat * .09;
-            c.globalCompositeOperation = 'lighter';
-            put(s.sprites.bells[j.bell], x, y, Math.sin(t * .2 + j.phase) * .1, 1, squash);
-            flat();
-            c.strokeStyle = 'rgba(150,225,250,.2)';
-            c.lineWidth = 1;
-            for (let n = 0; n < 6; n++) {
-                const spread = (n - 2.5) / 2.5;
-                c.beginPath();
-                c.moveTo(x + spread * j.size * .78, y + j.size * .05);
-                for (let k = 1; k <= 7; k++) {
-                    c.lineTo(x + spread * j.size * (.78 - k * .03) + Math.sin(t * .8 + k * .7 + n) * k * j.size * .045, y + k * j.size * .34 * (1.08 - beat * .08));
-                }
-                c.stroke();
-            }
-            c.globalCompositeOperation = 'source-over';
-        };
-        for (const j of s.jellies) jelly(j, true);
-
-        flat();
-        c.globalCompositeOperation = 'source-over';
-        const [nx, ny] = lookAt(.62);
-        const floorShift = sinking;
-        c.drawImage(s.floor.layer, nx - 40, s.floor.top + ny + floorShift, W + 80, s.floor.height);
-
-        // The kiwi, with its lamp, and the arm, on the bottom.
-        const kiwi = s.kiwi;
-        const slope = (s.curve(kiwi.x + 6) - s.curve(kiwi.x - 6)) / 12;
-        const roll = kiwi.wait > 0 ? 0 : Math.sin(t * 7) * .4;
-        const kiwiY = s.curve(kiwi.x) + 6 * unit + ny + floorShift + roll;
-        c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = .8 + .2 * Math.sin(t * 1.3);
-        put(s.sprites.lamp, kiwi.x + nx + kiwi.dir * 16 * unit, kiwiY - 12 * unit, kiwi.dir > 0 ? -.05 : Math.PI + .05);
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-        put(s.sprites.kiwi, kiwi.x + nx, kiwiY, Math.atan(slope), kiwi.dir);
-
-        if (s.armAway < 1) {
-            const arm = s.arm, ax = nx, ay = ny + floorShift + s.armAway * s.armAway * H * .8;
-            put(s.sprites.base, arm.x + ax, arm.y + ay);
-            put(s.sprites.upper, arm.shoulder[0] + ax, arm.shoulder[1] + ay, arm.angles[0]);
-            put(s.sprites.shoulder, arm.shoulder[0] + ax, arm.shoulder[1] + ay);
-            put(s.sprites.wand, arm.wrist[0] + ax, arm.wrist[1] + ay, arm.angles[2]);
-            put(s.sprites.fore, arm.elbow[0] + ax, arm.elbow[1] + ay, arm.angles[1]);
-            put(s.sprites.elbow, arm.elbow[0] + ax, arm.elbow[1] + ay);
-            put(s.sprites.wrist, arm.wrist[0] + ax, arm.wrist[1] + ay);
-        }
-
-        for (const j of s.jellies) jelly(j, false);
-
-        // Bubbles, back to front.
-        for (const b of s.bubbles) {
-            const [bx, by] = lookAt(b.depth);
-            const x = b.x + bx, y = b.y + by - scrollShift(b);
-            b.drawnX = x;
-            b.drawnY = y;
-            if (b.pop) {
-                flat();
-                c.globalCompositeOperation = 'lighter';
-                c.globalAlpha = (1 - b.pop) * .7;
-                c.strokeStyle = ICE;
-                c.lineWidth = Math.max(1, (1 - b.pop) * 2);
-                c.beginPath();
-                c.arc(x, y, b.r * (1 + b.pop * .42), 0, TAU);
-                c.stroke();
-                c.globalAlpha = 1;
-                c.globalCompositeOperation = 'source-over';
-                continue;
-            }
-            const r = b.r * (b.grown < 1 ? .2 + .8 * b.grown : 1);
-            if (y + r < -6 || y - r > H + 6 || x + r < -6 || x - r > W + 6) continue;
-            const wobble = 1 + Math.sin(t * 1.1 + b.phase) * .012;
-            if (b.icon) {
-                const icon = b.icon;
-                const turn = Math.sin(t * .3 + b.phase) * .16;
-                const size = r * (icon.cad ? 1.62 : 1.9) / icon.width;
-                const cos = Math.cos(turn) * size, sin = Math.sin(turn) * size;
-                c.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, scale * x, scale * y);
-                c.globalAlpha = .95;
-                c.drawImage(icon.canvas, -icon.anchorX, -icon.anchorY, icon.width, icon.height);
-                c.globalAlpha = 1;
-            }
-            flat();
-            const rx = r * wobble, ry = r / wobble;
-            c.globalCompositeOperation = 'lighter';
-            c.drawImage(glassFor(s, r), x - rx, y - ry, rx * 2, ry * 2);
-            c.globalCompositeOperation = 'source-over';
-        }
-
-        // The specks, which wake near the cursor, and its small circle of light.
-        flat();
-        c.globalCompositeOperation = 'lighter';
-        const lit = 150 * Math.max(.8, unit);
-        for (const speck of s.specks) {
-            const [sx, sy] = lookAt(speck.depth);
-            const x = speck.x + sx, y = speck.y + sy;
-            let glow = .22 + .3 * Math.max(0, Math.sin(t * speck.rate * 1.4 + speck.phase));
-            let size = speck.size;
-            if (pointerSeen) {
-                const near = 1 - Math.hypot(x - pointerX, y - pointerY) / lit;
-                if (near > 0) {
-                    glow += near * .75;
-                    size *= 1 + near * 1.1;
-                }
-            }
-            c.globalAlpha = Math.min(1, glow);
-            c.drawImage(speck.violet ? s.speckViolet : s.speck, x - size, y - size, size * 2, size * 2);
-        }
-        if (pointerSeen) {
-            const size = 240 * Math.max(.8, unit);
-            c.globalAlpha = .34;
-            c.drawImage(s.torch, pointerX - size, pointerY - size, size * 2, size * 2);
-        }
-        c.fillStyle = ICE;
-        for (const d of s.sparks) {
-            c.globalAlpha = d.life * .85;
-            c.fillRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2);
-        }
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-
-        // Very rarely, the signal slips.
-        if (t > s.nextGlitch) {
-            c.setTransform(1, 0, 0, 1, 0, 0);
-            const height = canvas.height, width = canvas.width;
-            for (let i = 0; i < 2; i++) {
-                const y = Math.floor(Math.random() * height * .8), h = Math.floor(height * (.006 + Math.random() * .016));
-                c.drawImage(canvas, 0, y, width, h, (Math.random() - .5) * 26 * scale, y, width, h);
-            }
-            if (t > s.nextGlitch + .07) s.nextGlitch = t + 14 + Math.random() * 18;
-        }
+        const t = clock;
+        gl.bindVertexArray(vao);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+        gl.viewport(0, 0, cols, rows);
+        gl.useProgram(eyeProgram);
+        const e = eyeUniforms;
+        gl.uniform2f(e.uGrid, cols, rows);
+        gl.uniform2f(e.uEye, cx, cy);
+        const yawS = Math.sin(yaw), yawC = Math.cos(yaw), pitchS = Math.sin(pitch), pitchC = Math.cos(pitch);
+        const lookX = ball * yawS * pitchC, lookY = ball * pitchS;
+        turn[0] = yawC;
+        turn[1] = -yawS * pitchS;
+        turn[2] = yawS * pitchC;
+        turn[3] = 0;
+        turn[4] = pitchC;
+        turn[5] = pitchS;
+        turn[6] = -yawS;
+        turn[7] = -yawC * pitchS;
+        turn[8] = yawC * pitchC;
+        gl.uniformMatrix3fv(e.uTurn, false, turn);
+        gl.uniform2f(e.uLookAt, cx + lookX, cy + lookY);
+        gl.uniform2f(e.uLid, lookX * .05, lookY * .2);
+        gl.uniform1f(e.uBall, ball);
+        gl.uniform1f(e.uCap, Math.asin(irisR / ball));
+        gl.uniform3f(e.uSize, A, upper, lower);
+        gl.uniform1f(e.uIris, irisR);
+        gl.uniform1f(e.uTime, t);
+        gl.uniform1f(e.uOpen, open);
+        gl.uniform1f(e.uPupil, pupil);
+        gl.uniform1f(e.uTall, tall);
+        gl.uniform1f(e.uFollow, followAmount);
+        const shock = t - shockAt;
+        gl.uniform1f(e.uShock, shock < 1 ? shock : -1);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, scene);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.useProgram(screenProgram);
+        const s = screenUniforms;
+        gl.uniform1i(s.uScene, 0);
+        gl.uniform2f(s.uGrid, cols, rows);
+        gl.uniform2f(s.uRes, canvas.width, canvas.height);
+        gl.uniform2f(s.uPupilAt, (cx + lookX) / cols, 1 - (cy + lookY) / rows);
+        gl.uniform1f(s.uTime, t);
+        gl.uniform1f(s.uGlitch, t < glitchUntil ? 1 : Math.max(0, 1 - shock * 3));
+        gl.uniform1f(s.uTall, tall);
+        gl.uniform1f(s.uFollow, followAmount);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
-    /* ---- Running it ------------------------------------------------------------- */
     const stopLoop = () => {
         if (frame) cancelAnimationFrame(frame);
         frame = 0;
@@ -1000,7 +436,7 @@
         draw();
     };
     const startLoop = () => {
-        if (frame || !shown || !scene || document.hidden || underProject) return;
+        if (frame || !shown || document.hidden || underProject) return;
         lastFrame = 0;
         if (reducedMotion && reducedMotion.matches) {
             update(1 / 60);
@@ -1026,114 +462,82 @@
         underProject = false;
         startLoop();
     };
-    const onScroll = () => { scrolled = window.scrollY; };
     const onPointerMove = event => {
-        if (event.pointerType && event.pointerType !== 'mouse') return;
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
     };
+    // Pressed twice, anywhere the page itself does not answer a press.
+    const ANSWERS = 'a, button, input, select, textarea, label, .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';
     const onPointerDown = event => {
-        if (!scene || event.button) return;
-        const s = scene;
-        for (let i = s.bubbles.length - 1; i >= 0; i--) {
-            const b = s.bubbles[i];
-            if (b.pop || b.grown < 1) continue;
-            const dx = event.clientX - b.drawnX, dy = event.clientY - b.drawnY;
-            if (dx * dx + dy * dy > b.r * b.r) continue;
-            b.pop = .001;
-            for (let k = 0; k < 14; k++) {
-                const a = Math.random() * TAU, speed = 30 + Math.random() * 100;
-                s.sparks.push({ x: b.drawnX + Math.cos(a) * b.r * .9, y: b.drawnY + Math.sin(a) * b.r * .9, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: .7 + Math.random() * 1.1, life: 1 });
-            }
-            return;
-        }
-    };
-    const sizeCanvas = () => {
-        canvas.width = Math.ceil(W * scale);
-        canvas.height = Math.ceil(H * scale);
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        pointerSeen = true;
+        if (event.button || event.target.closest?.(ANSWERS)) return;
+        const now = performance.now();
+        if (now - lastPress < DOUBLE_PRESS_MS) {
+            followUntil = now + FOLLOW_MS;
+            shockAt = clock;
+            lastPress = -1e9;
+        } else lastPress = now;
     };
     const onResize = () => {
         clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(rebuild, 260);
+        resizeTimer = window.setTimeout(() => {
+            if (!shown) return;
+            // A phone's address bar coming and going is not a new screen.
+            if (document.documentElement.clientWidth === builtWidth && Math.abs(window.innerHeight - builtHeight) < builtHeight * .16) return;
+            size();
+            draw();
+        }, 200);
     };
-    const rebuild = async () => {
-        if (!shown) return;
-        const width = document.documentElement.clientWidth, height = window.innerHeight;
-        if (width === W && Math.abs(height - H) < H * .16) return;
-        const mine = ++rebuilding;
-        stopLoop();
-        await build();
-        if (mine !== rebuilding || !shown) return;
-        sizeCanvas();
-        update(1 / 60);
-        draw();
-        startLoop();
-    };
-    const prepare = () => {
-        if (ready) return Promise.resolve();
-        if (preparing) return preparing;
-        reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-        preparing = build().then(() => {
-            preparing = null;
-            ready = true;
-        }, error => {
-            preparing = null;
-            throw error;
-        });
-        return preparing;
-    };
-    const show = () => {
-        if (!ready) return;
-        if (!canvas) {
-            canvas = document.createElement('canvas');
-            canvas.className = 'ego-scene';
-            canvas.setAttribute('aria-hidden', 'true');
-            context = canvas.getContext('2d', { alpha: false });
+
+    window.portfolioEgo = {
+        prepare() {
+            try {
+                if (!gl) setUp();
+                return Promise.resolve();
+            } catch (error) {
+                gl = null;
+                canvas = null;
+                return Promise.reject(error);
+            }
+        },
+        show() {
+            if (!gl) return;
+            reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
             const anchor = document.querySelector('.galaxy-nebula') || document.querySelector('.galaxy-field');
             if (anchor) anchor.after(canvas);
             else document.body.prepend(canvas);
-        }
-        shown = true;
-        sizeCanvas();
-        canvas.hidden = false;
-        scrolled = window.scrollY;
-        sinking = Math.min(scrolled * .09, H * .17);
-        document.addEventListener('visibilitychange', onVisibility);
-        document.addEventListener('portfolio:modal-open', onModalOpen);
-        document.addEventListener('portfolio:modal-close', onModalClose);
-        window.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('pointermove', onPointerMove, { passive: true });
-        window.addEventListener('pointerdown', onPointerDown, { passive: true });
-        window.addEventListener('resize', onResize, { passive: true });
-        update(1 / 60);
-        draw();
-        startLoop();
-    };
-    const release = () => {
-        shown = false;
-        ready = false;
-        rebuilding += 1;
-        stopLoop();
-        clearTimeout(resizeTimer);
-        clearTimeout(underProjectTimer);
-        underProject = false;
-        document.removeEventListener('visibilitychange', onVisibility);
-        document.removeEventListener('portfolio:modal-open', onModalOpen);
-        document.removeEventListener('portfolio:modal-close', onModalClose);
-        window.removeEventListener('scroll', onScroll);
-        window.removeEventListener('pointermove', onPointerMove);
-        window.removeEventListener('pointerdown', onPointerDown);
-        window.removeEventListener('resize', onResize);
-        scene = null;
-        projectSprites = null;
-        if (canvas) {
-            canvas.width = canvas.height = 0;
-            canvas.remove();
+            shown = true;
+            size();
+            update(1 / 60);
+            draw();
+            document.addEventListener('visibilitychange', onVisibility);
+            document.addEventListener('portfolio:modal-open', onModalOpen);
+            document.addEventListener('portfolio:modal-close', onModalClose);
+            window.addEventListener('pointermove', onPointerMove, { passive: true });
+            window.addEventListener('pointerdown', onPointerDown, { passive: true });
+            window.addEventListener('resize', onResize, { passive: true });
+            startLoop();
+        },
+        release() {
+            shown = false;
+            stopLoop();
+            clearTimeout(resizeTimer);
+            clearTimeout(underProjectTimer);
+            underProject = false;
+            followUntil = 0;
+            document.removeEventListener('visibilitychange', onVisibility);
+            document.removeEventListener('portfolio:modal-open', onModalOpen);
+            document.removeEventListener('portfolio:modal-close', onModalClose);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('resize', onResize);
+            if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext();
+            canvas?.remove();
             canvas = null;
-            context = null;
+            gl = null;
         }
     };
-
-    window.portfolioEgo = { prepare, show, release };
 })();

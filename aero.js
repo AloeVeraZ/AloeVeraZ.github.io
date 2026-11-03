@@ -10,17 +10,18 @@
 
    It is a picture of this portfolio as much as of the era. A glass orb holds
    a New York skyline, a robot arm on the hill blows the bubbles through a wand,
-   the bubbles carry the things on these pages -- gears, a swerve module, a 3D
-   printer, a robot, a controller board -- a three-wheeled kiwi drive potters
-   about on the grass, and the contrail across the sky belongs to a drone.
+   the bubbles carry the projects on these pages, as CAD and as photographs, a
+   three-wheeled kiwi drive potters about on the grass over a lake, and the
+   contrail across the sky belongs to a drone.
 
    Everything is drawn here, in code, in two steps. Getting ready paints the
    slow things once into sprites: the clouds come from a worker, so the sky
    already on screen keeps moving while they are worked out. After that a frame
-   is only sprites being moved, about fifty drawImage calls and no paths but the
-   contrail, so it costs little beyond the pixels themselves. The glass in
-   front of it is the page's own and is not touched: it frosts and bends this
-   the way it frosts and bends the stars. */
+   is sprites being moved, and then the things only a finished frame can give: the
+   light pushed out from the sun through it, the lake and every large bubble showing
+   the world behind them, and a bloom over everything. It is the most this level
+   asks for, as it should be. The glass in front of it is the page's own and is not
+   touched: it frosts and bends this the way it frosts and bends the stars. */
 (function () {
     'use strict';
 
@@ -379,175 +380,89 @@
         c.fill();
     });
 
-    /* ---- What the bubbles carry -------------------------------------------- */
-    const toothedGear = (c, radius, teeth, hole, fill) => {
-        c.beginPath();
-        for (let i = 0; i < teeth; i++) {
-            const a = i / teeth * TAU, w = TAU / teeth;
-            const steps = [[a, .8], [a + w * .14, 1], [a + w * .4, 1], [a + w * .54, .8]];
-            for (const [angle, reach] of steps) c.lineTo(Math.cos(angle) * radius * reach, Math.sin(angle) * radius * reach);
-            c.arc(0, 0, radius * .8, a + w * .54, a + w, false);
-        }
-        c.closePath();
-        c.moveTo(radius * hole, 0);
-        c.arc(0, 0, radius * hole, 0, TAU, true);
-        c.fillStyle = fill;
-        c.fill('evenodd');
-    };
-    const steel = (c, r) => linear(c, -r, -r, r, r, [[0, '#ffffff'], [.35, '#c5d9ec'], [.55, '#8fb2d3'], [.8, '#dfeaf5'], [1, '#6f94ba']]);
-    const rounded = (c, x, y, width, height, radius) => {
-        c.beginPath();
-        if (c.roundRect) c.roundRect(x, y, width, height, radius);
-        else c.rect(x, y, width, height);
-    };
-    const ICONS = {
-        gear: c => {
-            toothedGear(c, 60, 12, .32, steel(c, 60));
-            c.strokeStyle = 'rgba(255,255,255,.75)';
-            c.lineWidth = 2;
-            c.beginPath();
-            c.arc(0, 0, 40, -2.6, -.9);
-            c.stroke();
-            c.fillStyle = radial(c, -6, -8, 1, 0, 0, 18, [[0, '#c9f6ff'], [.5, '#2fc0f2'], [1, '#07619f']]);
-            c.beginPath();
-            c.arc(0, 0, 13, 0, TAU);
-            c.fill();
-        },
-        gears: c => {
-            c.save();
-            c.translate(-22, 16);
-            toothedGear(c, 42, 12, .3, linear(c, -42, -42, 42, 42, [[0, '#bff0ff'], [.5, '#22a9e6'], [1, '#07619f']]));
-            c.restore();
-            c.save();
-            c.translate(32, -26);
-            c.rotate(.14);
-            toothedGear(c, 30, 9, .3, steel(c, 30));
-            c.restore();
-        },
-        // A swerve module from the side: wheel below, plates around it, the
-        // two motors standing on top.
-        swerve: c => {
-            c.fillStyle = linear(c, -8, 0, 8, 0, [[0, '#9fbbd6'], [.4, '#ffffff'], [1, '#7f9fc0']]);
-            c.fillRect(-34, -62, 22, 44);
-            c.fillStyle = linear(c, 12, 0, 34, 0, [[0, '#0f73c4'], [.4, '#58d2f8'], [1, '#07518e']]);
-            c.fillRect(12, -62, 22, 44);
-            c.fillStyle = linear(c, 0, -22, 0, -10, [[0, '#ffffff'], [1, '#a4bfd8']]);
-            c.fillRect(-46, -20, 92, 10);
-            c.fillStyle = 'rgba(190,212,233,.92)';
-            c.fillRect(-42, -12, 8, 44);
-            c.fillRect(34, -12, 8, 44);
-            c.fillStyle = radial(c, -7, 14, 6, 0, 22, 38, [[0, '#4d6680'], [.7, '#223344'], [1, '#0a1420']]);
-            c.beginPath();
-            c.arc(0, 22, 36, 0, TAU);
-            c.fill();
-            c.save();
-            c.translate(0, 22);
-            toothedGear(c, 21, 10, .3, steel(c, 21));
-            c.restore();
-            c.fillStyle = '#17a9e8';
-            c.beginPath();
-            c.arc(0, 22, 5, 0, TAU);
-            c.fill();
-        },
-        // A printer in its frame, a part half built on the bed.
-        printer: c => {
-            c.strokeStyle = linear(c, -50, -50, 50, 50, [[0, '#ffffff'], [1, '#6f94ba']]);
-            c.lineWidth = 7;
-            c.lineJoin = 'round';
-            c.strokeRect(-42, -48, 84, 96);
-            c.fillStyle = 'rgba(205,235,255,.22)';
-            c.fillRect(-42, -48, 84, 96);
-            c.fillStyle = linear(c, 0, -22, 0, -12, [[0, '#ffffff'], [1, '#9db8d3']]);
-            c.fillRect(-42, -24, 84, 8);
-            c.fillStyle = linear(c, -12, 0, 12, 0, [[0, '#0f73c4'], [.4, '#58d2f8'], [1, '#07518e']]);
-            c.fillRect(-13, -32, 26, 22);
-            c.fillStyle = '#e8f4ff';
-            c.beginPath();
-            c.moveTo(-6, -10);
-            c.lineTo(6, -10);
-            c.lineTo(0, 1);
-            c.closePath();
-            c.fill();
-            c.fillStyle = linear(c, 0, 8, 0, 34, [[0, '#ffc66b'], [.5, '#ff9a2e'], [1, '#e8650f']]);
-            c.beginPath();
-            c.moveTo(-22, 34);
-            c.lineTo(-13, 8);
-            c.lineTo(13, 8);
-            c.lineTo(22, 34);
-            c.closePath();
-            c.fill();
-            c.fillStyle = linear(c, 0, 34, 0, 41, [[0, '#ffffff'], [1, '#8fb1d2']]);
-            c.fillRect(-36, 34, 72, 7);
-        },
-        // A small friend. Every Aero mascot had a face like this.
-        bot: c => {
-            c.strokeStyle = '#8fb1d2';
-            c.lineWidth = 4;
-            c.beginPath();
-            c.moveTo(0, -38);
-            c.lineTo(0, -56);
-            c.stroke();
-            c.fillStyle = radial(c, -2, -60, 1, 0, -57, 9, [[0, '#ffffff'], [.5, '#4fd2f7'], [1, '#0a6db8']]);
-            c.beginPath();
-            c.arc(0, -57, 8, 0, TAU);
-            c.fill();
-            c.fillStyle = linear(c, -48, 0, -38, 0, [[0, '#17a9e8'], [1, '#0a6db8']]);
-            c.fillRect(-54, -10, 12, 26);
-            c.fillRect(42, -10, 12, 26);
-            c.fillStyle = linear(c, 0, -40, 0, 42, [[0, '#ffffff'], [.6, '#e4f0fb'], [1, '#88aacb']]);
-            rounded(c, -46, -40, 92, 80, 26);
-            c.fill();
-            c.fillStyle = linear(c, 0, -24, 0, 16, [[0, '#123a63'], [1, '#07213d']]);
-            rounded(c, -34, -24, 68, 42, 16);
-            c.fill();
-            c.fillStyle = '#c8fbff';
-            c.shadowColor = '#5feaff';
-            c.shadowBlur = 9;
-            for (const side of [-1, 1]) {
-                c.beginPath();
-                c.ellipse(side * 15, -4, 7, 10, 0, 0, TAU);
-                c.fill();
-            }
-            c.shadowBlur = 0;
-            c.fillStyle = 'rgba(255,255,255,.2)';
-            c.beginPath();
-            c.ellipse(-8, -18, 22, 5, -.1, 0, TAU);
-            c.fill();
-        },
-        // The sort of board the keychains and subway signs on these pages run on.
-        board: c => {
-            c.fillStyle = linear(c, -44, -44, 44, 44, [[0, '#1b9d62'], [1, '#07583a']]);
-            rounded(c, -46, -40, 92, 80, 7);
-            c.fill();
-            c.strokeStyle = 'rgba(255,214,120,.86)';
-            c.lineWidth = 2;
-            for (let i = 0; i < 6; i++) {
-                const y = -30 + i * 12;
-                c.beginPath();
-                c.moveTo(-40, y);
-                c.lineTo(-22, y);
-                c.lineTo(-22 + (i % 2 ? 7 : -3), y + 3);
-                c.moveTo(40, y);
-                c.lineTo(22, y);
-                c.stroke();
-            }
-            c.fillStyle = linear(c, -18, -22, 18, 22, [[0, '#566a7d'], [.5, '#1b2a3a'], [1, '#0a1420']]);
-            c.fillRect(-20, -22, 40, 44);
-            c.fillStyle = 'rgba(255,255,255,.22)';
-            c.fillRect(-20, -22, 40, 8);
-            c.fillStyle = '#6ff3ff';
-            c.shadowColor = '#6ff3ff';
-            c.shadowBlur = 8;
-            c.beginPath();
-            c.arc(30, 30, 4, 0, TAU);
-            c.fill();
-            c.shadowBlur = 0;
-        }
-    };
-    const iconSprite = (name, size) => sprite(size, size, size / 2, size / 2, c => {
-        c.scale(size / 150, size / 150);
-        ICONS[name](c);
+    /* ---- What the bubbles carry --------------------------------------------
+       Things actually made for these pages. A CAD render sits on black, so its black
+       is made clear and it floats in the bubble as a bare part; a photograph is cut to
+       a circle that fades at its edge. */
+    const PROJECTS = [
+        { file: 'assembly-render.webp', cad: true },
+        { file: 'omni-bot-cad-900.webp', cad: true },
+        { file: 'cad-lower-mecanum-section-900.webp', cad: true },
+        { file: 'omnibot-assembled-900.webp' },
+        { file: 'zerog-hydra-900.webp' },
+        { file: 'a-eye-animatronic-900.webp' },
+        { file: 'a301-swerve-wheel-assembly-900.webp' },
+        { file: 'digital-camera-enclosure.webp' },
+        { file: 'final-robot-900.webp' },
+        { file: 'kiwi-swerve-prototype-900.webp' }
+    ];
+    const SPRITE_SIZE = 360;
+    const fetchPicture = file => new Promise(resolve => {
+        const picture = new Image();
+        picture.onload = () => resolve(picture);
+        picture.onerror = () => resolve(null);
+        picture.src = `assets/${file}`;
     });
+    const cadSprite = picture => {
+        // How much of the frame is really the part: a render has a lot of black to spare.
+        const probe = blank(96, 96);
+        const pc = probe.getContext('2d', { willReadFrequently: true });
+        pc.fillStyle = '#000';
+        pc.fillRect(0, 0, 96, 96);
+        const fit = 96 / Math.max(picture.width, picture.height);
+        const pw = picture.width * fit, ph = picture.height * fit, ox = (96 - pw) / 2, oy = (96 - ph) / 2;
+        pc.drawImage(picture, ox, oy, pw, ph);
+        const seen = pc.getImageData(0, 0, 96, 96).data;
+        let x0 = 96, y0 = 96, x1 = 0, y1 = 0;
+        for (let y = 0; y < 96; y++) {
+            for (let x = 0; x < 96; x++) {
+                const i = (y * 96 + x) * 4;
+                if (seen[i] + seen[i + 1] + seen[i + 2] < 60) continue;
+                if (x < x0) x0 = x;
+                if (y < y0) y0 = y;
+                if (x > x1) x1 = x;
+                if (y > y1) y1 = y;
+            }
+        }
+        if (x1 <= x0 || y1 <= y0) return null;
+        const side = Math.max(x1 - x0, y1 - y0) * 1.06 / fit;
+        const midX = ((x0 + x1) / 2 - ox) / fit, midY = ((y0 + y1) / 2 - oy) / fit;
+        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
+        const c = canvas.getContext('2d', { willReadFrequently: true });
+        c.fillStyle = '#000';
+        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        c.drawImage(picture, midX - side / 2, midY - side / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        const image = c.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        const d = image.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const light = (d[i] + d[i + 1] + d[i + 2]) / 3;
+            d[i + 3] = Math.min(255, Math.max(0, (light - 6) * 14));
+        }
+        c.putImageData(image, 0, 0);
+        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: SPRITE_SIZE / 2, anchorY: SPRITE_SIZE / 2, cad: true };
+    };
+    const photoSprite = picture => {
+        const canvas = blank(SPRITE_SIZE, SPRITE_SIZE);
+        const c = canvas.getContext('2d');
+        const side = Math.min(picture.width, picture.height);
+        c.drawImage(picture, (picture.width - side) / 2, (picture.height - side) / 2, side, side, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        c.globalCompositeOperation = 'destination-in';
+        const r = SPRITE_SIZE / 2;
+        c.fillStyle = radial(c, r, r, r * .7, r, r, r, [[0, 'rgba(0,0,0,1)'], [.7, 'rgba(0,0,0,.9)'], [1, 'rgba(0,0,0,0)']]);
+        c.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+        return { canvas, width: SPRITE_SIZE, height: SPRITE_SIZE, anchorX: r, anchorY: r, cad: false };
+    };
+    const loadProjects = async () => {
+        const pictures = await Promise.all(PROJECTS.map(project => fetchPicture(project.file)));
+        const made = [];
+        for (let i = 0; i < PROJECTS.length; i++) {
+            if (!pictures[i]) continue;
+            await breathe();
+            const part = PROJECTS[i].cad ? cadSprite(pictures[i]) : photoSprite(pictures[i]);
+            if (part) made.push(part);
+        }
+        return made;
+    };
 
     /* ---- The bubble's glass ------------------------------------------------
        Clear in the middle, bright at the rim, with a thin film of colour round
@@ -934,6 +849,7 @@
     let pointerX = 0, pointerY = 0, pointerSeen = false;
     let lookX = 0, lookY = 0;
     let scrolled = 0, sinking = 0;
+    let projectSprites = null;
 
     const FAR = 40, GROUND_MARGIN = 30;
     const curves = () => {
@@ -1131,10 +1047,21 @@
         await breathe();
 
         const glassSizes = [96, 192, 384].map(size => ({ size, canvas: bubbleGlass(size) }));
-        const icons = {};
-        for (const name of Object.keys(ICONS)) icons[name] = iconSprite(name, 180);
+        projectSprites = projectSprites || await loadProjects();
+        const icons = projectSprites;
         await breathe();
         const sparkle = sparkleSprite(128);
+        // Small copies of the picture so far, for the things only a finished frame can
+        // give: the light through it, what the bubbles and the water show, the bloom.
+        const snap = blank(Math.ceil(W / 3), Math.ceil(H / 3));
+        const glow = blank(Math.ceil(W / 12), Math.ceil(H / 12));
+        const lakeTop = H * (portrait ? .93 : .89);
+        const lakeTint = blank(8, 64);
+        {
+            const c = lakeTint.getContext('2d');
+            c.fillStyle = linear(c, 0, 0, 0, 64, [[0, 'rgba(235,250,255,.5)'], [.16, 'rgba(90,180,235,.32)'], [1, 'rgba(8,70,150,.62)']]);
+            c.fillRect(0, 0, 8, 64);
+        }
 
         // The clouds, far ones low and small and near ones high and large.
         const clouds = [
@@ -1152,17 +1079,16 @@
 
         const random = seeded(2718);
         const count = portrait ? 18 : Math.round(clamp(W * H / 34000, 22, 42));
-        const iconNames = ['gear', 'swerve', 'printer', 'bot', 'board', 'gears'];
         const bubbles = [];
-        for (let i = 0; i < count; i++) {
-            const carrying = i < iconNames.length;
-            const radius = (carrying ? 44 + random() * 26 : 7 + Math.pow(random(), 2.2) * 42) * unit * (portrait ? 1.1 : 1.15);
+        for (let i = 0; i < Math.max(count, icons.length + 6); i++) {
+            const carrying = i < icons.length;
+            const radius = (carrying ? 52 + random() * 28 : 7 + Math.pow(random(), 2.2) * 42) * unit * (portrait ? 1.1 : 1.15);
             bubbles.push({
                 x: random() * W, y: random() * (H + 200) - 100,
                 r: radius, grown: 1, depth: .25 + random() * .75,
                 rise: (carrying ? 7 : 12) + random() * 15,
                 sway: 8 + random() * 22, swayRate: .16 + random() * .36, phase: random() * TAU,
-                icon: carrying ? iconNames[i] : null,
+                icon: carrying ? icons[i] : null,
                 turn: 0, turnRate: (random() - .5) * .3,
                 pop: 0, drawnX: 0, drawnY: 0
             });
@@ -1180,7 +1106,8 @@
         const droplets = [];
 
         scene = {
-            sun, sky, rays, flare, land, orb, arm, sprites, glassSizes, icons, sparkle, clouds, bubbles, sparkles, droplets,
+            sun, sky, rays, flare, land, orb, arm, sprites, glassSizes, sparkle, clouds, bubbles, sparkles, droplets,
+            snap, snapC: snap.getContext('2d', { alpha: false }), glow, glowC: glow.getContext('2d', { alpha: false }), lakeTop, lakeTint,
             kiwi: { x: W * (portrait ? .55 : .24), dir: 1, wait: 0 },
             drone: { trail: [], clock: random() * 20 },
             nextWandBubble: 2
@@ -1412,6 +1339,50 @@
         c.globalCompositeOperation = 'source-over';
         c.globalAlpha = 1;
 
+        // A small copy of everything so far. Pushed out from the sun in a few sizes it is
+        // the light coming through the clouds, past the arm and over the hill.
+        s.snapC.drawImage(canvas, 0, 0, s.snap.width, s.snap.height);
+        c.setTransform(scale, 0, 0, scale, 0, 0);
+        c.globalCompositeOperation = 'screen';
+        for (const [grow, alpha] of [[1.05, .17], [1.12, .11], [1.22, .07], [1.36, .04]]) {
+            c.globalAlpha = alpha * (.85 + .15 * Math.sin(t * .4 + grow * 9));
+            c.drawImage(s.snap, s.sun.x * (1 - grow), s.sun.y * (1 - grow), W * grow, H * grow);
+        }
+        c.globalCompositeOperation = 'source-over';
+        c.globalAlpha = 1;
+
+        // The lake along the foot: the picture over it, turned over, shivering, each row
+        // from further up as it comes toward the viewer.
+        {
+            const top = s.lakeTop + nearShift * .4, depth = H - top;
+            if (depth > 2) {
+                const rowsOfWater = 44, each = depth / rowsOfWater;
+                const toSnap = s.snap.height / H;
+                for (let i = 0; i < rowsOfWater; i++) {
+                    const k = i / rowsOfWater;
+                    const from = top - (k * k * .9 + k * .5) * depth * 2.2 - 4;
+                    const wobble = Math.sin(t * 1.3 + i * .42) * (.6 + k * 3.4) + Math.sin(t * .6 + i * 1.1) * (.4 + k * 1.6);
+                    c.drawImage(s.snap, 0, Math.max(0, from) * toSnap, s.snap.width, Math.max(3, each * 3 * toSnap), wobble - 8, top + i * each, W + 16, each + 1);
+                }
+                c.drawImage(s.lakeTint, 0, top, W, depth);
+                c.globalCompositeOperation = 'lighter';
+                c.fillStyle = 'rgba(255,255,255,.9)';
+                const glints = 34;
+                for (let i = 0; i < glints; i++) {
+                    const seed = i * 12.9898;
+                    const gx = (Math.sin(seed) * .5 + .5) * W + Math.sin(t * .5 + seed) * 14;
+                    const gy = top + (Math.sin(seed * 3.1) * .5 + .5) * depth;
+                    const shine = Math.sin(t * (1.2 + (i % 5) * .3) + seed);
+                    if (shine < .35) continue;
+                    c.globalAlpha = (shine - .35) * .9;
+                    const wide = (6 + (gy - top) / depth * 22) * unit * 1.2;
+                    c.fillRect(gx - wide / 2, gy, wide, Math.max(1, 1.4 * unit));
+                }
+                c.globalAlpha = 1;
+                c.globalCompositeOperation = 'source-over';
+            }
+        }
+
         // Bubbles, back to front.
         for (const b of s.bubbles) {
             const [bx, by] = lookAt(b.depth);
@@ -1433,13 +1404,27 @@
             const r = b.r * (b.grown < 1 ? .2 + .8 * b.grown : 1);
             if (y + r < -6 || y - r > H + 6 || x + r < -6 || x - r > W + 6) continue;
             const wobble = 1 + Math.sin(t * 1.3 + b.phase) * .012;
+            // What a real bubble shows: the world behind it, small and upside down.
+            if (r > 11) {
+                const toSnap = s.snap.width / W, reach = r * 2.6;
+                c.save();
+                c.setTransform(scale, 0, 0, scale, 0, 0);
+                c.beginPath();
+                c.arc(x, y, r * .975, 0, TAU);
+                c.clip();
+                c.translate(x, y);
+                c.scale(-1, -1);
+                c.globalAlpha = .72;
+                c.drawImage(s.snap, (x - reach / 2) * toSnap, (y - reach / 2) * toSnap, reach * toSnap, reach * toSnap, -r, -r, r * 2, r * 2);
+                c.restore();
+            }
             if (b.icon) {
-                const icon = s.icons[b.icon];
-                const spin = b.icon === 'gear' || b.icon === 'gears' ? b.turn * 3 : Math.sin(t * .4 + b.phase) * .22;
-                const size = r * 1.32 / icon.width;
+                const icon = b.icon;
+                const spin = Math.sin(t * .35 + b.phase) * .14;
+                const size = r * (icon.cad ? 1.62 : 1.92) / icon.width;
                 const cos = Math.cos(spin) * size, sin = Math.sin(spin) * size;
                 c.setTransform(scale * cos, scale * sin, -scale * sin, scale * cos, scale * x, scale * y);
-                c.globalAlpha = .96;
+                c.globalAlpha = .98;
                 c.drawImage(icon.canvas, -icon.anchorX, -icon.anchorY, icon.width, icon.height);
                 c.globalAlpha = 1;
             }
@@ -1470,6 +1455,14 @@
             c.globalAlpha = wave;
             c.drawImage(s.sparkle, x - size, y - size, size * 2, size * 2);
         }
+
+        // Bloom: the finished picture, very small, laid back over itself, so that
+        // everything bright bleeds.
+        s.glowC.drawImage(canvas, 0, 0, s.glow.width, s.glow.height);
+        c.setTransform(scale, 0, 0, scale, 0, 0);
+        c.globalCompositeOperation = 'screen';
+        c.globalAlpha = .3;
+        c.drawImage(s.glow, 0, 0, W, H);
         c.globalCompositeOperation = 'source-over';
         c.globalAlpha = 1;
     };
@@ -1631,6 +1624,7 @@
         window.removeEventListener('resize', onResize);
         scene = null;
         cloudCache = null;
+        projectSprites = null;
         if (canvas) {
             canvas.width = canvas.height = 0;
             canvas.remove();
