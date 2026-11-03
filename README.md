@@ -13,8 +13,8 @@ Source for my portfolio at [aloeveraz.github.io](https://aloeveraz.github.io/), 
 | `navbar.css` | The floating navigation bar |
 | `glass.js` | The liquid glass on the bar, cards and buttons (the modes are explained at the top of the file) |
 | `y2k.js`, `y2k.css`, `iris.js`, `iris.css`, `vapor.js`, `vapor.css`, `ego.js`, `ego.css` | Each level's hidden other looks (see Visual effects). Fetched only when a visitor asks for one |
-| `portfolio-data.json` | Profile, skills, project write-ups, media and links |
-| `project-example.json` | Template for a new project |
+| `portfolio-data.json` | Every word and link on the page: the hero, each section's headings, the About cards, skills, archive folders and projects |
+| `portfolio-template.json` | One of each kind of object in `portfolio-data.json`, filled in as an example |
 | `assets/` | Photos, GIFs, graphics and self-hosted fonts |
 | `tools/` | Scripts that rebuild images, icons and fonts |
 | `tools/perf/` | Windows scripts that serve the site locally and measure it in Chrome (see its README) |
@@ -33,15 +33,33 @@ Then open <http://localhost:8000>. On Windows without Python, `powershell -NoPro
 
 `PERFORMANCE_BASELINE.md`, `OPTIMIZATION_LOG.md` and `PERFORMANCE_REPORT.md` record what the site costs to run and what was changed to make it cheaper; `tools/perf/smoke.ps1` clicks through the page and checks it still works.
 
-## Add a project
+## Edit the site
+
+Everything a visitor reads is in `portfolio-data.json`, and it is the only place to change it. Every effects level and every hidden look shows the same page, so an edit there shows at Low, Medium and High, behind the eyes and on Medium's desk, whose pop-ups are made from the page's own projects, folders and links.
+
+Every object of a kind is written the same way: the same fields, in the same order, with `""`, `[]`, `0` or `false` where it has nothing. An empty field is left off the page. `portfolio-template.json` has one of each to copy.
+
+| In the data | On the page | Fields |
+| --- | --- | --- |
+| `profile` | The hero | `name`, `title` (shown only if `tagline` is empty), `badge`, `tagline`, `actions` (the hero's buttons) and `links` (the hero's icons and the Contact buttons, in this order; the hero puts the résumé last) |
+| `sections` | Each section's heading: `about`, `skills`, `projects`, `archive` and `contact` | `menu` (its word in the navigation bar), `label`, `title`, `summary` (the paragraph under it; About's is the bio) |
+| `about` | The About cards | `label`, `title`, `summary`, `roles` (each `title`, `position`, `period`), `subline`, `link` |
+| `skills` | The skill groups | `title`, `items` |
+| `collections` | The archive's folders | `id` (its address, `#id`), `title`, `summary`, `itemNoun` and `itemNounPlural` (what the count calls them), `carousel`, `categories` (the projects it holds) |
+| `projects` | Each card and its project sheet | See below |
+
+Every link, anywhere, is `{ "type", "label", "url" }`, and the type picks its icon: `github`, `linkedin`, `cad`, `video`, `resume`, `email` (`url` is `mailto:` and the address), `link` (another site), and for places on the page `projects`, `contact` and `section`. A link with no `url` is left off, except the résumé, which shows as coming soon.
+
+A project's fields, in order: `id`, `title`, `category` and `additionalCategories` (which folders it is in), `period` (`Started September 2026` while it goes on, `June 2024 to June 2025` once done, the semester for classes and clubs), `collectionOrder` (its place in its folder), `featured` and `featuredOrder` (its place in the top row, which shows the first three; `0` when not featured), `summary` (top of the sheet), `cardSummary` (the card), `programSummary` (a line about the program, for internships), `image`, `imageAlt`, `imageSrcset` (written by `tools/link-thumbnails.py`), `imagePresentation` (`photo` or `certificate`), `motionImage` and `motionImageAlt` (played when the card is pointed at), `tags`, `quickLink` (the link at the top of the sheet), `featureVideo` (`src`, `label`), `overview` (`problem`, `method`, `result`, and three `headings` or none for the usual ones; left empty, the sheet shows the first three `sections` instead), `sections` (each `heading`, `body`), `media` (each `type` of `image`, `gif` or `video`, `src`, `label`, `alt`, and `fit` of `cover` or `contain`; a video leaves `alt` and `fit` empty) and `links`.
+
+To add a project:
 
 1. Put the images in `assets/`.
-2. Copy the record in `project-example.json` into the `projects` array in `portfolio-data.json` and fill it in, including `category` and `collectionOrder`.
-3. Write `imageAlt` to describe what the picture shows, not the project's name.
-4. To put it in the top row, set `featured` to `true` and give it a `featuredOrder`.
-5. Run the media scripts below, then check the card, project sheet, links and mobile layout locally.
+2. Copy the project in `portfolio-template.json` into `projects` in `portfolio-data.json` and fill it in. Write `imageAlt` to say what the picture shows, not the project's name.
+3. Run the media scripts below, then `python tools/check-data.py`.
+4. Check the card, project sheet, links and phone layout locally.
 
-Empty link and media fields are skipped, so unfinished work stays off the site.
+`python tools/check-data.py` says anything in the data that is off the format and what it would get wrong on the page: a field missing or out of order, a link type it does not know, a project in a category no folder holds, a picture that is not in `assets/`. `--fix` puts fields in order and adds missing ones empty. `index.html` keeps a copy of the hero's and the headings' words (its `data-content` elements) so they are there before the data loads; `--fix` copies them from the data too. The page's `<head>` (its title, description and link previews) is the one place the data does not reach.
 
 ## Media and assets
 

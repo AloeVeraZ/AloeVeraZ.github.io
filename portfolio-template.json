@@ -1,0 +1,141 @@
+{
+    "profile": {
+        "name": "Your name",
+        "title": "What you are, shown if the tagline is empty",
+        "badge": "Small line over the name",
+        "tagline": "Line under the name",
+        "actions": [
+            {
+                "type": "projects",
+                "label": "Button words",
+                "url": "#projects"
+            }
+        ],
+        "links": [
+            {
+                "type": "github",
+                "label": "GitHub",
+                "url": "https://github.com/you"
+            }
+        ]
+    },
+    "sections": {
+        "about": {
+            "menu": "Word in the navigation bar",
+            "label": "Small line over the title",
+            "title": "Section title",
+            "summary": "Paragraph under the title. Leave empty for none."
+        }
+    },
+    "about": [
+        {
+            "label": "Small line over the title",
+            "title": "Card title",
+            "summary": "Paragraph on the card.",
+            "roles": [
+                {
+                    "title": "Club or team",
+                    "position": "Your role",
+                    "period": "2026 to 2028"
+                }
+            ],
+            "subline": "Smaller line at the foot of the card. Leave empty for none.",
+            "link": {
+                "type": "section",
+                "label": "Words at the foot of the card",
+                "url": "#folder-id"
+            }
+        }
+    ],
+    "skills": [
+        {
+            "title": "Group title",
+            "items": [
+                "Skill",
+                "Another skill"
+            ]
+        }
+    ],
+    "collections": [
+        {
+            "id": "folder-id",
+            "title": "Folder title",
+            "summary": "One sentence under the folder title.",
+            "itemNoun": "project",
+            "itemNounPlural": "projects",
+            "carousel": true,
+            "categories": [
+                "Category"
+            ]
+        }
+    ],
+    "projects": [
+        {
+            "id": "project-slug",
+            "title": "Project title",
+            "category": "Category",
+            "additionalCategories": [],
+            "period": "Started September 2026",
+            "collectionOrder": 1,
+            "featured": false,
+            "featuredOrder": 0,
+            "summary": "One or two sentences at the top of the project sheet.",
+            "cardSummary": "The words on the project card.",
+            "programSummary": "",
+            "image": "assets/project-cover.webp",
+            "imageAlt": "What the picture shows, not the project's name.",
+            "imageSrcset": "",
+            "imagePresentation": "photo",
+            "motionImage": "",
+            "motionImageAlt": "",
+            "tags": [
+                "CAD",
+                "3D Printing"
+            ],
+            "quickLink": {
+                "type": "github",
+                "label": "Full Project Breakdown",
+                "url": ""
+            },
+            "featureVideo": {
+                "src": "",
+                "label": ""
+            },
+            "overview": {
+                "headings": [],
+                "problem": "Why you made it.",
+                "method": "What you did.",
+                "result": "How it turned out."
+            },
+            "sections": [
+                {
+                    "heading": "Design",
+                    "body": "A paragraph about the design."
+                }
+            ],
+            "media": [
+                {
+                    "type": "image",
+                    "src": "assets/project-detail.webp",
+                    "label": "Caption under the picture",
+                    "alt": "What the picture shows.",
+                    "fit": "cover"
+                },
+                {
+                    "type": "video",
+                    "src": "https://www.youtube-nocookie.com/embed/VIDEO_ID?enablejsapi=1&playsinline=1&rel=0",
+                    "label": "Caption under the video",
+                    "alt": "",
+                    "fit": ""
+                }
+            ],
+            "links": [
+                {
+                    "type": "github",
+                    "label": "GitHub Project",
+                    "url": "https://github.com/you/project"
+                }
+            ]
+        }
+    ]
+}

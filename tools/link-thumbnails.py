@@ -23,8 +23,10 @@ for project in data["projects"]:
         if project.get("imageSrcset") != srcset:
             project["imageSrcset"] = srcset
             linked += 1
-    elif "imageSrcset" in project:
-        del project["imageSrcset"]
+    elif project.get("imageSrcset"):
+        # Emptied rather than taken out: every project keeps every field, in
+        # the set format tools/check-data.py checks.
+        project["imageSrcset"] = ""
         cleared += 1
 
 io.open("portfolio-data.json", "w", encoding="utf-8", newline="\n").write(

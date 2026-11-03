@@ -76,7 +76,7 @@
     </script>
     <link rel="stylesheet" href="fonts.css?v=20260910c">
     <link rel="stylesheet" href="icons.css?v=20260910c">
-    <link rel="stylesheet" href="portfolio.css?v=20261103-153336">
+    <link rel="stylesheet" href="portfolio.css?v=20261103-161042">
     <link rel="stylesheet" href="navbar.css?v=20261027-icon-controls-swipe">
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
@@ -110,15 +110,15 @@
 
     <nav class="navbar" aria-label="Main navigation">
         <div class="nav-content">
-            <a href="#" class="logo" id="nav-name">Angelo Demetroulakos</a>
+            <a href="#" class="logo" id="nav-name" data-content="profile.name">Angelo Demetroulakos</a>
             <button class="nav-toggle icon-control" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu">
                 <span class="nav-toggle-icon" aria-hidden="true"></span>
             </button>
             <ul class="nav-links" id="nav-links">
-                <li><a href="#about">About</a></li>
-                <li><a href="#skills">Skills</a></li>
-                <li><a href="#projects">Projects</a></li>
-                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about" data-content="sections.about.menu">About</a></li>
+                <li><a href="#skills" data-content="sections.skills.menu">Skills</a></li>
+                <li><a href="#projects" data-content="sections.projects.menu">Projects</a></li>
+                <li><a href="#contact" data-content="sections.contact.menu">Contact</a></li>
                 <li class="performance-control">
                     <!-- The effects slider: Low on the left, Medium in the
                          middle, High on the right (portfolio.js), with no
@@ -138,14 +138,18 @@
         </div>
     </nav>
 
+    <!-- Every word on the page comes from portfolio-data.json. An element
+         marked data-content shows the field it names, and what is written
+         here is only the copy for the first paint, kept the same as the data
+         by tools/check-data.py --fix. Edit the data, not this. -->
     <header id="hero" class="hero-section">
         <div class="hero-content">
-            <span class="badge hero-badge"><i class="fa-solid fa-gear" aria-hidden="true"></i> Mechanical Engineering &amp; Robotics</span>
-            <h1 id="hero-name" class="hero-name">Angelo Demetroulakos</h1>
-            <p id="hero-tagline" class="hero-tagline">Robotics • CAD • 3D Printing • Programming</p>
+            <span class="badge hero-badge" data-content="profile.badge"><i class="fa-solid fa-gear" aria-hidden="true"></i> Mechanical Engineering &amp; Robotics</span>
+            <h1 id="hero-name" class="hero-name" data-content="profile.name">Angelo Demetroulakos</h1>
+            <p id="hero-tagline" class="hero-tagline" data-content="profile.tagline">Robotics • CAD • 3D Printing • Programming</p>
             <div class="social-links" id="hero-social">
             </div>
-            <div class="hero-buttons">
+            <div class="hero-buttons" id="hero-actions">
                 <a href="#projects" class="btn hero-action"><i class="fa-solid fa-cubes" aria-hidden="true"></i> Explore Projects</a>
                 <a href="#contact" class="btn hero-action"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Get in Touch</a>
             </div>
@@ -155,19 +159,18 @@
     <main id="main-content">
         <section id="about" class="section glass-panel">
             <div class="section-header">
-                <span class="section-label">Overview</span>
-                <h2 class="section-title">About Me</h2>
+                <span class="section-label" data-content="sections.about.label">Overview</span>
+                <h2 class="section-title" data-content="sections.about.title">About Me</h2>
             </div>
-            <p id="about-bio" class="bio-text">
-                I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like designing and building robots and 3D printers from scratch.
-            </p>
+            <p id="about-bio" class="bio-text" data-content="sections.about.summary">I’m Angelo, and I study Mechanical Engineering Technology at City Tech in New York City. I like designing and building robots and 3D printers from scratch.</p>
             <div id="about-highlights" class="about-highlights" aria-label="Education and experience"></div>
         </section>
 
         <section id="skills" class="section">
             <div class="section-header">
-                <span class="section-label">Toolkit</span>
-                <h2 class="section-title">Skills &amp; Expertise</h2>
+                <span class="section-label" data-content="sections.skills.label">Toolkit</span>
+                <h2 class="section-title" data-content="sections.skills.title">Skills &amp; Expertise</h2>
+                <p class="section-subtitle" data-content="sections.skills.summary" hidden></p>
             </div>
             <div class="skills-categories" id="skills-container">
             </div>
@@ -175,18 +178,18 @@
 
         <section id="projects" class="section">
             <div class="section-header">
-                <span class="section-label">Portfolio</span>
-                <h2 class="section-title">Featured Projects</h2>
-                <p class="section-subtitle">Here are a few projects I have worked on. Open one to see how I made it and find the project files.</p>
+                <span class="section-label" data-content="sections.projects.label">Portfolio</span>
+                <h2 class="section-title" data-content="sections.projects.title">Featured Projects</h2>
+                <p class="section-subtitle" data-content="sections.projects.summary">Here are a few projects I have worked on. Open one to see how I made it and find the project files.</p>
             </div>
 
             <div class="projects-grid featured-grid" id="featured-projects-container">
             </div>
             <div class="project-library">
                 <div class="library-heading">
-                    <span class="section-label">Archive</span>
-                    <h3>My Projects</h3>
-                    <p>Open a category to explore more of my personal, club, class, and research work.</p>
+                    <span class="section-label" data-content="sections.archive.label">Archive</span>
+                    <h3 data-content="sections.archive.title">My Projects</h3>
+                    <p data-content="sections.archive.summary">Open a category to explore more of my personal, club, class, and research work.</p>
                 </div>
                 <div class="project-collections" id="project-collections"></div>
             </div>
@@ -194,10 +197,10 @@
 
         <section id="contact" class="section glass-panel contact-section">
             <div class="section-header">
-                <span class="section-label">Connect</span>
-                <h2 class="section-title">Contact &amp; Links</h2>
+                <span class="section-label" data-content="sections.contact.label">Connect</span>
+                <h2 class="section-title" data-content="sections.contact.title">Contact &amp; Links</h2>
             </div>
-            <p class="contact-desc">If you want to talk about robotics, 3D printing, or another project, feel free to reach out or look through my code and CAD files.</p>
+            <p class="contact-desc" data-content="sections.contact.summary">If you want to talk about robotics, 3D printing, or another project, feel free to reach out or look through my code and CAD files.</p>
             <div class="contact-links" id="contact-links-container">
             </div>
         </section>
@@ -246,7 +249,7 @@
 
     <footer>
         <div class="footer-content">
-            <p>&copy; <span id="current-year"></span> <span id="footer-name">Angelo Demetroulakos</span>. Mechanical Engineering Portfolio.</p>
+            <p>&copy; <span id="current-year"></span> <span id="footer-name" data-content="profile.name">Angelo Demetroulakos</span>. Mechanical Engineering Portfolio.</p>
             <nav class="footer-links" aria-label="Site policies">
                 <a href="/privacy.html">Privacy</a>
                 <a href="/terms.html">Terms</a>
@@ -256,7 +259,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261103-153336"></script>
+    <script src="portfolio.js?v=20261103-161042"></script>
     <script src="glass.js?v=20261102-031642"></script>
 </body>
 </html>

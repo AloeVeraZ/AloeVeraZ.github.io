@@ -44,7 +44,7 @@ try {
     Wait-PageReady $page
     Start-Sleep -Seconds 3
 
-    $data = & $js "fetch('portfolio-data.json').then(r => r.json()).then(d => JSON.stringify({ projects: d.projects.length, featured: d.projects.filter(p => p.featured).length, collections: d.projectCollections.length }))" | ConvertFrom-Json
+    $data = & $js "fetch('portfolio-data.json').then(r => r.json()).then(d => JSON.stringify({ projects: d.projects.length, featured: d.projects.filter(p => p.featured).length, collections: d.collections.length }))" | ConvertFrom-Json
     $cards = & $js "document.querySelectorAll('.project-card:not(.carousel-clone)').length"
     Check 'every project is rendered' ($cards -ge $data.projects) "$cards cards for $($data.projects) projects"
     Check 'featured row' ((& $js "document.querySelectorAll('#featured-projects-container .project-card').length") -eq [Math]::Min(3, $data.featured))

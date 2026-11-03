@@ -3,6 +3,20 @@
 For any agent working in this repository. The README says how the site works and
 OPTIMIZATION_LOG.md why it is built the way it is; these are the rules that are easy to miss.
 
+## Every word comes from the data
+
+- What a visitor reads (the hero, every section's headings, the About cards, skills, archive
+  folders, projects and every link) is in `portfolio-data.json`, and Aloe edits it there and
+  nowhere else. Don't type words into `index.html` or a script: give the element a
+  `data-content` naming its field, or render it from the data.
+- Every object of a kind has the same fields in the same order, empty where unused, and every
+  link is `{ type, label, url }` (README, "Edit the site"; `portfolio-template.json`). A new
+  field goes into the format in `tools/check-data.py`, the template and every object at once.
+- Run `python tools/check-data.py` after touching the data; `--fix` also copies the words
+  into `index.html`'s first-paint copy.
+- The levels and hidden looks never keep their own copy of the content: they show the one page,
+  and Medium's desk makes its pop-ups from the page's own cards, folders and links.
+
 ## Every switch has a transition
 
 Anything that changes what the page looks like at the press of a control (an effects level,

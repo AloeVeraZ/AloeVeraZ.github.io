@@ -1483,10 +1483,15 @@ document.addEventListener('DOMContentLoaded', () => {
     fetch('portfolio-data.json', { cache: 'no-cache' })
         .then(response => { if (!response.ok) throw new Error('Failed to load portfolio data'); return response.json(); })
         .then(data => {
+            // Everything a visitor reads comes from here, in the set format
+            // portfolio-template.json shows, and every level and every hidden
+            // look shows the one page it builds.
+            renderContent(data);
             renderProfile(data.profile);
-            renderSkills(data.skillCategories);
+            renderAbout(data.about);
+            renderSkills(data.skills);
             renderFeaturedProjects(data.projects);
-            renderProjectCollections(data.projectCollections, data.projects);
+            renderProjectCollections(data.collections, data.projects);
             setupModal();
             // The sections that waited for the data appear in this frame,
             // already at their full size (see .awaiting-data, index.html).
@@ -2722,80 +2727,147 @@ function describeImage(project, variant = 'still') {
     return described || project.title;
 }
 
-function renderProfile(profile) {
-    ['nav-name', 'footer-name', 'hero-name'].forEach(id => document.getElementById(id).textContent = profile.name);
-    document.getElementById('hero-tagline').textContent = profile.tagline || profile.title;
-    document.getElementById('about-bio').textContent = profile.bio;
-    const highlights = document.getElementById('about-highlights');
-    if (highlights) {
-        highlights.innerHTML = (profile.aboutHighlights || []).map(highlight => {
-            const roles = (highlight.roles || []).map(role => `<div class="about-highlight-role"><h4>${role.title}</h4><p>${[role.position, role.period].filter(Boolean).join(' • ')}</p></div>`).join('');
-            const content = `<span class="about-highlight-label">${highlight.label}</span><h3>${highlight.title}</h3><p>${highlight.body}</p>${roles}${highlight.subline ? `<p class="about-highlight-subline">${highlight.subline}</p>` : ''}${highlight.cta ? `<span class="about-highlight-cta">${highlight.cta} <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></span>` : ''}`;
-            return highlight.targetCollection
-                ? `<a class="about-highlight about-highlight-link" href="#${highlight.targetCollection}" data-collection-target="${highlight.targetCollection}" aria-label="${highlight.cta || `View ${highlight.label}`}">${content}</a>`
-                : `<article class="about-highlight">${content}</article>`;
-        }).join('');
-        highlights.querySelectorAll('[data-collection-target]').forEach(link => {
-            link.addEventListener('click', event => {
-                event.preventDefault();
-                const collection = document.getElementById(link.dataset.collectionTarget);
-                if (!collection) return;
-                const toggle = collection.querySelector('.collection-toggle');
-                if (toggle?.getAttribute('aria-expanded') !== 'true') toggle?.click();
-                window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-                    collection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }));
-            });
-        });
-        setupResponsiveCardSlider(highlights, {
-            cardSelector: '.about-highlight',
-            controlLabel: 'Browse education and experience',
-            regionLabel: 'Education and experience highlights'
-        });
-    }
-    const emailAddress = profile.email?.trim();
+// Every link in portfolio-data.json is written the same way: what kind of
+// link it is, the words on it and where it goes ({ type, label, url }). The
+// kind picks the icon, so a new link needs no markup. A link with no url is
+// left off the page, except the résumé, which says it is coming.
+const LINK_ICONS = {
+    github: 'fa-brands fa-github', linkedin: 'fa-brands fa-linkedin', cad: 'fa-solid fa-cube',
+    video: 'fa-solid fa-play', resume: 'fa-solid fa-file-arrow-down', email: 'fa-solid fa-envelope',
+    link: 'fa-solid fa-arrow-up-right-from-square', projects: 'fa-solid fa-cubes',
+    contact: 'fa-solid fa-paper-plane', section: 'fa-solid fa-arrow-down'
+};
+const LINK_WORDS = { github: 'Code', cad: 'CAD', video: 'Video', link: 'View', resume: 'Resume', email: 'Email Me' };
+const linkIcon = link => LINK_ICONS[link?.type] || LINK_ICONS.link;
+const linkLabel = link => link?.label || LINK_WORDS[link?.type] || 'View';
+// An email link opens Gmail's compose window on a computer, where a mailto:
+// so often lands in a mail program nobody set up, and the phone's own mail
+// app on a phone.
+function linkHref(link) {
+    const url = String(link?.url || '').trim();
+    if (link?.type !== 'email' || !url.startsWith('mailto:')) return url;
     const prefersNativeEmailApp = navigator.userAgentData?.mobile === true
         || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-    const emailUrl = emailAddress
-        ? prefersNativeEmailApp
-            ? `mailto:${emailAddress}`
-            : `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailAddress)}`
-        : '';
-    const links = [
-        [profile.github, 'fa-brands fa-github', 'GitHub'], [profile.linkedin, 'fa-brands fa-linkedin', 'LinkedIn'],
-        [profile.grabcad, 'fa-solid fa-cube', 'GrabCAD'], [emailUrl, 'fa-solid fa-envelope', `Email ${emailAddress || ''}`, 'Email Me']
-    ].filter(([url]) => url && !url.startsWith('UPDATE'));
-    const renderProfileLink = ([url, icon, label, buttonLabel], className = '') => {
+    return prefersNativeEmailApp ? url : `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(url.slice(7))}`;
+}
+
+// The page's own words: each element marked data-content in index.html shows
+// the field it names, such as "sections.about.title". index.html keeps a copy
+// for the first paint (tools/check-data.py --fix keeps it the same). An empty
+// field hides its element, so a section intro can be added or taken away from
+// the data alone. A Font Awesome icon in front of the words stays.
+function renderContent(data) {
+    document.querySelectorAll('[data-content]').forEach(element => {
+        const value = element.dataset.content.split('.').reduce((at, key) => at?.[key], data);
+        if (typeof value !== 'string') return;
+        const icons = [...element.querySelectorAll(':scope > i')];
+        if (icons.length) element.replaceChildren(...icons, ` ${value}`);
+        else element.textContent = value;
+        element.hidden = !value;
+    });
+}
+
+function renderProfile(profile) {
+    const tagline = document.getElementById('hero-tagline');
+    if (!profile.tagline && profile.title) {
+        tagline.textContent = profile.title;
+        tagline.hidden = false;
+    }
+    // The hero's buttons are changed where they stand rather than drawn
+    // again: they are on screen from the first paint, with the glass and the
+    // press already on them.
+    const actionRow = document.getElementById('hero-actions');
+    const actions = (profile.actions || []).filter(action => action.url);
+    const buttons = [...actionRow.querySelectorAll('.hero-action')];
+    actions.forEach((action, index) => {
+        let button = buttons[index];
+        if (!button) {
+            button = document.createElement('a');
+            button.className = 'btn hero-action';
+            actionRow.appendChild(button);
+        }
+        const icon = button.querySelector('i') || document.createElement('i');
+        icon.className = linkIcon(action);
+        icon.setAttribute('aria-hidden', 'true');
+        button.href = action.url;
+        button.replaceChildren(icon, ` ${linkLabel(action)}`);
+    });
+    buttons.slice(actions.length).forEach(button => button.remove());
+
+    const links = profile.links || [];
+    const resume = links.find(link => link.type === 'resume');
+    const others = links.filter(link => link.type !== 'resume' && String(link.url || '').trim());
+    const renderProfileLink = (link, className = '') => {
+        const url = linkHref(link);
+        const address = link.type === 'email' ? String(link.url).trim().replace(/^mailto:/, '') : '';
+        const named = address ? `Email ${address}` : linkLabel(link);
         const externalAttributes = url.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
         const classAttribute = className ? ` class="${className}"` : '';
-        return `<a href="${url}"${externalAttributes}${classAttribute} title="${label}" aria-label="${label}"><i class="${icon}" aria-hidden="true"></i>${className ? ` ${buttonLabel || label}` : ''}</a>`;
+        return `<a href="${url}"${externalAttributes}${classAttribute} title="${named}" aria-label="${named}"><i class="${linkIcon(link)}" aria-hidden="true"></i>${className ? ` ${linkLabel(link)}` : ''}</a>`;
     };
-    document.getElementById('hero-social').innerHTML = links.map(link => renderProfileLink(link)).join('');
-    const resumeButton = profile.resume
-        ? `<a href="${profile.resume}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Resume</a>`
-        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Resume</span>`;
-    const resumeIcon = profile.resume
-        ? `<a href="${profile.resume}" target="_blank" rel="noopener" title="Resume"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></a>`
+    const resumeUrl = String(resume?.url || '').trim();
+    const resumeButton = !resume ? ''
+        : resumeUrl
+        ? `<a href="${resumeUrl}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${linkLabel(resume)}</a>`
+        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${linkLabel(resume)}</span>`;
+    const resumeIcon = !resume ? ''
+        : resumeUrl
+        ? `<a href="${resumeUrl}" target="_blank" rel="noopener" title="${linkLabel(resume)}"><i class="${linkIcon(resume)}" aria-hidden="true"></i></a>`
         // Reads as a live control beside the other icons rather than a dead one,
         // because the résumé is coming. It still carries aria-disabled and still
         // goes nowhere, so nothing is promised to a screen reader that the page
-        // cannot deliver -- set `resume` in portfolio-data.json and it becomes a
-        // real link with no other change.
-        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Résumé coming soon"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></span>`;
-    document.getElementById('hero-social').innerHTML += resumeIcon;
+        // cannot deliver -- give the résumé link a url in portfolio-data.json and
+        // it becomes a real link with no other change.
+        : `<span class="resume-icon-unavailable" aria-disabled="true" title="Résumé coming soon"><i class="${linkIcon(resume)}" aria-hidden="true"></i></span>`;
+    // The hero's row of icons ends with the résumé.
+    document.getElementById('hero-social').innerHTML = others.map(link => renderProfileLink(link)).join('') + resumeIcon;
 
-    // Resume, GitHub and Email Me are one row of equal buttons, and they fill
-    // the three cells of the same page grid every other region uses. Email was
-    // briefly promoted to a louder primary button above this row; that read as a
-    // competing control rather than as the close of the section, so it sits back
-    // here in the same weight as the other two.
-    document.getElementById('contact-links-container').innerHTML =
-        resumeButton + links.map(link => renderProfileLink(link, 'btn secondary-btn')).join('');
+    // Resume, GitHub and Email Me are one row of equal buttons, in the order
+    // the data lists them, and they fill the three cells of the same page grid
+    // every other region uses. Email was briefly promoted to a louder primary
+    // button above this row; that read as a competing control rather than as
+    // the close of the section, so it sits back here in the same weight.
+    document.getElementById('contact-links-container').innerHTML = links
+        .map(link => link === resume ? resumeButton : others.includes(link) ? renderProfileLink(link, 'btn secondary-btn') : '')
+        .join('');
 }
 
-function renderSkills(categories) {
+// The About cards: label, title, summary, then any roles, a smaller line under
+// them and a link. A link to a folder of the archive opens the folder on the
+// way there.
+function renderAbout(cards = []) {
+    const highlights = document.getElementById('about-highlights');
+    if (!highlights) return;
+    highlights.innerHTML = cards.map(card => {
+        const roles = (card.roles || []).map(role => `<div class="about-highlight-role"><h4>${role.title}</h4><p>${[role.position, role.period].filter(Boolean).join(' • ')}</p></div>`).join('');
+        const link = card.link?.url ? card.link : null;
+        const content = `<span class="about-highlight-label">${card.label}</span><h3>${card.title}</h3><p>${card.summary}</p>${roles}${card.subline ? `<p class="about-highlight-subline">${card.subline}</p>` : ''}${link?.label ? `<span class="about-highlight-cta">${link.label} <i class="${linkIcon(link)}" aria-hidden="true"></i></span>` : ''}`;
+        return link
+            ? `<a class="about-highlight about-highlight-link" href="${link.url}"${link.url.startsWith('#') ? ` data-collection-target="${link.url.slice(1)}"` : ' target="_blank" rel="noopener"'} aria-label="${link.label || `View ${card.label}`}">${content}</a>`
+            : `<article class="about-highlight">${content}</article>`;
+    }).join('');
+    highlights.querySelectorAll('[data-collection-target]').forEach(link => {
+        link.addEventListener('click', event => {
+            const target = document.getElementById(link.dataset.collectionTarget);
+            if (!target) return;
+            event.preventDefault();
+            const toggle = target.querySelector(':scope > .collection-toggle');
+            if (toggle && toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+            window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }));
+        });
+    });
+    setupResponsiveCardSlider(highlights, {
+        cardSelector: '.about-highlight',
+        controlLabel: 'Browse education and experience',
+        regionLabel: 'Education and experience highlights'
+    });
+}
+
+function renderSkills(groups = []) {
     const container = document.getElementById('skills-container');
-    container.innerHTML = categories.map(cat => `<div class="skill-group"><h3 class="skill-group-title">${cat.name}</h3><div class="skill-tags">${cat.skills.map(skill => `<span class="tag">${skill}</span>`).join('')}</div></div>`).join('');
+    container.innerHTML = groups.map(group => `<div class="skill-group"><h3 class="skill-group-title">${group.title}</h3><div class="skill-tags">${group.items.map(skill => `<span class="tag">${skill}</span>`).join('')}</div></div>`).join('');
     setupResponsiveCardSlider(container, {
         cardSelector: '.skill-group',
         controlLabel: 'Browse skill categories',
@@ -3224,7 +3296,6 @@ function setupFeaturedCarousel(container) {
 function buildProjectCardSummary(project) {
     const summary = project.cardSummary
         || project.summary
-        || project.details
         || project.overview?.result
         || project.sections?.[0]?.body
         || 'Open the project to see the design and build details.';
@@ -3311,7 +3382,7 @@ function renderProjectCollections(collections, projects) {
     collections.forEach((collection, index) => {
         const group = document.createElement('section');
         group.className = 'project-collection';
-        group.id = collection.id || collection.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        group.id = collection.id || collection.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const collectionProjects = projects
             .filter(project => collection.categories.includes(project.category)
                 || project.additionalCategories?.some(category => collection.categories.includes(category)))
@@ -3333,7 +3404,7 @@ function renderProjectCollections(collections, projects) {
         const cueMarkup = collectionProjects.length
             ? `<span class="collection-cue">View ${countLabel}</span>`
             : '';
-        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.name}</strong><small>${collection.description}</small>${cueMarkup}</span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button><div class="collection-content" hidden></div>`;
+        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.title}</strong><small>${collection.summary}</small>${cueMarkup}</span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
         const useCarousel = collection.carousel !== false && collectionProjects.length > 3;
@@ -4140,17 +4211,12 @@ function setupCarousel(carousel, controls, options = {}) {
     return initialize;
 }
 
-function buildLinkButtons(links = {}) {
-    const map = [['github', 'fa-brands fa-github', 'Code', 'link-btn-github'], ['grabcad', 'fa-solid fa-cube', 'CAD', 'link-btn-grabcad'], ['video', 'fa-solid fa-play', 'Video', ''], ['projectUrl', 'fa-solid fa-arrow-up-right-from-square', 'View', '']];
-    return map.flatMap(([key, icon, label, cls]) => {
-        const entries = Array.isArray(links[key]) ? links[key] : [links[key]];
-        return entries.filter(Boolean).map(entry => {
-            const url = typeof entry === 'string' ? entry : entry.url;
-            const linkLabel = typeof entry === 'string' ? label : entry.label || label;
-            if (!url) return '';
-            return `<a href="${url}" target="_blank" rel="noopener" class="link-btn ${cls}"><i class="${icon}" aria-hidden="true"></i> ${linkLabel}</a>`;
-        });
-    }).join('');
+// A project's links, in the order the data lists them (see LINK_ICONS).
+function buildLinkButtons(links = []) {
+    return links
+        .filter(link => link?.url)
+        .map(link => `<a href="${linkHref(link)}" target="_blank" rel="noopener" class="link-btn"><i class="${linkIcon(link)}" aria-hidden="true"></i> ${linkLabel(link)}</a>`)
+        .join('');
 }
 
 function openModal(project) {
@@ -4165,7 +4231,9 @@ function openModal(project) {
     if (quickLink) {
         const quickLinkUrl = project.quickLink?.url;
         quickLink.hidden = !quickLinkUrl;
-        // The label goes in beside the GitHub icon; setting textContent wiped it.
+        // The label goes in beside the icon; setting textContent wiped it.
+        const quickLinkIcon = quickLink.querySelector('i');
+        if (quickLinkIcon && project.quickLink?.type) quickLinkIcon.className = linkIcon(project.quickLink);
         quickLink.replaceChildren(...quickLink.querySelectorAll('i'), project.quickLink?.label || 'Full Project Breakdown');
         if (quickLinkUrl) quickLink.href = quickLinkUrl;
         else quickLink.removeAttribute('href');
@@ -4196,7 +4264,10 @@ function openModal(project) {
         && project.overview.headings.length === 3
         ? project.overview.headings
         : defaultOverviewHeadings;
-    const overviewItems = project.overview
+    // A project whose overview is left empty shows its first three sections
+    // in its place.
+    const hasOverview = Boolean(project.overview?.problem || project.overview?.method || project.overview?.result);
+    const overviewItems = hasOverview
         ? [
             [overviewHeadings[0], project.overview.problem],
             [overviewHeadings[1], project.overview.method],
@@ -4221,9 +4292,7 @@ function openModal(project) {
     const details = document.getElementById('modal-details');
     details.innerHTML = isCoursework
         ? '<section class="modal-detail-section"><h4>Want to see more?</h4><p>The class README on GitHub has more details and all of the work I saved from the class.</p></section>'
-        : project.sections
-        ? project.sections.map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('')
-        : `<p>${project.details || ''}</p>`;
+        : (project.sections || []).map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('');
     document.getElementById('modal-tags').innerHTML = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
     document.getElementById('modal-links').innerHTML = buildLinkButtons(project.links);
     const image = document.getElementById('modal-image');
