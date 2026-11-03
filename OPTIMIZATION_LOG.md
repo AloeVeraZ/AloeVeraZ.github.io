@@ -2157,6 +2157,25 @@ all the time once awake, as Low's did; the two presses still fix them, flushed, 
 switch no longer leaves the new eye staring ahead until the cursor moves: the page keeps where
 the cursor last was (`window.portfolioPointer`) and the eye looks there as it arrives.
 
+Then Medium, which Aloe found laggy on this laptop (i7-1185G7, Iris Xe, a 3840x2400 screen at
+3x). Measured in the bench Chrome at the screen's own scale, 1280x720, the page and data pinned
+to the committed copies so only `cosmos.js` differed: Medium meant to rest at thirty frames a
+second but drew about 55, because a comet out kept it at every frame, and with comets arriving
+every 14 to 26 s and taking up to 16 to cross, one was nearly always out. Blocking `cosmos.js`
+altogether brings the GPU 3D engine at rest from about 50% to 6%, and a scroll runs 29-34
+frames a second with or without the sky (Low's runs 38-43): a scroll on this screen is slow
+for the glass at 3x, not the sky. Drawing the comets alone between the sky's frames, on their
+own canvas, saved nothing (61% against 57% at rest): any change under the glass has it blurred
+again, and that is most of a frame. So Medium now stays at thirty through a scroll, the cursor
+moving and a comet crossing, and only a world going into a hole takes it to every frame:
+
+| Medium, 3x, medians | Before | After |
+| --- | --- | --- |
+| At rest: GPU 3D engine | 53% | 36% |
+| At rest: sky frames a second | 60 | 30 |
+| Cursor moving: GPU 3D engine | 54% | 48% |
+| Scroll: page frames a second | 32 | 35 |
+
 ---
 
 ## Final checks (cycles 30-40 together)

@@ -1551,8 +1551,16 @@
         // glass over it filtered again, which is most of what a frame of this costs.
         // On an eased machine High keeps every frame for while someone is scrolling or moving;
         // what moves fast on its own there is never far from moving, and the frames are dear.
+        // Medium's sky holds still, so it stays at thirty through a scroll (nothing in it
+        // changes), the cursor moving (it only bends the light under it a little) and a comet
+        // crossing; only a world going in takes it to every frame. What a frame costs is mostly
+        // the glass over it filtered again, and any change under the glass sets that off, so
+        // drawing the comets alone between the sky's frames saved nothing. On this laptop's
+        // 3x screen Medium had been drawing about 55 frames a second with a comet out, which
+        // was most of the time.
         const rest = spec.rest || (eased || root.dataset.effectsPace ? 30 : 0);
-        const quick = !rest || now - lastScrollAt < 450 || now - lastPointerAt < 600 || (spec.rest && (fastThings > 0 || near.busy()));
+        const still = spec.fixed;
+        const quick = !rest || (!still && (now - lastScrollAt < 450 || now - lastPointerAt < 600)) || (spec.rest && (fastThings > 0 || (!still && near.busy())));
         if (lastFrame && !quick && now - lastFrame < 1000 / rest - 4) return;
         const dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 1 / 60;
         lastFrame = now;

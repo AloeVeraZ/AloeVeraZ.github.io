@@ -54,6 +54,10 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
   the galaxy (Medium's painted spiral and its feeding heart, High's living one) stands somewhere
   new each visit (`portfolioSkySpot`); Aloe found them all on the right side. The holes have no
   bright ring at their edge: Aloe had it taken off.
+- Medium's sky draws thirty frames a second and stays there through a scroll, the cursor moving
+  and a comet crossing; only a world going into a hole takes it to every frame. Most of what a
+  frame costs is the glass over it blurred again, which any change under it sets off, so the
+  way to make Medium cheaper is fewer frames, not a cheaper shader.
 - Far is the still picture: stars and far galaxies as points of light. Near is the living sky,
   and what is in it acts on what is around it: holes pull things in and swallow them, worlds and
   orbs are lit by whatever burns nearest, comets bend round the holes, the cursor pushes and
