@@ -1,3 +1,5 @@
+[![Portfolio homepage with oversized cream typography, glass controls, and an animated space backdrop](docs/images/portfolio-hero.webp)](https://aloeveraz.github.io/)
+
 <div align="center">
 
 # Angelo Demetroulakos
@@ -9,62 +11,63 @@ Robots, mechanisms, and things I built from scratch — presented through glass,
 
 </div>
 
-[![Portfolio homepage with oversized cream typography, glass controls, and an animated space backdrop](docs/images/portfolio-hero.webp)](https://aloeveraz.github.io/)
-
 ## The look
 
 Near-black backgrounds. Warm white lettering. Ice-blue accents. Barlow Condensed headlines paired with Inter body text. Translucent glass cards and a floating navigation bar catch the light over stars, planets, and black holes.
 
 The site feels like a window into space, with the engineering work in the foreground.
 
-| Detail | What you'll see |
+| Detail | What gives it its character |
 | --- | --- |
-| **Glass & light** | Frosted surfaces, illuminated edges, and buttons that react to the cursor |
-| **Motion & depth** | An interactive cosmic backdrop, tilting cards, and animated transitions |
-| **Three effects levels** | Low, Medium, and High, selected from the navigation bar |
-| **Hidden looks** | Double-press a slider stop to discover eyes and, on Medium, a pink retro desktop |
+| **Glass & light** | Thin illuminated rims, frosted surfaces, and translucent buttons let the sky show through the interface. |
+| **Scale & type** | Oversized condensed headings give the page its silhouette; quieter body text, small labels, and blue accents organize the details. |
+| **Motion & depth** | The cosmic backdrop moves behind the page while cards respond to the cursor. Animated transitions connect the different looks. |
+| **Images & space** | Large build photos sit inside a consistent card layout, with generous gaps between sections and compact tags for the technical details. |
+
+The navigation's three-dot slider sets **Low, Medium, or High** effects, from left to right. Medium is the default: a living space scene with black holes, worlds, and comets. High adds richer activity, interactive orbs, fleets, and cursor effects; Low keeps a mostly still starfield. The page adapts to smaller screens and respects reduced-motion preferences.
 
 ## The work
 
 ![Featured engineering projects displayed as glass cards with build photos](docs/images/portfolio-projects.webp)
 
+I'm a Mechanical Engineering Technology student at City Tech in New York City. I design mechanisms, build robots and devices, and work through the CAD, fabrication, electronics, and programming that make them run. This portfolio brings the finished builds together with the experiments, revisions, and lessons behind them.
+
 - **Robotics & mechanisms** — swerve drivetrains, FTC robots, odometry pods, and club builds.
 - **Devices & fabrication** — a custom CoreXY printer, a digital camera, transit displays, and an animated electronic keychain.
-- **The process behind them** — CAD, code, build photos, videos, and project write-ups covering the problem, method, and result.
+- **The process behind them** — CAD, code, build photos, videos, and write-ups explaining the problem, method, and result.
 - **Experience & learning** — City Tech coursework, NYC FIRST internships, research, awards, and technical skills.
 
-Featured cards open into detailed project sheets. The archive groups the rest into personal projects, work, clubs, research, and classes.
+The page moves from an introduction and About Me into Skills, Featured Projects, the project archive, and Contact. Featured cards open detailed project sheets over the page; archive folders group personal, work, club, research, and class projects into browsable collections. You can explore a build and return to where you left off.
 
-## How the page is laid out
+## Alternate looks
 
-The portfolio is one scrolling page, with a floating navigation bar linking its main sections. On smaller screens the links and effects control sit inside the navigation menu.
+The same portfolio has a different visual personality behind the star. **Click the star once, or press a slider stop twice quickly, to cycle through the looks available at that effects level.** These are the two main alternate styles:
 
-| Section | What happens there |
-| --- | --- |
-| **Introduction** | Large name and focus area, social and résumé links, and shortcuts to projects and contact |
-| **About Me** | A short bio followed by cards for education, experience, and hands-on work |
-| **Skills & Expertise** | Three groups: CAD and design, manufacturing and fabrication, and software and controls |
-| **Featured Projects** | A selection of builds shown as photo-led cards; select one to open its project sheet |
-| **My Projects** | Expandable collections for personal, work, club, research, and class projects, with browsable project rings |
-| **Contact & Links** | Ways to get in touch and find the related repositories and project files |
+### The eye · High effects
 
-Project sheets open over the page so you can explore a build without losing your place. Depending on the project, a sheet includes the problem, method, result, build steps, photos, video, and links to code or CAD. Close it to return to browsing.
+![High-effects eye: a giant violet and pink iris with luminous fibres, visible dithering, and purple glass controls behind the portfolio](docs/images/portfolio-eye-high.webp)
 
-## Effects & alternate looks
+**Violet light · Pixel texture · Living anatomy**
 
-The three-stop slider beside the diamond in the navigation controls how much visual activity the site uses. **Left is Low, middle is Medium, right is High.** A visit starts at Medium; changes are remembered for that visit, and the site can step down if rendering becomes slow.
+A giant eye fills the background with moving iris fibres, lit veins, sparks, and a flowing aura. Visible dithering, separated color channels, and light bleeding across the image give it the feel of a glowing digital display. Purple glass controls and luminous lettering carry that palette into the portfolio itself.
 
-| Level | The space backdrop & interface | Alternate looks |
-| --- | --- | --- |
-| **Low** | A mostly still starfield with occasional twinkles and shooting stars, and simpler glass | A dithered eye with glossy Y2K-style windows |
-| **Medium** | A moving space scene with black holes, worlds, comets, and landers, plus cursor-reactive cards | A GPU-drawn eye, then a pink retro desktop with a robot and project-linked pop-ups |
-| **High** | A richer animated galaxy, interactive orbs, battling fleets, frosted glass, and custom cursor effects | A more detailed animated eye with fibres, veins, and sparks |
+The eye assembles from its internal structure before waking up. It blinks and eases between small glances and wider looks on its own. **Double-click the eye** to tint its iris and let it follow your cursor for ten seconds; then its resting color returns and it goes back to looking around.
 
-**Press a slider stop twice quickly, or click the diamond once, to cycle through that level's looks.** The eyes wake up and look around on their own, easing between small glances, occasional wider looks, and pauses toward the viewer. Double-click an eye to change its color and let it follow your cursor for ten seconds; it then returns to its resting color and stops tracking. The retro desktop uses the portfolio's own projects and links. Reloading returns to the default look. Alternate-look files load only when selected.
+*Try it: move the slider to High, then click the star.*
 
-The diamond gives paired glints every few seconds during the opening ten seconds, then about once a minute to invite exploration. Using the control pauses the reminders for a minute. Hints stay quiet while a project is open, in a hidden tab, or when reduced motion is enabled.
+### The robot desktop · Medium effects
 
-The space backdrop dims after a few seconds without input and wakes when you interact again. Reduced-motion preferences also simplify transitions and motion.
+![Medium-effects retro desktop: pink grid wallpaper, overlapping lavender and teal windows, pixel robots, progress bars, and scattered digital glitches](docs/images/portfolio-desktop-medium.webp)
+
+**Pastel pink · Pixel robots · A desktop coming apart**
+
+Pink grid wallpaper sits behind a growing stack of lavender, teal, and hot-pink windows. Heavy black borders, hard offset shadows, pixel lettering, and blocky progress bars give the interface a late-90s desktop feel. The mischievous robot appears in glitching windows while digital static spills across the screen.
+
+The windows are part of the portfolio: project and section links become desktop items, alongside a print job, infill control, and torque window. Drag windows around, minimize them to the bottom bar, or poke the robot. The familiar name and page sections remain underneath the disorder.
+
+*Try it: move the slider to Medium, then click the star to cycle past the eye to the desktop.*
+
+Alternate looks load only when selected. Reloading returns to the default look. The star briefly glints on arrival and occasionally while browsing to invite exploration.
 
 ## Behind the site
 
