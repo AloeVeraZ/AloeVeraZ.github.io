@@ -32,10 +32,10 @@ The navigation's three-dot slider sets **Low, Medium, or High** effects, from le
 
 I'm a Mechanical Engineering Technology student at City Tech in New York City. I design mechanisms, build robots and devices, and work through the CAD, fabrication, electronics, and programming that make them run. This portfolio brings the finished builds together with the experiments, revisions, and lessons behind them.
 
-- **Robotics & mechanisms** — swerve drivetrains, FTC robots, odometry pods, and club builds.
-- **Devices & fabrication** — a custom CoreXY printer, a digital camera, transit displays, and an animated electronic keychain.
-- **The process behind them** — CAD, code, build photos, videos, and write-ups explaining the problem, method, and result.
-- **Experience & learning** — City Tech coursework, NYC FIRST internships, research, awards, and technical skills.
+- **Robotics & mechanisms** — swerve drivetrains, FTC competition robots, custom odometry pods, and club builds. These projects explore how mechanical design, sensors, and control software work together to make robots move accurately and reliably.
+- **Devices & fabrication** — a custom CoreXY printer in development, an ESP32 digital camera, live NYC subway displays, and an animated electronic keychain. Each combines electronics and programming with CAD, printed parts, and physical assembly.
+- **The process behind them** — CAD, source code, build photos, videos, and project write-ups that explain the original problem, design decisions, testing, and results, including the revisions made when a mechanism or prototype did not work as intended.
+- **Experience & learning** — City Tech coursework, NYC FIRST internships, materials research, mentoring, and awards. The work spans engineering drawings, CNC toolpaths, machining, MATLAB, and helping other students build and understand their own robots.
 
 The page moves from an introduction and About Me into Skills, Featured Projects, the project archive, and Contact. Featured cards open detailed project sheets over the page; archive folders group personal, work, club, research, and class projects into browsable collections. You can explore a build and return to where you left off.
 
