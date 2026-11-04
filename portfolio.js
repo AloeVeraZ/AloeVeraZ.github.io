@@ -1295,6 +1295,41 @@ document.addEventListener('DOMContentLoaded', () => {
             endDrag();
         });
     }
+
+    // ---- The star's hint -------------------------------------------------
+    // The star beside the slider glows softly now and then, to say it can be
+    // pressed: once, every minute and a half or so, and twice when the visitor
+    // has been on one look a minute or more. Never while a project is open, in
+    // a hidden tab or for anyone who prefers reduced motion, and it lets a
+    // visitor who has just used the slider be for a while. A timer every few
+    // seconds and a second's animation on a 14px icon (portfolio.css), so it
+    // costs Low nothing.
+    const fxIcon = fxSlider?.querySelector('.fx-slider-icon');
+    if (fxIcon) {
+        const HINT_FIRST_MS = 30000, HINT_EVERY_MS = 90000, LINGER_MS = 60000, AFTER_USE_MS = 180000;
+        let nextHint = performance.now() + HINT_FIRST_MS;
+        let look = '', lookSince = performance.now();
+        fxIcon.addEventListener('animationend', () => fxIcon.classList.remove('is-hinting', 'is-hinting-twice'));
+        fxSlider.addEventListener('pointerdown', () => {
+            nextHint = Math.max(nextHint, performance.now() + AFTER_USE_MS);
+        }, { passive: true });
+        const checkHint = () => {
+            const now = performance.now();
+            const current = `${effectsMode}:${showingSky}`;
+            if (current !== look) {
+                look = current;
+                lookSince = now;
+            }
+            const quiet = document.hidden || reducedMotion.matches
+                || document.getElementById('project-modal')?.classList.contains('active');
+            if (now >= nextHint && !quiet) {
+                fxIcon.classList.add(now - lookSince >= LINGER_MS ? 'is-hinting-twice' : 'is-hinting');
+                nextHint = now + HINT_EVERY_MS;
+            }
+            window.setTimeout(checkHint, 5000);
+        };
+        window.setTimeout(checkHint, 5000);
+    }
     document.addEventListener('visibilitychange', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         if (document.hidden) {
