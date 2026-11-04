@@ -2178,6 +2178,60 @@ moving and a comet crossing, and only a world going into a hole takes it to ever
 
 ---
 
+## Cycle 50: The whole codebase audited, and matter falling into the black hole (adopted)
+
+**Identified bottleneck:** none in particular: an audit of every file, by asking what can go and what
+breaks at the edges. Seven read-only passes (the desk, the eyes, the page's setup and still sky, the
+carousels and sheet, `cosmos.js`, the stylesheets, the data pipeline), each finding checked against
+the code before it was fixed.
+
+**Implementation (ed59256, then 4013b58 and this cycle's last commit):**
+- Switching looks: a look turned off while another level's was loading left no backdrop at all; a
+  switch that played late undid a newer one; a look still up could be released from under itself
+  (`targetSky`, `pendingSwap` in `syncSkies`). On a first visit, choosing the Medium already showing
+  played a "going down" that swallowed the second of the two presses, so the eye, and then the desk,
+  never came; choosing the level already up now plays nothing.
+- The eyes, the living sky, the still sky, the desk, the carousels and the project sheet: about
+  seventy bugs, each in the commit message of ed59256.
+- Taken out: glass.js's lens painter (only galaxy.js called it), the `.galaxy-nebula` layer, about 360
+  lines of CSS nothing could match or that were always overridden (the removals checked pixel for
+  pixel against the stylesheets before, at every level, with the test pattern: the only differences
+  are the scroll indicator now under the bar and an animated picture on another frame), and 14 images
+  nothing named.
+- `cosmos.js` (by request): motes of dust and gas go round the galaxy's heart and in, 32 at Medium and
+  56 at High, short strokes on the near canvas.
+- The star beside the slider glows now and then to say it can be pressed, twice after a minute on one
+  look.
+
+**Measured, interleaved, the machine otherwise idle (`ab.ps1`, kept awake by a key every second):**
+
+| Medium, `native`, median of 3 | before the audit | now, motes off | now |
+| --- | --- | --- | --- |
+| At rest: dropped | 0% | 0% | 0% |
+| At rest: frames a second | 44.2 | 44.4 | 44.5 |
+| At rest: main thread | 59.5 ms/s | 59.5 ms/s | 85 ms/s |
+| At rest: GPU process CPU | 27% | 29% | 36% |
+| At rest: GPU 3D engine | 41% | 40% | 41% |
+| Scroll: dropped | 14.2% | 16.4% | 14.4% |
+| Scroll: slowest 5% of frames | 65 ms | 59 ms | 48 ms |
+
+| Low, `minimum`, median of 2 | before | now |
+| --- | --- | --- |
+| At rest: frames a second | 1.6 | 1.6 |
+| At rest: main thread | 15.6 ms/s | 15.5 ms/s |
+| Scroll: dropped | 0.8% | 1.1% |
+| Scroll: main thread | 794 ms/s | 761 ms/s |
+
+The motes cost Medium about 25 ms a second of the page's thread and a few points of the GPU process at
+rest, and no frames; the graphics card does no more. Low is where it was.
+
+**Checks:** `smoke.ps1` 50 of 50 with graphics and 48 of 48 without; every project sheet opened, none
+telling a paragraph twice; every YouTube link form turned into a working embed.
+
+**Result:** Adopted.
+
+---
+
 ## Final checks (cycles 30-40 together)
 
 On the merged tree, not the branches:

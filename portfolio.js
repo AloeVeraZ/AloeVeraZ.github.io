@@ -1217,6 +1217,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // transition, and a reload in between must still find the visitor's choice.
         storeEffects('sessionStorage', levelStorageKey, level);
         storeEffects('sessionStorage', lagStorageKey, '');
+        // The level already showing, chosen by hand (a first visit's Medium, or the one the
+        // page stepped down to): nothing on the page changes, so nothing plays. A "going
+        // down" played here held the page through the next quick press, and the two presses
+        // that go round the looks lost their second.
+        if (level === effectsMode) {
+            applyEffectsMode(level, true, 'manual', false);
+            return;
+        }
         const rising = EFFECT_LEVELS.indexOf(level) > EFFECT_LEVELS.indexOf(effectsMode);
         shift(!rising ? 'fall' : level === 'high' ? 'surge' : 'rise', () => applyEffectsMode(level, true, 'manual'));
     };
