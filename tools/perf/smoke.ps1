@@ -137,7 +137,9 @@ try {
     Set-EffectsLevel $page 'high' | Out-Null
     # The living sky is fetched and built on the side; it is up within a few seconds.
     $polls = 0
-    do { Start-Sleep -Milliseconds 500; $h = & $js $level | ConvertFrom-Json; $polls++ } while (-not $h.sky -and -not $Software -and $polls -lt 11)
+    # Without graphics there is no sky to wait for, but the level itself goes up inside its
+    # transition, which such a machine is slow to start.
+    do { Start-Sleep -Milliseconds 500; $h = & $js $level | ConvertFrom-Json; $polls++ } while (($h.effects -ne 'high' -or (-not $h.sky -and -not $Software)) -and $polls -lt 11)
     Check 'and back to High: the sky again' ($h.effects -eq 'high' -and $h.sky -eq (-not $Software) -and $h.look -eq 'high' -and $h.value -eq '2') "$($h.effects) sky=$($h.sky) look=$($h.look)"
 
     # A visit the frame monitor had to step down stays there for the tab.
