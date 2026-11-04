@@ -1,15 +1,14 @@
-/* The pastel desktop's look on the page (vapor.js has the windows on it). Not fetched
-   until a visitor asks for it, quick presses on the slider's Medium stop, and
-   every rule answers only to html[data-effects="medium"][data-vapor].
+/* The pastel desktop's look on the page (vapor.js has the windows on it). Fetched with
+   the other looks the first time a visitor finds one, at any stop (portfolio.js). Every
+   rule for the page answers only to html[data-effects="medium"][data-vapor]; the desk's
+   own further down need not, as the desk is only there while it shows.
    Nothing about how anything moves or answers changes: the lean, the lift, the
    rings and the light under the cursor are the page's own. The cards become
    windows out of what they already hold. Each title bar is an element the card
    had anyway, kept to the room it had, so nothing on the page changes place.
-   It is all flat paint: no blur, no frost, no blend. Opaque panes ask less of the
-   graphics process than the clear glass they replace. */
-/* A press goes straight through the crossfade to the page under it. */
-::view-transition { pointer-events: none; }
-
+   It is all flat paint, no frost and no blend, and the one blur is the glow round the
+   robot's green ghosts, a few at a time and gone in a moment. Opaque panes ask less of
+   the graphics process than the clear glass they replace. */
 html[data-effects="medium"][data-vapor] {
     --bg: #f8b6ee;
     --surface: #ffffff;
@@ -21,11 +20,9 @@ html[data-effects="medium"][data-vapor] {
     --blue-light: #3a1a86;
     --blue-soft: #3a1a86;
     --red: #3a1a86;
-    --yellow: #2c2340;
     --vapor-teal: #5ff0d8;
     --vapor-purple: #b18be8;
     --vapor-yellow: #f5ea5a;
-    --vapor-pink: #f8b6ee;
     --radius-card: 0;
     --radius-control: 0;
     --radius-surface: 0;
@@ -37,7 +34,6 @@ html[data-effects="medium"][data-vapor] {
     --glass-shadow: none;
     --glass-volume: inset 0 0 0 0 transparent;
     --glass-lit-body: #5ff0d8;
-    --glass-lit: #5ff0d8;
     --glass-lit-glow: 3px 3px 0 #0c0a14;
     --glass-lit-ink: #0c0a14;
     /* A pointer of the period: an operating system's own cursor, so it costs nothing and
@@ -185,9 +181,7 @@ html[data-effects="medium"][data-vapor] .project-category-badge {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-html[data-effects="medium"][data-vapor] :is(.project-image-wrapper, .project-image) { background: transparent; }
 html[data-effects="medium"][data-vapor] .project-image-wrapper { border-bottom: 2px solid #0c0a14; }
-html[data-effects="medium"][data-vapor] .project-card:hover .project-image.is-motion-active { background: transparent; }
 html[data-effects="medium"][data-vapor] .card-media-placeholder,
 html[data-effects="medium"][data-vapor] :is(.card-media-placeholder i, .card-media-placeholder span) { color: var(--ink); }
 
@@ -217,8 +211,7 @@ html[data-effects="medium"][data-vapor] :is(.hero-buttons > .btn, .contact-links
 }
 
 /* The bar: a window lying across the top, no frost behind it. */
-html[data-effects="medium"][data-vapor] .navbar { --nav-tint: #ffffff; --nav-muted: var(--ink); }
-html[data-effects="medium"][data-vapor] .has-scrolled .navbar { --nav-muted: var(--ink); }
+html[data-effects="medium"][data-vapor] .navbar { --nav-muted: var(--ink); }
 html[data-effects="medium"][data-vapor] .navbar .nav-content,
 html[data-effects="medium"][data-vapor] .has-scrolled .navbar .nav-content {
     -webkit-backdrop-filter: none;
@@ -304,14 +297,15 @@ html[data-effects="medium"][data-vapor] .modal-media-item figcaption {
     color: var(--ink);
 }
 html[data-effects="medium"][data-vapor] .modal-feature-video-player { background: #0c0a14; border-radius: 0; }
-html[data-effects="medium"][data-vapor] .navbar[data-nav-open] { --nav-muted: var(--ink); }
 
 /* ---- The desk -------------------------------------------------------------
    At the back a wall of windows that do nothing, painted once; in front, everything can be
    used and picked up, and every pop-up leads somewhere (vapor.js). It stands on one fixed layer
    behind the page, so it stays with the visitor all the way down, and the page's empty
    stretches let a press through to it while everything on the page that answers a press
-   still does. All flat paint. */
+   still does. The bar at its foot, its dialogs and whatever is being carried stand on a
+   second fixed layer, in front of the page. All flat paint, but for the glow round the
+   robot's ghosts. */
 html[data-effects="medium"][data-vapor] :is(.hero-section, .hero-section *, main, main *, footer) { pointer-events: none; }
 html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section button, .hero-section .btn, .hero-section .social-links > *,
     main a, main button, main input, main .project-card, main .project-card *, main .about-highlight, main .about-highlight *, main .skill-group, main .skill-group *,
@@ -331,6 +325,8 @@ html[data-effects="medium"][data-vapor] :is(.hero-section a, .hero-section butto
     --vapor-line: max(1px, .125em);
     --vapor-ink: #0c0a14;
 }
+/* The desk comes last on the page (vapor.js) and still stands behind all of it, which stands
+   at 1 and above (portfolio.css). */
 .vapor-desk { z-index: 0; }
 .vapor-over { z-index: 900; }
 @media (pointer: coarse) {
@@ -395,7 +391,8 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
 /* How big each is. Where it stands is up to vapor.js. */
 .vapor-win, .vapor-hearts, .vapor-file { left: 0; top: 0; }
 .vapor-hearts[hidden], .vapor-file[hidden] { display: none; }
-.vapor-win { max-width: calc(100vw - .5em); max-height: calc(100vh - 3em); }
+/* No bigger than the desk, which is the screen as it stands, a phone's toolbars showing or not. */
+.vapor-win { max-width: calc(100% - .5em); max-height: calc(100% - 3em); }
 .vapor-win[data-win="infill"] { width: 17.6em; height: 25em; }
 .vapor-win[data-win="print"] { width: 17.6em; }
 .vapor-win[data-win="robot"] { width: 13.6em; height: 13em; }
@@ -423,7 +420,7 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
 .vapor-note[data-depth="0"] { font-size: .78em; }
 .vapor-note[data-depth="1"] { font-size: .89em; }
 html[data-effects="medium"][data-vapor] :is(.vapor-note[data-act="go"], .vapor-note[data-act="go"] .vapor-bar) { cursor: var(--vapor-hand); }
-.vapor-over [data-win="popup"] { left: calc(50% - 8em); top: 38vh; }
+.vapor-over [data-win="popup"] { left: calc(50% - 8em); top: 38%; }
 .vapor-bar {
     flex: none;
     display: flex;
@@ -437,7 +434,6 @@ html[data-effects="medium"][data-vapor] :is(.vapor-note[data-act="go"], .vapor-n
     cursor: grab;
     overflow: hidden;
 }
-.vapor-win.is-held .vapor-bar { cursor: grabbing; }
 .vapor-dots { display: flex; flex: none; gap: .2em; }
 .vapor-dot {
     width: .8em;
@@ -617,14 +613,13 @@ html[data-effects="medium"][data-vapor] :is(.vapor-note[data-act="go"], .vapor-n
     filter: drop-shadow(0 0 .3em #39ff8a);
     pointer-events: none;
 }
-.vapor-ghost[hidden] { display: none; }
 /* On a layer of its own, or every frame of it would paint the whole pile under it again. */
 .vapor-gremlin-win { width: 18em; will-change: transform; }
 .vapor-gremlin-win .vapor-pane { gap: .45em; padding: .45em; background: var(--vapor-ink); }
 .vapor-gremlin-body { display: flex; flex-direction: column; align-items: center; gap: .45em; width: 100%; --vapor-cell: .094em; }
 .vapor-gremlin { display: block; width: 100%; aspect-ratio: 48 / 33; image-rendering: pixelated; }
 .vapor-gremlin-win .vapor-progress { width: 100%; margin: 0; box-sizing: border-box; }
-.vapor-gremlin-win .vapor-progress i { background: var(--vapor-gremlin-fill, #ff5c8a); }
+.vapor-gremlin-win .vapor-progress i { background: #ff5c8a; }
 .vapor-snap {
     display: block;
     flex: none;

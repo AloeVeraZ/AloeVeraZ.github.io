@@ -901,7 +901,7 @@
             "programSummary": "",
             "image": "assets/digital-camera-enclosure.webp",
             "imageAlt": "The assembled aloeZ mini mini camera in its printed case.",
-            "imageSrcset": "",
+            "imageSrcset": "assets/digital-camera-enclosure-900.webp 900w, assets/digital-camera-enclosure.webp 1600w",
             "imagePresentation": "photo",
             "motionImage": "",
             "motionImageAlt": "",

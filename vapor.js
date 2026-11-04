@@ -21,11 +21,14 @@
    About, Skills, the projects and each folder of the archive, Contact, and the links the
    page has. Only the robot gone bad, ALWAYS_BREAK.EXE, leads nowhere. All of it stands on
    one fixed layer behind the page, so it stays with the visitor down the page and
-   everything on the page stays in front of it.
+   everything on the page stays in front of it, but for the bar at the foot, the dialogs
+   and whatever is being carried, which stand on a second fixed layer in front of the page.
 
    It holds to what Medium promises. These are plain elements, and nothing on them runs
-   unless someone is using it, so at rest the page still asks for no frames at all. This
-   file is not fetched until someone asks, and leaving Medium hands all of it back. */
+   unless someone is using it, but for the newest three robots and the static they throw
+   over the desk, which keep a beat of eight times a second and rest with the tab hidden
+   and under an open project. This file is fetched with the other looks the first time
+   anyone finds one, at any stop (portfolio.js), and leaving Medium hands all of it back. */
 (function () {
     'use strict';
 
@@ -155,29 +158,26 @@
        each, and a desk buried in notes came to hundreds of layers put together on every
        frame. Only the robot's own typing, which changes as it goes, stays a canvas. */
     const typeImages = new Map();
-    const setType = (target, text) => {
-        if (target instanceof HTMLCanvasElement) {
-            drawType(target, text);
-            return;
-        }
+    const setType = (image, text) => {
         if (!typeImages.has(text)) {
             const canvas = document.createElement('canvas');
             drawType(canvas, text);
             typeImages.set(text, { url: canvas.toDataURL(), cols: canvas.width });
         }
         const { url, cols } = typeImages.get(text);
-        target.src = url;
-        target.alt = text;
-        target.style.setProperty('--cols', cols);
+        image.src = url;
+        image.alt = text;
+        image.style.setProperty('--cols', cols);
     };
-    const pixelType = (text, className = 'vapor-type') => {
+    const pixelType = text => {
         const image = document.createElement('img');
-        image.className = className;
+        image.className = 'vapor-type';
         image.decoding = 'sync';
         image.draggable = false;
         setType(image, text);
         return image;
-    };    const ROBOT = [
+    };
+    const ROBOT = [
         '.........#.........', '........###........', '....###########....', '...#...........#...', '..#.............#..',
         '.##.............##.', '.##.............##.', '.##.............##.', '..#.............#..', '..#.............#..',
         '..#.............#..', '..#.............#..', '...#...........#...', '....###########....', '......#.....#......', '....#####.#####....'
@@ -415,15 +415,28 @@
             item.style.setProperty('--dx', `${dx}px`);
             item.style.setProperty('--dy', `${dy}px`);
         };
+        // Where an item stands before it is moved: a dialog in the middle of the screen, the rest
+        // at its corner. As laid out, so one still breaking in or on its way across the desk is
+        // not taken to be where it only seems to be for the moment.
+        const originOf = item => [item.offsetLeft, item.offsetTop];
         // Anywhere at all, so long as enough of it stays on the screen to get hold of again.
         const keepReachable = (item, x, y) => {
-            const box = item.getBoundingClientRect();
-            const left = box.left - (parseFloat(item.dataset.dx) || 0), top = box.top - (parseFloat(item.dataset.dy) || 0);
+            const box = item.getBoundingClientRect(), [left, top] = originOf(item);
             return [
                 Math.min(Math.max(x, 48 - box.width - left), window.innerWidth - 48 - left),
                 Math.min(Math.max(y, -top), window.innerHeight - 32 - top)
             ];
         };
+        /* The bar along the top floats in front of everything, so nothing comes out where it
+           would be under it. Its first row, that is: on a phone the menu opens below it, and
+           goes again. No more than a fifth of the screen, so a short one still has room.
+           Measured once for the screen as it is, and again when it changes. */
+        let clear = 0;
+        const measureBar = () => {
+            const bar = document.querySelector('.navbar .nav-content'), box = bar?.getBoundingClientRect();
+            clear = box ? Math.min(window.innerHeight * .2, box.top + Math.min(box.height, parseFloat(getComputedStyle(bar).minHeight) || box.height)) : 0;
+        };
+        measureBar();
         let hold = null;
         // While something is up in the air a finger moves that, not the page.
         const stayPut = event => {
@@ -435,6 +448,8 @@
             win.className = 'vapor-win';
             win.dataset.win = name;
             win.dataset.item = '';
+            // A group, not a landmark: a desk buried in them would bury the page's own.
+            win.setAttribute('role', 'group');
             win.setAttribute('aria-label', title);
             win.style.setProperty('--vapor-win-bar', COLOURS[bar]);
             win.addEventListener('touchmove', stayPut, { passive: false });
@@ -516,14 +531,20 @@
         slider.setAttribute('aria-label', 'Infill density');
         foot.append(stepper('less', 'Less infill'), slider, stepper('more', 'More infill'));
         infillWin.pane.append(pattern, foot);
-        let density = 20, patternFrame = 0;
+        let density = 20, patternFrame = 0, patternImage = null, patternDrawn = '';
         const drawPattern = () => {
             patternFrame = 0;
             if (!field || infillWin.win.hidden) return;
-            const box = pattern.getBoundingClientRect();
-            if (!box.width || !box.height) return;
+            // Its size as laid out, not as it shows: a window breaking in is scaled up for a moment.
+            const width = pattern.clientWidth, height = pattern.clientHeight;
+            if (!width || !height) return;
             const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
-            const px = Math.max(1, Math.round(box.width * ratio)), py = Math.max(1, Math.round(box.height * ratio));
+            const px = Math.max(1, Math.round(width * ratio)), py = Math.max(1, Math.round(height * ratio));
+            const tall = isTall();
+            // Drawn again only when something it is drawn from has changed.
+            const drawn = `${px} ${py} ${density} ${tall}`;
+            if (drawn === patternDrawn) return;
+            patternDrawn = drawn;
             if (pattern.width !== px || pattern.height !== py) {
                 pattern.width = px;
                 pattern.height = py;
@@ -545,10 +566,11 @@
                 const m = Math.abs(value) % span;
                 return m < size - 1 ? m : span - m;
             };
-            const ink = isTall() ? [120, 88, 170] : [12, 10, 20];
+            const ink = tall ? [120, 88, 170] : [12, 10, 20];
             const c = pattern.getContext('2d');
-            const image = c.createImageData(px, py);
-            const data = image.data;
+            // Kept from one drawing to the next for as long as the size holds.
+            if (!patternImage || patternImage.width !== px || patternImage.height !== py) patternImage = c.createImageData(px, py);
+            const data = patternImage.data;
             for (let j = 0; j < py; j++) {
                 const fy = fold(FIELD_H / 2 + (j - py / 2) / perCell, FIELD_H), j0 = Math.floor(fy), ty = fy - j0, j1 = Math.min(FIELD_H - 1, j0 + 1);
                 for (let i = 0; i < px; i++) {
@@ -563,7 +585,7 @@
                     data[k + 3] = 255;
                 }
             }
-            c.putImageData(image, 0, 0);
+            c.putImageData(patternImage, 0, 0);
         };
         const askPattern = () => {
             if (!patternFrame) patternFrame = requestAnimationFrame(drawPattern);
@@ -587,7 +609,6 @@
         const row = document.createElement('div');
         row.className = 'vapor-job-row';
         const info = pixelType('ROBOT.STL');
-        info.classList.add('vapor-job-info');
         const printButton = document.createElement('button');
         printButton.type = 'button';
         printButton.className = 'vapor-key';
@@ -599,7 +620,6 @@
         printWin.pane.append(progress, row);
         const printJob = {
             state: 'idle',
-            madeAt: 20,
             grams: () => Math.round(4 + density * .46),
             seconds: () => Math.round(5 + density * .13),
             describe() {
@@ -631,6 +651,8 @@
             },
             finish() {
                 this.state = 'idle';
+                // Put away while it printed, it can go away properly now (hide, below).
+                if (printWin.win.classList.contains('is-gone')) printWin.win.hidden = true;
                 setType(printLabel, 'PRINT');
                 printWin.win.setTitle('PRINT JOB');
                 progress.classList.remove('is-printing');
@@ -651,10 +673,11 @@
         torqueWin.pane.appendChild(rings);
         let phase = 0, spin = 0, holding = false, ringFrame = 0, lastRing = 0, lastTitle = 0;
         const drawRings = () => {
-            const box = rings.getBoundingClientRect();
-            if (!box.width || !box.height) return;
+            // As laid out, as the labyrinth is.
+            const width = rings.clientWidth, height = rings.clientHeight;
+            if (!width || !height) return;
             const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
-            const px = Math.round(box.width * ratio), py = Math.round(box.height * ratio);
+            const px = Math.round(width * ratio), py = Math.round(height * ratio);
             if (rings.width !== px || rings.height !== py) {
                 rings.width = px;
                 rings.height = py;
@@ -777,12 +800,12 @@
         });
         // Somewhere on the screen, as clear of what is already out as a few tries find.
         const findPlace = item => {
-            const box = item.getBoundingClientRect();
+            const box = item.getBoundingClientRect(), [left, top] = originOf(item);
             const others = [...root.querySelectorAll('[data-item]')].filter(other => other !== item && !other.hidden).map(other => other.getBoundingClientRect());
-            let best = [8, 72], least = Infinity;
+            let best = [8, clear], least = Infinity;
             for (let i = 0; i < 14; i++) {
                 const x = 8 + Math.random() * Math.max(0, window.innerWidth - box.width - 20);
-                const y = 72 + Math.random() * Math.max(0, window.innerHeight - box.height - 84);
+                const y = clear + Math.random() * Math.max(0, window.innerHeight - box.height - clear - 12);
                 let overlap = 0;
                 for (const other of others) {
                     overlap += Math.max(0, Math.min(x + box.width, other.right) - Math.max(x, other.left)) * Math.max(0, Math.min(y + box.height, other.bottom) - Math.max(y, other.top));
@@ -792,7 +815,8 @@
                     best = [x, y];
                 }
             }
-            return best;
+            // That spot on the screen, as a move from where the item starts.
+            return [best[0] - left, best[1] - top];
         };
         const open = (item, somewhereNew) => {
             if (!item.hidden && !item.classList.contains('is-gone')) {
@@ -804,6 +828,9 @@
             if (somewhereNew || !item.dataset.placed) {
                 place(item, ...findPlace(item));
                 item.dataset.placed = '1';
+            } else {
+                // Back where it was, or as near as a screen that has changed meanwhile allows.
+                place(item, ...keepReachable(item, parseFloat(item.dataset.dx) || 0, parseFloat(item.dataset.dy) || 0));
             }
             item.classList.add('is-opening');
             raise(item);
@@ -816,7 +843,11 @@
         };
         const hide = win => {
             win.classList.add('is-gone');
-            later(() => { if (win.classList.contains('is-gone')) win.hidden = true; }, 200);
+            later(() => {
+                // Not the print job while it prints: put away for good, its bar would start again
+                // from nothing when it came back. Out of sight is enough until it finishes.
+                if (win.classList.contains('is-gone') && !(win === printWin.win && printJob.state !== 'idle')) win.hidden = true;
+            }, 200);
         };
         let popped = 0;
         const allGone = () => popped >= burstCount && windows.every(win => win.classList.contains('is-gone'));
@@ -850,7 +881,6 @@
             made.win.classList.add('vapor-popup', 'is-opening');
             made.win.dataset.title = title;
             const words = pixelType(text);
-            words.classList.add('vapor-popup-words');
             const key = document.createElement('button');
             key.type = 'button';
             key.className = 'vapor-key';
@@ -878,7 +908,9 @@
             window.removeEventListener('pointercancel', letGo);
             hold.item.classList.remove('is-held');
             if (hold.carrying) {
-                hold.home.appendChild(hold.item);
+                // Back down where it came from, unless it was taken off the desk while it was
+                // up, as a pop-up is when it comes round again: put back, it would be there twice.
+                if (hold.item.isConnected) hold.home.appendChild(hold.item);
                 swallowClick = true;
                 later(() => { swallowClick = false; }, 50);
             }
@@ -886,7 +918,8 @@
         };
         const onPointerMove = event => {
             if (!hold || event.pointerId !== hold.id) return;
-            if (!event.buttons) {
+            // Let go of, or gone from the desk from under the pointer.
+            if (!event.buttons || !hold.item.isConnected) {
                 letGo(event);
                 return;
             }
@@ -907,7 +940,8 @@
         const onPointerDown = event => {
             const item = event.target.closest('[data-item]');
             if (item) raise(item);
-            if (event.target.dataset.act === 'wind') {
+            // Only the main button winds it, as it is the only one that presses anything else here.
+            if (event.target.dataset.act === 'wind' && !event.button) {
                 holding = true;
                 event.target.setPointerCapture?.(event.pointerId);
                 windRings();
@@ -939,7 +973,7 @@
             if (!target) return;
             const win = target.closest('.vapor-win');
             const act = target.dataset.act;
-            if (win && win.classList.contains('vapor-note') && (act === 'close' || act === 'tuck' || act === 'dismiss')) {
+            if (win && win.classList.contains('vapor-note') && (act === 'close' || act === 'tuck')) {
                 dropNote(win);
                 if (win.gremlin) comeBack(win.gremlin);
                 return;
@@ -969,7 +1003,7 @@
                 later(() => win.classList.remove('is-hopping'), 400);
             } else if (act === 'grow') {
                 win.classList.toggle('is-big');
-                askPattern();
+                if (win === infillWin.win) askPattern();
                 if (win === torqueWin.win) later(drawRings, 30);
             } else if (act === 'poke') {
                 drawFace((faceAt + 1) % FACES.length);
@@ -1007,10 +1041,9 @@
             surface.addEventListener('contextmenu', event => { if (hold) event.preventDefault(); });
         }
         root.addEventListener('input', onInput);
-        const layer = document.querySelector('.background-grid');
-        if (layer) layer.after(root);
-        else document.body.prepend(root);
-        document.body.appendChild(over);
+        // Last on the page, so the keyboard and anything reading the page aloud come to the
+        // page first. Its layer keeps it behind the page all the same (vapor.css).
+        document.body.append(root, over);
 
         printJob.describe();
 
@@ -1029,8 +1062,7 @@
             const wide = window.innerWidth, high = window.innerHeight;
             const em = parseFloat(getComputedStyle(root).fontSize) || 16;
             // The bar along the top has no window behind its words at the top of the page, so the
-            // wall stays below it, as the pop-ups always have.
-            const clear = Math.min(high * .2, document.querySelector('.navbar')?.getBoundingClientRect().bottom || 0);
+            // wall stays below it (clear), as the pop-ups do.
             // A window of the wall, in cells, as near as most of them come.
             const [bw, bh] = brickSize(BRICKS[0]);
             const wanted = WALL_DEPTHS.map(({ scale, cover }) => cover * wide * high / (bw * bh * (.125 * em * scale) ** 2));
@@ -1102,13 +1134,13 @@
             if (!stack || stack.left <= 0 || stack.x + width > window.innerWidth - 4 || stack.y + height > window.innerHeight - 4) {
                 stack = stacks[depth] = {
                     x: 4 + Math.random() * Math.max(0, window.innerWidth - width - 8),
-                    y: 60 + Math.random() * Math.max(0, window.innerHeight - height - 64),
+                    y: clear + Math.random() * Math.max(0, window.innerHeight - height - clear - 4),
                     left: 2 + Math.floor(Math.random() * STACK_MOST)
                 };
             }
             return [stack.x, stack.y];
         };
-        const makeNote = (title, answer, fill, act, colour = 'yellow', depth = 2) => {
+        const makeNote = (title, answer, fill, act, colour, depth = 2) => {
             const made = makeWindow('note', title, colour);
             made.win.classList.add('vapor-popup', 'vapor-note', 'is-opening');
             made.win.dataset.depth = depth;
@@ -1210,10 +1242,7 @@
                 fill.alt = '';
                 fill.draggable = false;
                 snapOf(smallestCopy(where.picture)).then(url => { fill.src = url; }, () => {});
-            } else {
-                fill = pixelType(where.words);
-                fill.classList.add('vapor-popup-words');
-            }
+            } else fill = pixelType(where.words);
             const win = makeNote(where.title, where.answer, fill, 'go', where.bar, depth);
             win.dataset.act = 'go';
             win.querySelector('.vapor-key').setAttribute('aria-label', where.label);
@@ -1466,7 +1495,6 @@
             g.text = THREATS[g.threat++ % THREATS.length];
             g.typed = 0;
             g.gloating = false;
-            g.left = 0;
             g.fill.parentElement.classList.remove('is-printing');
             void g.fill.offsetWidth;
             g.fill.parentElement.style.setProperty('--vapor-print-time', `${g.hackBeats * BEAT_MS / 1000}s`);
@@ -1545,7 +1573,7 @@
                 at += 60 + Math.random() * 180;
                 later(() => {
                     ghost.style.setProperty('--dx', `${Math.random() * (window.innerWidth - 80)}px`);
-                    ghost.style.setProperty('--dy', `${60 + Math.random() * (window.innerHeight - 160)}px`);
+                    ghost.style.setProperty('--dy', `${clear + Math.random() * (window.innerHeight - clear - 100)}px`);
                     ghost.style.setProperty('--ghost-scale', (.7 + Math.random() * 1.1).toFixed(2));
                     ghost.style.zIndex = 9e6 + top;
                     ghost.hidden = false;
@@ -1563,7 +1591,8 @@
                 place(g.win, ...gremlinPlace(g.win));
                 later(() => g.win.classList.remove('is-opening'), 300);
             } else if (roll < .65) {
-                place(g.win, ...keepReachable(g.win, parseFloat(g.win.dataset.dx) || 0, -g.win.offsetHeight * .4));
+                // Up against the top of the screen, its head under the bar.
+                place(g.win, parseFloat(g.win.dataset.dx) || 0, 0);
                 g.win.classList.add('is-buzzing');
                 later(() => g.win.classList.remove('is-buzzing'), 620);
             } else if (roll < .85) surge(8, true);
@@ -1574,7 +1603,7 @@
         // from the others as a few tries find.
         const gremlinPlace = item => {
             const width = item.offsetWidth, height = item.offsetHeight, wide = window.innerWidth, high = window.innerHeight;
-            const fromX = isTall() ? 4 : wide * .5, fromY = isTall() ? high * .42 : 64;
+            const fromX = isTall() ? 4 : wide * .5, fromY = isTall() ? high * .42 : clear;
             let best = [fromX, fromY], furthest = -1;
             for (let i = 0; i < 10; i++) {
                 const x = fromX + Math.random() * Math.max(0, wide - width - 8 - fromX), y = fromY + Math.random() * Math.max(0, high - height - 8 - fromY);
@@ -1650,10 +1679,17 @@
         /* How many come out in the burst. The wall is enough to bury a screen of any size a few
            times over. In front, every place there is to go, or as many as three depths of a
            screen this size have room for, whichever is fewer, with the desk's own six things and
-           the robot three times; the rest of the places come after, one at a time. */
-        const frontCount = Math.max(8, Math.min(destinations().length, Math.round(screenArea() / 90)));
-        const burstCount = frontCount + waiting.length + 3;
-        const burstGap = BURST_MS / burstCount, mostOut = burstCount + 60, gremlinEvery = Math.round(burstCount / 3);
+           the robot three times; the rest of the places come after, one at a time. Counted as the
+           burst starts, when it can be seen and the page has its projects up, and not when the
+           desk was built, which may have been before either. */
+        let burstCount = Infinity, burstGap = 0, mostOut = Infinity, gremlinEvery = Infinity;
+        const countBurst = () => {
+            const frontCount = Math.max(8, Math.min(destinations().length, Math.round(screenArea() / 90)));
+            burstCount = frontCount + waiting.length + 3;
+            burstGap = BURST_MS / burstCount;
+            mostOut = burstCount + 60;
+            gremlinEvery = Math.round(burstCount / 3);
+        };
         // The burst lays the front from the back depth to the nearest; after it, any depth.
         const laterDepth = () => [0, 1, 1, 2, 2, 2][Math.floor(Math.random() * 6)];
         const burstDepth = () => Math.min(2, Math.floor(3 * popped / burstCount));
@@ -1692,28 +1728,43 @@
                 later(() => item.classList.remove('is-buzzing'), 620);
             }
         };
-        let pointerX = window.innerWidth / 2, paused = false;
+        // Looking at the cursor from the start, wherever the page last saw it (portfolio.js).
+        let pointerX = window.portfolioPointer?.x ?? window.innerWidth / 2;
+        // A desk built under an open project waits under it, shut off, as the rest of the page
+        // does, until it closes (portfolio.js gives it back then).
+        let paused = !!document.querySelector('#project-modal.active');
+        root.inert = over.inert = paused;
         const onDeskPointer = event => { pointerX = event.clientX; };
+        // The beat rests with the tab hidden and under an open project, and nothing wakes for it
+        // meanwhile: either coming back starts it again.
+        let beating = 0;
+        const keepTime = () => {
+            if (!beating && !paused && !document.hidden && !stillness.matches) beating = later(beat, BEAT_MS);
+        };
         const onProjectOpen = () => { paused = true; };
-        const onProjectClose = () => { paused = false; };
+        const onProjectClose = () => {
+            paused = false;
+            keepTime();
+        };
         window.addEventListener('pointermove', onDeskPointer, { passive: true });
         document.addEventListener('portfolio:modal-open', onProjectOpen);
         document.addEventListener('portfolio:modal-close', onProjectClose);
+        document.addEventListener('visibilitychange', keepTime);
         const beat = () => {
-            if (!paused && !document.hidden) {
-                for (const g of gremlins) stepGremlin(g);
-                if (crackleLeft > 0) {
-                    crackleLeft -= 1;
-                    if (crackleLeft > 0) drawCrackle();
-                    else {
-                        crackle.hidden = true;
-                        crackle.width = crackle.height = 1;
-                    }
+            beating = 0;
+            if (paused || document.hidden) return;
+            for (const g of gremlins) stepGremlin(g);
+            if (crackleLeft > 0) {
+                crackleLeft -= 1;
+                if (crackleLeft > 0) drawCrackle();
+                else {
+                    crackle.hidden = true;
+                    crackle.width = crackle.height = 1;
                 }
             }
-            later(beat, BEAT_MS);
+            beating = later(beat, BEAT_MS);
         };
-        if (!stillness.matches) later(beat, BEAT_MS);
+        keepTime();
 
         const outNow = () => root.querySelectorAll('[data-item]:not([hidden])').length + over.querySelectorAll('[data-item]:not([hidden])').length;
         let lastGremlin = 0, burstFrom = 0;
@@ -1733,12 +1784,20 @@
             popped += 1;
         };
         layWall(false);
+        // While the page waits for its data its projects are not on it yet. It waits ten seconds
+        // at the most (index.html).
+        const awaitingData = () => document.documentElement.classList.contains('awaiting-data');
         const popNext = () => {
             const bursting = popped < burstCount || wallShown < wallPlan.length;
-            if (!document.hidden) {
+            // Nothing comes with the tab hidden or under an open project, and the burst waits
+            // for the page's projects.
+            if (!document.hidden && !paused && (burstFrom || !awaitingData())) {
                 // On time however late the timer comes, as busy as the page is in the burst: as
                 // many as are due by now, a few at a time at most.
-                if (!burstFrom) burstFrom = performance.now();
+                if (!burstFrom) {
+                    burstFrom = performance.now();
+                    countBurst();
+                }
                 const gone = performance.now() - burstFrom;
                 if (wallShown < wallPlan.length) {
                     const due = Math.ceil(wallPlan.length * Math.min(1, gone / BURST_MS));
@@ -1751,30 +1810,39 @@
                     } else if (!bursting) popOne();
                 }
             }
-            later(popNext, popped < burstCount || wallShown < wallPlan.length ? BURST_TICK_MS : LATER_GAP_MS + Math.random() * LATER_SPREAD_MS);
+            // Looked at often only while there is more of the burst to come and room for it: a
+            // desk full to its limit is looked at again only now and then.
+            const busy = wallShown < wallPlan.length || (popped < burstCount && outNow() < mostOut);
+            later(popNext, busy ? BURST_TICK_MS : LATER_GAP_MS + Math.random() * LATER_SPREAD_MS);
         };
         later(popNext, BURST_TICK_MS);
 
         return {
             redraw() {
+                measureBar();
                 askPattern();
                 drawRings();
                 // A screen of a very different size or shape, a phone turned on its side, gets a
                 // wall of its own; a finished one at once.
                 const shape = window.innerWidth / window.innerHeight;
                 if (Math.abs(screenArea() / wallArea - 1) > .35 || Math.abs(Math.log(shape / wallShape)) > .4) layWall(wallShown >= wallPlan.length);
-                // A smaller window must not strand anything out of reach.
-                root.querySelectorAll('[data-item]:not([hidden])').forEach(item => {
-                    place(item, ...keepReachable(item, parseFloat(item.dataset.dx) || 0, parseFloat(item.dataset.dy) || 0));
-                });
+                // A smaller window must not strand anything out of reach, the dialogs in front
+                // included. All of it is measured first and moved after, so the desk is laid
+                // out once and not once for every window on it.
+                const out = [...root.querySelectorAll('[data-item]:not([hidden])'), ...over.querySelectorAll('[data-item]:not([hidden])')];
+                const spots = out.map(item => keepReachable(item, parseFloat(item.dataset.dx) || 0, parseFloat(item.dataset.dy) || 0));
+                out.forEach((item, i) => place(item, ...spots[i]));
             },
             remove() {
                 letGo();
                 window.removeEventListener('pointermove', onDeskPointer);
                 document.removeEventListener('portfolio:modal-open', onProjectOpen);
                 document.removeEventListener('portfolio:modal-close', onProjectClose);
+                document.removeEventListener('visibilitychange', keepTime);
                 timers.forEach(id => clearTimeout(id));
                 timers.clear();
+                // And the projects' pictures still waiting their turn.
+                snapJobs.length = 0;
                 if (patternFrame) cancelAnimationFrame(patternFrame);
                 if (ringFrame) cancelAnimationFrame(ringFrame);
                 root.remove();

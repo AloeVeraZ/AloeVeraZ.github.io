@@ -1,47 +1,34 @@
 :root {
     --bg: #080808;
     --surface: #111111;
-    --surface-raised: #1a1a1a;
     /* The one liquid glass the site is cut from, the navigation bar included
-       (glass.js): a thin surface grey that the sky shows through, frosted.
-       The denser sheet is for the two places with no frost to lean on -- see
-       "Glass surfaces" below, which also makes both solid again for anyone
-       who asks their system for less transparency or more contrast. */
-    --glass-surface: rgba(26, 27, 30, .45);
+       (glass.js), is a thin surface grey that the sky shows through, set for
+       each level under "Clear glass" below. This denser sheet is for the open
+       navigation menu, which lies over the hero's lettering (navbar.css).
+       Both go solid for anyone who asks their system for less transparency
+       or more contrast. */
     --glass-surface-dense: rgba(26, 27, 30, .84);
     /* The rim every sheet of glass wears, the navigation's included: a faint
        ring all the way round, over it a hairline of light that is brightest
        along the top-left edge and fades round the sides, and inside that two
-       more hairlines lighting the glass at its top and foot. Cards used to
-       draw themselves a brighter rim of their own, on the grounds that a
-       card's edge runs far longer between its corners than a button's; a
-       sheet that outlines itself more brightly than the sheet above it reads
-       as a different material, which is the one thing this rim is for. */
+       more hairlines lighting the glass at its top and foot, which each level
+       sets for itself (--glass-edge-lights, below). Cards used to draw
+       themselves a brighter rim of their own, on the grounds that a card's
+       edge runs far longer between its corners than a button's; a sheet that
+       outlines itself more brightly than the sheet above it reads as a
+       different material, which is the one thing this rim is for. */
     --glass-edge-ring: rgba(255, 255, 255, .08);
     --glass-edge: linear-gradient(170deg,
         rgba(255, 255, 255, .5),
         rgba(255, 255, 255, .12) 26%,
         rgba(255, 255, 255, .03) 60%,
         rgba(255, 255, 255, .16));
-    --glass-edge-lights:
-        inset 0 1px 1px rgba(255, 255, 255, .14),
-        inset 0 -1px 1px rgba(255, 255, 255, .04);
-    /* The light the glass catches on its face: a band running down from the
-       top edge, and over it a glint the bar carries under the cursor
-       (glass.js) and the rest of the glass holds where the bar rests it. Both
-       are measured in rem rather than as a share of the surface, so a card
-       four hundred pixels tall catches the same band of light as a bar
-       fifty-six pixels tall rather than a proportionally deeper one. */
-    --glass-sheen:
-        radial-gradient(10rem 1.5rem at var(--glass-glint, 28%) 0%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 70%),
-        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 1rem);
     /* A glass button lit by the cursor: the site's blue as a sheet of tinted
        glass rather than paint -- half see-through, with a highlight where the
        light comes in at its top, glowing faintly on the page beneath it. In
-       High FX the highlight follows the cursor across it (Glass surfaces). */
-    --glass-lit-body: rgba(123, 168, 216, .5);
+       High FX the highlight follows the cursor across it, and each level sets
+       the blue and the glow for itself (Glass surfaces). */
     --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
-    --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .45);
     --ink: #f7f4ed;
     /* The one grey for secondary text, and the same one the policy pages
        use. It sat a step darker here, which read as dim over the backdrop. */
@@ -55,10 +42,8 @@
     --blue-light: #9dccff;
     --blue-soft: #b9d6f5;
     --red: #b7b9be;
-    --yellow: #d4d5d8;
     --ease: cubic-bezier(.2,.75,.2,1);
     --site-max-width: 1440px;
-    --nav-max-width: 1440px;
     --hero-content-max-width: 1080px;
     --project-card-height: 680px;
     --project-card-height-mobile: 680px;
@@ -217,38 +202,15 @@ a { color: inherit; text-decoration: none; }
 button { font: inherit; }
 
 .background-grid {
-    /* Fixed, not absolute: in Low FX this is the lattice, and a lattice that
-       slides away with the document is a moving grid. Pinned to the viewport it
-       matches what the High FX canvas draws. */
+    /* Fixed, not absolute: every level paints its still sky on this layer
+       once (The backdrop, below), and pinned to the viewport a scroll moves
+       the page over it without painting it again. */
     position: fixed;
     inset: 0;
     z-index: 0;
     display: none;
     pointer-events: none;
-    background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-    background-size: 3rem 3rem;
-    opacity: 1;
     transition: opacity 1.4s ease;
-}
-.galaxy-nebula {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    /* The canvas paints cluster-linked haze; this is only a dark veil. */
-    background-image: radial-gradient(ellipse at 50% 45%, transparent 25%, rgba(0,0,0,.18) 100%);
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    opacity: .8;
-    transition: opacity 1.4s ease;
-}
-.galaxy-nebula::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,.34) 100%);
 }
 .cursor-dot {
     position: fixed;
@@ -311,17 +273,14 @@ button { font: inherit; }
 }
 
 html.effects-background-idle body { background-color: #000; }
-html.effects-background-click-fading body {
-    background-color: #000;
-    transition-duration: 3.5s;
-}
 
-.navbar, .hero-section, main, footer { position: relative; z-index: 1; }
+.hero-section, main, footer { position: relative; z-index: 1; }
 .page-scroll-progress {
     position: fixed;
     top: 18vh;
     right: 18px;
-    z-index: 1200;
+    /* Under the bar (navbar.css), so an open menu covers it. */
+    z-index: 999;
     width: 15px;
     height: 64vh;
     pointer-events: none;
@@ -359,10 +318,9 @@ html.effects-background-click-fading body {
        that layer anew, at every effects level. */
     will-change: transform;
 }
-@media (max-width: 639px) {
-    .galaxy-nebula {
-        opacity: .58;
-    }
+/* Narrow wherever the page's gutter is too narrow for it, so it never stands
+   over the cards. */
+@media (max-width: 1100px) {
     .page-scroll-progress {
         right: 6px;
         width: 9px;
@@ -375,30 +333,12 @@ html.effects-background-click-fading body {
     .page-scroll-track { left: 4px; }
 }
 
-.navbar { position: fixed; inset: 0 0 auto; z-index: 1000; border-bottom: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
-.has-scrolled .navbar { background: #080808; border-color: var(--line); }
-.nav-content { width: min(var(--nav-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); min-height: calc(var(--nav-bar-height) + var(--safe-area-top)); display: flex; align-items: center; justify-content: space-between; margin: auto; padding-top: var(--safe-area-top); }
-.logo {
-    display: inline-block;
-    color: var(--ink);
-    font-size: .98rem;
-    font-weight: 700;
-    letter-spacing: -.03em;
-}
-.nav-links { list-style: none; display: flex; gap: var(--space-5); color: var(--muted); font-size: .85rem; }
-.nav-links a { transition: color .2s ease; }
-.nav-links a:hover { color: var(--blue); }
 .performance-control { display: flex; align-items: center; }
 
-.hero-section { min-height: 92vh; min-height: 92svh; display: grid; place-items: center; overflow: hidden; isolation: isolate; padding: var(--space-9) var(--page-inline-end) var(--space-8) var(--page-inline-start); }
-.hero-section::before, .hero-section::after { content: ""; position: absolute; z-index: -1; transition: transform .5s var(--ease); }
-.hero-section::before { width: min(34vw, 500px); aspect-ratio: 1; border-radius: 50%; background: #5e7186; right: -8vw; top: 14%; opacity: .19; transform: translateY(var(--scroll-shift)); }
-.hero-section::after { width: clamp(110px, 16vw, 220px); aspect-ratio: 1; background: #94999f; left: 8%; bottom: 12%; transform: rotate(45deg) translateY(var(--scroll-shift-reverse)); opacity: .13; }
-.hero-content { width: min(100%, 56.25rem); text-align: center; }
+.hero-section { display: grid; overflow: hidden; isolation: isolate; }
 .badge { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: rgba(21,22,25,.68); border: 1px solid var(--line); color: var(--blue); font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.hero-name { --lh: .87; max-width: 56.25rem; margin: 0 auto; font-size: clamp(3.8rem, 10.2vw, 8.5rem); font-weight: 700; letter-spacing: -.085em; line-height: var(--lh); }
-.hero-tagline { --lh: 1.55; line-height: var(--lh); max-width: 40.625rem; margin: var(--rhythm-heading) auto 0; color: #d0d1d5; font-size: clamp(1rem, 2vw, 1.25rem); }
-.social-links { display: flex; justify-content: center; gap: var(--space-3); margin: var(--rhythm-block) 0; }
+.hero-tagline { --lh: 1.55; line-height: var(--lh); }
+.social-links { display: flex; gap: var(--space-3); }
 /* The icons arrive with portfolio-data.json. Their row stands at its full
    height from the first paint, so the hero's buttons do not drop by it when
    they do. */
@@ -411,12 +351,16 @@ html.effects-background-click-fading body {
    The class is only ever set by script, so without one nothing is hidden. */
 html.awaiting-data main > .section:not(#about),
 html.awaiting-data footer { visibility: hidden; }
-.social-links a { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
-.resume-icon-unavailable { display: grid; place-items: center; width: 2.5rem; aspect-ratio: 1; background: var(--surface); border: 1px solid var(--line); color: inherit; }
-.hero-buttons, .contact-links { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
-.btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
+/* A field left empty in portfolio-data.json hides the element that shows it
+   (renderContent, portfolio.js), and the rules that set the badge, a label,
+   a link or the name in a row of their own would otherwise outrank the
+   hidden attribute. */
+[data-content][hidden] { display: none !important; }
+.social-links a { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s; }
+.resume-icon-unavailable { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid var(--line); color: inherit; }
+.hero-buttons { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; border: 1px solid var(--line); transition: transform .25s var(--ease), background .25s, color .25s; }
 .resume-unavailable { cursor: not-allowed; opacity: .65; }
-.secondary-btn { background: var(--surface); }
 main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); margin: auto; padding: 0; }
 .section { scroll-margin-top: var(--scroll-clearance); padding: var(--rhythm-section) 0; opacity: .72; transform: translateY(12px); transition: opacity .65s var(--ease), transform .65s var(--ease); content-visibility: auto; contain-intrinsic-size: auto 800px; }
 .section.in-view { opacity: 1; transform: translateY(0); }
@@ -427,21 +371,20 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .section-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
 .section-title { --lh: .8; font-size: var(--type-section); letter-spacing: var(--tracking-display); line-height: var(--lh); }
 .section-subtitle, .library-heading p, .contact-desc { --lh: 1.55; line-height: var(--lh); margin-top: var(--rhythm-heading); color: var(--muted); font-size: var(--type-intro); max-width: 38.125rem; }
-.glass-panel { background: var(--surface); border: 1px solid var(--line); padding: var(--pad-panel); }
+.glass-panel { border: 1px solid var(--line); padding: var(--pad-panel); }
 /* The opening line runs across two of the three columns and stops where the
    second card below it stops, instead of running ~115 characters to the far
    edge of the page. Once the cards go two-up the full width is a fair
    measure again. */
 .bio-text { --lh: 1.45; line-height: var(--lh); width: 100%; max-width: calc((100% - var(--gutter) * 2) / 3 * 2 + var(--gutter)); color: #dedee0; font-size: clamp(1.18rem, 2.3vw, 1.55rem); }
 @media (max-width: 1080px) { .bio-text { max-width: none; } }
-.about-highlights { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--rhythm-block); background: var(--surface); border: 0; }
+.about-highlights { margin-top: var(--rhythm-block); }
 .about-highlight p { --lh: 1.55; line-height: var(--lh); }
-.about-highlight { position: relative; z-index: 0; display: flex; flex-direction: column; min-height: 10.3125rem; padding: var(--pad-card); background: var(--surface); border: 1px solid var(--line); }
-.about-highlight + .about-highlight { margin-left: -1px; }
+.about-highlight { display: flex; flex-direction: column; }
 /* A card's label is the section eyebrow one step down -- same face, same
    tracking, same blue -- so a card reads as a small section of its own. */
 .about-highlight > .about-highlight-label { --lh: 1.55; line-height: var(--lh); display: block; margin-bottom: var(--rhythm-label); color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow-sm); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
-.about-highlight h3 { --lh: 1.05; margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); line-height: var(--lh); }
+.about-highlight h3 { --lh: 1.05; margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); line-height: var(--lh); }
 .about-highlight p { color: var(--muted); font-size: var(--type-small); }
 .about-highlight .about-highlight-subline { --lh: 1.45; margin-top: var(--rhythm-heading); color: var(--ink); font-size: var(--type-meta); line-height: var(--lh); }
 .about-highlight-role { margin-top: var(--rhythm-rule); padding-top: var(--rhythm-rule); border-top: 1px solid var(--line); }
@@ -473,13 +416,10 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .about-highlight-link:focus-visible .about-highlight-cta { color: var(--blue); }
 .about-highlight-link:hover .about-highlight-cta i,
 .about-highlight-link:focus-visible .about-highlight-cta i { --about-arrow-turn: 360deg; }
-#about > .section-header, #about > .bio-text,
-#contact > .section-header, #contact > .contact-desc, #contact > .contact-links { margin-left: 0; }
+#about > .section-header, #about > .bio-text, #contact > .contact-links { margin-left: 0; }
 
-.skills-categories { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.skill-group { display: flex; flex-direction: column; justify-content: center; min-height: 13.75rem; padding: var(--pad-card); background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { position: relative; z-index: 2; background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
-.skill-group-title { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); letter-spacing: var(--tracking-title); }
+.skill-group { display: flex; flex-direction: column; }
+.skill-group-title { --lh: 1.05; line-height: var(--lh); margin-bottom: var(--rhythm-heading); font-size: var(--type-card-title); }
 .skill-tags, .project-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 /* One chip everywhere -- Skills, the cards and the project sheet -- where it
    used to be re-coloured three more times further down the file. A chip is a
@@ -487,21 +427,20 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
    body's 1.55 every row of chips stood 4px taller than its text needed. */
 .tag { padding: var(--space-1) var(--space-2); border: 1px solid rgba(123,168,216,.5); color: var(--blue-soft); font-size: var(--type-label); font-weight: 600; line-height: 1.25; }
 
-.projects-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .featured-grid { margin-bottom: var(--rhythm-section); }
-.project-card { display: flex; height: var(--project-card-height); flex-direction: column; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s; }
-.project-card:hover { --card-lift: var(--lift-card); border-color: rgba(123,168,216,.42); box-shadow: 0 14px 30px rgba(0,0,0,.22); }
+.project-card { display: flex; flex-direction: column; min-width: 0; cursor: pointer; }
 .project-card[role="button"]:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
-.project-image-wrapper { position: relative; height: var(--project-image-height); overflow: hidden; background: transparent; }
+.project-image-wrapper { position: relative; overflow: hidden; background: transparent; }
 .project-image { width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transition: transform .25s var(--ease); }
 .project-image.is-certificate-thumbnail { object-fit: cover; object-position: center top; transform: scale(1.35); transform-origin: center top; }
-.project-card:hover .project-image.is-certificate-thumbnail { transform: scale(1.35); }
-.project-card:hover .project-image { transform: scale(1.012); }
-.project-category-badge { position: absolute; top: var(--space-4); left: var(--space-4); padding: var(--space-1) var(--space-2); color: var(--ink); background: rgba(21,22,25,.78); border: 1px solid rgba(244,244,241,.18); font-size: .67rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+@media (hover: hover) {
+    .project-card:hover .project-image.is-certificate-thumbnail { transform: scale(1.35); }
+}
+.project-category-badge { position: absolute; padding: var(--space-1) var(--space-2); font-weight: 800; text-transform: uppercase; }
 .project-info { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: var(--pad-card); }
 .project-heading { flex: 0 0 auto; }
-.project-copy { display: flex; flex: 1; align-items: center; min-height: 0; }
-.project-title { --lh: 1.08; margin-bottom: var(--rhythm-heading); font-size: 1.2rem; letter-spacing: -.04em; line-height: var(--lh); }
+.project-copy { display: flex; flex: 1; min-height: 0; }
+.project-title { margin-bottom: var(--rhythm-heading); }
 .project-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: var(--blue-soft); font-size: var(--type-meta); font-weight: 600; }
 .project-summary { --lh: 1.55; color: var(--muted); font-size: 1rem; line-height: var(--lh); }
 .project-tags { margin-top: var(--rhythm-block); }
@@ -509,15 +448,17 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 /* The project sheet's link buttons are the page's buttons: the same capitals,
    the same outline, the same blue under the cursor. They were grey slabs in
    lower case, the one set of controls on the site that answered in grey. */
-.link-btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: transparent; border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
+.link-btn { display: inline-flex; align-items: center; gap: var(--space-2); background: transparent; border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
 
-.project-library { padding-top: var(--rhythm-section); border-top: 1px solid var(--line); }
+.project-library { padding-top: var(--rhythm-section); }
 .library-heading { max-width: 42.5rem; margin-bottom: var(--rhythm-header); }
 .library-heading h3 { --lh: .8; font-size: var(--type-subsection); letter-spacing: var(--tracking-display); line-height: var(--lh); }
 .project-collections { border-top: 1px solid var(--line); }
 .project-collection { border-bottom: 1px solid var(--line); scroll-margin-top: var(--scroll-clearance); }
-.collection-toggle { --collection-arrow-size: 2.5rem; width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--collection-arrow-size); gap: var(--gutter); align-items: center; padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: color .2s; }
-.collection-toggle:hover { color: #dfe4ea; }
+.collection-toggle { --collection-arrow-size: 2.5rem; width: 100%; display: grid; grid-template-columns: var(--space-7) 1fr var(--collection-arrow-size); gap: var(--gutter); padding: var(--space-5) 0; border: 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
+@media (hover: hover) {
+    .collection-toggle:hover { color: #dfe4ea; }
+}
 .collection-index { color: var(--blue-light); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); }
 .collection-copy { display: grid; min-width: 0; gap: var(--rhythm-heading); }
 /* A name that wraps -- Internship / Work Projects does on a phone -- keeps a
@@ -525,42 +466,41 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .collection-copy strong { --lh: 1.05; line-height: var(--lh); font-family: var(--font-display); letter-spacing: var(--tracking-title); text-transform: uppercase; }
 .collection-copy small { --lh: 1.55; line-height: var(--lh); color: var(--muted); font-size: var(--type-small); }
 .collection-copy strong, .collection-copy small, .project-title, .project-summary, .modal-title { overflow-wrap: anywhere; }
-.collection-toggle > i { justify-self: end; transition: transform .3s var(--ease); }
-.collection-toggle[aria-expanded="true"] > i { color: var(--blue); transform: rotate(180deg); }
+.collection-toggle > i { justify-self: end; }
+.collection-toggle[aria-expanded="true"] > i { transform: rotate(180deg); }
 .collection-content { padding-bottom: var(--rhythm-block); }
 .carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: var(--type-meta); }
-.carousel-controls > div { display: flex; gap: var(--space-4); }
-.carousel-arrow { --arrow-fill: var(--glass-surface); display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
+.carousel-controls > div { display: flex; }
+.carousel-arrow { --arrow-fill: var(--glass-surface); display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
 .carousel-arrow.is-nudging { animation: nudge .32s ease; }
 @keyframes nudge { 50% { transform: scale(.85); } }
-.project-carousel { display: flex; gap: var(--gutter); margin-top: 0; padding-top: 0; padding-bottom: var(--rhythm-block); overflow-x: hidden; scroll-snap-type: none; scrollbar-width: none; touch-action: pan-y pinch-zoom; }
-.project-carousel::-webkit-scrollbar { display: none; }
-.project-carousel .project-card { flex: 0 0 calc((100% - var(--gutter) * 2) / 3); scroll-snap-align: start; }
+.project-carousel .project-card { scroll-snap-align: start; }
 /* Off while the ring is idle, and switched back on per card by the layout
    pass, which is the only thing that knows whether a given clone is one of
    the five the visitor can actually see. A clone standing on the ring is
    the same card to the eye and answers the pointer like one. */
 .project-carousel .carousel-clone { pointer-events: none; }
-.project-carousel .project-image-wrapper, .compact-project-grid .project-image-wrapper { height: var(--carousel-image-height); }
 .project-carousel .project-action-links, .compact-project-grid .project-action-links { display: none; }
-.compact-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); padding-bottom: var(--rhythm-block); }
+.compact-project-grid { padding-bottom: var(--rhythm-block); }
 
 .contact-section { margin-top: 0; }
-.contact-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--rhythm-block); }
-.contact-links .btn { justify-content: center; min-height: 3.375rem; text-align: center; }
+.contact-links { margin-top: var(--rhythm-block); }
+.contact-links .btn { justify-content: center; text-align: center; }
 .contact-links .resume-unavailable { opacity: 1; cursor: default; }
 
 .modal-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; align-items: center; padding: max(var(--space-4), var(--safe-area-top)) max(var(--space-4), var(--safe-area-right)) max(var(--space-4), var(--safe-area-bottom)) max(var(--space-4), var(--safe-area-left)); overflow-y: auto; background: rgba(5,6,8,.94); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
-.modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(calc(var(--visual-viewport-height) - max(var(--space-4), var(--safe-area-top)) - max(var(--space-4), var(--safe-area-bottom))), var(--modal-max-height)); overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); background: var(--surface); color: var(--ink); border-color: rgba(244,244,241,.2); box-shadow: none; }
-.modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; width: 2.625rem; height: 2.625rem; margin: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
+.modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(calc(var(--visual-viewport-height) - max(var(--space-4), var(--safe-area-top)) - max(var(--space-4), var(--safe-area-bottom))), var(--modal-max-height)); overscroll-behavior: contain; background: var(--surface); color: var(--ink); }
+.modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; margin: 0; border: 1px solid var(--line); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
 .modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
 /* The sheet's title is one step below a section title, and its headings one
    step below that. On a phone all three used to land on 29px together. */
 .modal-title { --lh: .95; max-width: 37.5rem; font-size: var(--type-sheet-title); letter-spacing: var(--tracking-display); line-height: var(--lh); }
 .modal-header-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin: 0 0 var(--rhythm-block); }
-.modal-quick-link { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); color: var(--ink); border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
-.modal-quick-link:hover { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
+.modal-quick-link { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--ink); border: 1px solid var(--line); font-size: var(--type-label); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; transition: transform .25s var(--ease), background .25s, color .25s, border-color .25s; }
+@media (hover: hover) {
+    .modal-quick-link:hover { color: #080808; background: var(--blue); border-color: var(--blue); --control-lift: var(--lift-control); }
+}
 .modal-quick-link[hidden] { display: none; }
 .modal-period { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--rhythm-heading); color: var(--blue-soft); font-size: var(--type-meta); font-weight: 600; }
 .modal-period[hidden] { display: none; }
@@ -578,13 +518,12 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .modal-summary { --lh: 1.55; line-height: var(--lh); color: #dedee0; font-size: 1.125rem; font-weight: 600; }
 .modal-overview[hidden], .modal-deep-dive-heading[hidden] { display: none; }
 .modal-overview { margin: var(--rhythm-header) 0; padding: var(--space-5); border: 1px solid rgba(85,168,255,.28); background: linear-gradient(145deg, rgba(85,168,255,.07), rgba(255,255,255,.018) 44%, transparent); }
-.modal-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--rhythm-block); }
+.modal-section-heading { margin-bottom: var(--rhythm-block); }
 /* A heading in the sheet is built like one on the page: an eyebrow in the
    page's face and blue, one step smaller, over a condensed title. */
 .modal-section-heading span { color: var(--blue-light); font-family: var(--font-display); font-size: var(--type-eyebrow-sm); font-weight: 700; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
 .modal-section-heading h3 { font-family: var(--font-display); font-size: var(--type-sheet-heading); letter-spacing: var(--tracking-display); text-transform: uppercase; }
 .modal-overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); background: transparent; }
-.modal-overview-grid.is-class-rundown { grid-template-columns: 1fr; }
 .modal-overview-item { position: relative; min-width: 0; padding: var(--pad-card); overflow: hidden; border: 1px solid rgba(244,244,241,.11); background: linear-gradient(155deg, rgba(49,51,58,.96), rgba(29,30,35,.96)); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
 .modal-overview-item::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(to bottom, #b8dcff, var(--blue) 46%, rgba(85,168,255,.12)); }
 /* The numerals stay the loudest mark on a part but stop short of the sheet's
@@ -626,55 +565,13 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 footer { padding: var(--space-7) var(--page-inline-end) max(var(--space-7), var(--safe-area-bottom)) var(--page-inline-start); border-top: 1px solid var(--line); color: var(--muted); text-align: center; font-size: var(--type-meta); }
 
 @media (max-width: 900px) {
-    .nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
-    .nav-links { display: none; }
-    .hero-section::before { width: 260px; right: -110px; }
-    .hero-section::after { width: 100px; left: -30px; }
-    .featured-grid { margin-bottom: var(--rhythm-section); }
     .carousel-controls span { display: none; }
     .modal-overlay { align-items: flex-start; padding: max(var(--space-3), var(--safe-area-top)) max(var(--space-3), var(--safe-area-right)) max(var(--space-3), var(--safe-area-bottom)) max(var(--space-3), var(--safe-area-left)); }
     .modal-card { max-height: min(calc(var(--visual-viewport-height) - max(var(--space-3), var(--safe-area-top)) - max(var(--space-3), var(--safe-area-bottom))), var(--modal-max-height)); }
     .modal-header { padding-right: var(--space-7); }
     .modal-overview-grid { grid-template-columns: 1fr; }
-    .modal-section-heading { align-items: flex-start; flex-direction: column; }
-    .modal-media { grid-template-columns: 1fr; }
 }
 
-body { background-color: var(--bg); background-image: none; }
-.navbar { border-bottom-color: rgba(247,244,237,.09); background: #080808; }
-.nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
-
-.nav-content { min-height: calc(var(--nav-bar-height) + var(--safe-area-top)); }
-.logo {
-    font-family: "Barlow Condensed", sans-serif;
-    font-size: 1.35rem;
-    letter-spacing: .02em;
-    text-transform: uppercase;
-}
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-    .logo {
-        color: transparent;
-        -webkit-text-fill-color: transparent;
-        background-image:
-            linear-gradient(to top, var(--blue) 0 72%, #a8cff7 88%, var(--blue) 100%),
-            linear-gradient(var(--ink), var(--ink));
-        background-position: left bottom, left top;
-        background-repeat: no-repeat;
-        background-size: 100% 0%, 100% 100%;
-        -webkit-background-clip: text;
-        background-clip: text;
-        filter: drop-shadow(0 0 0 rgba(123,168,216,0));
-        transition:
-            background-size .35s cubic-bezier(.22, .72, .2, 1),
-            filter .35s ease;
-    }
-    .logo:hover,
-    .logo:focus-visible {
-        background-size: 100% 100%, 100% 100%;
-        filter: drop-shadow(0 0 .35rem rgba(123,168,216,.32));
-    }
-}
-.nav-links { gap: var(--space-5); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .hero-section {
     min-height: auto;
     place-items: start;
@@ -684,8 +581,6 @@ body { background-color: var(--bg); background-image: none; }
         0
         max(var(--page-inline-start), calc((100vw - var(--site-max-width)) / 2));
 }
-.hero-section::before { width: min(42vw, 680px); border-radius: 0; background: var(--blue); right: -13vw; top: 7%; opacity: .12; transform: rotate(45deg) translateY(var(--scroll-shift)); }
-.hero-section::after { width: clamp(90px, 12vw, 175px); background: var(--red); left: auto; right: 16%; bottom: 9%; opacity: .68; }
 .hero-content { width: min(100%, var(--hero-content-max-width)); max-width: var(--hero-content-max-width); text-align: left; }
 /* The hero's eyebrow is the sections' eyebrow: the same size, face, tracking
    and blue, one step up from where it was. */
@@ -694,50 +589,38 @@ body { background-color: var(--bg); background-image: none; }
 .hero-name { --lh: .74; max-width: var(--hero-content-max-width); margin: 0; font-size: clamp(5rem, 13vw, 11.5rem); letter-spacing: -.055em; line-height: var(--lh); }
 .hero-tagline { max-width: 35rem; margin: var(--rhythm-heading) 0 0; color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.2rem); }
 .social-links { justify-content: flex-start; margin: var(--rhythm-block) 0; }
-.social-links a, .resume-icon-unavailable { border-radius: 0; background: var(--glass-surface); }
+.social-links a, .resume-icon-unavailable { background: var(--glass-surface); }
 .hero-buttons { justify-content: flex-start; }
 .secondary-btn { background: var(--glass-surface); }
-.hero-buttons .btn {
-    background: var(--glass-surface);
-    border-color: var(--line);
-    color: var(--ink);
-}
-main { padding-top: 0; }
 .section { transition-duration: .42s; }
 .glass-panel { background: rgba(17,17,17,.92); border-color: var(--line); }
-.about-highlight { background: var(--surface); transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.about-highlight:hover { z-index: 2; background: #151d26; border: 1px solid var(--blue); --card-lift: var(--lift-card); }
 .about-highlight h3, .skill-group-title, .project-title { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-title); }
-.skills-categories { border-color: var(--line); }
-.skill-group { min-height: 15rem; background: rgba(17,17,17,.9); }
-.skill-group { transition: transform .2s var(--ease), background .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.skill-group:hover { background: #151d26; border-color: var(--blue); --card-lift: var(--lift-card); }
-.projects-grid { gap: var(--gutter); border: 0; }
-.project-card { background: var(--glass-surface); border: 1px solid var(--line); border-radius: 0; transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
-.project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
-.project-image-wrapper { height: var(--project-image-height); background: transparent; }
-.project-card:hover .project-image { transform: scale(1.035); }
-.project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: transparent; }
+.projects-grid { border: 0; }
+.project-card { background: var(--glass-surface); border: 1px solid var(--line); transition: transform .2s var(--ease), border-color .2s ease, background .2s ease; }
+@media (hover: hover) {
+    .project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
+    .project-card:hover .project-image { transform: scale(1.035); }
+    .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: transparent; }
+}
 /* 14px, not 12.5: the condensed face is the hardest one on the page to read
    small, and this is the one place it sat below its floor. */
-.project-category-badge { top: auto; bottom: 0; left: 0; border: 0; background: var(--blue); color: #080808; font-family: var(--font-display); font-size: .875rem; letter-spacing: .08em; }
-.project-info { padding: var(--pad-card); }
+.project-category-badge { top: auto; border: 0; background: var(--blue); color: #080808; font-family: var(--font-display); font-size: .875rem; letter-spacing: .08em; }
 .project-title { --lh: .94; font-size: clamp(1.85rem, 2.25vw, 2.15rem); line-height: var(--lh); }
 .project-action-links { border-color: var(--line); }
-.link-btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; --control-lift: var(--lift-control); }
+@media (hover: hover) {
+    .link-btn:hover { background: var(--blue); border-color: var(--blue); color: #080808; --control-lift: var(--lift-control); }
+}
 .project-library { border-top: 1px solid var(--blue); }
-.collection-toggle { transition: color .2s ease; }
 .collection-toggle > .collection-index,
 .collection-toggle > .collection-copy { transition: transform .2s var(--ease); }
-.collection-toggle:hover > .collection-index,
-.collection-toggle:hover > .collection-copy { transform: translateX(var(--space-3)); }
-.carousel-arrow { border-radius: 0; }
+@media (hover: hover) {
+    .collection-toggle:hover > .collection-index,
+    .collection-toggle:hover > .collection-copy { transform: translateX(var(--space-3)); }
+}
 .modal-card { border: 1px solid rgba(244,244,241,.2); box-shadow: none; }
-.modal-close { border-radius: 0; }
 footer { background: transparent; }
 #about, #contact { background: transparent; border: 0; }
 #contact .contact-desc { margin-top: var(--rhythm-heading); }
-#contact .contact-links { margin-top: var(--rhythm-block); }
 /* Class-strength, not an ID, so a lit glass button (Glass surfaces) can still
    turn it blue under the cursor. */
 .contact-links > .resume-unavailable {
@@ -748,14 +631,10 @@ footer { background: transparent; }
 }
 .about-highlight:focus-within, .skill-group:focus-within { border-color: var(--blue); }
 @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    .background-grid { transform: none !important; }
-    .galaxy-nebula { transform: none !important; opacity: .54; }
     .cursor-spark, .cursor-ripple { display: none; }
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @media (max-width: 639px) {
-    .nav-content, main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - var(--page-inline-end))); }
     .hero-section { padding: calc(var(--nav-bar-height) + var(--safe-area-top) + var(--space-7)) var(--page-inline-end) 0 var(--page-inline-start); }
     .hero-name {
         max-width: 100%;
@@ -764,14 +643,12 @@ footer { background: transparent; }
         overflow-wrap: normal;
         word-break: normal;
     }
-    .modal-card { box-shadow: none; }
-    .about-highlight + .about-highlight { margin-left: 0; margin-top: -1px; }
+    .about-highlight + .about-highlight { margin-top: -1px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .section { opacity: 1; transform: none; transition: none; }
-    .hero-section::before, .hero-section::after { transition: none; }
 }
 
 /* Both hero buttons are the same control. "Explore Projects" used to be blue
@@ -786,26 +663,21 @@ footer { background: transparent; }
     color: var(--ink);
 }
 
-/* About and skills cards share the same grid so both sections line up. */
+/* The About and Skills rows draw nothing of their own: the cards in them
+   are the glass, and they stand on the page grid (below). */
 .about-highlights,
 .skills-categories {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--gutter);
     border: 0;
     background: transparent;
 }
 .about-highlight,
 .skill-group {
-    position: relative;
     z-index: 0;
     width: 100%;
     height: auto;
-    min-height: 15rem;
     padding: var(--pad-card);
     background: var(--glass-surface);
     border: 1px solid var(--line);
-    border-radius: .875rem;
     transition:
         transform .2s var(--ease),
         background .2s ease,
@@ -816,21 +688,15 @@ footer { background: transparent; }
 .skill-group + .skill-group {
     margin-left: 0;
 }
-/* A card answers the cursor at its rim alone (see Glass surfaces). The glass
-   keeps its tint -- the older hover rules above would tint it blue -- and Low
-   FX no longer leaves a blue slab under its foot: with both, the whole card
-   went blue at once. */
-.about-highlight:hover,
-.skill-group:hover {
-    z-index: 2;
-    background: var(--glass-surface);
-    --card-lift: var(--lift-card);
-}
-@media (max-width: 639px) {
-    .about-highlight,
-    .skill-group {
-        height: auto;
-        min-height: 15rem;
+/* A card answers the cursor at its rim alone (see Glass surfaces): the glass
+   keeps its tint, and Low FX no longer leaves a blue slab under its foot --
+   with both, the whole card went blue at once. */
+@media (hover: hover) {
+    .about-highlight:hover,
+    .skill-group:hover {
+        z-index: 2;
+        background: var(--glass-surface);
+        --card-lift: var(--lift-card);
     }
 }
 
@@ -850,20 +716,15 @@ footer { background: transparent; }
    What the bar still keeps for itself is the shadow it throws: it floats over
    the page, and the cards lie in it.
 
-   The denser sheet is still there (--glass-surface-dense) for the two places
-   that have no frost to lean on: the open navigation menu, which lies over
-   the hero's lettering, and a browser that cannot frost a backdrop at all.
+   The denser sheet is still there (--glass-surface-dense) for the open
+   navigation menu, which lies over the hero's lettering.
 
    In High FX, Chromium also bends what shows through at the edges: glass.js
    builds each surface a displacement filter to its size, and the bend keeps
    up while the surface moves -- turning on the ring, leaning toward the
    cursor, sliding along a row. Safari and Firefox cannot run that filter on a
-   live backdrop, and Low FX leaves the bending out, so there they only
-   frost. */
-/* How much of the sky's light the frost lets through: enough to read as light
-   glass, not so much that the brightest cluster drifting behind a card washes
-   its grey text below 5:1. */
-:root { --glass-blur: 8px; --glass-brightness: .88; }
+   live backdrop, so there the glass only frosts. Below High FX the cards and
+   buttons neither frost nor bend (Clear glass, below). */
 html[data-glass] :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn,
     .social-links > a, .social-links > .resume-icon-unavailable,
@@ -962,7 +823,6 @@ html :is(.about-highlight, .skill-group, .project-card, .hero-buttons > .btn,
    hovered, the blue shows only while a finger is on the button. */
 :root { --glass-lit-ink: var(--ink); }
 html[data-effects="low"] {
-    --glass-lit: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
     --glass-lit-glow: 0 10px 26px -8px rgba(123, 168, 216, .55);
 }
 :is(.hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
@@ -1044,11 +904,12 @@ html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn
     --glass-lit: radial-gradient(120% 90% at var(--card-glow-x, 30%) 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 55%), var(--glass-lit-body);
 }
 
-/* Both modes share the same clear tint and light frost. Low FX keeps the
-   static rim and sheen, without refraction or pointer-driven reflections. */
+/* Every level fills a lit button with the same blue. Below High FX the only
+   frost is the bar's (navbar.css), and it brightens what shows through it a
+   touch; High FX sets a frost of its own (Clear glass, below). Low FX keeps
+   the static rim and sheen, without refraction or pointer-driven
+   reflections. */
 html[data-effects] {
-    --glass-surface: rgba(19, 24, 33, .22);
-    --glass-blur: 4px;
     --glass-brightness: 1.06;
     --glass-lit-body: rgba(91, 157, 226, .42);
 }
@@ -1070,9 +931,6 @@ html:is([data-effects="medium"], [data-effects="high"]) {
     --glass-edge-lights:
         inset 0 1px 1px rgba(255, 255, 255, .28),
         inset 0 -1px 1px rgba(208, 231, 255, .16);
-    --glass-sheen:
-        radial-gradient(12rem 2.5rem at var(--glass-glint, 24%) 0%, rgba(255, 255, 255, .22), transparent 72%),
-        linear-gradient(135deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .025) 24%, transparent 42%, transparent 68%, rgba(190, 220, 255, .065));
     --glass-volume:
         inset 2px 3px 7px rgba(255, 255, 255, .12),
         inset -2px -3px 7px rgba(183, 216, 255, .09);
@@ -1122,18 +980,7 @@ html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn
 }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    :root {
-        --glass-surface: var(--surface);
-        --glass-surface-dense: var(--surface);
-        /* Nothing is showing through, so there is no light on the face to
-           catch: the bar drops its own here too (navbar.css). The rim stays,
-           as the bar's does -- it is the edge of the panel now, not a
-           reflection off it. */
-        --glass-sheen: none;
-    }
     html[data-effects] {
-        --glass-surface: var(--surface);
-        --glass-sheen: none;
         --glass-edge-blend: normal;
         --glass-volume: inset 0 0 0 0 transparent;
         --glass-shadow: none;
@@ -1146,12 +993,6 @@ html:is([data-effects="medium"], [data-effects="high"]) :is(.hero-buttons > .btn
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
     }
-}
-/* A browser that cannot frost a backdrop at all leaves the tint to carry the
-   contrast on its own, as the denser sheet does. */
-@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-    :root { --glass-surface: var(--glass-surface-dense); }
-    html[data-effects] { --glass-surface: var(--glass-surface-dense); }
 }
 /* Low FX frosts nothing. Each sheet of frost is a blur the browser works out
    again for every frame anything behind it moves -- every frame of a scroll,
@@ -1167,17 +1008,16 @@ html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .sk
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
-/* Medium FX frosts nothing either. Its backdrop is the still lattice, and a
-   blur of a still lattice is a flat dark sheet -- so the glass is painted
-   that flat sheet instead of working it out. The frost and the bend were
-   nearly all of what Medium cost: every card re-blurring and re-bending
-   what lay behind it on every frame of a scroll, of a lean or of a ring
-   turning, which dropped a fifth of a scroll's frames on this laptop and
-   two in three of a hover's on a computer drawing without graphics
+/* Medium FX frosts nothing either: its glass is clear (Clear glass, below),
+   painted rather than worked out from what lies behind it. The frost and
+   the bend were nearly all of what Medium cost: every card re-blurring and
+   re-bending what lay behind it on every frame of a scroll, of a lean or of
+   a ring turning, which dropped a fifth of a scroll's frames on this laptop
+   and two in three of a hover's on a computer drawing without graphics
    acceleration. The bar's rim keeps its light, but laid on plainly rather
    than blended into the backdrop: a blend mode is another surface for the
-   browser to composite, and over a dark sheet the blend only ever
-   brightened it this much. The cards' rims are hairlines (below). */
+   browser to composite, and over a dark sky the blend only ever brightened
+   it this much. The cards' rims are hairlines (below). */
 html[data-effects="medium"] {
     --glass-edge-blend: normal;
     --glass-edge-ring: rgba(225, 237, 255, .05);
@@ -1198,12 +1038,6 @@ html[data-effects="medium"] {
    faint along the foot and right, a faint ring all round -- with no mask
    and no blur. Hover, focus and a press still turn the ring blue: it is
    whatever --glass-edge-paint says, transparent at rest. */
-html:is([data-effects="low"], [data-effects="medium"]) {
-    --glass-edge-lights:
-        inset 1px 1px 0 rgba(255, 255, 255, .16),
-        inset -1px -1px 0 rgba(255, 255, 255, .05),
-        inset 0 0 0 1px rgba(225, 237, 255, .06);
-}
 html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .skill-group, .project-card,
     .hero-buttons > .btn, .social-links > a, .social-links > .resume-icon-unavailable,
     .contact-links > .btn, .carousel-arrow, .icon-control)::before {
@@ -1226,9 +1060,27 @@ html:is([data-effects="low"], [data-effects="medium"]) :is(.about-highlight, .sk
    and work nothing out, so they cost what they did. */
 html[data-effects] {
     --glass-surface: rgba(255, 255, 255, .025);
-    /* The glow inside the top and foot is part of the face, not of the rim:
-       the rim changes colour under the cursor, and a soft shadow in it was
-       painted again on every frame of that fade. */
+    /* The light the glass catches on its face: a glow inside its top and
+       foot, and over it a glint the bar carries under the cursor (glass.js)
+       and the rest of the glass holds where the bar rests it. The glow and
+       the glint are measured in rem rather than as a share of the surface,
+       so a card four hundred pixels tall catches the same light as a bar
+       fifty-six pixels tall rather than a proportionally deeper one. The
+       glow is part of the face, not of the rim: the rim changes colour under
+       the cursor, and a soft shadow in it was painted again on every frame
+       of that fade. */
+    --glass-sheen:
+        radial-gradient(12rem 2.5rem at var(--glass-glint, 24%) 0%, rgba(255, 255, 255, .14), transparent 72%),
+        linear-gradient(180deg, rgba(255, 255, 255, .055), transparent .75rem, transparent calc(100% - .75rem), rgba(255, 255, 255, .03)),
+        linear-gradient(160deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .02) 24%, transparent 46%, transparent 72%, rgba(255, 255, 255, .035));
+}
+/* glass.js writes the glint on the bar, but a var() in a custom property is
+   settled where the property is declared, and on html there is no glint to
+   read: the bar's face stood still at 24%. The face is declared again on the
+   bar's own glass, which reads the glint where glass.js puts it. Only there:
+   the toggle in the bar, like every other sheet, keeps the glint where the
+   bar rests it. */
+html[data-effects] .navbar .nav-content::before {
     --glass-sheen:
         radial-gradient(12rem 2.5rem at var(--glass-glint, 24%) 0%, rgba(255, 255, 255, .14), transparent 72%),
         linear-gradient(180deg, rgba(255, 255, 255, .055), transparent .75rem, transparent calc(100% - .75rem), rgba(255, 255, 255, .03)),
@@ -1248,45 +1100,16 @@ html:is([data-effects="low"], [data-effects="medium"]) {
         inset 0 0 0 1px rgba(255, 255, 255, .07);
 }
 /* Still solid for anyone who asks for less transparency or more contrast,
-   whichever level they are on. */
+   whichever level they are on. Nothing is showing through, so there is no
+   light on the face to catch: the bar drops its own here too (navbar.css).
+   The rim stays, as the bar's does -- it is the edge of the panel now, not a
+   reflection off it. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
     html[data-effects] { --glass-surface: var(--surface); --glass-sheen: none; }
+    html[data-effects] .navbar .nav-content::before { --glass-sheen: none; }
 }
 
-:root {
-    --radius-card: .875rem;
-    --radius-control: .4375rem;
-}
-.glass-panel,
-.project-card,
-.modal-card,
-.modal-media-item,
-.modal-detail-section,
-.modal-feature-video-player,
-.modal-overview-grid,
-.media-placeholder {
-    border-radius: var(--radius-card);
-}
-.btn,
-.social-links a,
-.resume-icon-unavailable,
-.badge,
-.tag,
-.project-category-badge,
-.link-btn,
-.carousel-arrow,
-.carousel-controls > div,
-.collection-toggle,
-.modal-close,
-.modal-quick-link,
-.modal-overview-item {
-    border-radius: var(--radius-control);
-}
-
-.hero-section::before,
-.hero-section::after {
-    display: none;
-}
+.collection-toggle { border-radius: var(--radius-control); }
 
 :root {
     --content-section-gap: var(--rhythm-section);
@@ -1367,22 +1190,21 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     perspective: 75rem;
     scrollbar-width: none;
     overscroll-behavior-x: contain;
-    touch-action: pan-y;
+    /* A swipe along the track is the carousel's; up and down, and a pinch,
+       stay the browser's. */
+    touch-action: pan-y pinch-zoom;
 }
 .project-carousel::-webkit-scrollbar {
     display: none;
 }
 .project-carousel .project-card {
     flex: 0 0 calc((100% - var(--gutter) * 2) / 3);
-    opacity: calc(1 - (var(--carousel-depth, 0) * .24));
     transform:
         perspective(68.75rem)
-        translateY(calc(var(--carousel-depth, 0) * 1.125rem + var(--card-lift, 0px)))
-        rotateY(calc(var(--carousel-position, 0) * 11deg))
+        translateY(var(--card-lift, 0px))
         rotateX(var(--card-tilt-x, 0deg))
         rotateY(var(--card-tilt-y, 0deg))
-        translateZ(calc(var(--carousel-depth, 0) * -5.5rem))
-        scale(calc((1 - (var(--carousel-depth, 0) * .07)) * var(--card-press, 1)));
+        scale(var(--card-press, 1));
     transform-origin: center center;
     transform-style: preserve-3d;
     transition: border-color .3s ease, box-shadow .3s ease, opacity .15s linear, var(--card-answer-transition);
@@ -1415,17 +1237,10 @@ main > #contact { padding-bottom: var(--rhythm-section); }
     margin-left: 0;
     transform: none;
 }
-.circular-project-carousel .project-card {
-    border-radius: .875rem;
-}
-.featured-project-carousel .project-card {
-    border-radius: .875rem;
-}
 html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
     /* Never taller than the card it turns and the padding round it, so a
        short window's shorter cards are not left standing over an empty foot. */
     min-height: min(clamp(var(--ring-height-min), 44vw, var(--ring-height-max)), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
-    padding-top: var(--rhythm-block);
     padding-bottom: var(--rhythm-block);
     perspective: 87.5rem;
 }
@@ -1454,9 +1269,6 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
 }
 html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-card.is-carousel-active {
     box-shadow: 0 26px 64px rgba(0,0,0,.42);
-}
-html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper {
-    height: var(--ring-image-height);
 }
 html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-info {
     padding: var(--pad-card);
@@ -1527,7 +1339,9 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
     cursor: pointer;
     transition: width .38s var(--ease), background .38s ease, box-shadow .38s ease, transform .2s ease;
 }
-.carousel-indicator:hover,
+@media (hover: hover) {
+    .carousel-indicator:hover { transform: scale(1.15); }
+}
 .carousel-indicator:focus-visible {
     transform: scale(1.15);
 }
@@ -1571,13 +1385,9 @@ html:is([data-effects="medium"], [data-effects="high"]) .project-carousel.is-dra
 }
 
 @media (max-width: 639px) {
-    .project-card { height: var(--project-card-height-mobile); }
     html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel {
         min-height: min(var(--ring-height-min), calc(var(--card-height) + var(--rhythm-block) * 2 + var(--rhythm-heading)));
-        padding-top: var(--rhythm-block);
-        padding-bottom: var(--rhythm-block);
     }
-    html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carousel .project-image-wrapper { height: var(--ring-image-height-compact); }
     .featured-carousel-controls,
     .carousel-controls {
         justify-content: flex-end;
@@ -1589,11 +1399,6 @@ html:is([data-effects="medium"], [data-effects="high"]) .project-carousel.is-dra
     }
     .collection-toggle:hover > .collection-index,
     .collection-toggle:hover > .collection-copy { transform: none; }
-    .circular-project-carousel {
-        width: 100%;
-        margin-left: 0;
-        transform: none;
-    }
 }
 
 /* Featured cards are one complete three-card row or a slider: two cards across
@@ -1643,10 +1448,9 @@ html:is([data-effects="medium"], [data-effects="high"]) .project-carousel.is-dra
     background: radial-gradient(ellipse 75% 65% at 76% 50%, #08080c, #030305 45%, #000000);
     opacity: 1;
 }
-html:is([data-effects="low"], [data-effects="medium"]) :is(.galaxy-nebula, .cursor-dot, .cursor-spark, .cursor-ripple) {
+html:is([data-effects="low"], [data-effects="medium"]) :is(.cursor-dot, .cursor-spark, .cursor-ripple) {
     display: none !important;
 }
-html[data-effects="high"] .galaxy-nebula { display: none; }
 /* The still sky: deep space, nebulae, a band of stars and thousands more,
    drawn once by setupStillSky (portfolio.js) and handed over as --still-sky.
    It is part of the layer's one painting, so a scroll moves the page over it
@@ -1666,35 +1470,29 @@ html[data-effects="high"] .galaxy-nebula { display: none; }
     background-image: var(--still-sky-old, none);
     transition: none;
 }
+/* Up, the sky stands at --sky-shown: all of it, or a little dimmer at Low
+   (below). The picture going in a swap starts from the same, or the sky
+   flashed brighter for a moment every time it was drawn again. */
 .background-grid[data-look][data-sky]::before {
-    opacity: 1;
+    opacity: var(--sky-shown, 1);
 }
 .background-grid[data-swap]::after { animation: sky-swap .8s ease both; }
-@keyframes sky-swap { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sky-swap { from { opacity: var(--sky-shown, 1); } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
     .background-grid::before { transition-duration: 0s; }
     .background-grid[data-swap]::after { animation: none; }
 }
 /* High's eye brings a backdrop of its own and wants nothing under it. */
 html[data-effects="high"][data-ego] .background-grid { display: none; }
-@media (max-width: 900px) {
-    .nav-links { display: flex; }
-    .nav-links > li:not(.performance-control) { display: none; }
-}
 
 /* Left alone, the whole backdrop goes to black together: a few seconds after
    anyone last moved (portfolio.js, IDLE_DARK_MS), and when the tab goes away. Every layer fades on exactly the same curve
    and the same clock -- one of them lagging behind is what makes the page
    look like a stack of effects rather than a single view that is settling --
    and they come back together, a little quicker, when someone moves. */
-html.effects-background-idle :is(.background-grid, .sky-life, .cosmos, .galaxy-nebula) {
+html.effects-background-idle :is(.background-grid, .sky-life, .cosmos) {
     opacity: 0;
     transition-duration: 1.4s;
-    transition-timing-function: cubic-bezier(.16, .85, .3, 1);
-}
-html.effects-background-click-fading :is(.background-grid, .sky-life, .cosmos, .galaxy-nebula) {
-    opacity: 0;
-    transition-duration: 3.5s;
     transition-timing-function: cubic-bezier(.16, .85, .3, 1);
 }
 /* ---- What moves on the still sky (Low FX) ----------------------------------------
@@ -1726,15 +1524,7 @@ html:is([data-y2k], [data-iris], [data-vapor], [data-ego]) .sky-life { display: 
     mask-image: radial-gradient(circle, #000 18%, transparent 68%);
     opacity: .45;
     transform: scale(.5);
-    animation: sky-glint var(--period, 7s) var(--delay, 0s) infinite;
     will-change: transform, opacity;
-}
-@keyframes sky-glint {
-    0%, 82%, 100% { opacity: .45; transform: scale(.5); animation-timing-function: steps(1, end); }
-    84% { opacity: .8; transform: scale(.85) rotate(12deg); animation-timing-function: steps(1, end); }
-    87% { opacity: 1; transform: scale(1.3) rotate(26deg); animation-timing-function: steps(1, end); }
-    90% { opacity: .9; transform: scale(1.05) rotate(36deg); animation-timing-function: steps(1, end); }
-    94% { opacity: .7; transform: scale(.75) rotate(44deg); animation-timing-function: steps(1, end); }
 }
 /* At Low, only four, and those slow: up over six seconds in twelve steps, held, and down
    again the same way. */
@@ -1767,8 +1557,7 @@ html[data-effects="low"] .sky-glint { animation: sky-breathe var(--slow, 22s) va
     transform-origin: 100% 50%;
     transform: rotate(var(--angle, 150deg));
 }
-.sky-shooting.is-shooting { animation: sky-shoot .9s cubic-bezier(.3, .1, .6, 1) both; }
-html[data-effects="low"] .sky-shooting.is-shooting { animation-duration: 2.6s; animation-timing-function: cubic-bezier(.25, .1, .4, 1); }
+.sky-shooting.is-shooting { animation: sky-shoot 2.6s cubic-bezier(.25, .1, .4, 1) both; }
 @keyframes sky-shoot {
     0% { opacity: 0; transform: rotate(var(--angle, 150deg)) translateX(0) scaleX(.2); }
     15% { opacity: 1; }
@@ -1777,7 +1566,7 @@ html[data-effects="low"] .sky-shooting.is-shooting { animation-duration: 2.6s; a
 /* Medium's and High's stars move in cosmos.js. */
 html:is([data-effects="medium"], [data-effects="high"]) .sky-life { display: none; }
 /* The same sky at Low, its stars dimmer. */
-html[data-effects="low"] .background-grid[data-look][data-sky]::before { opacity: .62; }
+html[data-effects="low"] .background-grid { --sky-shown: .62; }
 .sky-life.is-resting *,
 html.effects-background-idle .sky-life * { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
@@ -1880,11 +1669,12 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
 }
 /* ---- The page grid --------------------------------------------------------
    Every three-up region on the page runs on one track definition and one
-   gutter, so About, Skills, Projects and Contact resolve to identical column
-   widths and their card edges line up in a single unbroken vertical rule from
-   the top of the page to the bottom. Before this each region carried its own
-   gutter -- 12px, 16px, 20px, 13.6px -- which put four different column widths
-   on one page and left nothing aligned with anything below it.
+   gutter, so About, Skills and Projects resolve to identical column widths
+   and their card edges line up in a single unbroken vertical rule from the
+   top of the page to the bottom. Contact's buttons take the same widths and
+   gutter but centre each row (below). Before this each region carried its
+   own gutter -- 12px, 16px, 20px, 13.6px -- which put four different column
+   widths on one page and left nothing aligned with anything below it.
 
    The breakpoints are shared for the same reason: all regions step from three
    to two to one at the same widths, instead of the page passing through a band
@@ -1984,7 +1774,6 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
 @media (min-width: 1600px) {
     :root {
         --site-max-width: 1680px;
-        --nav-max-width: 1680px;
         --hero-content-max-width: 1240px;
         --project-card-height: 700px;
         --project-image-height: 260px;
@@ -1999,7 +1788,6 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
 @media (min-width: 2560px) {
     :root {
         --site-max-width: 1920px;
-        --nav-max-width: 1920px;
         --hero-content-max-width: 1400px;
         --project-card-height: 720px;
         --project-image-height: 280px;
@@ -2015,7 +1803,6 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
     html { font-size: 18px; }
     :root {
         --site-max-width: 2160px;
-        --nav-max-width: 2160px;
         --hero-content-max-width: 1540px;
         --project-card-height: 760px;
         --project-image-height: 300px;
@@ -2120,6 +1907,13 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
     .project-period { margin-bottom: var(--space-3); }
     .project-summary { --lh: 1.5; font-size: .9375rem; }
     .project-tags { margin-top: var(--space-4); }
+}
+/* A window this short -- a phone on its side -- leaves a card too little
+   room for both its description and its tags, and the tags won: the
+   description shrank to nothing and the tags ran out of the foot. The card
+   keeps its description; the tags are in the project it opens. */
+@media (max-height: 440px) {
+    .project-card .project-tags { display: none; }
 }
 
 /* Touch-first devices keep every control at least as large as Apple's 44pt
@@ -2266,9 +2060,9 @@ html[data-primary-input="touch"] .nav-toggle {
 }
 
 /* ====================================================================
-   Skip link, focus rings, consent banner, video placeholders, mobile nav.
-   Appended as one block so the additions stay easy to find and easy to lift
-   back out. Everything below reuses the tokens defined at the top of the file.
+   Skip link, hidden labels, focus rings, footer links, mobile nav and the
+   data error. Appended as one block so the additions stay easy to find and
+   easy to lift back out.
    ==================================================================== */
 
 /* Keyboard users should be able to jump the nav rather than tab through it. */
@@ -2343,11 +2137,6 @@ button:focus-visible,
 .nav-toggle {
     display: none;
     position: relative;
-    width: 2.5rem;
-    height: 2.5rem;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--ink);
     cursor: pointer;
 }
 .nav-toggle > .nav-toggle-icon,
@@ -2377,51 +2166,18 @@ button:focus-visible,
 .nav-toggle[aria-expanded="true"] > span::after { transform: rotate(-45deg); }
 
 @media (max-width: 900px) {
-    .nav-toggle { display: block; }
     .nav-content {
         flex-wrap: wrap;
         /* The collapsed menu is still a flex item, so it forms a second line of
-           zero height. Without this the bar's 78px min-height is split between
-           the two lines and the logo and toggle ride ~10px high, leaving dead
+           zero height. Without this the bar's 56px min-height is split between
+           the two lines and the logo and toggle ride 3px high, leaving dead
            space under them. Centring the lines as a group puts the row back on
            the bar's axis, and does nothing once the menu opens and the content
            is taller than the minimum. */
         align-content: center;
     }
-
-    /* Supersedes the earlier rules that hid every link on small screens.
-
-       Collapsed with max-height rather than `grid-template-rows: 0fr`, which
-       only sizes the FIRST row -- the remaining items land in implicit rows and
-       keep their height, leaving a closed navbar 212px tall with the hero
-       showing through it. The ceiling only has to clear five items. */
-    .nav-links {
-        display: block;
-        flex-basis: 100%;
-        gap: 0;
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height .3s var(--ease);
-    }
-    .nav-links > li:not(.performance-control) { display: block; }
     .navbar:not([data-nav-open]) .nav-links > li { visibility: hidden; }
-    .navbar[data-nav-open] .nav-links { max-height: 20rem; }
     .navbar[data-nav-open] .nav-links > li { visibility: visible; }
-    .nav-links a {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        width: 100%;
-        padding: var(--space-3) 0;
-        border-bottom: 1px solid var(--line);
-    }
-    /* Fully opaque, not .98: the open panel sits directly over the hero type,
-       and even a two-percent bleed shows the headline through the menu. */
-    .navbar[data-nav-open] {
-        background: #080808;
-        border-bottom-color: var(--line);
-    }
-
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2473,8 +2229,6 @@ button:focus-visible,
    frame of a turn. Only the card reads them. Left to inherit, each write restyled
    everything inside every card as well, four hundred elements a frame for a ring
    of sixteen, which was most of what turning one cost the page's main thread. */
-@property --carousel-position { syntax: "*"; inherits: false; }
-@property --carousel-depth { syntax: "*"; inherits: false; }
 @property --carousel-ring-x { syntax: "*"; inherits: false; }
 @property --carousel-ring-y { syntax: "*"; inherits: false; }
 @property --carousel-ring-z { syntax: "*"; inherits: false; }
@@ -2736,9 +2490,6 @@ html:is([data-effects="medium"], [data-effects="high"]) .skill-group::after {
     flex: 0 0 calc((100% - var(--gutter)) / 2);
     margin-top: 0;
     scroll-snap-align: start;
-}
-#about.has-responsive-card-slider .responsive-card-slider-controls {
-    margin-top: var(--rhythm-block);
 }
 #about.has-responsive-card-slider .about-highlights {
     margin-top: 0;
@@ -3094,6 +2845,10 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
 .modal-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 .modal-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--pad-panel); scrollbar-width: none; }
 .modal-scroll::-webkit-scrollbar { display: none; }
+/* The scroll box takes the keyboard (index.html gives it a tabindex), and the
+   sheet clips whatever is drawn outside it, so its ring is drawn just inside
+   instead, round the sheet's own corner. */
+.modal-scroll:focus-visible { outline-offset: -4px; border-radius: inherit; }
 .modal-card > .modal-close { position: absolute; display: grid; place-items: center; flex: none; }
 
 body:has(.modal-overlay.active) { overflow: hidden; }
@@ -3158,7 +2913,9 @@ body:has(.modal-overlay.active) { overflow: hidden; }
 }
 /* The tint fills the row between its two dividers rather than boxing in the
    text, so the target the cursor is being shown is the target it can hit. */
-.collection-toggle:hover,
+@media (hover: hover) {
+    .collection-toggle:hover { background-color: rgba(123, 168, 216, .07); }
+}
 .collection-toggle:focus-visible,
 .collection-toggle[aria-expanded="true"] {
     background-color: rgba(123, 168, 216, .07);
@@ -3178,7 +2935,9 @@ body:has(.modal-overlay.active) { overflow: hidden; }
     transform-origin: left;
     transition: transform .3s var(--ease);
 }
-.collection-toggle:hover::after,
+@media (hover: hover) {
+    .collection-toggle:hover::after { transform: scaleX(1); }
+}
 .collection-toggle:focus-visible::after,
 .collection-toggle[aria-expanded="true"]::after {
     transform: scaleX(1);
@@ -3202,7 +2961,13 @@ body:has(.modal-overlay.active) { overflow: hidden; }
         border-color .25s var(--ease),
         color .25s var(--ease);
 }
-.collection-toggle:hover > i,
+@media (hover: hover) {
+    .collection-toggle:hover > i {
+        background-color: var(--blue);
+        border-color: var(--blue);
+        color: #080808;
+    }
+}
 .collection-toggle:focus-visible > i,
 .collection-toggle[aria-expanded="true"] > i {
     background-color: var(--blue);

@@ -1,18 +1,20 @@
 /* The eye, at Medium: the first of Medium FX's hidden looks.
 
-   Ten quick presses on the effects slider's Medium stop find them, and after that two
-   quick presses go round them: the still stars, this, the pink desk (vapor.js), and the
-   stars again (the slider code in portfolio.js). It is the same eye as Low's (y2k.js) and
-   High's (ego.js), with what lies between them to spend.
+   Two quick presses on the effects slider's Medium stop go round Medium's looks: the still
+   stars, this, the pink desk (vapor.js), and the stars again (the slider code in
+   portfolio.js). It is the same eye as Low's (y2k.js) and High's (ego.js), with what lies
+   between them to spend.
 
    Low's works out each cell on the page's own thread a few times a second. High's runs on
    the graphics card on every frame, through a second pass full of light. This is the one
    pass on the graphics card, thirty times a second, and only while something is moving:
    a ball that turns, with veins that go round with it, a lit rim, lids that follow it and
    a soft light under the dither. Between one movement and the next it asks for no frames
-   at all, as Medium promises. It looks about for itself, and blinks. Pressed twice,
-   anywhere the page itself does not answer, it turns to fix on the cursor for fifteen
-   seconds. Not fetched until someone asks, and leaving it hands everything back. */
+   at all, as Medium promises. Once awake it looks at the cursor wherever it is (with no
+   cursor, on a touch screen, it looks about for itself), and blinks. Pressed twice,
+   anywhere the page itself does not answer, it fixes on the cursor for fifteen seconds,
+   its pupil pinned and the iris flushed. Not fetched until someone asks, and leaving it
+   takes it off the page; what was compiled for it is kept for the next time. */
 (function () {
     'use strict';
 
@@ -24,8 +26,9 @@
     const FRAME_MS = 32;
     const FOLLOW_MS = 15000;
     const DOUBLE_PRESS_MS = 450;
-    // How long it lies shut before it wakes, and how long after that a press is ignored; and
-    // how long before it wakes light pours into its iris.
+    // The waking's clock (it starts SHUT_MS in, the lids flying open), how long after it is
+    // brought in a press is ignored, how long light pours into its iris before it wakes, and
+    // how long it goes wild once it has.
     const SHUT_MS = 650, SETTLE_MS = SHUT_MS + 700, GATHER_MS = 600, FRENZY_MS = 500;
     // How long it takes to build itself, from the bones out, when it is brought in.
     const BIRTH_MS = 5000;
@@ -232,7 +235,9 @@
     let shown = false, frame = 0, lastDraw = 0, underProject = false, reducedMotion = null;
     let blinkTimer = 0, lookTimer = 0, followTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
     let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, tall = 0;
-    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false;
+    // pointerSeen: any pointer, which a double press aims at. mouseSeen: a cursor, which it
+    // follows once awake; a finger leaves it looking about for itself, as Low's does.
+    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false, mouseSeen = false;
     let open = 1, blinkAt = -1, shockAt = -1, followUntil = 0, followAmount = 0, lastPress = -1e9;
     let shownAt = 0, wakeAt = -1, waking = false, wakeTimers = [], kick = 0, dieAt = -1, dieMs = 1, birthStart = -Infinity, born = 1, frenzyUntil = -1, nextDart = 0;
     const turn = new Float32Array(9);
@@ -323,7 +328,7 @@
     const following = () => performance.now() < followUntil;
     // Awake and done going wild, it looks at the cursor wherever it is, always; pressed twice
     // it fixes on it as well, its pupil pinned and the iris flushed.
-    const tracking = () => pointerSeen && shown && born >= 1 && wakeAt < 0 && performance.now() >= frenzyUntil && dieAt < 0;
+    const tracking = () => mouseSeen && shown && born >= 1 && wakeAt < 0 && performance.now() >= frenzyUntil && dieAt < 0;
     // True for as long as anything is on its way somewhere and another frame is wanted.
     const update = (dt, now) => {
         const fixed = following();
@@ -352,10 +357,9 @@
             moving = true;
         }
         if (wakeAt >= 0) {
-            // Shut, a twitch under the lid, and then wide awake all at once, with a jolt
-            // through everything.
+            // Wide awake all at once, with a jolt through everything.
             const age = now - wakeAt;
-            if (age < SHUT_MS) open = age > 260 && age < 400 ? .04 + .14 * Math.sin((age - 260) / 140 * Math.PI) : .04;
+            if (age < SHUT_MS) open = .04;
             else if (age < SHUT_MS + 110) {
                 open = Math.min(1, (age - SHUT_MS) / 110);
                 if (shockAt < wakeAt) {
@@ -381,9 +385,10 @@
             if (now - shockAt > 550) shockAt = now;
             moving = true;
         }
-        // Building itself: every frame until it is whole.
+        // Building itself: every frame until it is whole, from when it can be seen (show()
+        // wakes it then; under the switch that brings it there is nothing to draw).
         born = clamp((now - birthStart) / BIRTH_MS, 0, 1);
-        if (born < 1) moving = true;
+        if (born < 1 && now >= birthStart) moving = true;
         // Dying, on the way out: the pupil blows, it rolls up and away, and the lids come down.
         if (dieAt >= 0) {
             const k = clamp((now - dieAt) / dieMs, 0, 1);
@@ -421,7 +426,9 @@
     const scheduleBlink = () => {
         clearTimeout(blinkTimer);
         blinkTimer = window.setTimeout(() => {
-            if (!quiet()) {
+            // Not while it builds itself and the light pours in: a blink would cut the
+            // bare ball down to a slit.
+            if (!quiet() && performance.now() >= shownAt) {
                 blinkAt = performance.now();
                 wake();
             }
@@ -441,13 +448,12 @@
             scheduleLook();
         }, 900 + Math.random() * Math.random() * 4200);
     };
-    /* It is shown asleep. A moment later it wakes all at once: the lids fly open, rings go out
-       from it, the pupil pins, and it goes straight for whoever woke it, the hand on the
-       slider, and has a quick look round before it gets on with looking about for itself. */
-    // Built (uilt): no lying shut, it wakes at once, and the light has already poured in.
-    const wakeUp = built => {
+    /* Whole, and the light poured into it: it wakes all at once. The lids fly open, rings go
+       out from it, the pupil pins, it goes wild a moment, and has a quick look round before
+       it settles on the cursor, or on looking about for itself where there is none. */
+    const wakeUp = () => {
         if (reducedMotion.matches) return;
-        const now = performance.now() - (built ? SHUT_MS : 0);
+        const now = performance.now() - SHUT_MS;
         const slider = document.querySelector('.fx-slider')?.getBoundingClientRect();
         const x = slider?.width ? slider.left + slider.width / 2 : window.innerWidth * .8;
         const y = slider?.width ? slider.top + slider.height / 2 : 40;
@@ -469,17 +475,9 @@
             waking = false;
             scheduleLook();
         }, SHUT_MS + 1360));
-        // Light pours into the iris while it lies shut (portfolio.js draws it), and it starts
-        // out at the viewer as the lids fly open.
-        if (built) {
-            frenzyUntil = now + SHUT_MS + FRENZY_MS;
-            pop();
-            return;
-        }
-        wakeTimers.push(window.setTimeout(() => {
-            document.dispatchEvent(new CustomEvent('portfolio:eye-gather', { detail: { ...irisAt(), ms: GATHER_MS } }));
-        }, SHUT_MS - GATHER_MS));
-        wakeTimers.push(window.setTimeout(pop, SHUT_MS));
+        // It starts out at the viewer as the lids fly open.
+        frenzyUntil = now + SHUT_MS + FRENZY_MS;
+        pop();
     };
     // Where its iris is on the screen, for what portfolio.js draws round it.
     const irisAt = () => {
@@ -502,6 +500,7 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
+        if (event.pointerType === 'mouse') mouseSeen = true;
         if (following() || tracking()) wake();
     };
     // Pressed twice, anywhere the page itself does not answer a press.
@@ -510,10 +509,11 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
+        if (event.pointerType === 'mouse') mouseSeen = true;
         if (event.button || event.target.closest?.(ANSWERS)) return;
         const now = performance.now();
-        // A hand still spamming the slider as the eye arrives, through the crossfade, where
-        // a press lands on nothing in particular, is not asking for anything.
+        // A hand still spamming the slider as the eye arrives, where a press lands on nothing
+        // in particular, is not asking for anything.
         if (now - shownAt < SETTLE_MS) return;
         if (now - lastPress < DOUBLE_PRESS_MS) {
             followUntil = now + FOLLOW_MS;
@@ -554,7 +554,7 @@
             }
         },
         // `after`: how long it is hidden under the switch that brings it (portfolio.js); it
-        // lies shut that much longer, so it wakes where it can be seen.
+        // starts building itself that much later, so it is built where it can be seen.
         // `settled`: brought in from another level's eye, it is simply there, awake, where that
         // one was.
         show({ after = 0, settled = false } = {}) {
@@ -566,7 +566,11 @@
             if (window.portfolioPointer) {
                 ({ x: pointerX, y: pointerY } = window.portfolioPointer);
                 pointerSeen = true;
+                if (window.portfolioPointer.mouse) mouseSeen = true;
             }
+            // Brought in while a project is open (the frame monitor stepping the level), it
+            // waits behind it like everything else.
+            underProject = !!document.querySelector('.modal-overlay.active');
             document.querySelector('.background-grid')?.after(canvas);
             shown = true;
             open = 1;
@@ -575,16 +579,19 @@
             yaw = pitch = wantYaw = wantPitch = followAmount = kick = 0;
             size();
             // It builds itself, from the bones out; then light pours into its iris and it wakes.
+            // Whole already, it does not pick up a build the last showing left unfinished.
             born = 1;
+            birthStart = -Infinity;
             if (!reducedMotion.matches && !settled) {
                 birthStart = performance.now() + after;
                 born = 0;
                 shownAt += BIRTH_MS + GATHER_MS;
+                if (after > 0) wakeTimers.push(window.setTimeout(wake, after));
                 wakeTimers.push(window.setTimeout(() => {
                     document.dispatchEvent(new CustomEvent('portfolio:eye-gather', { detail: { ...irisAt(), ms: GATHER_MS } }));
                 }, after + BIRTH_MS));
                 wakeTimers.push(window.setTimeout(() => {
-                    wakeUp(true);
+                    wakeUp();
                     wake();
                 }, after + BIRTH_MS + GATHER_MS));
             } else if (settled && !reducedMotion.matches) {

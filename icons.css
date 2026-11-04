@@ -1,9 +1,9 @@
 /*!
  * Font Awesome 6.4.0 -- subset for this site only.
  * Icons: CC BY 4.0 | Fonts: SIL OFL 1.1 | Code: MIT -- https://fontawesome.com
- * Only the 17 glyphs this portfolio actually draws are included, self-hosted so
- * no third party sees a request on page load. Regenerate with scripts/ notes in
- * README if the markup starts using a new icon.
+ * A subset of 17 glyphs, self-hosted so no third party sees a request on page
+ * load; the 14 this portfolio draws have a rule below. Regenerate with
+ * tools/build-icons.py (see README) if the markup starts using a new icon.
  */
 @font-face {
     font-family: 'Font Awesome 6 Free';
@@ -45,8 +45,6 @@
 .fa-brands { font-family: 'Font Awesome 6 Brands'; font-weight: 400; }
 
 .fa-arrow-down::before { content: '\f063'; }
-.fa-arrow-left::before { content: '\f060'; }
-.fa-arrow-right::before { content: '\f061'; }
 .fa-arrow-up-right-from-square::before { content: '\f08e'; }
 .fa-calendar::before { content: '\f133'; }
 .fa-cube::before { content: '\f1b2'; }
@@ -60,4 +58,3 @@
 .fa-linkedin::before { content: '\f08c'; }
 .fa-paper-plane::before { content: '\f1d8'; }
 .fa-play::before { content: '\f04b'; }
-.fa-xmark::before { content: '\f00d'; }

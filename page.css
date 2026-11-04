@@ -1,8 +1,8 @@
-/* Shared styling for the standalone pages -- privacy, terms and 404.
+/* Shared styling for the standalone pages -- privacy, terms, updates and 404.
    Deliberately small and self-contained: these pages carry no carousels, no
-   canvas backdrop and no portfolio.js, so pulling in the whole site stylesheet
-   would ship several thousand rules to render a column of text. The tokens are
-   copied from portfolio.css so the two stay visually identical. */
+   sky and no portfolio.js, so pulling in the whole site stylesheet would ship
+   several thousand rules to render a column of text. The tokens are copied
+   from portfolio.css so the pages look like the same site. */
 :root {
     --bg: #080808;
     --surface: #111111;
@@ -72,7 +72,7 @@ body {
     background: var(--bg);
     color: var(--ink);
     line-height: var(--lh-body);
-    /* the same 48px lattice the portfolio draws behind its canvas */
+    /* A faint 48px lattice: the backdrop the portfolio had before its sky. */
     background-image:
         linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, .022) 1px, transparent 1px);
@@ -399,10 +399,6 @@ a { color: inherit; }
         margin-left: var(--page-inline-start);
         margin-right: 0;
     }
-}
-
-@media (min-width: 3400px) {
-    html { font-size: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -16,8 +16,6 @@
     border: 0;
     background: transparent;
 }
-.has-scrolled .navbar,
-.navbar[data-nav-open] { background: transparent; border: 0; }
 .navbar .nav-content {
     position: relative;
     display: flex;
@@ -37,10 +35,8 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    border: 1px solid transparent;
     /* the same corner as every card it floats over */
     border-radius: var(--radius-surface);
-    transition: background .28s, border-color .28s, box-shadow .28s;
 }
 /* ---- Liquid glass ---------------------------------------------------------
    The bar that appears on scroll is the same glass as the cards and buttons
@@ -56,16 +52,17 @@
 
      refract  High FX, Chromium: the frosted backdrop bends through an SVG
               filter
-     lens     High FX, Safari and Firefox: the page behind frosts, and the sky
-              bends under the bar on its own canvas
-     frost    Low FX: the page behind frosts, and nothing bends
+     lens     High FX, Safari and Firefox: the page behind frosts, and
+              nothing bends
+     frost    Medium and Low FX: nothing bends, and of all the glass only
+              the bar frosts -- in Low FX only while its menu is open (below)
 
    The links keep legible over the brightest thing that can scroll behind
    them -- the hero's name, a white photo -- through the frost and the soft
    shadow the text carries. */
 .navbar { --nav-tint: var(--glass-surface); }
 .navbar .nav-content::before {
-    border-color: var(--glass-edge-ring);
+    border: 1px solid var(--glass-edge-ring);
     background: var(--glass-sheen), var(--nav-tint);
     box-shadow: 0 12px 32px rgba(0, 0, 0, .3), var(--glass-edge-lights);
     opacity: 0;
@@ -81,10 +78,7 @@ html[data-effects="high"] .navbar .nav-content::before {
     box-shadow: var(--glass-volume), 0 12px 32px rgba(0, 0, 0, .3);
 }
 /* The backdrop filter only runs while the glass is showing: at the top of the
-   page there is no bar, and nothing behind it should be paying for one. In
-   lens mode the frost falls on the sky glass.js has already bent, as it does
-   on the cards; a browser with no backdrop filter at all gets the cards'
-   denser sheet instead (portfolio.css). */
+   page there is no bar, and nothing behind it should be paying for one. */
 .has-scrolled .navbar .nav-content::before,
 .navbar[data-nav-open] .nav-content::before {
     opacity: 1;
@@ -186,9 +180,6 @@ html[data-effects-renderer="software"]:not([data-effects="high"]) .has-scrolled 
     position: relative;
     z-index: 1;
     color: var(--ink);
-    -webkit-text-fill-color: currentColor;
-    background: none;
-    filter: none;
     font-family: var(--font-text);
     font-size: .9375rem;
     font-weight: 550;
@@ -201,8 +192,6 @@ html[data-effects-renderer="software"]:not([data-effects="high"]) .has-scrolled 
 .navbar .logo:hover,
 .navbar .logo:focus-visible {
     color: var(--blue);
-    background: none;
-    filter: none;
 }
 /* On a touch screen the name is pressed like every other control on the
    page, so it stands the same 44px tall. It is centred on its line, as the
@@ -220,18 +209,13 @@ html[data-primary-input="touch"] .navbar .logo {
     padding: 0;
     list-style: none;
     font-family: var(--font-text);
-    font-weight: 400;
     line-height: 1.65;
-    letter-spacing: normal;
-    text-transform: none;
 }
 /* The links and the effects slider are one row, so they stand as tall. */
 .navbar .nav-links > li > a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 0;
-    border: 0;
     color: var(--nav-muted);
     font-size: var(--type-meta);
     transition: color .16s;
@@ -432,9 +416,11 @@ html[data-effects="low"] .navbar .fx-slider {
     .navbar .nav-toggle {
         display: grid;
         place-items: center;
-        padding: 0;
-        border: 0;
     }
+    /* Collapsed with max-height rather than `grid-template-rows: 0fr`, which
+       only sizes the first row: the rest land in implicit rows and keep their
+       height, which left a closed bar 212px tall with the hero showing through
+       it. The ceiling only has to clear five items. */
     .navbar .nav-links {
         display: block;
         flex-basis: 100%;
@@ -465,15 +451,4 @@ html[data-effects="low"] .navbar .fx-slider {
 }
 @media (max-width: 359px) {
     .navbar .logo { font-size: .8125rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .navbar .logo,
-    .navbar .nav-links,
-    .navbar .nav-links > li > a,
-    .navbar .fx-slider,
-    .navbar .fx-slider-track,
-    .navbar .fx-slider-fill,
-    .navbar .fx-slider-thumb,
-    .navbar .nav-content::before,
-    .navbar .nav-content::after { transition: none; }
 }

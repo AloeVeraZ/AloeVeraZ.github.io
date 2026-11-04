@@ -31,7 +31,7 @@
     let irisTone = null, irisR8 = null, irisG8 = null, irisB8 = null;
     let open = 1, drawnOpen = -1, drawnX = 1e9, drawnY = 1e9;
     let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, lookX = 0, lookY = 0, mostYaw = MOST_YAW;
-    let frame = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
+    let frame = 0, gapTimer = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
     let underProject = false, pointerSeen = false, reducedMotion = null;
     let lastX = 0, lastY = 0;
 
@@ -233,12 +233,17 @@
         drawnOpen = open;
     };
 
-    // There are frames only while something is moving.
+    // There are frames only while something is moving, one every FRAME_MS; between them it
+    // waits on a timer rather than being woken at every refresh of the screen for nothing.
     const step = now => {
         frame = 0;
         if (!shown || underProject || document.hidden) return;
-        if (now - lastDraw < FRAME_MS) {
-            frame = requestAnimationFrame(step);
+        const early = FRAME_MS - (now - lastDraw);
+        if (lastDraw && early > 4) {
+            gapTimer = window.setTimeout(() => {
+                gapTimer = 0;
+                frame = requestAnimationFrame(step);
+            }, early);
             return;
         }
         const dt = lastDraw ? Math.min(.1, (now - lastDraw) / 1000) : .04;
@@ -265,12 +270,16 @@
         else lastDraw = 0;
     };
     const wake = () => {
-        if (!frame && shown && !underProject && !document.hidden) frame = requestAnimationFrame(step);
+        if (!frame && !gapTimer && shown && !underProject && !document.hidden) frame = requestAnimationFrame(step);
     };
     const aim = (x, y) => {
-        // Turned until the pupil is on the cursor, as far as a ball can turn.
-        wantYaw = clamp(Math.asin(clamp((x / cell - cx) / ball, -1, 1)), -mostYaw, mostYaw);
-        wantPitch = clamp(Math.asin(clamp((y / cell - cy) / ball, -1, 1)), -MOST_PITCH, MOST_PITCH);
+        // Turned until the pupil is on the cursor, as far as a ball can turn. A cursor moving
+        // where the ball is already turned as far as it goes asks for nothing.
+        const yawTo = clamp(Math.asin(clamp((x / cell - cx) / ball, -1, 1)), -mostYaw, mostYaw);
+        const pitchTo = clamp(Math.asin(clamp((y / cell - cy) / ball, -1, 1)), -MOST_PITCH, MOST_PITCH);
+        if (yawTo === wantYaw && pitchTo === wantPitch) return;
+        wantYaw = yawTo;
+        wantPitch = pitchTo;
         wake();
     };
     const scheduleBlink = () => {
@@ -283,9 +292,11 @@
             scheduleBlink();
         }, 2600 + Math.random() * 4600);
     };
-    // A screen with no cursor on it: the eye looks about for itself.
+    // A screen with no cursor on it: the eye looks about for itself. Once there is one, it
+    // looks at that from then on.
     const scheduleRoam = () => {
         clearTimeout(roamTimer);
+        if (pointerSeen) return;
         roamTimer = window.setTimeout(() => {
             if (shown && !pointerSeen && !underProject && !document.hidden && !reducedMotion.matches) {
                 aim(Math.random() * cols * cell, Math.random() * rows * cell);
@@ -333,7 +344,11 @@
             // A phone's address bar coming and going is not a new screen.
             if (document.documentElement.clientWidth === builtWidth && Math.abs(window.innerHeight - builtHeight) < builtHeight * .16) return;
             build();
+            // Turned as it was, measured on the new screen, and aimed again where it looked.
+            lookX = ball * Math.sin(yaw) * Math.cos(pitch);
+            lookY = ball * Math.sin(pitch);
             whole();
+            if (pointerSeen) aim(lastX, lastY);
         }, 260);
     };
 
@@ -351,6 +366,9 @@
             shown = true;
             open = 1;
             yaw = pitch = wantYaw = wantPitch = lookX = lookY = 0;
+            // Brought in while a project is open (the frame monitor stepping the level), it
+            // waits behind it like everything else.
+            underProject = !!document.querySelector('.modal-overlay.active');
             build();
             lookAtSlider();
             whole();
@@ -370,6 +388,8 @@
             underProject = false;
             if (frame) cancelAnimationFrame(frame);
             frame = 0;
+            clearTimeout(gapTimer);
+            gapTimer = 0;
             blinkAt = -1;
             clearTimeout(blinkTimer);
             clearTimeout(roamTimer);

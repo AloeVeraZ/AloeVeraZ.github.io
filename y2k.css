@@ -1,8 +1,8 @@
 /* The dark web of the turn of the century: Low FX's hidden look.
 
-   Ten quick presses on the effects slider's Low stop find it, and after that two
-   quick presses turn it on and off (the slider code in portfolio.js). A reload forgets
-   it. The colour behind everything is a few gradients on the lattice's own fixed layer,
+   Two quick presses on the effects slider's Low stop turn it on and off (the slider code
+   in portfolio.js). A reload forgets it. The colour behind everything is a few gradients
+   on the backdrop's own fixed layer,
    painted once, so a scroll moves the page over them and never paints them again. The
    eye on top of them is y2k.js. All the rest is flat paint with no blur, frost, blend
    or mask. Every rule answers only to html[data-effects="low"][data-y2k].
@@ -16,7 +16,6 @@ html[data-effects="low"][data-y2k] {
     --y2k-pane: rgba(12, 7, 26, .84);
     --y2k-bar: rgba(78, 44, 200, .84);
     --surface: var(--y2k-pane);
-    --surface-raised: var(--y2k-pane);
     --ink: #f4f0ff;
     --muted: #c3b8df;
     --line: rgba(190, 165, 255, .28);
@@ -24,7 +23,6 @@ html[data-effects="low"][data-y2k] {
     --blue-light: #cdb6ff;
     --blue-soft: #e3b3ff;
     --red: #ff9d8a;
-    --yellow: #eadfff;
     --radius-card: .625rem;
     --radius-control: 999px;
     --radius-surface: .75rem;
@@ -54,7 +52,6 @@ html[data-effects="low"][data-y2k] .background-grid[data-look] {
         radial-gradient(70vmax 60vmax at 62% 46%, rgba(84, 36, 214, .6), transparent 70%),
         radial-gradient(44vmax 36vmax at 88% 12%, rgba(214, 50, 200, .3), transparent 70%),
         radial-gradient(46vmax 40vmax at 26% 92%, rgba(34, 70, 240, .3), transparent 70%);
-    background-size: auto;
     opacity: 1;
 }
 html[data-effects="low"][data-y2k] .background-grid::before { display: none; }

@@ -7,21 +7,22 @@
    black holes, go round and round and are swallowed with a flare and a spray of sparks;
    comets bend round the holes and are caught by them; every world is lit from the side of
    whatever burns nearest it, its moon going round in front and behind and throwing a
-   shadow as it crosses. The cursor has weight: the light behind it bends, and what is near
-   it is pushed aside and drifts back -- or, pushed hard enough toward a hole, goes in. A
-   press sends a shock out through all of it. The black holes bend the picture behind them
-   too, so the stars of the still sky are drawn round them in rings as they pass.
+   shadow as it crosses. The cursor has weight: the light behind it bends, and at High what
+   is near it is pushed aside and drifts back -- or, pushed hard enough toward a hole, goes
+   in. A press sends a shock out through all of it. The black holes bend the picture behind
+   them too, so the stars of the still sky are drawn round them in rings as they pass.
 
    Medium has the spiral of its still picture, and its heart is a hole that feeds; nine
-   worlds, orbs and holes hold still on the screen as the page scrolls over them, comets
-   crossing and the holes now and then taking one in, drawn thirty times a second unless
-   something is moving fast. High has its own galaxy at the top of the page and is
-   crowded with orbs that wander and can be pushed a long way, eight things to a screen,
-   at every frame; whatever a hole takes there comes apart on the way in. And a war across
-   all of it: two kinds of fighters hunting each other, steering round worlds, knocking
-   orbs about with their shots and pulled at by the holes, and landers setting down on
-   worlds. Left alone, the whole backdrop goes dark (portfolio.js) and this stops; moving
-   brings it back, with a flare.
+   things hold still on the screen as the page scrolls over them, always the same nine: two
+   far spirals, two ringed worlds, a world with a moon, a hole, a nebula and two dying
+   stars. Only comets, landers and what a hole takes in move there, drawn thirty times a
+   second unless a world is going in. High has its own galaxy at the top of the page and is
+   crowded with orbs that wander and can be pushed a long way, nine things to a screen
+   spread down the page, at every frame; whatever a hole takes there comes apart on the way
+   in. And a war across all of it: two kinds of fighters hunting each other, steering round
+   worlds, knocking orbs about with their shots and pulled at by the holes, and landers
+   setting down on worlds. Left alone, the whole backdrop goes dark (portfolio.js) and this
+   stops; moving brings it back, with a flare.
 
    All of it rests with the tab hidden and under an open project, and holds still for
    anyone who prefers reduced motion. Not fetched for Low. */
@@ -48,8 +49,8 @@
     // The colour of what an orb or a world breaks into: rock, ice, molten, light; a world.
     const SHARDS = ['176,156,140', '196,220,240', '255,130,60', '214,170,255', '206,176,146'];
     const shardOf = thing => (thing.kind === ORB ? SHARDS[thing.own < .3 ? 0 : thing.own < .55 ? 1 : thing.own < .8 ? 2 : 3] : SHARDS[4]);
-    // What each level may spend. `rest` is how many frames a second Medium draws while
-    // nothing is moving fast (0: every frame); `reach` is how hard a hole pulls on what it
+    // What each level may spend. `rest` is how many frames a second Medium draws while no
+    // world is going into a hole (0: every frame); `reach` is how hard a hole pulls on what it
     // has chosen to feed on; `spring` how hard what was pushed floats back, and `breaks`
     // whether a thing a hole has hold of comes apart as it goes in.
     const LEVELS = {
@@ -58,12 +59,12 @@
         medium: {
             perScreen: 9, fixed: true, odds: [.06, .15, .05, .14, .18, .09, .14, .04, .15], near: [0, 0], far: [0, 0], sharp: 1.25, eased: 1, rest: 30,
             push: 0, spring: 1.4, shock: 0, feed: [12, 22], reach: 34, fall: 4.2, comets: [14, 26], landers: [24, 42],
-            armed: false, galaxy: false, breaks: false, cursorLens: 2.5, dim: .8, mono: .5
+            armed: false, galaxy: false, breaks: false, cursorLens: 2.5, dim: .8, mono: .5, motes: 32
         },
         high: {
             perScreen: 9, odds: [.06, .08, .03, .42, .09, .05, .05, .05, .17], near: [.45, .95], far: [.12, .28], sharp: 2, eased: 1.5, rest: 0,
             push: 2400, spring: .45, shock: 620, feed: [6, 11], reach: 70, fall: 2.6, comets: [9, 16], landers: [14, 26],
-            armed: true, galaxy: true, breaks: true, cursorLens: 4, dim: .78, mono: .55
+            armed: true, galaxy: true, breaks: true, cursorLens: 4, dim: .78, mono: .55, motes: 56
         }
     };
     const DAMP = 1.3;
@@ -145,8 +146,9 @@
         vec3 lightTint(float t) {
             return t < 0.5 ? vec3(0.78, 0.86, 1.0) : t < 1.5 ? vec3(1.0, 0.5, 0.36) : t < 2.5 ? vec3(1.0, 0.72, 0.48) : vec3(0.86, 0.82, 0.78);
         }
-        // Stars nearer than the picture, so a scroll carries them past it, each layer at its
-        // own pace: one star at most to a cell, most of them faint, all of them twinkling.
+        // Stars nearer than the picture: at High a scroll carries them past it, each of its
+        // two layers at its own pace, and Medium's one layer holds still. One star at most to
+        // a cell, most of them faint, all of them twinkling.
         vec3 stars(vec2 p, float cell, float seed, float bright) {
             vec2 id = floor(p / cell);
             float h = hash(id + seed);
@@ -460,14 +462,18 @@
     let flare = 0, shockX = 0, shockY = 0, shockAt = -1, shockStrength = 1;
     let scrolled = 0, depth = 0, lastScrollAt = -1e9, lastPointerAt = -1e9, underProject = false, reducedMotion = null, resizeTimer = 0;
     let dark = false, darkTimer = 0, fastThings = 0, frameNumber = 0;
-    let skyTexture = null, skyPicture = null, skyReady = false, skyMap = [0, 0, 0, 0];
+    // `skyPicture` is the still sky's picture last handed over, `skyLoaded` the one on the
+    // graphics card.
+    let skyTexture = null, skyPicture = null, skyLoaded = null, skyReady = false, skyMap = [0, 0, 0, 0];
 
     /* ---- What is scattered down the page ---------------------------------------
-       So many to a screen's worth of scrolling, each with its own place on the screen at
-       its own point of the scroll and its own speed past it, so going down the page is
-       going past things at different depths. Each is made from its own number, so the
-       same page always has the same things in the same places, and a page that grows only
-       gets more of them. Each floats a little about its place; the rest is what acts on it. */
+       At High, so many to a screen's worth of scrolling, each with its own place on the
+       screen at its own point of the scroll and its own speed past it, so going down the
+       page is going past things at different depths, and each floats a little about its
+       place. Medium's nine hold still on the screen as the page scrolls over them. Each is
+       made from its own number, so the same page always has the same things in the same
+       places, and a page that grows only gets more of them. Any other move is what acts on
+       it. */
     let things = [];
     const view = [], holes = [], worlds = [];
     // The heart of the galaxy (High's own, or the spiral in Medium's picture): a hole that
@@ -524,7 +530,7 @@
             drift: spec.fixed ? 0 : (kind === ORB ? 24 + random() * 46 : 6 + random() * 18) * unit * 1.5, wobble: TAU / (kind === ORB ? 10 + random() * 14 : 20 + random() * 25),
             shedding: 0,
             sx: 0, sy: 0, ox: 0, oy: 0, vx: 0, vy: 0, fade: 1, shrink: 1, heat: 0, gone: false, goneAt: 0, away: 30, fall: null, pullBy: null, pullUntil: 0,
-            flare: 0, spinBy: 0, nextFeed: random() * spec.feed[1], lens: null, sense: random() < .5 ? -1 : 1, seen: -1,
+            flare: 0, spinBy: 0, nextFeed: clock + random() * spec.feed[1], lens: null, sense: random() < .5 ? -1 : 1, seen: -1,
             lit: .45, lx: -.6, ly: -.45, tint: 3
         };
     };
@@ -542,17 +548,21 @@
     /* ---- The picture behind ------------------------------------------------------
        setupStillSky hands over the picture it has laid on the page, so what the holes bend
        is the sky actually there; this works out where on the screen the stylesheet put it
-       (center / cover), and at Medium where the spiral it holds has its heart. */
-    const takePicture = detail => {
-        skyPicture = detail || null;
+       (center / cover), and at Medium where the spiral it holds has its heart. Put away (at
+       Low, under an eye or the desk), it only keeps what it is handed: putting a picture on
+       the graphics card holds the page up for tens of milliseconds, so that waits until the
+       sky is shown again, and a copy of a picture the page no longer shows is let go. */
+    const loadPicture = () => {
+        if (skyLoaded === skyPicture) return;
+        skyLoaded = skyPicture;
         skyReady = false;
-        if (!gl || !detail) return;
+        if (!gl || broken || !skyPicture) return;
         if (!skyTexture) skyTexture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, skyTexture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         try {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, detail.picture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skyPicture.picture);
         } catch (error) {
             return;
         }
@@ -561,7 +571,17 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         skyReady = true;
-        if (width) mapSky();
+    };
+    const takePicture = detail => {
+        skyPicture = detail || null;
+        if (shown) {
+            loadPicture();
+            if (width) mapSky();
+        } else if (skyTexture && skyLoaded !== skyPicture) {
+            gl.deleteTexture(skyTexture);
+            skyTexture = skyLoaded = null;
+            skyReady = false;
+        }
     };
     // Where this visit's galaxy stands, as shares of the screen: chosen with the still sky
     // (portfolio.js, skySpot), anywhere across it.
@@ -643,6 +663,9 @@
         let w = 1, h = 1, ratio = 1, armed = false, pointerX = -1e5, pointerY = -1e5, lastScroll = null, drew = true, time = 0;
         let nextComet = 3, nextLander = 9;
         const ships = [], bolts = [], blasts = [], bits = [], comets = [], landers = [];
+        // What is falling into the galaxy's heart, and the heart as it is this frame.
+        const motes = [], TRAIL = 4;
+        let inflowHole = null, inflowHeat = 0;
         const pull = [0, 0];
         let fellInto = null;
         const glows = new Map();
@@ -668,16 +691,14 @@
            stretched between its horns, a row of pale lights along the leading edge. */
         const SPRITE_SCALE = 5;
         const sprites = new Map();
-        const sprite = (kind, size) => {
-            const key = `${kind}${size}`;
-            if (sprites.has(key)) return sprites.get(key);
-            const span = size * 2.8, px = Math.ceil(span * 2 * SPRITE_SCALE);
+        const sprite = kind => {
+            if (sprites.has(kind)) return sprites.get(kind);
+            const s = KINDS[kind].size, span = s * 2.8, px = Math.ceil(span * 2 * SPRITE_SCALE);
             const picture = document.createElement('canvas');
             picture.width = picture.height = px;
             const c = picture.getContext('2d');
             c.translate(px / 2, px / 2);
             c.scale(SPRITE_SCALE, SPRITE_SCALE);
-            const s = size;
             const dot = (x, y, r, rgb, alpha) => {
                 const light = c.createRadialGradient(x, y, 0, x, y, r);
                 light.addColorStop(0, `rgba(${rgb},${alpha})`);
@@ -780,13 +801,13 @@
                 }
             }
             const made = { picture, half: span };
-            sprites.set(key, made);
+            sprites.set(kind, made);
             return made;
         };
         // Any size from the one picture of each, so a lander shrinking on its way down asks
         // for no new ones.
         const hull = (kind, size) => {
-            const made = sprite(kind, KINDS[kind].size);
+            const made = sprite(kind);
             const span = made.half * size / KINDS[kind].size;
             context.drawImage(made.picture, -span, -span, span * 2, span * 2);
         };
@@ -813,9 +834,9 @@
                 hp: KINDS[kind].hp, cooldown: Math.random(), wobble: Math.random() * TAU, alive: true
             });
         };
-        const blowUp = (x, y, size, rgb, count = 10) => {
+        const blowUp = (x, y, size, rgb) => {
             blasts.push({ x, y, age: 0, size, rgb });
-            for (let i = 0; i < count; i++) {
+            for (let i = 0; i < 10; i++) {
                 const a = Math.random() * TAU, speed = 40 + Math.random() * 160;
                 bits.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: .6 + Math.random() * .8, rgb });
             }
@@ -836,10 +857,9 @@
         };
         const launchLander = worldList => {
             const world = worldList[Math.floor(Math.random() * worldList.length)];
-            if (!world) return false;
+            if (!world) return;
             const kind = Math.random() < .5 ? 'ash' : 'pale', fromLeft = Math.random() < .5;
             landers.push({ kind, x: fromLeft ? -30 : w + 30, y: h * (.15 + Math.random() * .7), angle: fromLeft ? 0 : Math.PI, world, stage: 'in', t: 0, stay: 4 + Math.random() * 4, scale: 1, alpha: 1, spotX: 0, spotY: 0, fromX: 0, fromY: 0, speed: 0 });
-            return true;
         };
         const worldRadius = world => world.size * (world.kind === RINGED ? .42 : world.kind === ORB ? .5 : .4) * world.shrink;
         return {
@@ -888,8 +908,45 @@
                     bits.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: .6 + Math.random() * .8, rgb: '255,190,140', chunk: true });
                 }
             },
-            // Only what is quick needs every frame: a lander comes in slowly enough without.
-            busy: () => comets.length > 0 || bits.length > 0 || blasts.length > 0,
+            /* Matter falling into the galaxy's heart: motes of dust and gas on the plane of
+               its disc, each going round and in, a little faster with every turn as anything
+               round a hole does, warming as it comes, and gone at the edge of the dark. Those
+               on the far side go behind the hole; those on the near side cross in front of it.
+               More of it, and quicker, for a while after the hole has fed. In hole radii: they
+               come in from about seven and are gone at 1.2. Held to `count`, a few short strokes
+               a frame, so it costs next to nothing beside the sky under it. */
+            inflow(dt, hole, count, heat) {
+                inflowHole = hole;
+                inflowHeat = heat;
+                if (!hole || !count) {
+                    motes.length = 0;
+                    return;
+                }
+                const OUT = 7.2, IN = 1.2;
+                const spawn = (mote, anywhere) => {
+                    // Placed as many as are falling would be: more of them further out, where
+                    // they are slow, the first time; from the outside after.
+                    mote.r = anywhere ? Math.sqrt(IN * IN + Math.random() * (OUT * OUT - IN * IN)) : OUT - Math.random() * .8;
+                    mote.a = Math.random() * TAU;
+                    mote.bright = .45 + Math.random() * .55;
+                    mote.width = .8 + Math.random() * .7;
+                };
+                while (motes.length < count) {
+                    const mote = {};
+                    spawn(mote, true);
+                    motes.push(mote);
+                }
+                motes.length = count;
+                const hurry = 1 + heat * .9;
+                for (const mote of motes) {
+                    // In faster the nearer it is, and round as a thing in orbit goes round.
+                    mote.fall = 1.15 * hurry / mote.r;
+                    mote.turn = 2.9 * Math.pow(mote.r, -1.5) * (1 + heat * .4);
+                    mote.r -= dt * mote.fall;
+                    mote.a += dt * mote.turn;
+                    if (mote.r < IN) spawn(mote, false);
+                }
+            },
             update(dt, depthNow, scrolledBy, holeList, worldList, feed, knock) {
                 time += dt;
                 const by = lastScroll === null ? 0 : scrolledBy - lastScroll;
@@ -1117,12 +1174,46 @@
                 prune(landers);
             },
             draw() {
-                const any = comets.length || bits.length || blasts.length || landers.length || ships.length || bolts.length;
+                const falling = inflowHole && motes.length;
+                const any = comets.length || bits.length || blasts.length || landers.length || ships.length || bolts.length || falling;
                 if (!any && !drew) return;
                 drew = !!any;
                 context.setTransform(ratio, 0, 0, ratio, 0, 0);
                 context.clearRect(0, 0, w, h);
                 if (!any) return;
+                // What is falling into the heart, each trailing the arc it has just come round,
+                // fading behind it, so what is seen is things going round and in.
+                if (falling) {
+                    const hole = inflowHole, hr = hole.hr;
+                    context.globalCompositeOperation = 'lighter';
+                    context.lineCap = 'round';
+                    for (const mote of motes) {
+                        let [x, y] = outOfDisc(hole, mote.r * hr, mote.a);
+                        // Grey and faint far out, warmer and brighter coming in, white-hot at the last.
+                        const near = smooth(7.2, 1.4, mote.r);
+                        const edge = smooth(7.2, 6.3, mote.r) * smooth(1.2, 1.5, mote.r);
+                        const alpha = (.3 + .7 * near) * mote.bright * edge * (1 + inflowHeat * .6);
+                        if (alpha < .01) continue;
+                        const rgb = near > .8 ? '255,232,205' : near > .45 ? '240,204,168' : '200,206,218';
+                        const width = mote.width * (.9 + near * .6);
+                        for (let k = 1; k <= TRAIL; k++) {
+                            const back = k * .14;
+                            const [tx, ty] = outOfDisc(hole, (mote.r + mote.fall * back) * hr, mote.a - mote.turn * back);
+                            // Behind the hole, it is hidden by the dark.
+                            const behind = Math.sin(mote.a - mote.turn * back) < 0 ? smooth(hr * .96, hr * 1.06, Math.hypot(x - hole.sx, y - hole.sy)) : 1;
+                            const share = 1 - (k - 1) / TRAIL;
+                            context.strokeStyle = `rgba(${rgb},${Math.min(1, alpha * share * behind).toFixed(3)})`;
+                            context.lineWidth = width * (.45 + .55 * share);
+                            context.beginPath();
+                            context.moveTo(tx, ty);
+                            context.lineTo(x, y);
+                            context.stroke();
+                            x = tx;
+                            y = ty;
+                        }
+                    }
+                    context.globalCompositeOperation = 'source-over';
+                }
                 // The fighters and the landers: a faint wake behind, then the craft.
                 context.globalCompositeOperation = 'lighter';
                 context.lineCap = 'round';
@@ -1202,10 +1293,18 @@
         };
     }
 
+    // The sky cannot go on here: it is put away for the visit, and the page paints what it
+    // would have floated into the still picture instead (portfolio.js, setupDeferredCosmos).
+    const giveUp = () => {
+        if (broken) return;
+        broken = true;
+        window.portfolioCosmos.hide();
+        document.dispatchEvent(new Event('portfolio:cosmos-failed'));
+    };
     const setUp = target => {
         canvas = target;
         gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
-        if (!gl) throw new Error('no WebGL 2');
+        if (!gl || gl.isContextLost()) throw new Error('no WebGL 2');
         // A graphics card the browser only imitates, on the processor, would spend the whole
         // machine on this. The page keeps the still sky instead.
         const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -1213,15 +1312,21 @@
         if (/swiftshader|llvmpipe|software|basic render/i.test(renderer)) throw new Error('no graphics card');
         building = gl.getExtension('KHR_parallel_shader_compile');
         gl.bindVertexArray(gl.createVertexArray());
+        // A graphics card that resets under it (its driver crashed or updated, the machine
+        // woken from sleep) takes everything this had put on it, so the sky gives up rather
+        // than go on drawing nothing.
+        canvas.addEventListener('webglcontextlost', giveUp);
         nearCanvas = document.createElement('canvas');
-        nearCanvas.className = 'cosmos cosmos-near';
+        nearCanvas.className = 'cosmos';
         nearCanvas.setAttribute('aria-hidden', 'true');
         nearCanvas.hidden = true;
         canvas.after(nearCanvas);
         near = makeNear(nearCanvas);
         if (window.portfolioStillSky) takePicture(window.portfolioStillSky);
     };
-    const size = () => {
+    // `keep`: only the canvas changes (on a machine the page has eased), so what is out there
+    // stays as it is; a pushed orb is not snapped home, nor anything a hole took brought back.
+    const size = keep => {
         width = document.documentElement.clientWidth;
         height = window.innerHeight;
         const tall = height >= width * 1.1;
@@ -1238,6 +1343,7 @@
         gl.viewport(0, 0, canvas.width, canvas.height);
         near.size(width, height, scale, spec.armed);
         mapSky();
+        if (keep) return;
         things = [];
         scatter();
         heart.nextFeed = clock + 3 + Math.random() * 4;
@@ -1345,7 +1451,7 @@
             } else if (isWorld(thing.kind) && !thing.fall) worlds.push(thing);
         }
         // ---- What acts on what. The worlds and stars float back to their places when let
-        // go; the cursor pushes them aside, and the holes pull at them.
+        // go, and the holes pull at them; at High the cursor pushes them aside too.
         const pushed = cursorSeen ? spec.push : 0;
         for (const thing of view) {
             if (!MOVES[thing.kind]) continue;
@@ -1468,6 +1574,7 @@
             world.tint = tint;
         }
         near.update(dt, depth, spec.fixed ? 0 : scrolled, holes, worlds, feed, knock);
+        near.inflow(dt, heart.seen === frameNumber ? heart.lens : null, spec.motes, heart.flare);
     };
 
     const draw = now => {
@@ -1545,22 +1652,19 @@
     };
     const tick = now => {
         frame = requestAnimationFrame(tick);
-        // Medium draws thirty times a second while nothing is moving fast, and so does High
-        // on a machine the page has eased; a scroll, the cursor moving, a comet, a world
-        // going in or sparks flying take either to every frame. Every frame redrawn is the
-        // glass over it filtered again, which is most of what a frame of this costs.
+        // Medium draws thirty times a second, and so does High on a machine the page has
+        // eased: at Medium only a world going into a hole takes it to every frame, and on an
+        // eased High only scrolling or the cursor moving. Every frame redrawn is the glass
+        // over it filtered again, which is most of what a frame of this costs.
         // On an eased machine High keeps every frame for while someone is scrolling or moving;
         // what moves fast on its own there is never far from moving, and the frames are dear.
         // Medium's sky holds still, so it stays at thirty through a scroll (nothing in it
         // changes), the cursor moving (it only bends the light under it a little) and a comet
-        // crossing; only a world going in takes it to every frame. What a frame costs is mostly
-        // the glass over it filtered again, and any change under the glass sets that off, so
-        // drawing the comets alone between the sky's frames saved nothing. On this laptop's
-        // 3x screen Medium had been drawing about 55 frames a second with a comet out, which
-        // was most of the time.
+        // crossing. Any change under the glass sets the filtering off, so drawing the comets
+        // alone between the sky's frames saved nothing. On this laptop's 3x screen Medium had
+        // been drawing about 55 frames a second with a comet out, which was most of the time.
         const rest = spec.rest || (eased || root.dataset.effectsPace ? 30 : 0);
-        const still = spec.fixed;
-        const quick = !rest || (!still && (now - lastScrollAt < 450 || now - lastPointerAt < 600)) || (spec.rest && (fastThings > 0 || (!still && near.busy())));
+        const quick = !rest || (spec.fixed ? fastThings > 0 : now - lastScrollAt < 450 || now - lastPointerAt < 600);
         if (lastFrame && !quick && now - lastFrame < 1000 / rest - 4) return;
         const dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : 1 / 60;
         lastFrame = now;
@@ -1595,9 +1699,7 @@
             try {
                 finishProgram(prog);
             } catch (error) {
-                broken = true;
-                window.portfolioCosmos.hide();
-                document.dispatchEvent(new Event('portfolio:cosmos-failed'));
+                giveUp();
                 return;
             }
         }
@@ -1655,6 +1757,9 @@
         near.press(event.clientX, event.clientY);
     };
     const onScroll = () => {
+        // Medium's sky holds still as the page scrolls over it: nothing to measure or add.
+        // A change to High measures it afresh (show, arrive).
+        if (spec.fixed) return;
         measureDepth();
         lastScrollAt = performance.now();
         // The page grows as its projects open; there is more of it to scatter things down.
@@ -1676,8 +1781,16 @@
         clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(() => {
             if (!shown || canvas.hidden) return;
+            // A phone's address bar coming and going is not a new screen: what is out there
+            // stays where it is, as the eyes do (iris.js, ego.js).
+            if (document.documentElement.clientWidth === width && Math.abs(window.innerHeight - height) < height * .16) return;
             size();
             measureDepth();
+            // Drawn again at once, and stepped first, so what is drawn is the new screen's
+            // things and not the last one's: held still, nothing else would step them. Not
+            // while the level's program is still being built; startLoop draws it once it is.
+            if (!prog.uniforms) return;
+            step(1 / 60);
             draw(performance.now());
         }, 200);
     };
@@ -1728,8 +1841,23 @@
                 return true;
             }
             shown = true;
-            dark = false;
-            if (!canvas.hidden || prog.uniforms) {
+            // Brought in after the backdrop has gone dark with nobody moving since, or under
+            // an open project, it waits as it would have had it been here all along: the next
+            // move wakes it with its flare, and the project closing starts it.
+            dark = root.classList.contains('effects-background-idle');
+            underProject = !!document.querySelector('#project-modal.active');
+            // The cursor where it is now (portfolio.js keeps it), not where it was when this
+            // was put away; a finger is a cursor only while it is down.
+            const pointer = window.portfolioPointer;
+            cursorSeen = !!pointer?.mouse;
+            if (cursorSeen) {
+                cursorX = pointer.x;
+                cursorY = pointer.y;
+            }
+            near.pointer(cursorSeen ? cursorX : -1e5, cursorSeen ? cursorY : -1e5);
+            // A picture the still sky handed over while this was put away goes on the card now.
+            loadPicture();
+            if (prog.uniforms) {
                 canvas.hidden = false;
                 nearCanvas.hidden = false;
                 size();
@@ -1758,6 +1886,7 @@
             if (!shown) return;
             shown = false;
             dark = false;
+            underProject = false;
             stopLoop();
             clearTimeout(resizeTimer);
             clearTimeout(darkTimer);
@@ -1791,8 +1920,11 @@
             if (eased) return;
             eased = true;
             if (shown && !canvas.hidden) {
-                size();
+                size(true);
                 measureDepth();
+                // Its new size has cleared it, so it is drawn again at once, as it was: held
+                // still, or resting, nothing else would.
+                if (prog.uniforms) draw(performance.now());
             }
         }
     };

@@ -115,77 +115,110 @@ def name_of(item, fallback):
     return item.get('id') or item.get('title') or fallback if isinstance(item, dict) else fallback
 
 def exists(path):
-    return os.path.isfile(path.split('?')[0].split('#')[0])
+    # As GitHub Pages finds it: a leading / is the site's root, and the case of
+    # every name has to match, though Windows would find the file either way.
+    here = '.'
+    for part in path.split('?')[0].split('#')[0].strip('/').split('/'):
+        if part not in os.listdir(here):
+            return False
+        here = os.path.join(here, part)
+    return os.path.isfile(here)
 
 def local(url):
     return url and not re.match(r'^(https?:|mailto:|#)', url)
 
+repeated = []
+def keep_order(pairs):
+    seen = collections.OrderedDict()
+    for key, value in pairs:
+        if key in seen:
+            repeated.append(key)
+        seen[key] = value
+    return seen
+
 raw = io.open('portfolio-data.json', encoding='utf-8').read()
 try:
-    data = json.loads(raw, object_pairs_hook=collections.OrderedDict)
+    data = json.loads(raw, object_pairs_hook=keep_order)
 except ValueError as error:
     print('portfolio-data.json is not valid JSON: %s' % error)
     print('(a missing or extra comma, or a quote left open, is the usual cause)')
     sys.exit(1)
+for key in repeated:
+    problem('the file', '"%s" is written twice in one object; the page only sees the second' % key)
+if repeated and FIX:
+    print('Not fixing anything while a field is written twice: --fix would drop one of them.')
+    FIX = False
 
 data = check(data, 'data', 'data')
 
 # What the format alone cannot say.
-def check_link(link, where, may_be_empty=True):
-    if not isinstance(link, dict):
+def check_link(link, where):
+    if not isinstance(link, dict) or not isinstance(link.get('url', ''), str):
+        return
+    url = link.get('url', '').strip()
+    # A link with no url is left off the page: the way to keep a place for one.
+    if not url:
         return
     if link.get('type') not in LINK_TYPES:
         problem(where, 'type "%s" is not one of %s' % (link.get('type'), ', '.join(LINK_TYPES)))
-    if not may_be_empty and not link.get('url'):
-        problem(where, 'has no url')
-    if local(link.get('url', '')) and not exists(link['url']):
-        problem(where, 'points at %s, which is not in the repository' % link['url'])
+    if local(url) and not exists(url):
+        problem(where, 'points at %s, which is not in the repository' % url)
 
-profile = data.get('profile') or {}
-for i, link in enumerate(profile.get('actions', [])):
+def listed(value):
+    return value if isinstance(value, list) else []
+
+profile = data.get('profile') if isinstance(data.get('profile'), dict) else {}
+for i, link in enumerate(listed(profile.get('actions'))):
     check_link(link, 'profile.actions[%d]' % i)
-for i, link in enumerate(profile.get('links', [])):
+for i, link in enumerate(listed(profile.get('links'))):
     check_link(link, 'profile.links[%d]' % i)
-    if link.get('type') == 'email' and link.get('url') and not link['url'].startswith('mailto:'):
+    if isinstance(link, dict) and link.get('type') == 'email' and isinstance(link.get('url'), str) \
+            and link['url'] and not link['url'].startswith('mailto:'):
         problem('profile.links[%d]' % i, 'an email link\'s url starts with mailto:')
 
 collection_ids = []
 categories = set()
-for i, folder in enumerate(data.get('collections', [])):
+for i, folder in enumerate(listed(data.get('collections'))):
+    if not isinstance(folder, dict):
+        continue
     where = 'collections[%d] (%s)' % (i, name_of(folder, i))
-    if folder.get('id') in collection_ids:
+    folder_id = folder.get('id') if isinstance(folder.get('id'), str) else ''
+    if folder_id in collection_ids:
         problem(where, 'has the same id as another folder')
-    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', folder.get('id', '')):
+    if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', folder_id):
         problem(where, 'id should be lower-case words joined by hyphens')
-    collection_ids.append(folder.get('id'))
-    categories.update(folder.get('categories', []))
+    collection_ids.append(folder_id)
+    categories.update(c for c in listed(folder.get('categories')) if isinstance(c, str))
 
 anchors = set(collection_ids) | {'about', 'skills', 'projects', 'contact', 'hero', 'main-content'}
-for i, card in enumerate(data.get('about', [])):
-    link = card.get('link') or {}
+for i, card in enumerate(listed(data.get('about'))):
+    link = card.get('link') if isinstance(card, dict) else None
+    if not isinstance(link, dict):
+        continue
     check_link(link, 'about[%d].link' % i)
-    url = link.get('url', '')
+    url = link.get('url', '') if isinstance(link.get('url'), str) else ''
     if url.startswith('#') and url[1:] not in anchors:
         problem('about[%d].link' % i, '%s is not a folder or section on the page' % url)
 
 project_ids = set()
 featured_orders = collections.Counter()
 collection_orders = collections.Counter()
-for i, project in enumerate(data.get('projects', [])):
+for i, project in enumerate(listed(data.get('projects'))):
     if not isinstance(project, dict):
         continue
     where = 'projects[%d] (%s)' % (i, name_of(project, i))
-    pid = project.get('id', '')
+    pid = project.get('id') if isinstance(project.get('id'), str) else ''
     if pid in project_ids:
         problem(where, 'has the same id as another project')
     project_ids.add(pid)
     if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', pid):
         problem(where, 'id should be lower-case words joined by hyphens')
-    for category in [project.get('category')] + list(project.get('additionalCategories', [])):
+    for category in [project.get('category')] + listed(project.get('additionalCategories')):
         if category not in categories:
             problem(where, 'category "%s" is in no folder, so the project shows nowhere in the archive' % category)
     if project.get('featured'):
-        if not project.get('featuredOrder', 0) >= 1:
+        order = project.get('featuredOrder', 0)
+        if not isinstance(order, int) or isinstance(order, bool) or order < 1:
             problem(where, 'is featured, so its featuredOrder should be 1 or more')
         featured_orders[project.get('featuredOrder')] += 1
     elif project.get('featuredOrder'):
@@ -194,21 +227,28 @@ for i, project in enumerate(data.get('projects', [])):
     if project.get('imagePresentation') not in ('photo', 'certificate'):
         problem(where, 'imagePresentation should be "photo" or "certificate"')
     for key in ('image', 'motionImage'):
-        if project.get(key) and not exists(project[key]):
+        if isinstance(project.get(key), str) and project[key] and not exists(project[key]):
             problem(where, '%s %s is not in the repository' % (key, project[key]))
     if project.get('image') and not project.get('imageAlt'):
         problem(where, 'has an image but no imageAlt')
-    for part in (project.get('imageSrcset') or '').split(','):
+    if project.get('motionImage') and not (project.get('motionImageAlt') or project.get('imageAlt')):
+        problem(where, 'has a motionImage but no motionImageAlt (or imageAlt) to describe it')
+    srcset = project.get('imageSrcset') if isinstance(project.get('imageSrcset'), str) else ''
+    for part in srcset.split(','):
         path = part.strip().split(' ')[0]
         if path and not exists(path):
             problem(where, 'imageSrcset names %s, which is not in the repository' % path)
-    headings = (project.get('overview') or {}).get('headings', [])
+    overview = project.get('overview') if isinstance(project.get('overview'), dict) else {}
+    headings = listed(overview.get('headings'))
     if len(headings) not in (0, 3):
         problem(where, 'overview.headings should have three headings, or none for the usual ones')
     check_link(project.get('quickLink'), where + '.quickLink')
-    for j, link in enumerate(project.get('links', [])):
-        check_link(link, '%s.links[%d]' % (where, j), may_be_empty=False)
-    for j, item in enumerate(project.get('media', [])):
+    for j, link in enumerate(listed(project.get('links'))):
+        check_link(link, '%s.links[%d]' % (where, j))
+    video = project.get('featureVideo') if isinstance(project.get('featureVideo'), dict) else {}
+    if isinstance(video.get('src'), str) and video['src'] and not re.match(r'^https://(www\.)?(youtube(-nocookie)?\.com|youtu\.be)/', video['src']):
+        problem(where + '.featureVideo', 'src should be a YouTube link')
+    for j, item in enumerate(listed(project.get('media'))):
         if not isinstance(item, dict):
             continue
         at = '%s.media[%d]' % (where, j)
@@ -223,7 +263,7 @@ for i, project in enumerate(data.get('projects', [])):
                 problem(at, 'fit should be "cover" or "contain"')
             if item.get('src') and not item.get('alt'):
                 problem(at, 'has a picture but no alt')
-            if local(item.get('src', '')) and not exists(item['src']):
+            if isinstance(item.get('src'), str) and local(item['src']) and not exists(item['src']):
                 problem(at, '%s is not in the repository' % item['src'])
 for order, count in featured_orders.items():
     if count > 1:
@@ -246,9 +286,10 @@ def copy(match):
     if not isinstance(value, str):
         problem('index.html', 'data-content="%s" names nothing in the data' % path)
         return match.group(0)
-    shown = html.unescape(re.sub(r'\s+', ' ', inner)).strip()
+    spaced = lambda text: re.sub(r'[ \t\n\r\f]+', ' ', text).strip()
+    shown = spaced(html.unescape(inner))
     hidden = re.search(r'\shidden(\s|$|=)', attributes) is not None
-    if shown == value and hidden == (not value):
+    if shown == spaced(value) and hidden == (not value):
         return match.group(0)
     problem('index.html', 'its first-paint copy of %s is not the data\'s' % path)
     attributes = re.sub(r'\shidden(?=\s|$)', '', attributes) + ('' if value else ' hidden')

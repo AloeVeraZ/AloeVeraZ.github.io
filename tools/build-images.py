@@ -65,7 +65,9 @@ total_before = total_after = 0
 report = []
 for path in sorted(glob.glob("assets/*")):
     ext = os.path.splitext(path)[1].lower()
-    if ext == ".svg":
+    # A WebP is what this makes: saving one again would only lose a little more of
+    # it each run, in place.
+    if ext in (".svg", ".webp"):
         continue
     before = os.path.getsize(path)
     out = os.path.splitext(path)[0] + ".webp"

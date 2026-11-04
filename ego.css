@@ -1,7 +1,7 @@
 /* The eye's look on the page (ego.js has the eye itself): Low's other look (y2k.css),
    rule for rule, with High's glass kept. Not fetched until a visitor asks for it, and
-   every rule answers only to html[data-ego], which portfolio.js sets only in High FX,
-   so nothing here reaches Low or Medium. The lean, the lift, the bend, the frost, the
+   every rule but the eye's own canvas answers only to html[data-ego], which portfolio.js
+   sets only in High FX, so nothing here reaches Low or Medium. The lean, the lift, the bend, the frost, the
    rings and the rims are the page's own and keep working as they do. */
 .ego-scene {
     position: fixed;
@@ -12,17 +12,11 @@
     height: 100%;
     pointer-events: none;
 }
-.ego-scene[hidden] { display: none; }
-/* A press goes straight through the crossfade to the page under it. */
-::view-transition { pointer-events: none; }
 
 html[data-effects="high"][data-ego] {
     --bg: #040209;
-    /* Everything that can be seen through is seen through by exactly this much. */
-    --y2k-pane: rgba(12, 7, 26, .84);
-    --y2k-bar: rgba(78, 44, 200, .84);
+    /* The panes and the bar are High's own, at the end of this file. */
     --surface: var(--y2k-pane);
-    --surface-raised: var(--y2k-pane);
     --ink: #f4f0ff;
     --muted: #c3b8df;
     --line: rgba(190, 165, 255, .28);
@@ -30,14 +24,11 @@ html[data-effects="high"][data-ego] {
     --blue-light: #cdb6ff;
     --blue-soft: #e3b3ff;
     --red: #ff9d8a;
-    --yellow: #eadfff;
     --radius-card: .625rem;
     --radius-control: 999px;
     --radius-surface: .75rem;
-    --glass-surface: var(--y2k-pane);
     --glass-surface-dense: rgba(16, 10, 32, .96);
     --glass-edge-paint: transparent;
-    --glass-edge-lights: inset 0 0 0 0 transparent;
     --glass-sheen: none;
     --glass-shadow: none;
     --glass-lit-body: #5a3bd0;

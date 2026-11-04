@@ -157,16 +157,24 @@ try {
     # moving it up when the page had not is not. The third time, the page
     # stops stepping it down for the rest of the visit.
     $overrides = { & $js "sessionStorage.getItem('portfolio-effects-overrides')" }
+    # The page puts a chosen level up inside its transition, and stores it again then: storage
+    # written by the test before that lands is overwritten by it. So wait for it before a reload.
+    $landed = { param($want)
+        $polls = 0
+        while (((& $js "document.documentElement.dataset.effects") -ne $want -or (& $js "'shift' in document.documentElement.dataset")) -and $polls -lt 40) { Start-Sleep -Milliseconds 100; $polls++ }
+    }
     & $js "(() => { ['portfolio-effects-level', 'portfolio-effects-lag', 'portfolio-effects-overrides'].forEach(k => sessionStorage.removeItem(k)); return 1; })()" | Out-Null
     Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     $fresh = & $js $level | ConvertFrom-Json
     Set-EffectsLevel $page 'high' | Out-Null
+    & $landed 'high'
     Check 'a fresh visit starts Medium, and moving up unprompted is not counted' ($fresh.effects -eq 'medium' -and $fresh.reason -eq 'default' -and $null -eq (& $overrides)) "$($fresh.effects)/$($fresh.reason) overrides=$(& $overrides)"
     & $js "(() => { sessionStorage.setItem('portfolio-effects-lag', 'medium'); return 1; })()" | Out-Null
     Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }
     Wait-PageReady $page
     Set-EffectsLevel $page 'high' | Out-Null
+    & $landed 'high'
     Check 'moving it back up after a step down is counted' ((& $overrides) -eq '1') "overrides=$(& $overrides)"
     & $js "(() => { sessionStorage.setItem('portfolio-effects-overrides', '2'); sessionStorage.setItem('portfolio-effects-lag', 'low'); return 1; })()" | Out-Null
     Invoke-PageJs $page '(window.__stale = 1)' | Out-Null; Invoke-Page $page 'Page.reload' | Out-Null; $fresh = 0; while ((Invoke-PageJs $page '!!window.__stale') -and $fresh -lt 100) { Start-Sleep -Milliseconds 100; $fresh++ }

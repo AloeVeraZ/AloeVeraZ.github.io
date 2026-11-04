@@ -8,8 +8,10 @@ actually on. The modal keeps using the full-size file.
 
 Animated images are skipped: re-encoding every frame at a second size costs more
 bytes on disk than it saves on the wire for the handful of cards that use one.
+So is every picture no card shows: the project sheet and its gallery use the
+full-size file, so a smaller one of those would never be asked for.
 """
-import os, glob
+import glob, io, json, os
 from PIL import Image
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,8 +21,15 @@ CARD_WIDTH = 900
 saved_before = saved_after = 0
 made = skipped = 0
 
+data = json.loads(io.open("portfolio-data.json", encoding="utf-8").read())
+card_images = {project.get("image") for project in data.get("projects", [])
+               if isinstance(project, dict) and project.get("image")}
+
 for path in sorted(glob.glob("assets/*.webp")):
     if path.endswith("-900.webp"):
+        continue
+    if path.replace(os.sep, "/") not in card_images:
+        skipped += 1
         continue
     im = Image.open(path)
     if getattr(im, "n_frames", 1) > 1:

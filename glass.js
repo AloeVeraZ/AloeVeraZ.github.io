@@ -23,12 +23,11 @@
               cursor, a slider being swiped.
      lens     High FX in Safari, Firefox, and every browser on iOS (all of
               them WebKit). None of those can run an SVG filter on a backdrop,
-              so the bar frosts the page behind it instead and bends the sky --
-              which this site paints itself -- on its own canvas: portfolio.js
-              calls paintBackdrop() once a frame. Cards and buttons frost.
+              so the bar, the cards and the buttons frost what is behind them
+              and nothing bends; the glint still follows the cursor along the
+              bar.
      frost    Low and Medium FX, where the stylesheets swap the frost for a
-              clear sheet over the still lattice (and Medium's still sky),
-              so nothing is blurred either;
+              clear sheet over the still sky, so nothing is blurred either;
               a machine the page has found straining (data-effects-pace); and
               anyone whose system asks for less transparency or more contrast
               (the stylesheets make the glass solid for them). Nothing bends. */
@@ -70,10 +69,9 @@
     // crossing the bar's rim were drawn out far longer than the letters beside
     // them.) Every point samples from further in than the point just outside
     // it, so the glass never folds what is behind it into mirrored slices.
-    // dispersion bends blue a trace further than red, as real glass does, and
-    // soften is a frost of the filter's own, in px. Both are off: all of the
-    // glass, the bar included, is frosted by its stylesheet before this filter
-    // bends what shows through, and neither would survive that.
+    // (A colour split and a frost of the filter's own were tried here and
+    // dropped: the stylesheet frosts all of the glass before this filter bends
+    // what shows through, and neither survived that.)
     //
     // bevel and stretch are the bar's, and now every surface's: a card that
     // bends what is behind it less than the bar does reads as a thinner
@@ -105,22 +103,19 @@
         // A steeper curve in a narrower rim makes the clearer High FX lens
         // legible without enlarging the filtered area. Keep a single colour
         // pass and the existing map resolution/cache; Low FX uses no lens.
-        bar: { bevel: 22, stretch: 2.6, dispersion: 0, soften: 0, density: .5 },
-        surface: { bevel: 22, stretch: 2.6, dispersion: 0, soften: 0, density: .25 }
+        bar: { bevel: 22, stretch: 2.6, density: .5 },
+        surface: { bevel: 22, stretch: 2.6, density: .25 }
     };
     const CURVE = 1.5;
-    const LENS_BANDS = 12;     // slices per rim when the sky is bent on canvas
 
     const rimBevel = (kind, width, height) => Math.max(1, Math.min(GLASS[kind].bevel, Math.min(width, height) / 2 - 2));
-    // The pull at the very edge that magnifies by exactly `stretch` there, in
-    // the channel that bends furthest.
-    const rimReach = (kind, bevel) => (1 - 1 / GLASS[kind].stretch) * bevel / CURVE / (1 + GLASS[kind].dispersion);
+    // The pull at the very edge that magnifies by exactly `stretch` there.
+    const rimReach = (kind, bevel) => (1 - 1 / GLASS[kind].stretch) * bevel / CURVE;
 
     let mode = '';
-    let rect = null;           // the bar's box in viewport px, for the lens painter
+    let rect = null;           // the bar's box in viewport px, for the glint
 
     const menuOpen = () => !!navbar && navbar.hasAttribute('data-nav-open');
-    const glassShowing = () => document.body.classList.contains('has-scrolled') || menuOpen();
 
     /* ---- refract: SVG filters over the live backdrop ---------------------- */
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -217,32 +212,11 @@
     };
 
     const buildFilter = (id, kind, width, height, radius, density) => {
-        const glass = GLASS[kind];
         const bevel = rimBevel(kind, width, height);
         // feDisplacementMap moves a pixel by scale * (channel - 0.5); the map
         // stores the pull as 128 +/- 127, so this scale turns a full pull into
         // exactly the rim's reach.
         const scale = rimReach(kind, bevel) * 255 / 127;
-        // The frost, if any, is laid on before the bend.
-        const input = glass.soften ? 'soft' : 'SourceGraphic';
-        const frost = glass.soften
-            ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${glass.soften}" result="soft"/>`
-            : '';
-        const only =(r, g, b) => `${r} 0 0 0 0  0 ${g} 0 0 0  0 0 ${b} 0 0  0 0 0 1 0`;
-        const pass = (name, strength, keep) => `
-                <feDisplacementMap in="${input}" in2="map" scale="${(scale * strength).toFixed(2)}"
-                    xChannelSelector="R" yChannelSelector="G" result="warp-${name}"/>
-                <feColorMatrix in="warp-${name}" type="matrix" values="${keep}" result="${name}"/>`;
-        // With dispersion: three displacements of the one map at slightly
-        // different strengths, each kept to one colour channel and screened
-        // back together. Without it, one.
-        const bend = glass.dispersion
-            ? `${pass('red', 1 - glass.dispersion, only(1, 0, 0))}
-                ${pass('green', 1, only(0, 1, 0))}
-                ${pass('blue', 1 + glass.dispersion, only(0, 0, 1))}
-                <feBlend in="red" in2="green" mode="screen" result="red-green"/>
-                <feBlend in="red-green" in2="blue" mode="screen"/>`
-            : `<feDisplacementMap in="${input}" in2="map" scale="${scale.toFixed(2)}" xChannelSelector="R" yChannelSelector="G"/>`;
         const map = buildMap(width, height, radius, bevel, density);
         const { cw, ch, bandX, bandY } = map;
         const holder = document.createElementNS(svgNS, 'svg');
@@ -260,7 +234,7 @@
         // unchanged to the pixel; the middle, which the map never moved, is
         // simply not filtered at all. Something too small to have a middle --
         // a round button, an icon -- is all rim, and is bent whole as before.
-        if (!glass.dispersion && !glass.soften && cw > bandX * 2 && ch > bandY * 2) {
+        if (cw > bandX * 2 && ch > bandY * 2) {
             const sx = width / cw, sy = height / ch;
             const strip = (name, x, y, w, h) => `
                 <feImage x="${x * sx}" y="${y * sy}" width="${w * sx}" height="${h * sy}" preserveAspectRatio="none"
@@ -288,8 +262,7 @@
                 primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
                 <feImage x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none"
                     href="${map.canvas.toDataURL('image/png')}" result="map"/>
-                ${frost}
-                ${bend}
+                <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale.toFixed(2)}" xChannelSelector="R" yChannelSelector="G"/>
             </filter>`;
         return holder.firstElementChild;
     };
@@ -396,8 +369,8 @@
         dueTimer = window.setTimeout(flush, 150);
     };
 
-    // The bar's box is only read by the lens and by the glint along the bar,
-    // neither of which frosted glass has.
+    // The bar's box is only read by the glint along the bar, which frosted
+    // glass does not have.
     const measure = () => {
         if (!bar || mode === 'frost') return;
         const box = bar.getBoundingClientRect();
@@ -590,75 +563,6 @@
         [...tracked].forEach(forget);
     };
 
-    /* ---- lens: the sky bends under the bar on its own canvas -------------- */
-    let buffer = null, bufferContext = null;
-
-    // Called by the galaxy at the end of every frame, in canvas pixels. Each
-    // rim is redrawn in thin slices, and each slice is stretched from a strip
-    // a little further toward the middle -- the same pull, on the same curve,
-    // that the SVG map gives the whole backdrop in Chromium, applied to the
-    // one layer this page draws itself. The slices meet edge to edge, so the
-    // bend is continuous rather than stepped.
-    const paintBackdrop = (context, ratio) => {
-        if (mode !== 'lens' || !rect || !glassShowing() || menuOpen()) return;
-        const canvas = context.canvas;
-        const x = Math.max(0, Math.round(rect.x * ratio));
-        const y = Math.max(0, Math.round(rect.y * ratio));
-        const w = Math.min(canvas.width - x, Math.round(rect.w * ratio));
-        const h = Math.min(canvas.height - y, Math.round(rect.h * ratio));
-        if (w <= 4 || h <= 4) return;
-        if (!buffer) {
-            buffer = document.createElement('canvas');
-            bufferContext = buffer.getContext('2d');
-        }
-        if (buffer.width !== w || buffer.height !== h) {
-            buffer.width = w;
-            buffer.height = h;
-        }
-        bufferContext.clearRect(0, 0, w, h);
-        bufferContext.drawImage(canvas, x, y, w, h, 0, 0, w, h);
-
-        const bevelPx = rimBevel('bar', rect.w, rect.h);
-        const bevel = Math.min(Math.round(bevelPx * ratio), Math.floor(h / 2));
-        const reach = rimReach('bar', bevelPx) * ratio;
-        const source = depth => depth + reach * Math.pow(1 - depth / bevel, CURVE);
-        const middle = h - bevel * 2;
-        const radius = Math.min(rect.r * ratio, w / 2, h / 2);
-        const slice = (sx, sy, sw, sh, dx, dy, dw, dh) => {
-            if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) return;
-            context.clearRect(x + dx, y + dy, dw, dh);
-            context.drawImage(buffer, sx, sy, sw, sh, x + dx, y + dy, dw, dh);
-        };
-        context.save();
-        context.setTransform(1, 0, 0, 1, 0, 0);
-        context.globalAlpha = 1;
-        context.globalCompositeOperation = 'source-over';
-        context.imageSmoothingEnabled = true;
-        context.beginPath();
-        context.moveTo(x + radius, y);
-        context.arcTo(x + w, y, x + w, y + h, radius);
-        context.arcTo(x + w, y + h, x, y + h, radius);
-        context.arcTo(x, y + h, x, y, radius);
-        context.arcTo(x, y, x + w, y, radius);
-        context.closePath();
-        context.clip();
-        for (let i = 0; i < LENS_BANDS; i++) {
-            // Whole canvas pixels on the landing side, so neighbouring slices
-            // share an edge exactly and leave no hairline seam between them.
-            const d0 = Math.round(bevel * i / LENS_BANDS);
-            const d1 = Math.round(bevel * (i + 1) / LENS_BANDS);
-            if (d1 <= d0) continue;
-            const s0 = source(d0), s1 = source(d1);
-            slice(0, s0, w, s1 - s0, 0, d0, w, d1 - d0);                         // top
-            slice(0, h - s1, w, s1 - s0, 0, h - d1, w, d1 - d0);                 // bottom
-            if (middle > 0) {
-                slice(s0, bevel, s1 - s0, middle, d0, bevel, d1 - d0, middle);           // left
-                slice(w - s1, bevel, s1 - s0, middle, w - d1, bevel, d1 - d0, middle);   // right
-            }
-        }
-        context.restore();
-    };
-
     /* ---- mode ------------------------------------------------------------- */
     const pickMode = () => {
         // A testing hook: set window.__glassForce before this file runs.
@@ -748,6 +652,4 @@
     }
 
     applyMode();
-
-    window.portfolioNavGlass = { paintBackdrop };
 })();

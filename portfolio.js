@@ -51,7 +51,9 @@ function setupResponsiveEnvironment() {
         // density. Classify the space the page actually owns instead of trying
         // to infer physical resolution from screen or browser-frame dimensions.
         const width = root.clientWidth || window.innerWidth;
-        const visualHeight = window.visualViewport?.height || window.innerHeight;
+        // The visible height follows a phone's toolbars sliding; times the zoom, so that a
+        // pinch into an open project does not shrink the project with it.
+        const visualHeight = window.visualViewport ? window.visualViewport.height * window.visualViewport.scale : window.innerHeight;
         root.dataset.viewportTier = width < 360
             ? 'micro'
             : width < 640
@@ -79,16 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundGrid = document.createElement('div');
     backgroundGrid.className = 'background-grid';
     backgroundGrid.setAttribute('aria-hidden', 'true');
-    const galaxyNebula = document.createElement('div');
-    galaxyNebula.className = 'galaxy-nebula';
-    galaxyNebula.setAttribute('aria-hidden', 'true');
     document.body.prepend(backgroundGrid);
-    backgroundGrid.after(galaxyNebula);
     const cosmosCanvas = document.createElement('canvas');
     cosmosCanvas.className = 'cosmos';
     cosmosCanvas.setAttribute('aria-hidden', 'true');
     cosmosCanvas.hidden = true;
-    galaxyNebula.after(cosmosCanvas);
+    backgroundGrid.after(cosmosCanvas);
     const pageScrollProgress = document.createElement('div');
     pageScrollProgress.className = 'page-scroll-progress';
     pageScrollProgress.setAttribute('aria-hidden', 'true');
@@ -257,8 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const root = document.documentElement;
         // Touching classList on every pointermove churns style + observers for
         // no reason; only clear the state when it is actually set.
-        if (root.classList.contains('effects-background-idle') || root.classList.contains('effects-background-click-fading')) {
-            root.classList.remove('effects-background-idle', 'effects-background-click-fading');
+        if (root.classList.contains('effects-background-idle')) {
+            root.classList.remove('effects-background-idle');
             document.dispatchEvent(new Event('portfolio:backdrop-wake'));
         }
         clearBackgroundIdleTimer();
@@ -519,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261103j';
+    const SKY_VERSION = '20261103k';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -539,6 +537,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return eyeOn && eye && !skippedSkies.has(eye) ? eye : '';
     };
     let showingSky = '';
+    // What the backdrop will be once every switch already on its way has played: '' for
+    // the page's own sky, a look's name, or null for nothing, while a look put away for
+    // another level's is still getting ready. A switch changes the page only partway
+    // through playing, and presses keep coming while it plays.
+    let targetSky = '';
     let pressedLevel = '';
     let skyPresses = 0;
     let lastSkyPress = 0;
@@ -547,22 +550,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // visitor moves on is not shown over whatever they moved on to.
     let skyRequest = 0;
     const skyLoads = {};
-    const NOTHING_TO_RUN = { prepare: () => Promise.resolve(), show() {}, release() {} };
     const loadSky = name => {
         if (skyLoads[name]) return skyLoads[name];
         const fetched = (element, attach) => new Promise((resolve, reject) => {
             element.onload = resolve;
-            element.onerror = reject;
+            // Gone again, so a later try fetches it afresh rather than finding a sheet that
+            // never arrived and taking it for loaded.
+            element.onerror = error => {
+                element.remove();
+                reject(error);
+            };
             attach(element);
         });
         const { script, file } = SKIES[name];
         const sheet = document.getElementById(`${name}-styles`) ? Promise.resolve() : fetched(Object.assign(document.createElement('link'), {
             id: `${name}-styles`, rel: 'stylesheet', href: `${name}.css?v=${SKY_VERSION}`
         }), element => document.head.appendChild(element));
-        const code = script ? fetched(Object.assign(document.createElement('script'), {
+        const code = window[script] ? Promise.resolve() : fetched(Object.assign(document.createElement('script'), {
             src: `${file}?v=${SKY_VERSION}`
-        }), element => document.head.appendChild(element)) : Promise.resolve();
-        const load = Promise.all([sheet, code]).then(() => (script ? window[script] : NOTHING_TO_RUN));
+        }), element => document.head.appendChild(element));
+        const load = Promise.all([sheet, code]).then(() => window[script]);
         load.catch(() => { delete skyLoads[name]; });
         skyLoads[name] = load;
         return load;
@@ -993,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         warping = true;
         deferPerformanceSampling(5000);
-        // Said on the page while it plays, for the stylesheets and the smoke test.
+        // Said on the page while it plays, for the smoke test.
         root.dataset.warp = level;
         let changed = false;
         const once = () => {
@@ -1007,27 +1014,51 @@ document.addEventListener('DOMContentLoaded', () => {
             delete root.dataset.warp;
         });
     };
+    // The switch still waiting to change the page, partway through its transition: it runs
+    // once, when the transition gets there or sooner, if the page is asked to change again.
+    let pendingSwap = null;
     const swapSkies = (change, animate, from, to) => {
-        if (!animate) change();
-        else if (from === 'vapor' || to === 'vapor') shift(to === 'vapor' ? 'glitch' : 'off', change);
-        else warp(effectsMode, change, from, to);
-    };    const putSkyAway = () => {
+        let ran = false;
+        const once = () => {
+            if (ran) return;
+            ran = true;
+            if (pendingSwap === once) pendingSwap = null;
+            change();
+        };
+        pendingSwap = once;
+        if (!animate) once();
+        else if (from === 'vapor' || to === 'vapor') shift(to === 'vapor' ? 'glitch' : 'off', once);
+        else warp(effectsMode, once, from, to);
+    };
+    const putSkyAway = () => {
         if (!showingSky) return;
-        const { script } = SKIES[showingSky];
         delete root.dataset[showingSky];
-        if (script) window[script]?.release();
+        window[SKIES[showingSky].script]?.release();
         showingSky = '';
     };
     const syncSkies = async animate => {
         const want = wantedSky(effectsMode);
-        if (want === showingSky) return;
+        // Already on its way: but a change asked for while a switch plays applies at once,
+        // as every change does then (CLAUDE.md), rather than waiting for the switch to get
+        // round to it -- a level changed under a look going away takes the look with it.
+        if (want === targetSky) {
+            pendingSwap?.();
+            return;
+        }
         const from = showingSky;
         const request = ++skyRequest;
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         // Another level's sky does not stay up while this level's is fetched.
-        if (want && showingSky && SKIES[showingSky].level !== effectsMode) putSkyAway();
+        if (want && showingSky && SKIES[showingSky].level !== effectsMode) {
+            putSkyAway();
+            targetSky = null;
+        }
         if (!want) {
+            targetSky = '';
             swapSkies(() => {
+                // Each switch changes the page partway through playing; by then a newer one
+                // may have been asked for, and that one has the last word.
+                if (request !== skyRequest) return;
                 putSkyAway();
                 showOwnBackdrop(effectsMode);
             }, animate, from, want);
@@ -1036,13 +1067,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const sky = await loadSky(want);
             await sky.prepare();
-            // Moved on while it got ready: another level, or more presses.
+            // Moved on while it got ready: another level, or more presses. Not put away if it
+            // is up after all, from an earlier press, for whatever comes next to take down.
             if (wantedSky(effectsMode) !== want) {
-                sky.release();
+                if (showingSky !== want) sky.release();
                 return;
             }
             if (request !== skyRequest) return;
+            targetSky = want;
             swapSkies(() => {
+                if (request !== skyRequest) return;
                 putSkyAway();
                 showingSky = want;
                 root.dataset[want] = '';
@@ -1055,11 +1089,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }, animate, from, want);
             deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         } catch (error) {
-            // Offline, or blocked: the page simply keeps the sky it has.
+            // Offline, or blocked: the page simply keeps the sky it has, or puts its own
+            // back if another level's was put away for this one.
             if (request !== skyRequest) return;
             skippedSkies.add(want);
             delete root.dataset[want];
-            showOwnBackdrop(effectsMode);
+            if (!showingSky) {
+                targetSky = '';
+                showOwnBackdrop(effectsMode);
+            } else targetSky = showingSky;
         }
     };
     // By when the press happened, not when the page got round to it: on a machine
@@ -1076,7 +1114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         skyPresses += 1;
-        if (!EYES[level] || skyPresses < SKY_PRESSES) return;
+        if (skyPresses < SKY_PRESSES) return;
         skyPresses = 0;
         skyQuietUntil = now + SKY_QUIET_MS;
         // Once found, every look is fetched, so a switch from here on is at once.
@@ -1135,6 +1173,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mode !== 'high') {
             document.querySelectorAll('.cursor-spark, .cursor-ripple').forEach(effect => effect.remove());
         }
+        // Low leans no card: one still leaning under a cursor that has not moved goes flat.
+        if (mode === 'low') retargetPointerSurfaces();
         wakeEffectsBackground();
         syncSlider();
         if (stepped) {
@@ -1259,7 +1299,6 @@ document.addEventListener('DOMContentLoaded', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
         if (document.hidden) {
             clearBackgroundIdleTimer();
-            document.documentElement.classList.remove('effects-background-click-fading');
             document.documentElement.classList.add('effects-background-idle');
         } else {
             wakeEffectsBackground();
@@ -1485,14 +1524,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             // Everything a visitor reads comes from here, in the set format
             // portfolio-template.json shows, and every level and every hidden
-            // look shows the one page it builds.
+            // look shows the one page it builds. The project sheet's close,
+            // Escape and backdrop are wired first: it is markup already in the
+            // page, and a render that throws part-way must not leave a project
+            // open that nothing can close.
+            setupModal();
             renderContent(data);
             renderProfile(data.profile);
             renderAbout(data.about);
             renderSkills(data.skills);
             renderFeaturedProjects(data.projects);
             renderProjectCollections(data.collections, data.projects);
-            setupModal();
             // The sections that waited for the data appear in this frame,
             // already at their full size (see .awaiting-data, index.html).
             window.portfolioDataPending = false;
@@ -1545,17 +1587,11 @@ function showDataLoadFailure() {
         + '</div>';
 }
 
-// A visitor who loaded the page before the images were converted to WebP can be
-// holding a cached portfolio-data.json that still names the old .jpg/.png/.gif
-// files, which no longer exist. Rather than leave broken-image icons across the
-// grid until their cache expires, retry the WebP sibling, and fall back to the
-// same placeholder an imageless project uses if that fails too.
-//
-// `error` does not bubble, so this listens in the capture phase -- one listener
-// covers the cards, the modal and anything rendered later.
+// A picture that will not load is swapped for the same placeholder an imageless
+// project uses, rather than left as a broken-image icon. `error` does not bubble,
+// so this listens in the capture phase -- one listener covers the cards, the
+// modal and anything rendered later.
 function setupImageRecovery() {
-    const LEGACY_EXTENSION = /\.(jpe?g|png|gif)$/i;
-
     const showPlaceholder = image => {
         const inCard = image.classList.contains('project-image');
         const placeholder = document.createElement('div');
@@ -1569,19 +1605,10 @@ function setupImageRecovery() {
 
     document.addEventListener('error', event => {
         const image = event.target;
-        if (!(image instanceof HTMLImageElement)) return;
-        if (image.dataset.recovered === 'placeholder') return;
-
-        const source = image.getAttribute('src') || '';
-        // Try the WebP sibling once; if that fails too, give up and show the
-        // placeholder rather than retrying a file that is not there.
-        if (image.dataset.recovered !== 'webp' && LEGACY_EXTENSION.test(source)) {
-            image.dataset.recovered = 'webp';
-            image.removeAttribute('srcset');
-            image.removeAttribute('sizes');
-            image.src = source.replace(LEGACY_EXTENSION, '.webp');
-            return;
-        }
+        if (!(image instanceof HTMLImageElement) || image.dataset.recovered) return;
+        // A card's hover animation, fetched on the first hover, did not come (offline,
+        // say): the card keeps its picture, which leaving it puts back.
+        if (image.dataset.motionSrc && image.getAttribute('src') === image.dataset.motionSrc) return;
         image.dataset.recovered = 'placeholder';
         showPlaceholder(image);
     }, true);
@@ -1617,7 +1644,9 @@ function setupMobileNav() {
     });
     // Widening past the breakpoint leaves the desktop row visible anyway, so
     // drop the open state rather than keep a stale aria-expanded="true".
-    window.matchMedia('(max-width: 900px)').addEventListener('change', event => {
+    // (Guarded like every other media listener here: Safari before 14 has no
+    // addEventListener on a media query, and a throw would stop the page building.)
+    window.matchMedia('(max-width: 900px)').addEventListener?.('change', event => {
         if (!event.matches) setOpen(false);
     });
 }
@@ -1945,12 +1974,16 @@ const stillSkyWorkerSource = () => `
 function setupStillSky(layer, reducedMotion) {
     const seed = Math.floor(Math.random() * 4294967296);
     const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 1));
-    let wanted = false, url = '', job = 0, resizeTimer = 0, releaseTimer = 0, swapTimer = 0;
+    // `adopted`: the build whose picture is on the layer. `fading`: the picture before it,
+    // while it fades out. `stopBuild`: ends the build under way, when a newer one starts.
+    let wanted = false, url = '', job = 0, adopted = 0, fading = '', stopBuild = null, resizeTimer = 0, releaseTimer = 0, swapTimer = 0;
     let drawnWidth = 0, drawnHeight = 0, drawnRatio = 0, drawnFull = false, drawnLive = true, drawnDark = false, drawnSpot = false;
     // Whether cosmos.js is drawing over this; until it is found it cannot, it is taken to.
     let live = true;
     const root = document.documentElement;
-    const wantFull = () => root.dataset.effects === 'medium';
+    // Medium's things are painted in; so are they at High where cosmos.js cannot run, so
+    // that High never shows less than Medium.
+    const wantFull = () => root.dataset.effects === 'medium' || (!live && root.dataset.effects === 'high');
     // Every level the same dark sky; Low only shows it dimmer (portfolio.css).
     const wantDark = () => true;
     // Where this visit's galaxy stands, as shares of the screen: anywhere across it, one visit
@@ -1962,8 +1995,8 @@ function setupStillSky(layer, reducedMotion) {
     window.portfolioSkySpot = skySpot;
     const wantSpot = (width, height) => (root.dataset.effects === 'low' ? null : skySpot(height >= width * 1.1));
 
-    // What moves on it: stars that glint and shooting stars. Where the glints stand is
-    // part of the visit's sky too.
+    // What moves on it, at Low (the other levels hide it): four stars that glint and a
+    // shooting star. Where the glints stand is part of the visit's sky too.
     const life = document.createElement('div');
     life.className = 'sky-life';
     life.setAttribute('aria-hidden', 'true');
@@ -1976,30 +2009,28 @@ function setupStillSky(layer, reducedMotion) {
             t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
             return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 4; i++) {
             const glint = document.createElement('span');
             glint.className = 'sky-glint';
             // Most of them off to the right, clear of the page's words.
             const x = random() < .72 ? 44 + random() * 54 : 2 + random() * 42;
-            glint.style.cssText = `--x:${x.toFixed(1)}%;--y:${(4 + random() * 92).toFixed(1)}%;--period:${(5 + random() * 7).toFixed(2)}s;--slow:${(16 + random() * 14).toFixed(2)}s;--delay:${(-random() * 30).toFixed(2)}s`;
+            const y = 4 + random() * 92;
+            // A draw no longer used, kept so each visit's glints stand and turn where they did.
+            random();
+            glint.style.cssText = `--x:${x.toFixed(1)}%;--y:${y.toFixed(1)}%;--slow:${(16 + random() * 14).toFixed(2)}s;--delay:${(-random() * 30).toFixed(2)}s`;
             life.appendChild(glint);
         }
     }
-    const shooters = [];
-    for (let i = 0; i < 5; i++) {
-        const shooter = document.createElement('span');
-        shooter.className = 'sky-shooting';
-        shooter.addEventListener('animationend', () => shooter.classList.remove('is-shooting'));
-        shooters.push(shooter);
-        life.appendChild(shooter);
-    }
+    const shooter = document.createElement('span');
+    shooter.className = 'sky-shooting';
+    shooter.addEventListener('animationend', () => shooter.classList.remove('is-shooting'));
+    life.appendChild(shooter);
     layer.after(life);
     const living = () => wanted && !life.hidden && !document.hidden && !reducedMotion.matches;
 
-    // Now and then a shooting star: at Low a slow one, seldom; at Medium more often,
-    // and sometimes several together.
+    // Now and then, at Low, a slow shooting star, seldom.
     let shootTimer = 0, resting = false;
-    const shoot = (shooter, fromLeft) => {
+    const shoot = fromLeft => {
         shooter.style.setProperty('--from-x', `${(fromLeft ? 8 + Math.random() * 30 : 45 + Math.random() * 50).toFixed(1)}vw`);
         shooter.style.setProperty('--from-y', `${(4 + Math.random() * 40).toFixed(1)}vh`);
         shooter.style.setProperty('--angle', `${(fromLeft ? 18 + Math.random() * 22 : 140 + Math.random() * 22).toFixed(1)}deg`);
@@ -2008,17 +2039,15 @@ function setupStillSky(layer, reducedMotion) {
         void shooter.offsetWidth;
         shooter.classList.add('is-shooting');
     };
+    // Only Low shows them, so only Low keeps a timer for them; show() runs on every
+    // change of level, which starts or stops it.
     const scheduleShot = () => {
         clearTimeout(shootTimer);
-        const low = root.dataset.effects === 'low';
+        if (root.dataset.effects !== 'low' || reducedMotion.matches) return;
         shootTimer = window.setTimeout(() => {
-            if (living() && !resting && root.dataset.effects === 'low') {
-                const fromLeft = Math.random() < .35;
-                const count = !low && Math.random() < .25 ? 3 + Math.floor(Math.random() * 3) : 1;
-                for (let i = 0; i < count; i++) window.setTimeout(() => shoot(shooters[i], fromLeft), i * (180 + Math.random() * 260));
-            }
+            if (living() && !resting) shoot(Math.random() < .35);
             if (wanted) scheduleShot();
-        }, low ? 18000 + Math.random() * 16000 : 5000 + Math.random() * 6000);
+        }, 18000 + Math.random() * 16000);
     };
     const rest = () => {
         resting = true;
@@ -2050,8 +2079,15 @@ function setupStillSky(layer, reducedMotion) {
             }
             const previous = url;
             url = next;
-            if (previous && 'sky' in layer.dataset) {
+            adopted = ticket;
+            if (previous) {
                 clearTimeout(swapTimer);
+                // One still fading out from a swap a moment ago is done with now; left to its
+                // cleared timer, its picture would be held for the rest of the visit.
+                if (fading) URL.revokeObjectURL(fading);
+                fading = previous;
+            }
+            if (previous && 'sky' in layer.dataset) {
                 layer.style.setProperty('--still-sky-old', `url("${previous}")`);
                 delete layer.dataset.swap;
                 void layer.offsetWidth;
@@ -2066,6 +2102,7 @@ function setupStillSky(layer, reducedMotion) {
                     delete layer.dataset.swap;
                     layer.style.removeProperty('--still-sky-old');
                     URL.revokeObjectURL(previous);
+                    fading = '';
                 }, 1000);
             }
         });
@@ -2074,7 +2111,7 @@ function setupStillSky(layer, reducedMotion) {
     // quarter of the memory of the sharper picture, and the stars are points anyway.
     const targetRatio = () => Math.min(window.devicePixelRatio || 1, root.dataset.effects === 'low' ? 1 : 1.5);
     // For a browser with no canvas for its workers to draw on. All of it runs on the
-    // page's thread, in its idle moments.
+    // page's thread.
     const buildHere = (width, height, ratio, ticket) => {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(width * ratio);
@@ -2092,6 +2129,10 @@ function setupStillSky(layer, reducedMotion) {
         const ratio = targetRatio();
         const ticket = ++job;
         drawnWidth = width; drawnHeight = height; drawnRatio = ratio; drawnFull = wantFull(); drawnLive = live; drawnDark = wantDark(); drawnSpot = !!wantSpot(width, height);
+        // A build still painting a picture nobody will take is stopped, not left to finish:
+        // on Low's dual core it would be painting against the page.
+        stopBuild?.();
+        stopBuild = null;
         if (!('OffscreenCanvas' in window) || !('Worker' in window)) {
             buildHere(width, height, ratio, ticket);
             return;
@@ -2099,8 +2140,11 @@ function setupStillSky(layer, reducedMotion) {
         let worker = null, source = '';
         const finish = () => {
             worker?.terminate();
+            worker = null;
             if (source) URL.revokeObjectURL(source);
+            source = '';
         };
+        stopBuild = finish;
         const fallBack = () => {
             finish();
             if (ticket === job) buildHere(width, height, ratio, ticket);
@@ -2170,7 +2214,12 @@ function setupStillSky(layer, reducedMotion) {
         hide() {
             if (!wanted) return;
             wanted = false;
+            // A build under way is dropped. What it was drawing for is no longer what the
+            // layer holds, so the next show() must draw again, not take the older picture.
+            if (adopted !== job) drawnWidth = 0;
             job++;
+            stopBuild?.();
+            stopBuild = null;
             life.hidden = true;
             clearTimeout(shootTimer);
             clearTimeout(resizeTimer);
@@ -2202,12 +2251,19 @@ function setupDeferredCosmos(canvas, stillSky) {
     };
     document.addEventListener('portfolio:cosmos-failed', fail);
     const arrive = () => {
+        // A script that loaded but could not run here (too old a browser for it) defines
+        // nothing: the still sky paints in what it would have drawn.
+        if (!window.portfolioCosmos) {
+            fail();
+            return;
+        }
         if (!wanted || failed) return;
         if (eased) window.portfolioCosmos.ease();
         if (!window.portfolioCosmos.show(canvas, wanted)) fail();
     };
     const load = () => {
-        if (script || failed) return;
+        // Not for a visitor who went to Low before the page got round to it.
+        if (script || failed || !wanted) return;
         script = document.createElement('script');
         script.src = `cosmos.js${PORTFOLIO_SCRIPT_QUERY}`;
         script.onload = arrive;
@@ -2367,7 +2423,8 @@ function setupSteadyLift() {
             settle(under, true);
         });
     };
-    window.addEventListener('scroll', relift, { passive: true });
+    // Called on every scroll too, through retargetPointerSurfaces, which the page's
+    // own scroll listener runs (setupPointerReactiveSurfaces).
     const retargetOthers = retargetPointerSurfaces;
     retargetPointerSurfaces = () => {
         retargetOthers();
@@ -2505,7 +2562,13 @@ function setupPointerReactiveSurfaces(reducedMotion) {
     // per frame -- which is what a real pointermove would have cost anyway.
     retargetPointerSurfaces = () => {
         activeRect = null;
-        if (!finePointer.matches || !pointerInside || retargetFrame || !highEffects()) return;
+        // Low leans nothing: a card still leaning from Medium, its level changed from the
+        // keyboard with the cursor resting on it, is let go here.
+        if (!highEffects()) {
+            clearActiveCard();
+            return;
+        }
+        if (!finePointer.matches || !pointerInside || retargetFrame) return;
         retargetFrame = window.requestAnimationFrame(() => {
             retargetFrame = 0;
             const under = document.elementFromPoint(pointerX, pointerY);
@@ -2666,7 +2729,7 @@ function setupCursorEffects(cursorDot, reducedMotion) {
         enabled = nextEnabled;
         syncPointerMode();
     };
-    finePointer.addEventListener('change', syncPointerMode);
+    finePointer.addEventListener?.('change', syncPointerMode);
     return { move, setEnabled };
 }
 
@@ -2675,8 +2738,9 @@ function setupCursorEffects(cursorDot, reducedMotion) {
 // it has to match the --carousel-card-max-width the grid resolves to.
 const CARD_IMAGE_SIZES = '(max-width: 639px) calc(100vw - 2rem), (max-width: 1007px) calc((100vw - 3.5rem) / 2), (max-width: 1599px) 440px, (max-width: 2559px) 560px, 640px';
 
-// Project prose goes into HTML attributes in a few places. Anything with a
-// quote or an angle bracket in it would otherwise break out of the attribute.
+// Every word from portfolio-data.json that goes into markup goes through this,
+// in text and in attributes alike: a "<Servo.h>" in a write-up would otherwise
+// vanish as a tag, and a quote in a label break out of its attribute.
 function escapeAttribute(value) {
     return String(value == null ? '' : value)
         .replace(/&/g, '&amp;')
@@ -2691,14 +2755,34 @@ function escapeAttribute(value) {
 // The privacy-enhanced host is used regardless: it behaves identically for the
 // viewer but keeps YouTube from writing tracking storage before playback.
 function buildVideoEmbed(src, title, options = {}) {
-    const hardened = String(src || '').replace(
-        /^https?:\/\/(?:www\.)?youtube\.com\//,
-        'https://www.youtube-nocookie.com/'
-    );
+    const hardened = youtubeEmbedUrl(src);
     if (!hardened) return '';
     return `<iframe src="${escapeAttribute(hardened)}" title="${escapeAttribute(title || 'Project video')}"`
         + (options.lazy ? ' loading="lazy"' : '')
         + ' allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+}
+
+// A video's address as the player needs it, from any form YouTube hands out. An
+// embed keeps its own settings and only moves to the privacy-enhanced host; a
+// watch page, a youtu.be share link or a Short -- each of which refuses to be
+// framed, and youtu.be skips the privacy-enhanced host as well -- becomes the
+// embed of the same video, starting where the link said. Anything else is left
+// as it was.
+function youtubeEmbedUrl(src) {
+    const raw = String(src || '').trim();
+    let url;
+    try { url = new URL(raw); } catch (error) { return raw; }
+    const host = url.hostname.replace(/^(?:www|m)\./, '');
+    if (host !== 'youtube.com' && host !== 'youtube-nocookie.com' && host !== 'youtu.be') return raw;
+    const [kind, value] = url.pathname.split('/').filter(Boolean);
+    if (kind === 'embed') return `https://www.youtube-nocookie.com${url.pathname}${url.search}`;
+    const id = host === 'youtu.be' ? kind : kind === 'watch' ? url.searchParams.get('v') : kind === 'shorts' || kind === 'live' ? value : '';
+    if (!id) return raw;
+    // t=75, t=75s or t=1m15s.
+    const time = url.searchParams.get('t') || url.searchParams.get('start') || '';
+    const part = unit => Number(time.match(new RegExp(`(\\d+)${unit}`))?.[1] || 0);
+    const seconds = /^\d+$/.test(time) ? Number(time) : part('h') * 3600 + part('m') * 60 + part('s');
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}${seconds ? `?start=${seconds}` : ''}`;
 }
 
 // Every YouTube player runs a Google anti-abuse script that asks WebGPU for
@@ -2803,16 +2887,16 @@ function renderProfile(profile) {
         const named = address ? `Email ${address}` : linkLabel(link);
         const externalAttributes = url.startsWith('mailto:') ? '' : ' target="_blank" rel="noopener"';
         const classAttribute = className ? ` class="${className}"` : '';
-        return `<a href="${url}"${externalAttributes}${classAttribute} title="${named}" aria-label="${named}"><i class="${linkIcon(link)}" aria-hidden="true"></i>${className ? ` ${linkLabel(link)}` : ''}</a>`;
+        return `<a href="${escapeAttribute(url)}"${externalAttributes}${classAttribute} title="${escapeAttribute(named)}" aria-label="${escapeAttribute(named)}"><i class="${linkIcon(link)}" aria-hidden="true"></i>${className ? ` ${escapeAttribute(linkLabel(link))}` : ''}</a>`;
     };
     const resumeUrl = String(resume?.url || '').trim();
     const resumeButton = !resume ? ''
         : resumeUrl
-        ? `<a href="${resumeUrl}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${linkLabel(resume)}</a>`
-        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${linkLabel(resume)}</span>`;
+        ? `<a href="${escapeAttribute(resumeUrl)}" target="_blank" rel="noopener" class="btn secondary-btn"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${escapeAttribute(linkLabel(resume))}</a>`
+        : `<span class="btn secondary-btn resume-unavailable" aria-disabled="true" title="Add a résumé PDF to activate this button"><i class="${linkIcon(resume)}" aria-hidden="true"></i> ${escapeAttribute(linkLabel(resume))}</span>`;
     const resumeIcon = !resume ? ''
         : resumeUrl
-        ? `<a href="${resumeUrl}" target="_blank" rel="noopener" title="${linkLabel(resume)}"><i class="${linkIcon(resume)}" aria-hidden="true"></i></a>`
+        ? `<a href="${escapeAttribute(resumeUrl)}" target="_blank" rel="noopener" title="${escapeAttribute(linkLabel(resume))}"><i class="${linkIcon(resume)}" aria-hidden="true"></i></a>`
         // Reads as a live control beside the other icons rather than a dead one,
         // because the résumé is coming. It still carries aria-disabled and still
         // goes nowhere, so nothing is promised to a screen reader that the page
@@ -2839,11 +2923,11 @@ function renderAbout(cards = []) {
     const highlights = document.getElementById('about-highlights');
     if (!highlights) return;
     highlights.innerHTML = cards.map(card => {
-        const roles = (card.roles || []).map(role => `<div class="about-highlight-role"><h4>${role.title}</h4><p>${[role.position, role.period].filter(Boolean).join(' • ')}</p></div>`).join('');
+        const roles = (card.roles || []).map(role => `<div class="about-highlight-role"><h4>${escapeAttribute(role.title)}</h4><p>${escapeAttribute([role.position, role.period].filter(Boolean).join(' • '))}</p></div>`).join('');
         const link = card.link?.url ? card.link : null;
-        const content = `<span class="about-highlight-label">${card.label}</span><h3>${card.title}</h3><p>${card.summary}</p>${roles}${card.subline ? `<p class="about-highlight-subline">${card.subline}</p>` : ''}${link?.label ? `<span class="about-highlight-cta">${link.label} <i class="${linkIcon(link)}" aria-hidden="true"></i></span>` : ''}`;
+        const content = `<span class="about-highlight-label">${escapeAttribute(card.label)}</span><h3>${escapeAttribute(card.title)}</h3><p>${escapeAttribute(card.summary)}</p>${roles}${card.subline ? `<p class="about-highlight-subline">${escapeAttribute(card.subline)}</p>` : ''}${link?.label ? `<span class="about-highlight-cta">${escapeAttribute(link.label)} <i class="${linkIcon(link)}" aria-hidden="true"></i></span>` : ''}`;
         return link
-            ? `<a class="about-highlight about-highlight-link" href="${link.url}"${link.url.startsWith('#') ? ` data-collection-target="${link.url.slice(1)}"` : ' target="_blank" rel="noopener"'} aria-label="${link.label || `View ${card.label}`}">${content}</a>`
+            ? `<a class="about-highlight about-highlight-link" href="${escapeAttribute(link.url)}"${link.url.startsWith('#') ? ` data-collection-target="${escapeAttribute(link.url.slice(1))}"` : ' target="_blank" rel="noopener"'} aria-label="${escapeAttribute(link.label || `View ${card.label}`)}">${content}</a>`
             : `<article class="about-highlight">${content}</article>`;
     }).join('');
     highlights.querySelectorAll('[data-collection-target]').forEach(link => {
@@ -2867,7 +2951,7 @@ function renderAbout(cards = []) {
 
 function renderSkills(groups = []) {
     const container = document.getElementById('skills-container');
-    container.innerHTML = groups.map(group => `<div class="skill-group"><h3 class="skill-group-title">${group.title}</h3><div class="skill-tags">${group.items.map(skill => `<span class="tag">${skill}</span>`).join('')}</div></div>`).join('');
+    container.innerHTML = groups.map(group => `<div class="skill-group"><h3 class="skill-group-title">${escapeAttribute(group.title)}</h3><div class="skill-tags">${group.items.map(skill => `<span class="tag">${escapeAttribute(skill)}</span>`).join('')}</div></div>`).join('');
     setupResponsiveCardSlider(container, {
         cardSelector: '.skill-group',
         controlLabel: 'Browse skill categories',
@@ -2924,8 +3008,13 @@ function setupResponsiveCardSlider(container, options) {
     };
 
     const updateControls = () => {
+        // Disabling the arrow that has the keyboard's focus would drop the focus
+        // to the page; the other arrow takes it.
+        const focused = document.activeElement;
         previous.disabled = currentIndex <= 0;
         next.disabled = currentIndex >= maxIndex;
+        if (focused === previous && previous.disabled && !next.disabled) next.focus();
+        else if (focused === next && next.disabled && !previous.disabled) previous.focus();
         [...indicators.children].forEach((indicator, index) => {
             const active = index === currentIndex;
             indicator.classList.toggle('is-active', active);
@@ -3276,8 +3365,12 @@ function setupFeaturedCarousel(container) {
             dots[(active + 1) % dots.length].click();
         }
     });
+    // Two cards fit side by side at two-up, so a slider of two is one only where
+    // a phone shows a card at a time; otherwise its arrows would move nothing.
+    const oneUp = window.matchMedia('(max-width: 639px)');
     const updateLayout = () => {
-        const useCarousel = carouselConstraints.some(constraint => constraint.matches);
+        const useCarousel = carouselConstraints.some(constraint => constraint.matches)
+            && (cards.length > 2 || oneUp.matches);
         container.classList.toggle('project-carousel', useCarousel);
         container.classList.toggle('is-responsive-carousel', useCarousel);
         controls.classList.toggle('is-active', useCarousel);
@@ -3285,6 +3378,7 @@ function setupFeaturedCarousel(container) {
         autoplay.sync();
     };
     carouselConstraints.forEach(constraint => constraint.addEventListener?.('change', updateLayout));
+    if (cards.length === 2) oneUp.addEventListener?.('change', updateLayout);
     const layoutObserver = new ResizeObserver(() => window.requestAnimationFrame(updateLayout));
     layoutObserver.observe(container);
     // Settle the first layout synchronously. Deferring it to rAF meant a page
@@ -3328,22 +3422,23 @@ function createProjectCard(project, options = {}) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `View ${project.title} details`);
+    const text = escapeAttribute;
     const isCertificate = project.imagePresentation === 'certificate';
     // See showDeferredPictures.
     const sourceAttribute = options.deferImage ? 'data-src' : 'src';
     // A card draws into roughly 440 CSS px, so most screens want the 900px
     // variant rather than the full-size file the modal uses.
     const cardSrcset = project.imageSrcset
-        ? ` ${options.deferImage ? 'data-srcset' : 'srcset'}="${project.imageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
+        ? ` ${options.deferImage ? 'data-srcset' : 'srcset'}="${text(project.imageSrcset)}" sizes="${CARD_IMAGE_SIZES}"`
         : '';
     const cardMedia = project.image
-        ? `<img ${sourceAttribute}="${project.image}"${cardSrcset} alt="${escapeAttribute(describeImage(project))}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${project.motionImage}" data-motion-alt="${escapeAttribute(describeImage(project, 'motion'))}" data-still-alt="${escapeAttribute(describeImage(project))}" data-still-srcset="${project.imageSrcset || ''}"` : ''}>`
+        ? `<img ${sourceAttribute}="${text(project.image)}"${cardSrcset} alt="${text(describeImage(project))}" class="project-image${isCertificate ? ' is-certificate-thumbnail' : ''}" loading="lazy" decoding="async"${project.motionImage ? ` data-motion-src="${text(project.motionImage)}" data-motion-alt="${text(describeImage(project, 'motion'))}" data-still-alt="${text(describeImage(project))}" data-still-srcset="${text(project.imageSrcset)}"` : ''}>`
         : `<div class="media-placeholder card-media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Preview coming soon</span></div>`;
     const projectPeriod = project.period
-        ? `<div class="project-period"><i class="fa-regular fa-calendar" aria-hidden="true"></i>${project.period}</div>`
+        ? `<div class="project-period"><i class="fa-regular fa-calendar" aria-hidden="true"></i>${text(project.period)}</div>`
         : '';
     const cardDescription = buildProjectCardSummary(project);
-    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${project.category}</span></div><div class="project-info"><div class="project-heading"><h3 class="project-title">${project.title}</h3>${projectPeriod}</div><div class="project-copy"><p class="project-summary">${cardDescription}</p></div><div class="project-tags">${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
+    card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${text(project.category)}</span></div><div class="project-info"><div class="project-heading"><h3 class="project-title">${text(project.title)}</h3>${projectPeriod}</div><div class="project-copy"><p class="project-summary">${text(cardDescription)}</p></div><div class="project-tags">${(project.tags || []).map(tag => `<span class="tag">${text(tag)}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
     if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         card.addEventListener('pointerenter', () => {
@@ -3402,9 +3497,9 @@ function renderProjectCollections(collections, projects) {
         const nounPlural = collection.itemNounPlural || `${nounSingular}s`;
         const countLabel = `${collectionProjects.length} ${collectionProjects.length === 1 ? nounSingular : nounPlural}`;
         const cueMarkup = collectionProjects.length
-            ? `<span class="collection-cue">View ${countLabel}</span>`
+            ? `<span class="collection-cue">View ${escapeAttribute(countLabel)}</span>`
             : '';
-        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">0${index + 1}</span><span class="collection-copy"><strong>${collection.title}</strong><small>${collection.summary}</small>${cueMarkup}</span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button><div class="collection-content" hidden></div>`;
+        group.innerHTML = `<button class="collection-toggle" aria-expanded="false"><span class="collection-index">${String(index + 1).padStart(2, '0')}</span><span class="collection-copy"><strong>${escapeAttribute(collection.title)}</strong><small>${escapeAttribute(collection.summary)}</small>${cueMarkup}</span><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button><div class="collection-content" hidden></div>`;
         const content = group.querySelector('.collection-content');
         const gallery = document.createElement('div');
         const useCarousel = collection.carousel !== false && collectionProjects.length > 3;
@@ -3427,11 +3522,9 @@ function renderProjectCollections(collections, projects) {
             if (cue) cue.textContent = `${opening ? 'Hide' : 'View'} ${countLabel}`;
             content.hidden = !opening;
             if (opening) showDeferredPictures(content);
-            // The backdrop is placed in page coordinates and stays there, so it
-            // needs nothing from this beyond a nudge that the document is now a
-            // different height -- the star tiles are cut to that height, and a
-            // page grown past the sky already laid down needs more of it under
-            // the new bottom.
+            // Said once the page has changed height: the card fit measures the
+            // cards then if none was on show to measure before
+            // (setupProjectCardFit).
             const announceGrowth = () => document.dispatchEvent(new Event('portfolio:content-shifted'));
             // A carousel sets its own height when it initialises, so on the way
             // open the document is not finished growing until that has run.
@@ -3458,17 +3551,22 @@ function renderProjectCollections(collections, projects) {
 // off screen, tall enough that its picture sits at full size, and the tallest
 // need wins.
 const CARD_IMAGE_SHARE = .36; // keep in step with --card-image-height
-let refitProjectCards = null;
 
 function setupProjectCardFit() {
-    if (refitProjectCards) {
-        refitProjectCards();
-        return;
-    }
+    let timer = 0;
+    const schedule = () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(measure, 150);
+    };
     const measure = () => {
         const cards = [...document.querySelectorAll('.project-card:not(.carousel-clone)')];
         const sample = cards.find(card => card.offsetWidth > 0);
-        if (!sample) return;
+        // No card on show yet (no featured projects, every folder shut): measured
+        // when a folder opens instead.
+        if (!sample) {
+            document.addEventListener('portfolio:content-shifted', schedule, { once: true });
+            return;
+        }
         const probe = document.createElement('div');
         probe.setAttribute('aria-hidden', 'true');
         probe.style.cssText = `position:absolute;left:-10000px;top:0;width:${sample.offsetWidth}px;visibility:hidden;pointer-events:none;`;
@@ -3512,12 +3610,6 @@ function setupProjectCardFit() {
         // again for what only a project card reads.
         if (need) document.getElementById('projects').style.setProperty('--card-content-height', `${Math.ceil(need) + 6}px`);
     };
-    let timer = 0;
-    const schedule = () => {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(measure, 150);
-    };
-    refitProjectCards = measure;
     measure();
     // Again once the type has arrived, if it had not when that was measured
     // (laying the cards out above is what asks for any face not loaded yet).
@@ -3525,21 +3617,27 @@ function setupProjectCardFit() {
     // measured a second time to the same answer: a tenth of a second on a slow
     // laptop, all in one task.
     if (document.fonts?.status === 'loading') document.fonts.ready.then(schedule);
-    window.addEventListener('resize', schedule, { passive: true });
+    // Again when the writing could wrap differently: a new width, or a window
+    // crossing a height at which the stylesheet sets the cards' type smaller. A
+    // phone's toolbar sliding in and out is neither, and every card was laid out
+    // again for it.
+    const shortWindows = ['(max-height: 820px)', '(max-height: 420px)'].map(query => window.matchMedia(query));
+    const shape = () => `${window.innerWidth}:${shortWindows.map(query => query.matches).join()}`;
+    let measuredShape = shape();
+    window.addEventListener('resize', () => {
+        if (shape() === measuredShape) return;
+        measuredShape = shape();
+        schedule();
+    }, { passive: true });
 }
 
 function setupCarousel(carousel, controls, options = {}) {
-    const settings = typeof options === 'boolean' ? { autoplay: options } : options;
+    const settings = options;
     const originalCards = [...carousel.querySelectorAll('.project-card')];
     if (originalCards.length < 2) return () => {};
-    const ringSlots = settings.ring ? originalCards.length : 0;
     const visibleRingRadius = settings.ring && originalCards.length === 4 ? 1.05 : 2.05;
     const cloneCount = settings.finite ? 0 : Math.min(settings.ring ? 3 : 2, originalCards.length);
     const isEnabled = () => typeof settings.enabled !== 'function' || settings.enabled();
-    if (settings.ring) {
-        carousel.style.setProperty('--ring-project-count', String(ringSlots));
-        carousel.dataset.ringVisibleCards = originalCards.length === 4 ? '3' : '5';
-    }
     originalCards.forEach((card, index) => { card.dataset.carouselIndex = String(index); });
     const beforeClones = document.createDocumentFragment();
     const prepareClone = card => {
@@ -3554,7 +3652,7 @@ function setupCarousel(carousel, controls, options = {}) {
             .forEach(property => clone.style.removeProperty(property));
         clone.querySelectorAll('.press-ripple').forEach(ripple => ripple.remove());
         clone.setAttribute('aria-hidden', 'true');
-        clone.setAttribute('tabindex', '-1');
+        clone.removeAttribute('tabindex');
         clone.querySelectorAll('img').forEach(image => {
             image.loading = 'eager';
             image.decoding = 'async';
@@ -3594,7 +3692,7 @@ function setupCarousel(carousel, controls, options = {}) {
     let suppressSwipeClick = false;
     let suppressSnapUntil = 0;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const autoplayEnabled = settings.autoplay && !reducedMotion.matches;
+    const autoplayEnabled = () => settings.autoplay && !reducedMotion.matches;
     const indicators = settings.indicators ? document.createElement('div') : null;
     const cards = [...carousel.querySelectorAll('.project-card')];
     const previous = controls.querySelector('.carousel-prev');
@@ -3621,8 +3719,7 @@ function setupCarousel(carousel, controls, options = {}) {
         const gap = Number.parseFloat(getComputedStyle(carousel).gap) || 0;
         const cardWidth = card.offsetWidth;
         const distance = cardWidth + gap;
-        const centerOffset = Math.max((carousel.clientWidth - cardWidth) / 2, 0);
-        return { cardWidth, gap, distance, lastIndex: originalCards.length - 1, centerOffset };
+        return { cardWidth, gap, distance, lastIndex: originalCards.length - 1 };
     };
 
     const getTargetForPhysicalIndex = physicalIndex => {
@@ -3631,12 +3728,17 @@ function setupCarousel(carousel, controls, options = {}) {
         return card.offsetLeft + card.offsetWidth / 2 - carousel.clientWidth / 2;
     };
 
+    // By where each card would bring the row to rest, which a row that cannot
+    // scroll past its ends stops short of: at the last stop of the featured row
+    // at two-up the middle falls exactly between two cards, and the tie went to
+    // the one before, so the row bounced back from its own end.
     const getNearestPhysicalIndex = () => {
-        const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+        const furthest = Math.max(carousel.scrollWidth - carousel.clientWidth, 0);
         let nearestIndex = 0;
         let nearestDistance = Number.POSITIVE_INFINITY;
         cards.forEach((card, index) => {
-            const distance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - carouselCenter);
+            const rest = Math.min(Math.max(card.offsetLeft + card.offsetWidth / 2 - carousel.clientWidth / 2, 0), furthest);
+            const distance = Math.abs(rest - carousel.scrollLeft);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestIndex = index;
@@ -3660,8 +3762,13 @@ function setupCarousel(carousel, controls, options = {}) {
             });
         }
         if (settings.finite) {
+            // Disabling the arrow that has the keyboard's focus would drop the
+            // focus to the page; the other arrow takes it.
+            const focused = document.activeElement;
             previous.disabled = currentIndex <= 0;
             next.disabled = currentIndex >= originalCards.length - 1;
+            if (focused === previous && previous.disabled && !next.disabled) next.focus();
+            else if (focused === next && next.disabled && !previous.disabled) previous.focus();
         }
     };
 
@@ -3679,8 +3786,6 @@ function setupCarousel(carousel, controls, options = {}) {
         cards.forEach(card => {
             ringParked.delete(card);
             [
-                '--carousel-position',
-                '--carousel-depth',
                 '--carousel-ring-x',
                 '--carousel-ring-y',
                 '--carousel-ring-z',
@@ -3694,6 +3799,16 @@ function setupCarousel(carousel, controls, options = {}) {
         });
     };
 
+    // How far in a card sits, and how close it stands to the next, by how many
+    // places round the ring it is.
+    const scaleAt = value => value <= 1
+        ? 1 - value * .08
+        : Math.max(.38, .92 - (value - 1) * .28);
+    const spacingScaleAt = value => {
+        if (value <= 1) return 1 - value * .08;
+        if (value <= 2) return .92 - (value - 1) * .56;
+        return Math.max(0, .36 - (value - 2) * .36);
+    };
     const updateCardDepth = () => {
         if (!isEnabled()) {
             clearCardDepth();
@@ -3707,11 +3822,11 @@ function setupCarousel(carousel, controls, options = {}) {
         // the card's style out afresh, for nothing, and on a slow machine that
         // was most of what a turn cost. All that shows is which card is in front.
         if (settings.ring && document.documentElement.dataset.effects === 'low') {
-            cards.forEach(card => {
-                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-                const depth = Math.abs(cardCenter - carouselCenter) / metrics.distance;
-                card.classList.toggle('is-carousel-active', depth < .18);
-            });
+            // Every place read first, then every class written: read and written by
+            // turns, a change of the card in front had the browser work the style
+            // out again part-way through.
+            const depths = cards.map(card => Math.abs(card.offsetLeft + card.offsetWidth / 2 - carouselCenter) / metrics.distance);
+            cards.forEach((card, index) => card.classList.toggle('is-carousel-active', depths[index] < .18));
             retargetPointerSurfaces();
             return;
         }
@@ -3737,20 +3852,10 @@ function setupCarousel(carousel, controls, options = {}) {
                 if (ringParked.has(card)) return;
                 ringParked.add(card);
             } else ringParked.delete(card);
-            card.style.setProperty('--carousel-position', position.toFixed(3));
-            card.style.setProperty('--carousel-depth', depth.toFixed(3));
             if (settings.ring) {
                 const rawAbsolutePosition = Math.abs(position);
                 const absolutePosition = Math.min(rawAbsolutePosition, 3);
                 const direction = Math.sign(position);
-                const scaleAt = value => value <= 1
-                    ? 1 - value * .08
-                    : Math.max(.38, .92 - (value - 1) * .28);
-                const spacingScaleAt = value => {
-                    if (value <= 1) return 1 - value * .08;
-                    if (value <= 2) return .92 - (value - 1) * .56;
-                    return Math.max(0, .36 - (value - 2) * .36);
-                };
                 const ringScale = scaleAt(absolutePosition);
                 const wholeSteps = Math.floor(absolutePosition);
                 let targetMagnitude = 0;
@@ -3870,10 +3975,18 @@ function setupCarousel(carousel, controls, options = {}) {
         animateScroll(getTargetForPhysicalIndex(physicalIndex));
     };
 
-    const animateScroll = (target, onComplete) => {
+    const animateScroll = target => {
         window.cancelAnimationFrame(scrollAnimation);
         const start = carousel.scrollLeft;
         const change = target - start;
+        // Nowhere to go -- a press or an upward drag that ended where it began:
+        // the cards are placed once, not on every frame of a turn that goes
+        // nowhere.
+        if (Math.abs(change) < 1) {
+            isAnimating = false;
+            updateCardDepth();
+            return;
+        }
         const baseDuration = 310;
         let animationProgress = reducedMotion.matches ? 1 : 0;
         let lastFrameAt = performance.now();
@@ -3892,7 +4005,6 @@ function setupCarousel(carousel, controls, options = {}) {
                 scrollAnimation = window.requestAnimationFrame(frame);
             } else {
                 isAnimating = false;
-                onComplete?.();
             }
         };
         scrollAnimation = window.requestAnimationFrame(frame);
@@ -3976,7 +4088,7 @@ function setupCarousel(carousel, controls, options = {}) {
     const scheduleAutoplay = () => {
         window.clearTimeout(autoplayTimer);
         const modalOpen = document.getElementById('project-modal')?.classList.contains('active');
-        if (!isEnabled() || !autoplayEnabled || !carouselVisible || interactionActive || carouselHovered || carouselFocused || document.hidden || modalOpen) return;
+        if (!isEnabled() || !autoplayEnabled() || !carouselVisible || interactionActive || carouselHovered || carouselFocused || document.hidden || modalOpen) return;
         const waitForInteraction = Math.max(manualPauseUntil - Date.now(), 0);
         autoplayTimer = window.setTimeout(() => {
             const projectOpen = document.getElementById('project-modal')?.classList.contains('active');
@@ -4038,7 +4150,6 @@ function setupCarousel(carousel, controls, options = {}) {
         dragLastX = event.clientX;
         dragStartScrollLeft = carousel.scrollLeft;
         dragDirection = null;
-        carousel.classList.add('is-dragging');
     }, { passive: true });
     carousel.addEventListener('pointermove', event => {
         if (!interactionActive || event.pointerId !== dragPointerId) return;
@@ -4054,6 +4165,8 @@ function setupCarousel(carousel, controls, options = {}) {
             // handler with it.
             if (dragDirection === 'horizontal') {
                 try { carousel.setPointerCapture?.(event.pointerId); } catch { /* gone already */ }
+                // Only now: a press, or the start of a scroll up the page, is no drag.
+                carousel.classList.add('is-dragging');
             }
         }
         if (dragDirection === 'horizontal') {
@@ -4087,7 +4200,10 @@ function setupCarousel(carousel, controls, options = {}) {
             // Too short to have reached the next card, but quick and deliberate:
             // a flick still advances one, which is how a phone expects to swipe.
             move(horizontalDistance < 0 ? 1 : -1);
-        } else if (dragDirection) {
+        } else {
+            // Short, upward, or no drag at all -- a press that stopped a turn
+            // part-way included: back onto the nearest card, rather than left
+            // between two with nothing ever moving it on.
             snapToNearestCard();
         }
         if (suppressSwipeClick) window.setTimeout(() => { suppressSwipeClick = false; }, 820);
@@ -4169,9 +4285,27 @@ function setupCarousel(carousel, controls, options = {}) {
             pauseAfterInteraction(2500);
         }, { passive: true });
     }
-    carousel.addEventListener('focusin', () => {
+    carousel.addEventListener('focusin', event => {
         carouselFocused = true;
         cancelAutoplay();
+        // A card reached with the keyboard is brought round to the front, as a
+        // press on it would be. Left to the browser's own scroll it was shown
+        // half a ring off, turned away and unseen. (A click focuses the card
+        // too, but the press itself turns the ring then.)
+        const card = event.target.closest?.('.project-card');
+        let keyboard = false;
+        try { keyboard = !!card?.matches(':focus-visible'); } catch (error) { /* Safari before 15.4 */ }
+        if (!card || !keyboard || !isEnabled() || !initialized) return;
+        const metrics = getMetrics();
+        const position = metrics?.distance
+            ? (card.offsetLeft + card.offsetWidth / 2 - carousel.scrollLeft - carousel.clientWidth / 2) / metrics.distance
+            : 0;
+        if (Math.abs(position) < .5) return;
+        window.cancelAnimationFrame(scrollAnimation);
+        currentPhysicalIndex = cards.indexOf(card);
+        currentIndex = Number(card.dataset.carouselIndex) || 0;
+        updateIndicators();
+        animateScroll(getTargetForPhysicalIndex(currentPhysicalIndex));
     });
     carousel.addEventListener('focusout', event => {
         if (carousel.contains(event.relatedTarget)) return;
@@ -4198,6 +4332,7 @@ function setupCarousel(carousel, controls, options = {}) {
     }
     document.addEventListener('portfolio:modal-open', () => {
         cancelAutoplay();
+        if (!initialized || carousel.closest('[hidden]')) return;
         if (carousel.dataset.keepAnimatingThroughModal !== 'true') stopAndCenterCurrentMotion();
     });
     document.addEventListener('portfolio:modal-close', () => {
@@ -4207,6 +4342,9 @@ function setupCarousel(carousel, controls, options = {}) {
         if (document.hidden) cancelAutoplay();
         else pauseAfterInteraction(1200);
     });
+    // Reduced motion asked for in the middle of a visit stops the turning; let go,
+    // it starts again.
+    reducedMotion.addEventListener?.('change', scheduleAutoplay);
     scheduleAutoplay();
     return initialize;
 }
@@ -4215,7 +4353,7 @@ function setupCarousel(carousel, controls, options = {}) {
 function buildLinkButtons(links = []) {
     return links
         .filter(link => link?.url)
-        .map(link => `<a href="${linkHref(link)}" target="_blank" rel="noopener" class="link-btn"><i class="${linkIcon(link)}" aria-hidden="true"></i> ${linkLabel(link)}</a>`)
+        .map(link => `<a href="${escapeAttribute(linkHref(link))}" target="_blank" rel="noopener" class="link-btn"><i class="${linkIcon(link)}" aria-hidden="true"></i> ${escapeAttribute(linkLabel(link))}</a>`)
         .join('');
 }
 
@@ -4248,7 +4386,9 @@ function openModal(project) {
         modalProgramSummary.hidden = !project.programSummary;
         modalProgramSummary.textContent = project.programSummary || '';
     }
-    document.getElementById('modal-summary').textContent = project.summary;
+    const modalSummary = document.getElementById('modal-summary');
+    modalSummary.textContent = project.summary || '';
+    modalSummary.hidden = !project.summary;
     const overview = document.getElementById('modal-overview');
     const overviewGrid = document.getElementById('modal-overview-grid');
     const deepDiveHeading = document.getElementById('modal-deep-dive-heading');
@@ -4256,7 +4396,6 @@ function openModal(project) {
     const overviewTitle = document.getElementById('modal-overview-title');
     overviewLabel.textContent = isCoursework ? 'Coursework' : 'Quick Overview';
     overviewTitle.textContent = isCoursework ? 'What I Did in Class' : 'The Main Parts';
-    overviewGrid.classList.remove('is-class-rundown');
     const defaultOverviewHeadings = isCoursework
         ? ['What I Needed to Learn', 'What I Worked On', 'What I Took From It']
         : ['Why I Made It', 'What I Did', 'How It Turned Out'];
@@ -4265,19 +4404,23 @@ function openModal(project) {
         ? project.overview.headings
         : defaultOverviewHeadings;
     // A project whose overview is left empty shows its first three sections
-    // in its place.
+    // in its place, and "How I Built It" goes on from the fourth rather than
+    // telling them twice. An overview part left empty is left out.
     const hasOverview = Boolean(project.overview?.problem || project.overview?.method || project.overview?.result);
-    const overviewItems = hasOverview
+    const sections = project.sections || [];
+    const overviewItems = (hasOverview
         ? [
             [overviewHeadings[0], project.overview.problem],
             [overviewHeadings[1], project.overview.method],
             [overviewHeadings[2], project.overview.result]
         ]
-        : (project.sections || [])
+        : sections
             .slice(0, 3)
-            .map(section => [section.heading, section.body]);
+            .map(section => [section.heading, section.body]))
+        .filter(([, body]) => body);
+    const detailSections = hasOverview ? sections : sections.slice(3);
     overviewGrid.innerHTML = overviewItems
-        .map(([heading, body], index) => `<article class="modal-overview-item"><span>0${index + 1}</span><h4>${heading}</h4><p>${body}</p></article>`)
+        .map(([heading, body], index) => `<article class="modal-overview-item"><span>${String(index + 1).padStart(2, '0')}</span><h4>${escapeAttribute(heading)}</h4><p>${escapeAttribute(body)}</p></article>`)
         .join('');
     overview.hidden = overviewItems.length === 0;
     const featureVideo = document.getElementById('modal-feature-video');
@@ -4288,30 +4431,28 @@ function openModal(project) {
             ? buildVideoEmbed(project.featureVideo.src, project.featureVideo.label || `${project.title} video`)
             : '';
     }
-    deepDiveHeading.hidden = isCoursework || !project.sections?.length || overviewItems.length === 0;
+    deepDiveHeading.hidden = isCoursework || !detailSections.length || overviewItems.length === 0;
     const details = document.getElementById('modal-details');
     details.innerHTML = isCoursework
         ? '<section class="modal-detail-section"><h4>Want to see more?</h4><p>The class README on GitHub has more details and all of the work I saved from the class.</p></section>'
-        : (project.sections || []).map(section => `<section class="modal-detail-section"><h4>${section.heading}</h4><p>${section.body}</p></section>`).join('');
-    document.getElementById('modal-tags').innerHTML = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+        : detailSections.map(section => `<section class="modal-detail-section"><h4>${escapeAttribute(section.heading)}</h4><p>${escapeAttribute(section.body)}</p></section>`).join('');
+    document.getElementById('modal-tags').innerHTML = (project.tags || []).map(tag => `<span class="tag">${escapeAttribute(tag)}</span>`).join('');
     document.getElementById('modal-links').innerHTML = buildLinkButtons(project.links);
     const image = document.getElementById('modal-image');
     const leadMedia = project.motionImage || project.image;
     image.classList.toggle('has-motion-media', Boolean(project.motionImage));
     image.classList.toggle('is-certificate', project.imagePresentation === 'certificate');
     image.innerHTML = leadMedia
-        ? `<img src="${leadMedia}" alt="${escapeAttribute(describeImage(project, project.motionImage ? 'motion' : 'still'))}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
+        ? `<img src="${escapeAttribute(leadMedia)}" alt="${escapeAttribute(describeImage(project, project.motionImage ? 'motion' : 'still'))}" decoding="async"${project.motionImage ? ' class="is-motion-media"' : ''}>`
         : `<div class="media-placeholder"><i class="fa-solid fa-film" aria-hidden="true"></i><span>Pictures coming soon</span><small>I have not added pictures for this project yet.</small></div>`;
     const media = document.getElementById('modal-media');
-    media.innerHTML = (project.media || []).map(item => item.type === 'video' && item.src
-        ? `<figure class="modal-media-item modal-video">${buildVideoEmbed(item.src, item.label, { lazy: true })}<figcaption>${item.label}</figcaption></figure>`
-        : item.src
-        ? `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${item.src}" alt="${escapeAttribute(item.alt || item.label)}" loading="lazy" decoding="async"><figcaption>${item.label}</figcaption></figure>`
-        : `<div class="modal-media-item media-placeholder"><i class="fa-solid ${item.type === 'gif' ? 'fa-film' : 'fa-image'}" aria-hidden="true"></i><span>${item.label}</span><small>${item.hint || 'Media placeholder'}</small></div>`
+    // A media slot with nothing in it yet is left off the page.
+    media.innerHTML = (project.media || []).filter(item => item?.src).map(item => item.type === 'video'
+        ? `<figure class="modal-media-item modal-video">${buildVideoEmbed(item.src, item.label, { lazy: true })}<figcaption>${escapeAttribute(item.label)}</figcaption></figure>`
+        : `<figure class="modal-media-item${item.type === 'gif' ? ' is-motion-media' : ''}${item.fit === 'contain' ? ' media-contain' : ''}"><img src="${escapeAttribute(item.src)}" alt="${escapeAttribute(item.alt || item.label)}" loading="lazy" decoding="async"><figcaption>${escapeAttribute(item.label)}</figcaption></figure>`
     ).join('');
-    // Only a player that loaded while the project is still open: one closed
-    // first is sent to about:blank, which loads too, and offline the frame
-    // loads the browser's error page, where no player will ever ask.
+    // Only a player that loaded while the project is still open: offline the
+    // frame loads the browser's error page, where no player will ever ask.
     modal.querySelectorAll('iframe').forEach(video => video.addEventListener('load', () => {
         if (modal.classList.contains('active') && navigator.onLine !== false) holdGraphicsAdapter();
     }, { once: true }));
@@ -4339,11 +4480,10 @@ function setupModal() {
     const modalCard = modal.querySelector('.modal-scroll');
     const close = () => {
         if (!modal.classList.contains('active')) return;
-        modal.querySelectorAll('iframe').forEach(video => {
-            video.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }), '*');
-            video.src = 'about:blank';
-            video.remove();
-        });
+        // Taking a player off the page ends it, sound and all. (Sending it to
+        // about:blank first fired its load while the project was still open,
+        // which could wake the graphics adapter for a player that never ran.)
+        modal.querySelectorAll('iframe').forEach(video => video.remove());
         const returnFocusTo = modal._returnFocusTo;
         modal._returnFocusTo = null;
         setPageBehindModalInert(false);

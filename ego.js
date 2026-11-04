@@ -336,7 +336,9 @@
     let shown = false, frame = 0, lastFrame = 0, clock = 0, underProject = false, underProjectTimer = 0, resizeTimer = 0;
     let reducedMotion = null;
     let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, tall = 0, builtWidth = 0, builtHeight = 0;
-    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false;
+    // pointerSeen: any pointer, which a double press aims at. mouseSeen: a cursor, which it
+    // follows once awake; a finger leaves it looking about for itself, as Low's does.
+    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false, mouseSeen = false;
     let open = 1, blinkAt = -1, nextBlink = 3, secondBlink = false, nextLook = 1, shockAt = -9, glitchUntil = -1, nextGlitch = 6;
     let followUntil = 0, followAmount = 0, lastPress = -1e9, pupil = 0;
     let shownAt = 0, wakeAt = -1, wakeDarts = 0, wakeX = 0, wakeY = 0, birthStart = -Infinity, born = 1, woke = true, lattice = 48;
@@ -419,14 +421,13 @@
     const update = dt => {
         const t = clock;
         const fixed = following();
-        if (canvas) {
-            if (fixed && !canvas.dataset.following) canvas.dataset.following = '';
-            else if (!fixed && canvas.dataset.following !== undefined) delete canvas.dataset.following;
-        }
+        // Said on it while it follows, for the smoke test.
+        if (fixed && canvas.dataset.following === undefined) canvas.dataset.following = '';
+        else if (!fixed && canvas.dataset.following !== undefined) delete canvas.dataset.following;
         followAmount += ((fixed ? 1 : 0) - followAmount) * Math.min(1, dt * 4);
         // Awake and done going wild, it looks at the cursor wherever it is, always; pressed
         // twice it fixes on it as well, its pupil pinned and the iris flushed.
-        const tracking = pointerSeen && woke && t >= frenzyUntil && dieAt < 0;
+        const tracking = mouseSeen && woke && t >= frenzyUntil && dieAt < 0;
         if ((fixed || tracking) && pointerSeen) {
             // Turned until the pupil is on the cursor, as far as a ball can turn.
             wantYaw = turnFor((pointerX / cell - cx) / ball, mostYaw);
@@ -463,7 +464,7 @@
         // Built on the clock on the wall, so a slow machine does not watch it in slow motion,
         // and woken the moment it is whole.
         born = Math.min(1, Math.max(0, (performance.now() - birthStart) / (BIRTH_S * 1000)));
-        if (!woke && born >= 1) {
+        if (!woke && born >= 1 && dieAt < 0) {
             // Whole: light pours into the iris a moment (portfolio.js draws it), then it starts
             // out at the viewer and wakes.
             if (gatherAt < 0) {
@@ -482,11 +483,12 @@
                 wakeDarts = 6;
                 pop();
                 // Said on it, for the smoke test.
-                if (canvas) canvas.dataset.awake = '';
+                canvas.dataset.awake = '';
             }
         }
         if (blinkAt >= 0) {
-            const age = t - blinkAt;
+            // Held open, not thrown wide, while a second blink waits its turn.
+            const age = Math.max(0, t - blinkAt);
             if (age < .11) open = 1 - .96 * (age / .11);
             else if (age < .15) open = .04;
             else if (age < .34) open = .04 + .96 * ((age - .15) / .19);
@@ -518,9 +520,13 @@
             if (Math.random() < .35) glitchUntil = t + .05;
         }
     };
-    // Where its iris is on the screen, for what portfolio.js draws round it.
-    // At the pupil, where it is looking.
-    const irisAt = () => ({ x: (cx + ball * Math.sin(yaw) * Math.cos(pitch)) * cell, y: (cy + ball * Math.sin(pitch)) * cell, r: irisR * cell });
+    // Where its iris is on the screen, for what portfolio.js draws round it: at the pupil,
+    // where it is looking. Measured by the page, not by `cell`: under 320px the cells are
+    // drawn smaller than that.
+    const irisAt = () => {
+        const across = document.documentElement.clientWidth / cols, down = window.innerHeight / rows;
+        return { x: (cx + ball * Math.sin(yaw) * Math.cos(pitch)) * across, y: (cy + ball * Math.sin(pitch)) * down, r: irisR * across };
+    };
     // It starts out at the viewer as it wakes.
     const pop = () => {
         if (!canvas || reducedMotion?.matches) return;
@@ -595,6 +601,8 @@
     };
     const tick = now => {
         frame = requestAnimationFrame(tick);
+        // Under the switch that brings it there is nothing of it to see yet.
+        if (performance.now() < birthStart) return;
         const interval = document.documentElement.dataset.effectsPace ? 33.3 : 16.6;
         if (lastFrame && now - lastFrame < interval - 3) return;
         const dt = lastFrame ? Math.min(.05, (now - lastFrame) / 1000) : 1 / 60;
@@ -634,6 +642,7 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
+        if (event.pointerType === 'mouse') mouseSeen = true;
     };
     // Pressed twice, anywhere the page itself does not answer a press.
     const ANSWERS = 'a, button, input, select, textarea, label, .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';
@@ -641,10 +650,11 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
+        if (event.pointerType === 'mouse') mouseSeen = true;
         if (event.button || event.target.closest?.(ANSWERS)) return;
         const now = performance.now();
-        // A hand still spamming the slider as the eye arrives, through the crossfade, where
-        // a press lands on nothing in particular, is not asking for anything.
+        // A hand still spamming the slider as the eye arrives, where a press lands on nothing
+        // in particular, is not asking for anything.
         if (now - shownAt < SETTLE_MS || clock < wakeAt) return;
         if (now - lastPress < DOUBLE_PRESS_MS) {
             followUntil = now + FOLLOW_MS;
@@ -683,15 +693,22 @@
             reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
             shownAt = performance.now();
             gatherAt = dieAt = frenzyUntil = -1;
+            // Straight ahead, as the other two eyes start: not wherever it was looking, or
+            // dying, the last time it was out.
+            yaw = pitch = wantYaw = wantPitch = followAmount = pupil = 0;
             // Wherever the cursor is now (portfolio.js keeps it), it looks at once it is
             // awake, without waiting for it to move.
             if (window.portfolioPointer) {
                 ({ x: pointerX, y: pointerY } = window.portfolioPointer);
                 pointerSeen = true;
+                if (window.portfolioPointer.mouse) mouseSeen = true;
             }
+            // Brought in while a project is open (the frame monitor stepping the level), it
+            // waits behind it like everything else.
+            underProject = !!document.querySelector('.modal-overlay.active');
             canvas.getAnimations?.().forEach(animation => animation.cancel());
             delete canvas.dataset.awake;
-            const anchor = document.querySelector('.galaxy-nebula') || document.querySelector('.galaxy-field');
+            const anchor = document.querySelector('.background-grid');
             if (anchor) anchor.after(canvas);
             else document.body.prepend(canvas);
             shown = true;
@@ -710,7 +727,6 @@
                 born = 0;
                 // Nothing of its waking is due until it is whole.
                 wakeAt = shockAt = nextLook = nextBlink = Infinity;
-                wakeDarts = 4;
                 woke = false;
             } else {
                 // There already: awake, looking about, a press answered at once.
