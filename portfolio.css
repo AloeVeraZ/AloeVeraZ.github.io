@@ -3000,15 +3000,12 @@ body:has(.modal-overlay.active) { overflow: hidden; }
     text-transform: uppercase;
 }
 
-/* The star beside the effects slider glows now and then, to say it can be
-   pressed (portfolio.js): once, softly, and twice after a long while on one
-   look. Its colour, a touch of scale and a faint halo, for about a second. */
+/* Paired glints invite a double press: during the first ten seconds, then
+   once a minute (portfolio.js). Only the icon changes, never the layout. */
 @keyframes fx-hint {
-    45% { color: #dce8ff; transform: scale(1.22); filter: drop-shadow(0 0 .3rem rgba(150, 190, 255, .75)); }
+    45% { color: #dce8ff; transform: scale(1.35); filter: drop-shadow(0 0 .5rem rgba(150, 190, 255, .95)); }
 }
-.navbar .fx-slider-icon.is-hinting { animation: fx-hint 1.1s ease-in-out; }
 .navbar .fx-slider-icon.is-hinting-twice { animation: fx-hint .85s ease-in-out 2; }
 @media (prefers-reduced-motion: reduce) {
-    .navbar .fx-slider-icon.is-hinting,
     .navbar .fx-slider-icon.is-hinting-twice { animation: none; }
 }

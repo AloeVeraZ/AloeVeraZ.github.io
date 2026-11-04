@@ -2,7 +2,7 @@
 
    One great eye in hard dither, the kind of picture a dialog box showed at the turn
    of the century, drawn on a very small canvas and blown up with its pixels showing.
-   It is a ball that turns to follow the cursor, the iris narrowing as it comes round to
+   Double-pressing the eye tints its iris and lets it follow for ten seconds, narrowing toward
    the edge, and now and then it blinks. This is the one thing in Low's
    other look that runs, and it is built to ask almost nothing: everything that can
    be is worked out once, a frame looks up what it needs, only the cells that changed
@@ -32,7 +32,10 @@
     let open = 1, drawnOpen = -1, drawnX = 1e9, drawnY = 1e9;
     let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, lookX = 0, lookY = 0, mostYaw = MOST_YAW;
     let frame = 0, gapTimer = 0, lastDraw = 0, blinkAt = -1, blinkTimer = 0, roamTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
-    let underProject = false, pointerSeen = false, reducedMotion = null;
+    let underProject = false, reducedMotion = null;
+    let followUntil = 0, followTimer = 0, lastPress = -1e9, shownAt = 0;
+    const following = () => performance.now() < followUntil;
+    let yawVelocity = 0, pitchVelocity = 0;
     let lastX = 0, lastY = 0;
 
     const build = () => {
@@ -145,6 +148,7 @@
     // Only the cells inside the box given.
     const paint = (x0, y0, x1, y1) => {
         const data = image.data;
+        const flushed = following();
         const yawS = Math.sin(yaw), yawC = Math.cos(yaw), pitchS = Math.sin(pitch), pitchC = Math.cos(pitch);
         // The window it reflects stays with the room, and only slides a little as the
         // bulge of the eye comes round under it.
@@ -173,6 +177,11 @@
                                     r = irisR8[s];
                                     g = irisG8[s];
                                     b = irisB8[s];
+                                    if (flushed) {
+                                        r = r * .45 + 255 * .55;
+                                        g = g * .45 + 82 * .55;
+                                        b = b * .45 + 143 * .55;
+                                    }
                                 }
                             }
                         }
@@ -248,12 +257,20 @@
         }
         const dt = lastDraw ? Math.min(.1, (now - lastDraw) / 1000) : .04;
         lastDraw = now;
-        const pull = Math.min(1, dt * 9);
-        yaw += (wantYaw - yaw) * pull;
-        pitch += (wantPitch - pitch) * pull;
+        // Critically damped turns ease into each glance and carry momentum
+        // through a new target without snapping or depending on frame rate.
+        const rate = following() ? 15 : 12;
+        const decay = Math.exp(-rate * dt);
+        const yawOffset = yaw - wantYaw, pitchOffset = pitch - wantPitch;
+        const yawStep = (yawVelocity + rate * yawOffset) * dt;
+        const pitchStep = (pitchVelocity + rate * pitchOffset) * dt;
+        yaw = wantYaw + (yawOffset + yawStep) * decay;
+        pitch = wantPitch + (pitchOffset + pitchStep) * decay;
+        yawVelocity = (yawVelocity - rate * yawStep) * decay;
+        pitchVelocity = (pitchVelocity - rate * pitchStep) * decay;
         lookX = ball * Math.sin(yaw) * Math.cos(pitch);
         lookY = ball * Math.sin(pitch);
-        let moving = Math.abs(wantYaw - yaw) > .4 / ball || Math.abs(wantPitch - pitch) > .4 / ball;
+        let moving = Math.abs(yawVelocity) > .6 / ball || Math.abs(pitchVelocity) > .6 / ball || Math.abs(wantYaw - yaw) > .4 / ball || Math.abs(wantPitch - pitch) > .4 / ball;
         if (blinkAt >= 0) {
             const age = now - blinkAt;
             if (age < 110) open = 1 - .96 * (age / 110);
@@ -292,44 +309,50 @@
             scheduleBlink();
         }, 2600 + Math.random() * 4600);
     };
-    // A screen with no cursor on it: the eye looks about for itself. Once there is one, it
-    // looks at that from then on.
+    // At rest it looks about for itself, regardless of cursor movement.
     const scheduleRoam = () => {
         clearTimeout(roamTimer);
-        if (pointerSeen) return;
+        const glance = restingEyeGaze(wantYaw, wantPitch, mostYaw, MOST_PITCH);
         roamTimer = window.setTimeout(() => {
-            if (shown && !pointerSeen && !underProject && !document.hidden && !reducedMotion.matches) {
-                aim(Math.random() * cols * cell, Math.random() * rows * cell);
+            if (shown && !following() && !underProject && !document.hidden && !reducedMotion.matches) {
+                wantYaw = glance.yaw;
+                wantPitch = glance.pitch;
+                wake();
             }
             scheduleRoam();
-        }, 2200 + Math.random() * 3800);
-    };
-    // On Low nothing plays on the way in. It is simply there, already looking at the
-    // hand on the slider, and from then on at the cursor.
-    // Or at the cursor, wherever it is now (portfolio.js keeps it).
-    const lookAtSlider = () => {
-        const slider = document.querySelector('.fx-slider')?.getBoundingClientRect();
-        const cursor = window.portfolioPointer?.mouse && window.portfolioPointer;
-        lastX = cursor ? cursor.x : slider?.width ? slider.left + slider.width / 2 : window.innerWidth * .8;
-        lastY = cursor ? cursor.y : slider?.width ? slider.top + slider.height / 2 : 40;
-        if (cursor) pointerSeen = true;
-        aim(lastX, lastY);
-        yaw = wantYaw;
-        pitch = wantPitch;
-        lookX = ball * Math.sin(yaw) * Math.cos(pitch);
-        lookY = ball * Math.sin(pitch);
+        }, Math.max(900, glance.delay));
     };
     const onPointerMove = event => {
         if (event.pointerType && event.pointerType !== 'mouse') return;
-        pointerSeen = true;
         lastX = event.clientX;
         lastY = event.clientY;
-        aim(lastX, lastY);
+        if (following()) aim(lastX, lastY);
     };
+    const ANSWERS = 'a, button, input, select, textarea, label, .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';
     const onPointerDown = event => {
         lastX = event.clientX;
         lastY = event.clientY;
-        aim(lastX, lastY);
+        const x = lastX / cell - cx, y = lastY / cell - cy;
+        const onEye = (x / A) ** 2 + (y / (y < 0 ? upper : lower)) ** 2 <= 1;
+        if (event.button || event.target.closest?.(ANSWERS) || !onEye || underProject) {
+            lastPress = -1e9;
+            return;
+        }
+        const now = performance.now();
+        if (now - shownAt < 700) return;
+        if (now - lastPress < 500) {
+            followUntil = now + 10000;
+            lastPress = -1e9;
+            canvas.dataset.following = '';
+            clearTimeout(followTimer);
+            aim(lastX, lastY);
+            whole();
+            followTimer = window.setTimeout(() => {
+                delete canvas.dataset.following;
+                whole();
+                aim(cx * cell, cy * cell);
+            }, 10000);
+        } else lastPress = now;
     };
     const onVisibility = () => { if (!document.hidden) wake(); };
     const onModalOpen = () => { underProject = true; };
@@ -348,7 +371,7 @@
             lookX = ball * Math.sin(yaw) * Math.cos(pitch);
             lookY = ball * Math.sin(pitch);
             whole();
-            if (pointerSeen) aim(lastX, lastY);
+            if (following()) aim(lastX, lastY);
         }, 260);
     };
 
@@ -363,14 +386,18 @@
                 context = canvas.getContext('2d');
                 document.querySelector('.background-grid')?.after(canvas);
             }
+            yawVelocity = pitchVelocity = 0;
             shown = true;
+            shownAt = performance.now();
+            followUntil = 0;
+            lastPress = -1e9;
+            delete canvas.dataset.following;
             open = 1;
             yaw = pitch = wantYaw = wantPitch = lookX = lookY = 0;
             // Brought in while a project is open (the frame monitor stepping the level), it
             // waits behind it like everything else.
             underProject = !!document.querySelector('.modal-overlay.active');
             build();
-            lookAtSlider();
             whole();
             window.addEventListener('resize', onResize, { passive: true });
             document.addEventListener('visibilitychange', onVisibility);
@@ -393,6 +420,8 @@
             blinkAt = -1;
             clearTimeout(blinkTimer);
             clearTimeout(roamTimer);
+            clearTimeout(followTimer);
+            followUntil = 0;
             clearTimeout(resizeTimer);
             window.removeEventListener('resize', onResize);
             window.removeEventListener('pointermove', onPointerMove);

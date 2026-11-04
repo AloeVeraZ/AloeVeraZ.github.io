@@ -10,9 +10,8 @@
    pass on the graphics card, thirty times a second, and only while something is moving:
    a ball that turns, with veins that go round with it, a lit rim, lids that follow it and
    a soft light under the dither. Between one movement and the next it asks for no frames
-   at all, as Medium promises. Once awake it looks at the cursor wherever it is (with no
-   cursor, on a touch screen, it looks about for itself), and blinks. Pressed twice,
-   anywhere the page itself does not answer, it fixes on the cursor for fifteen seconds,
+   at all, as Medium promises. Once awake it looks about for itself and blinks. Pressed twice
+   on the eye, it follows the pointer for ten seconds,
    its pupil pinned and the iris flushed. Not fetched until someone asks, and leaving it
    takes it off the page; what was compiled for it is kept for the next time. */
 (function () {
@@ -24,7 +23,7 @@
         return t * t * (3 - 2 * t);
     };
     const FRAME_MS = 32;
-    const FOLLOW_MS = 15000;
+    const FOLLOW_MS = 10000;
     const DOUBLE_PRESS_MS = 450;
     // The waking's clock (it starts SHUT_MS in, the lids flying open), how long after it is
     // brought in a press is ignored, how long light pours into its iris before it wakes, and
@@ -235,11 +234,11 @@
     let shown = false, frame = 0, lastDraw = 0, underProject = false, reducedMotion = null;
     let blinkTimer = 0, lookTimer = 0, followTimer = 0, resizeTimer = 0, builtWidth = 0, builtHeight = 0;
     let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, tall = 0;
-    // pointerSeen: any pointer, which a double press aims at. mouseSeen: a cursor, which it
-    // follows once awake; a finger leaves it looking about for itself, as Low's does.
-    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false, mouseSeen = false;
+    // A pointer is remembered, but followed only during the ten-second double-press response.
+    let yaw = 0, pitch = 0, wantYaw = 0, wantPitch = 0, mostYaw = MOST_YAW, pointerX = 0, pointerY = 0, pointerSeen = false;
     let open = 1, blinkAt = -1, shockAt = -1, followUntil = 0, followAmount = 0, lastPress = -1e9;
     let shownAt = 0, wakeAt = -1, waking = false, wakeTimers = [], kick = 0, dieAt = -1, dieMs = 1, birthStart = -Infinity, born = 1, frenzyUntil = -1, nextDart = 0;
+    let yawVelocity = 0, pitchVelocity = 0;
     const turn = new Float32Array(9);
 
     const compile = (type, source) => {
@@ -326,9 +325,6 @@
     };
 
     const following = () => performance.now() < followUntil;
-    // Awake and done going wild, it looks at the cursor wherever it is, always; pressed twice
-    // it fixes on it as well, its pupil pinned and the iris flushed.
-    const tracking = () => mouseSeen && shown && born >= 1 && wakeAt < 0 && performance.now() >= frenzyUntil && dieAt < 0;
     // True for as long as anything is on its way somewhere and another frame is wanted.
     const update = (dt, now) => {
         const fixed = following();
@@ -336,15 +332,23 @@
         else if (!fixed && canvas.dataset.following !== undefined) delete canvas.dataset.following;
         const wantFollow = fixed ? 1 : 0;
         followAmount += (wantFollow - followAmount) * Math.min(1, dt * 4);
-        if ((fixed || tracking()) && pointerSeen) {
+        if (fixed && pointerSeen) {
             // Turned until the pupil is on the cursor, as far as a ball can turn.
             wantYaw = turnFor((pointerX / cell - cx) / ball, mostYaw);
             wantPitch = turnFor((pointerY / cell - cy) / ball, MOST_PITCH);
         }
-        const pull = Math.min(1, dt * (fixed || tracking() ? 8 : waking ? 20 : 11));
-        yaw += (wantYaw - yaw) * pull;
-        pitch += (wantPitch - pitch) * pull;
-        let moving = Math.abs(wantYaw - yaw) > .4 / ball || Math.abs(wantPitch - pitch) > .4 / ball || Math.abs(wantFollow - followAmount) > .02;
+        // Critically damped turns ease into each glance and carry momentum
+        // through a new target without snapping or depending on frame rate.
+        const rate = fixed ? 15 : waking ? 20 : 12;
+        const decay = Math.exp(-rate * dt);
+        const yawOffset = yaw - wantYaw, pitchOffset = pitch - wantPitch;
+        const yawStep = (yawVelocity + rate * yawOffset) * dt;
+        const pitchStep = (pitchVelocity + rate * pitchOffset) * dt;
+        yaw = wantYaw + (yawOffset + yawStep) * decay;
+        pitch = wantPitch + (pitchOffset + pitchStep) * decay;
+        yawVelocity = (yawVelocity - rate * yawStep) * decay;
+        pitchVelocity = (pitchVelocity - rate * pitchStep) * decay;
+        let moving = Math.abs(yawVelocity) > .6 / ball || Math.abs(pitchVelocity) > .6 / ball || Math.abs(wantYaw - yaw) > .4 / ball || Math.abs(wantPitch - pitch) > .4 / ball || Math.abs(wantFollow - followAmount) > .02;
         if (blinkAt >= 0) {
             const age = now - blinkAt;
             if (age < 110) open = 1 - .96 * (age / 110);
@@ -438,25 +442,23 @@
     // A dart somewhere, and a while looking at it. Now and then back to the middle.
     const scheduleLook = () => {
         clearTimeout(lookTimer);
+        const glance = restingEyeGaze(wantYaw, wantPitch, mostYaw, MOST_PITCH);
         lookTimer = window.setTimeout(() => {
-            if (!quiet() && !following() && !tracking()) {
-                const near = Math.random() < .25;
-                wantYaw = (near ? (Math.random() - .5) * .3 : Math.random() * 2 - 1) * mostYaw;
-                wantPitch = (near ? (Math.random() - .5) * .3 : Math.random() * 2 - 1) * MOST_PITCH;
+            if (!quiet() && !following()) {
+                wantYaw = glance.yaw;
+                wantPitch = glance.pitch;
                 wake();
             }
             scheduleLook();
-        }, 900 + Math.random() * Math.random() * 4200);
+        }, glance.delay);
     };
     /* Whole, and the light poured into it: it wakes all at once. The lids fly open, rings go
        out from it, the pupil pins, it goes wild a moment, and has a quick look round before
-       it settles on the cursor, or on looking about for itself where there is none. */
+       it settles into looking about for itself. */
     const wakeUp = () => {
         if (reducedMotion.matches) return;
         const now = performance.now() - SHUT_MS;
-        const slider = document.querySelector('.fx-slider')?.getBoundingClientRect();
-        const x = slider?.width ? slider.left + slider.width / 2 : window.innerWidth * .8;
-        const y = slider?.width ? slider.top + slider.height / 2 : 40;
+        const x = cx * cell, y = cy * cell;
         open = .04;
         wakeAt = now;
         shockAt = -1;
@@ -500,17 +502,20 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
-        if (event.pointerType === 'mouse') mouseSeen = true;
-        if (following() || tracking()) wake();
+        if (following()) wake();
     };
-    // Pressed twice, anywhere the page itself does not answer a press.
+    // Double presses on the visible eye answer; page controls keep their own behavior.
     const ANSWERS = 'a, button, input, select, textarea, label, .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';
     const onPointerDown = event => {
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
-        if (event.pointerType === 'mouse') mouseSeen = true;
-        if (event.button || event.target.closest?.(ANSWERS)) return;
+        const x = event.clientX / cell - cx, y = event.clientY / cell - cy;
+        const onEye = (x / A) ** 2 + (y / (y < 0 ? upper : lower)) ** 2 <= 1;
+        if (event.button || event.target.closest?.(ANSWERS) || !onEye || underProject || born < 1) {
+            lastPress = -1e9;
+            return;
+        }
         const now = performance.now();
         // A hand still spamming the slider as the eye arrives, where a press lands on nothing
         // in particular, is not asking for anything.
@@ -521,7 +526,10 @@
             lastPress = -1e9;
             clearTimeout(followTimer);
             // Nothing else would wake it to let go when the time is up.
-            followTimer = window.setTimeout(wake, FOLLOW_MS + 50);
+            followTimer = window.setTimeout(() => {
+                wantYaw = wantPitch = 0;
+                wake();
+            }, FOLLOW_MS + 50);
             wake();
         } else lastPress = now;
     };
@@ -560,18 +568,20 @@
         show({ after = 0, settled = false } = {}) {
             if (!gl) return;
             reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            followUntil = 0;
+            lastPress = -1e9;
+            delete canvas.dataset.following;
             shownAt = performance.now() + after;
-            // Wherever the cursor is now (portfolio.js keeps it), it looks at once it is
-            // awake, without waiting for it to move.
+            // Remember the cursor for a later double press; waking never starts tracking.
             if (window.portfolioPointer) {
                 ({ x: pointerX, y: pointerY } = window.portfolioPointer);
                 pointerSeen = true;
-                if (window.portfolioPointer.mouse) mouseSeen = true;
             }
             // Brought in while a project is open (the frame monitor stepping the level), it
             // waits behind it like everything else.
             underProject = !!document.querySelector('.modal-overlay.active');
             document.querySelector('.background-grid')?.after(canvas);
+            yawVelocity = pitchVelocity = 0;
             shown = true;
             open = 1;
             dieAt = frenzyUntil = -1;

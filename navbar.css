@@ -237,6 +237,36 @@ html[data-primary-input="touch"] .navbar .logo {
    paint; a drag sets --fx-drag while the finger is down. The range input
    over it is unseen: it has the keyboard and the screen reader, and the
    track draws its focus ring. */
+.navbar .fx-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+.navbar .fx-background-button {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 14px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--nav-muted);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: color .16s;
+}
+.navbar .fx-background-button:hover { color: var(--blue); }
+.navbar .fx-background-button:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+}
 .navbar .fx-slider {
     --fx-width: 48px;
     --fx-height: 18px;
@@ -287,7 +317,7 @@ html[data-effects="low"] .navbar .fx-slider {
     width: 14px;
     height: 14px;
     fill: currentColor;
-    pointer-events: none;
+    pointer-events: auto;
 }
 .has-scrolled .navbar .fx-slider-icon {
     filter: drop-shadow(0 0 .375rem rgba(0, 0, 0, .55));
@@ -440,6 +470,7 @@ html[data-effects="low"] .navbar .fx-slider {
     }
     /* The slider is the last row, as tall as the others. */
     .navbar .nav-links .fx-slider { min-height: 48px; }
+    .navbar .nav-links .fx-background-button { width: 15px; min-height: 48px; }
     .navbar .nav-links .fx-slider-icon { width: 15px; height: 15px; }
 }
 @media (max-width: 639px) {

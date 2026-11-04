@@ -86,9 +86,9 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
   swallowed by its pupil in about half a second (`pourIntoIris`, `GATHER_MS`), and it wakes and
   goes wild for half a second. Each dot keeps a path of its own: a spiral with arms read as a
   swastika once it shrank, so nothing in a switch may make arms or any figure.
-- Every eye looks at the cursor all the time once it is awake, and an eye a switch brings in
-  looks where the cursor already is (`window.portfolioPointer`). Two presses at Medium and High
-  still fix it, pupil pinned and iris flushed, for fifteen seconds. Medium and High play the
+- Every eye wakes without tracking the cursor and looks about for itself. Two presses on
+  the visible eye (away from page controls) tint the iris and start tracking for ten seconds,
+  then the resting color returns and tracking stops. This applies at Low, Medium and High. Medium and High play the
   same switch. From one level's eye to another's there is no build: `show({ settled: true })`.
   A centred rainbow spiral between switches was tried and dropped as "kind of shitty".
 - The sky goes black a few seconds after the last input, at every level, and comes back alive
@@ -96,7 +96,7 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
 
 ## The hidden looks
 
-- Two quick presses on any stop of the effects slider go round that level's looks. A reload
+- One click on the diamond or two quick presses on a slider stop cycle that level's looks. A reload
   goes back to the default.
 - Every level has its usual sky and an eye (`y2k.*` Low, `iris.*` Medium, `ego.*` High); Medium
   has the pink desk (`vapor.*`) last. The choice carries across levels.

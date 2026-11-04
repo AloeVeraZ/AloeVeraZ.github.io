@@ -55,7 +55,7 @@ All three share the same look: near black, almost colourless, lit at the rims, w
 <details>
 <summary><b>Hidden looks</b> (spoilers)</summary>
 
-Press any stop of the slider twice quickly to cycle through that level's hidden looks. A reload goes back to normal.
+Click the diamond once, or press any stop of the slider twice quickly, to cycle through that level's hidden looks. A reload goes back to normal.
 
 | Level | Looks | Files |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ Press any stop of the slider twice quickly to cycle through that level's hidden 
 | Medium | Stars → a GPU-drawn eye → a pink late-90s desktop overrun by a broken robot and hundreds of pop-ups that link to the site's own projects and sections | `iris.js`, `iris.css`, `vapor.js`, `vapor.css` |
 | High | Stars → a fully animated eye with moving fibres, flaring veins and sparks | `ego.js`, `ego.css` |
 
-The eyes at Medium and High build themselves from the bones out over five seconds, then follow the cursor; press twice to make one stare. None of these files load until someone finds them, so they cost the normal page nothing.
+The eyes at Medium and High build themselves from the bones out over five seconds, then look about on their own. At every level, double-press the visible eye to tint its iris and track the pointer for ten seconds; afterward its resting color returns and it stops tracking. None of these files load until someone finds them, so they cost the normal page nothing.
 
 </details>
 

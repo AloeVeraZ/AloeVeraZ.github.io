@@ -76,8 +76,8 @@
     </script>
     <link rel="stylesheet" href="fonts.css?v=20261103a">
     <link rel="stylesheet" href="icons.css?v=20261103a">
-    <link rel="stylesheet" href="portfolio.css?v=20261103-234607">
-    <link rel="stylesheet" href="navbar.css?v=20261103-audit">
+    <link rel="stylesheet" href="portfolio.css?v=20261104-natural-gaze">
+    <link rel="stylesheet" href="navbar.css?v=20261104-separate-star">
     <!-- Set before the first paint, cleared once portfolio-data.json has been
          rendered: the sections below About wait for it (portfolio.css), so
          the cards arriving cannot push what a phone is already showing. Four
@@ -127,11 +127,15 @@
                          after it is what shows, and takes the pointer. Where
                          the thumb sits comes from html[data-effects], so it
                          is right from the first paint. -->
-                    <div class="fx-slider" id="fx-slider">
-                        <svg class="fx-slider-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 .75Q9.1 6.9 15.25 8 9.1 9.1 8 15.25 6.9 9.1.75 8 6.9 6.9 8 .75Z"/></svg>
-                        <input class="fx-slider-input" id="fx-level" type="range" min="0" max="2" step="1" value="1" autocomplete="off" aria-label="Visual effects" aria-valuetext="Medium" aria-describedby="fx-slider-hint">
-                        <span class="fx-slider-track" aria-hidden="true"><span class="fx-slider-rail"><i class="fx-slider-fill"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i></span><b class="fx-slider-thumb"></b></span>
-                        <span class="visually-hidden" id="fx-slider-hint">Low keeps the page still and quick, Medium adds a still starry sky, cards that lean toward the cursor and rings that turn, and High sets the sky moving and frosts the glass.</span>
+                    <div class="fx-controls">
+                        <button class="fx-background-button" id="fx-background" type="button" aria-label="Switch background">
+                            <svg class="fx-slider-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 .75Q9.1 6.9 15.25 8 9.1 9.1 8 15.25 6.9 9.1.75 8 6.9 6.9 8 .75Z"/></svg>
+                        </button>
+                        <div class="fx-slider" id="fx-slider">
+                            <input class="fx-slider-input" id="fx-level" type="range" min="0" max="2" step="1" value="1" autocomplete="off" aria-label="Visual effects" aria-valuetext="Medium" aria-describedby="fx-slider-hint">
+                            <span class="fx-slider-track" aria-hidden="true"><span class="fx-slider-rail"><i class="fx-slider-fill"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i><i class="fx-slider-stop"></i></span><b class="fx-slider-thumb"></b></span>
+                            <span class="visually-hidden" id="fx-slider-hint">Low keeps the page still and quick, Medium adds a still starry sky, cards that lean toward the cursor and rings that turn, and High sets the sky moving and frosts the glass.</span>
+                        </div>
                     </div>
                 </li>
             </ul>
@@ -259,7 +263,7 @@
         </div>
     </footer>
 
-    <script src="portfolio.js?v=20261103-234607"></script>
+    <script src="portfolio.js?v=20261104-separate-star"></script>
     <script src="glass.js?v=20261103-audit"></script>
 </body>
 </html>

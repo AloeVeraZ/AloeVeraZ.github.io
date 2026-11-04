@@ -5,6 +5,22 @@ const PORTFOLIO_SCRIPT_QUERY = document.currentScript?.src ? new URL(document.cu
 // askAboutGraphics): a context that fails rather than run in software.
 const GRAPHICS_QUESTION = { powerPreference: 'low-power', failIfMajorPerformanceCaveat: true };
 
+// Most idle glances stay near the last point of interest, with occasional
+// wider looks and a return toward the viewer. The eyes share this rhythm.
+function restingEyeGaze(yaw, pitch, maxYaw, maxPitch) {
+    const glance = Math.random();
+    const limit = (value, range) => Math.max(-range, Math.min(range, value));
+    return {
+        yaw: glance < .2 ? (Math.random() - .5) * maxYaw * .2
+            : glance < .8 ? limit(yaw + (Math.random() - .5) * maxYaw * .65, maxYaw * .85)
+                : (Math.random() * 2 - 1) * maxYaw * .85,
+        pitch: glance < .2 ? (Math.random() - .5) * maxPitch * .2
+            : glance < .8 ? limit(pitch + (Math.random() - .5) * maxPitch * .5, maxPitch * .7)
+                : (Math.random() * 2 - 1) * maxPitch * .7,
+        delay: 650 + Math.random() ** 2 * 1900
+    };
+}
+
 function setupResponsiveEnvironment() {
     const root = document.documentElement;
     const media = {
@@ -517,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261103k';
+    const SKY_VERSION = '20261104-natural-gaze';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -1102,7 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     // By when the press happened, not when the page got round to it: on a machine
     // that is struggling, quick presses can be answered slowly.
-    const countSkyPress = (level, now) => {
+    const countSkyPress = (level, now, presses = SKY_PRESSES) => {
         if (level !== pressedLevel || now - lastSkyPress >= SKY_PRESS_GAP_MS) skyPresses = 0;
         pressedLevel = level;
         lastSkyPress = now;
@@ -1114,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         skyPresses += 1;
-        if (skyPresses < SKY_PRESSES) return;
+        if (skyPresses < presses) return;
         skyPresses = 0;
         skyQuietUntil = now + SKY_QUIET_MS;
         // Once found, every look is fetched, so a switch from here on is at once.
@@ -1142,7 +1158,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // (navbar.css), so it is right before any of this runs. No word names
     // the level on screen: the thumb's place and the track's blue say it.
     const fxSlider = document.getElementById('fx-slider');
+    const fxBackground = document.getElementById('fx-background');
     const fxInput = document.getElementById('fx-level');
+    fxBackground?.addEventListener('click', event => {
+        countSkyPress(effectsMode, event.timeStamp, 1);
+    });
     const fxTrack = fxSlider?.querySelector('.fx-slider-track');
     // A level the page steps down to by itself is read out from here; one the
     // visitor chose, the slider reads out itself. Outside the menu, which on
@@ -1264,15 +1284,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fxSlider.addEventListener('pointerdown', event => {
             if (!event.isPrimary || event.button !== 0) return;
             const stops = stopCentres();
-            const box = fxTrack.getBoundingClientRect();
-            // The sparkle beside the track does not move the thumb, but it is part of the
-            // control all the same: two quick presses on it go round the looks, as two on
-            // the thumb's own stop do.
-            if (event.clientX < box.left - 8) {
-                event.preventDefault();
-                countSkyPress(effectsMode, event.timeStamp);
-                return;
-            }
             event.preventDefault();
             // So the arrow keys carry on from a click, without a focus ring
             // for it (:focus-visible). A finger has no keys to carry on with.
@@ -1305,38 +1316,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---- The star's hint -------------------------------------------------
-    // The star beside the slider glows softly now and then, to say it can be
-    // pressed: once, every minute and a half or so, and twice when the visitor
-    // has been on one look a minute or more. Never while a project is open, in
-    // a hidden tab or for anyone who prefers reduced motion, and it lets a
-    // visitor who has just used the slider be for a while. A timer every few
-    // seconds and a second's animation on a 14px icon (portfolio.css), so it
-    // costs Low nothing.
-    const fxIcon = fxSlider?.querySelector('.fx-slider-icon');
+    // Paired glints suggest the two presses that reveal another look. Repeat
+    // them through the opening ten seconds, then leave a minute between hints.
+    // Using the control ends the introduction and gives it a minute's rest.
+    // Keep the small animation quiet in hidden tabs, project sheets and for
+    // reduced motion; missed opening hints are never replayed on returning.
+    const fxIcon = fxBackground?.querySelector('.fx-slider-icon');
     if (fxIcon) {
-        const HINT_FIRST_MS = 30000, HINT_EVERY_MS = 90000, LINGER_MS = 60000, AFTER_USE_MS = 180000;
-        let nextHint = performance.now() + HINT_FIRST_MS;
-        let look = '', lookSince = performance.now();
-        fxIcon.addEventListener('animationend', () => fxIcon.classList.remove('is-hinting', 'is-hinting-twice'));
-        fxSlider.addEventListener('pointerdown', () => {
-            nextHint = Math.max(nextHint, performance.now() + AFTER_USE_MS);
-        }, { passive: true });
+        const INTRO_MS = 10000, INTRO_EVERY_MS = 3000, HINT_EVERY_MS = 60000;
+        const introUntil = performance.now() + INTRO_MS;
+        let introducing = true;
+        let nextHint = performance.now() + 1000;
+        const clearHint = () => fxIcon.classList.remove('is-hinting-twice');
+        fxIcon.addEventListener('animationend', clearHint);
+        const restHint = () => {
+            introducing = false;
+            clearHint();
+            nextHint = performance.now() + HINT_EVERY_MS;
+        };
+        fxSlider.addEventListener('pointerdown', restHint, { passive: true });
+        fxSlider.addEventListener('keydown', restHint);
+        fxBackground.addEventListener('click', restHint);
         const checkHint = () => {
             const now = performance.now();
-            const current = `${effectsMode}:${showingSky}`;
-            if (current !== look) {
-                look = current;
-                lookSince = now;
+            if (introducing && now >= introUntil) {
+                introducing = false;
+                nextHint = introUntil + HINT_EVERY_MS;
             }
             const quiet = document.hidden || reducedMotion.matches
                 || document.getElementById('project-modal')?.classList.contains('active');
             if (now >= nextHint && !quiet) {
-                fxIcon.classList.add(now - lookSince >= LINGER_MS ? 'is-hinting-twice' : 'is-hinting');
-                nextHint = now + HINT_EVERY_MS;
+                fxIcon.classList.add('is-hinting-twice');
+                nextHint = now + (introducing ? INTRO_EVERY_MS : HINT_EVERY_MS);
             }
-            window.setTimeout(checkHint, 5000);
+            window.setTimeout(checkHint, 1000);
         };
-        window.setTimeout(checkHint, 5000);
+        window.setTimeout(checkHint, 1000);
     }
     document.addEventListener('visibilitychange', () => {
         deferPerformanceSampling(PERFORMANCE_RESUME_DELAY_MS);
