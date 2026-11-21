@@ -1631,6 +1631,23 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
     height: 100%;
     pointer-events: none;
 }
+/* The ring a press sends out at Low as it rouses the sleeping eye (portfolio.js, ripple):
+   small, and scaled up, so it is never a large layer. */
+.eye-ripple {
+    position: fixed;
+    z-index: 0;
+    width: 30vmax;
+    height: 30vmax;
+    margin: -15vmax 0 0 -15vmax;
+    border: 3px solid rgba(206, 190, 255, .9);
+    border-radius: 50%;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+/* While the eye the page starts with sleeps, the colour behind it is out; it comes up as it
+   is roused. */
+html:is([data-y2k], [data-iris]):not([data-eye-asleep]) .background-grid[data-look] { transition: opacity 1.8s ease; }
+html[data-eye-asleep] .background-grid[data-look] { opacity: 0 !important; transition: none !important; }
 .warp-flash {
     position: fixed;
     left: 50%;

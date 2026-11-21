@@ -98,8 +98,14 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
 
 - One click on the diamond or two quick presses on a slider stop cycle that level's looks. A reload
   goes back to the default.
-- Every level has its usual sky and an eye (`y2k.*` Low, `iris.*` Medium, `ego.*` High); Medium
-  has the pink desk (`vapor.*`) last. The choice carries across levels.
+- The eye is the default at every level (`y2k.*` Low, `iris.*` Medium, `ego.*` High), the space
+  sky is second, and Medium has the pink desk (`vapor.*`) last. The choice carries across levels.
+- The page loads with the eye asleep: lids shut, everything else black (`eyeAsleep`,
+  `html[data-eye-asleep]`). One press on the page away from controls sends a ripple out from the
+  press (`ripple`, `rouseEye` in portfolio.js) and calls the eye's `rouse()`: the lids open on a
+  plain ball, the skin draws back to leave just a circle, and then the usual build and waking
+  play (Low has no build: its iris winds in and it blinks). Cycling the looks ends the sleep;
+  changing level does not. Reduced motion starts awake.
 - Each look keeps to its level's budget: Low asks for almost nothing, Medium little, High what it
   must. Measure a change against the plain level before keeping it.
 - Every look has to hold up at any size and shape, from a folding phone to an ultrawide monitor.

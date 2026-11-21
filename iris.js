@@ -34,6 +34,12 @@
     // How far the ball can turn, in radians: a long way to the sides, less up and down.
     const MOST_YAW = .72, MOST_PITCH = .3;
     const turnFor = (offset, most) => clamp(Math.asin(clamp(offset, -1, 1)), -most, most);
+    // Asleep until the page is pressed (portfolio.js calls rouse): the lids shut and the whole
+    // of it dim. Roused, the lids come up heavily, with a flutter, on a plain ball with nothing
+    // in it; the skin draws back off it and it is just a circle; and from that it builds itself
+    // as it always has, and wakes.
+    const ROUSE_MS = 2000;
+    const lift = age => age < 150 ? 0 : age < 420 ? .3 * smooth(150, 420, age) : age < 540 ? .3 - .18 * smooth(420, 540, age) : .12 + .88 * smooth(540, 980, age);
 
     const QUAD = `#version 300 es
         void main() {
@@ -46,7 +52,7 @@
         uniform vec2 uGrid, uEye, uLookAt, uLid;
         uniform vec3 uSize;
         uniform mat3 uTurn;
-        uniform float uBall, uCap, uIris, uOpen, uPupil, uShock, uTall, uFollow, uBirth;
+        uniform float uBall, uCap, uIris, uOpen, uPupil, uShock, uTall, uFollow, uBirth, uBlank, uSkin, uSleep;
         out vec4 outColor;
         const float TAU = 6.2831853;
         const vec3 LIGHT = vec3(0.26, -0.34, 0.9);
@@ -92,7 +98,9 @@
             float sealed = smoothstep(0.86, 0.99, born);
             float veinsIn = smoothstep(0.4, 0.68, born);
             float irisIn = smoothstep(0.55, 0.84, born);
-            float skinIn = smoothstep(0.66, 0.92, born);
+            // Asleep and as it first opens the skin is already there (uSkin), and what opens is
+            // a plain ball with nothing in it yet (uBlank); both are gone before it builds.
+            float skinIn = max(smoothstep(0.66, 0.92, born), uSkin);
             float opening = mix(2.6, edge, skinIn);
             float top = middle - uOpen * uSize.y * opening, foot = middle + uOpen * uSize.z * opening;
             float lidTop = middle - uOpen * uSize.y * edge, lidFoot = middle + uOpen * uSize.z * edge;
@@ -105,13 +113,13 @@
             float wedgeAt = (atan(toEye.y, toEye.x) / TAU + 0.5) * 10.0;
             float wedge = floor(wedgeAt);
             float due = 0.18 + 0.3 * hash(vec2(wedge, 7.0));
-            float apart = 1.0 - smoothstep(due, due + 0.16, born);
+            float apart = (1.0 - smoothstep(due, due + 0.16, born)) * (1.0 - uBlank);
             float mid = (wedge + 0.5) / 10.0 * TAU - TAU * 0.5;
             vec2 outward = vec2(cos(mid), sin(mid));
             vec2 placed = toEye - outward * apart * uBall * 0.5;
             bool gap = apart > 0.0 && dot(placed, outward) < 0.0;
             float seamAt = min(fract(wedgeAt), 1.0 - fract(wedgeAt)) * TAU / 10.0 * length(toEye);
-            float seam = (1.0 - sealed) * smoothstep(1.6, 0.4, seamAt);
+            float seam = (1.0 - sealed) * smoothstep(1.6, 0.4, seamAt) * (1.0 - uBlank);
             float moving = apart * (1.0 - apart) * 4.0;
             toEye = placed;
             float rr = length(toEye) / uBall;
@@ -171,7 +179,7 @@
                     // Before the skin, the flesh of it, scanned in lines; the wire skeleton drawn
                     // in line by line, with its iris and pupil ringed and a cross through it; the
                     // pieces' cut edges lit as they move; and a ring of light sealing it.
-                    float bare = 1.0 - skinIn;
+                    float bare = (1.0 - skinIn) * (1.0 - uBlank);
                     tone *= 1.0 - 0.45 * bare * (0.5 + 0.5 * step(0.5, fract(y * 0.5)));
                     color = mix(color, vec3(0.86, 0.34, 0.5), 0.5 * bare * (1.0 - irisIn));
                     float away = acos(clamp(p.z, -1.0, 1.0)), lines = 16.0 * wireIn;
@@ -181,7 +189,7 @@
                     if (abs(length(toEye) - uIris) < 0.7 || abs(length(toEye) - uIris * (0.36 + uPupil)) < 0.6) marks = step(0.5, fract(atan(toEye.y, toEye.x) * 12.0));
                     if ((abs(toEye.x) < 0.6 || abs(toEye.y) < 0.6) && length(toEye) < uBall) marks = max(marks, step(0.45, fract(length(toEye) * 0.25)));
                     float wire = max(max(wireLon, wireLat) * wireIn, marks * wireIn * 0.8) * wireOut;
-                    tone = max(tone * (0.15 + 0.85 * smoothstep(0.12, 0.5, born)), wire * 0.95);
+                    tone = max(tone * mix(0.15 + 0.85 * smoothstep(0.12, 0.5, born), 1.0, uBlank), wire * 0.95);
                     color = mix(color, WIRE, wire * 0.85);
                     float cut = moving * (smoothstep(1.4, 0.3, seamAt) + smoothstep(0.9, 1.0, rr));
                     tone = max(tone * (1.0 - seam * 0.85), cut * 0.9);
@@ -200,6 +208,8 @@
                 float crease = middle - (uSize.y + uGrid.y * 0.085) * pow(edge, 0.8);
                 float fold = middle + (uSize.z + uGrid.y * 0.07) * pow(edge, 0.8);
                 tone = 0.05 + 0.2 * exp(-pow((y - top) / (uGrid.y * 0.16), 2.0)) + 0.16 * exp(-pow((y - foot) / (uGrid.y * 0.1), 2.0));
+                // Asleep it is all but black: only the shut lids' line, the crease and the fold.
+                tone *= 1.0 - 0.92 * uSleep;
                 tone += 0.46 * exp(-pow((y - crease) / (uGrid.y * 0.009 + 0.9), 2.0)) * min(1.0, edge * 2.6);
                 tone += 0.24 * exp(-pow((y - fold) / (uGrid.y * 0.007 + 0.8), 2.0)) * min(1.0, edge * 2.6);
                 float toLid = min(abs(y - top), abs(y - foot));
@@ -226,7 +236,7 @@
             // The cells the dither leaves dark keep a little of the light, soft, which is
             // what Low's has no way to do.
             bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
-            float alpha = on ? 0.38 + 0.62 * dim : min(0.34, tone * dim * 0.34);
+            float alpha = on ? 0.38 + 0.62 * dim : min(0.34, tone * dim * 0.34) * (1.0 - uSleep);
             outColor = vec4(color * alpha, alpha);
         }`;
 
@@ -239,6 +249,7 @@
     let open = 1, blinkAt = -1, shockAt = -1, followUntil = 0, followAmount = 0, lastPress = -1e9;
     let shownAt = 0, wakeAt = -1, waking = false, wakeTimers = [], kick = 0, dieAt = -1, dieMs = 1, birthStart = -Infinity, born = 1, frenzyUntil = -1, nextDart = 0;
     let yawVelocity = 0, pitchVelocity = 0;
+    let asleep = false, rouseAt = -1, blank = 0, skin = 0, sleep = 0;
     const turn = new Float32Array(9);
 
     const compile = (type, source) => {
@@ -260,7 +271,7 @@
         gl.linkProgram(program);
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
         uniforms = {};
-        for (const name of ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth']) {
+        for (const name of ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth', 'uBlank', 'uSkin', 'uSleep']) {
             uniforms[name] = gl.getUniformLocation(program, name);
         }
         vao = gl.createVertexArray();
@@ -319,6 +330,9 @@
         gl.uniform1f(u.uTall, tall);
         gl.uniform1f(u.uFollow, followAmount);
         gl.uniform1f(u.uBirth, born);
+        gl.uniform1f(u.uBlank, blank);
+        gl.uniform1f(u.uSkin, skin);
+        gl.uniform1f(u.uSleep, sleep);
         const shock = shockAt < 0 ? -1 : (now - shockAt) / 1000;
         gl.uniform1f(u.uShock, shock >= 0 && shock < 1.4 ? shock : -1);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -393,6 +407,17 @@
         // wakes it then; under the switch that brings it there is nothing to draw).
         born = clamp((now - birthStart) / BIRTH_MS, 0, 1);
         if (born < 1 && now >= birthStart) moving = true;
+        // Roused: the lids come up on a plain ball, the skin draws back off it, and as the
+        // build starts the plain ball goes dark and comes apart into its pieces.
+        if (rouseAt >= 0) {
+            const age = now - rouseAt;
+            open = age < ROUSE_MS ? lift(age) : 1;
+            skin = 1 - smooth(1050, 1750, age);
+            blank = 1 - smooth(0, 450, age - ROUSE_MS);
+            sleep = 1 - smooth(0, 900, age);
+            if (blank <= 0) rouseAt = -1;
+            moving = true;
+        }
         // Dying, on the way out: the pupil blows, it rolls up and away, and the lids come down.
         if (dieAt >= 0) {
             const k = clamp((now - dieAt) / dieMs, 0, 1);
@@ -481,6 +506,20 @@
         frenzyUntil = now + SHUT_MS + FRENZY_MS;
         pop();
     };
+    // It builds itself from `after` on; whole, light pours into its iris, and it wakes.
+    const beginBirth = after => {
+        birthStart = performance.now() + after;
+        born = 0;
+        shownAt = birthStart + BIRTH_MS + GATHER_MS;
+        if (after > 0) wakeTimers.push(window.setTimeout(wake, after));
+        wakeTimers.push(window.setTimeout(() => {
+            document.dispatchEvent(new CustomEvent('portfolio:eye-gather', { detail: { ...irisAt(), ms: GATHER_MS } }));
+        }, after + BIRTH_MS));
+        wakeTimers.push(window.setTimeout(() => {
+            wakeUp();
+            wake();
+        }, after + BIRTH_MS + GATHER_MS));
+    };
     // Where its iris is on the screen, for what portfolio.js draws round it.
     const irisAt = () => {
         const across = document.documentElement.clientWidth / cols, down = window.innerHeight / rows;
@@ -565,7 +604,8 @@
         // starts building itself that much later, so it is built where it can be seen.
         // `settled`: brought in from another level's eye, it is simply there, awake, where that
         // one was.
-        show({ after = 0, settled = false } = {}) {
+        // `sleeping`: as the page first has it, shut and dim until rouse().
+        show({ after = 0, settled = false, sleeping = false } = {}) {
             if (!gl) return;
             reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
             followUntil = 0;
@@ -592,18 +632,17 @@
             // Whole already, it does not pick up a build the last showing left unfinished.
             born = 1;
             birthStart = -Infinity;
-            if (!reducedMotion.matches && !settled) {
-                birthStart = performance.now() + after;
-                born = 0;
-                shownAt += BIRTH_MS + GATHER_MS;
-                if (after > 0) wakeTimers.push(window.setTimeout(wake, after));
-                wakeTimers.push(window.setTimeout(() => {
-                    document.dispatchEvent(new CustomEvent('portfolio:eye-gather', { detail: { ...irisAt(), ms: GATHER_MS } }));
-                }, after + BIRTH_MS));
-                wakeTimers.push(window.setTimeout(() => {
-                    wakeUp();
-                    wake();
-                }, after + BIRTH_MS + GATHER_MS));
+            asleep = sleeping && !reducedMotion.matches;
+            rouseAt = -1;
+            blank = skin = sleep = 0;
+            delete canvas.dataset.asleep;
+            if (asleep) {
+                canvas.dataset.asleep = '';
+                born = open = 0;
+                blank = skin = sleep = 1;
+                birthStart = shownAt = Infinity;
+            } else if (!reducedMotion.matches && !settled) {
+                beginBirth(after);
             } else if (settled && !reducedMotion.matches) {
                 // There already: awake, looking about, a press answered at once.
                 shownAt -= SETTLE_MS;
@@ -622,9 +661,19 @@
             }
         },
         irisAt: () => irisAt(),
-        // On the way out (portfolio.js): it dies over `ms`, and is put away after.
+        // The page was pressed while it slept: it opens, plain, and builds itself, and wakes.
+        rouse() {
+            if (!shown || !asleep) return;
+            asleep = false;
+            delete canvas.dataset.asleep;
+            rouseAt = performance.now();
+            beginBirth(ROUSE_MS);
+            wake();
+        },
+        // On the way out (portfolio.js): it dies over `ms`, and is put away after. Asleep, it
+        // is shut already and simply goes.
         die(ms) {
-            if (!shown || reducedMotion.matches) return;
+            if (!shown || reducedMotion.matches || asleep) return;
             dieAt = performance.now();
             dieMs = ms;
             clearTimeout(blinkTimer);
@@ -645,6 +694,8 @@
             wakeTimers.forEach(id => clearTimeout(id));
             wakeTimers = [];
             followUntil = 0;
+            asleep = false;
+            rouseAt = -1;
             clearTimeout(blinkTimer);
             clearTimeout(lookTimer);
             clearTimeout(followTimer);

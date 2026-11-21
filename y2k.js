@@ -37,6 +37,12 @@
     const following = () => performance.now() < followUntil;
     let yawVelocity = 0, pitchVelocity = 0;
     let lastX = 0, lastY = 0;
+    // Asleep until the page is pressed (portfolio.js calls rouse): the lids shut and the whole
+    // of it dim. Roused, the lids come up heavily, with a flutter, on a plain ball with nothing
+    // in it, the iris winds in from its rim to its middle, and it blinks and looks about.
+    const LIDS_MS = 1100, IRIS_MS = 1500, SLEEP_DIM = '.32';
+    const lift = age => age < 150 ? 0 : age < 420 ? .3 * smooth(150, 420, age) : age < 540 ? .3 - .18 * smooth(420, 540, age) : .12 + .88 * smooth(540, 980, age);
+    let asleep = false, rouseAt = -1, irisIn = 1, drawnIris = 1, irisKey = null;
 
     const build = () => {
         const width = Math.max(320, document.documentElement.clientWidth), height = Math.max(320, window.innerHeight);
@@ -114,6 +120,7 @@
         irisR8 = new Uint8Array(spriteCount);
         irisG8 = new Uint8Array(spriteCount);
         irisB8 = new Uint8Array(spriteCount);
+        irisKey = new Uint8Array(spriteCount);
         const pupil = irisR * .36;
         const c = (spriteSize - 1) / 2;
         for (let y = 0; y < spriteSize; y++) {
@@ -136,6 +143,8 @@
                 irisR8[i] = r;
                 irisG8[i] = g;
                 irisB8[i] = b;
+                // When it winds in: from the rim to the middle, a little round the clock.
+                irisKey[i] = 255 * ((1 - k) * .85 + (angle / (Math.PI * 2) + .5) * .15);
             }
         }
         canvas.width = cols;
@@ -156,6 +165,7 @@
         const big = irisR * .09, small = irisR * .035;
         const half = (spriteSize - 1) / 2;
         const shade = rows * .06;
+        const shownIris = irisIn * 255, glints = irisIn >= 1;
         for (let y = y0; y < y1; y++) {
             for (let x = x0; x < x1; x++) {
                 const i = y * cols + x;
@@ -172,7 +182,7 @@
                             const sy = Math.round(half + (-yawS * pitchS * nx + pitchC * ny - yawC * pitchS * z) * ball);
                             if (sx >= 0 && sy >= 0 && sx < spriteSize && sy < spriteSize) {
                                 const s = sy * spriteSize + sx;
-                                if (irisTone[s] >= 0) {
+                                if (irisTone[s] >= 0 && irisKey[s] <= shownIris) {
                                     tone = irisTone[s] * (.35 + .65 * dimming[i]) * ballShade[i];
                                     r = irisR8[s];
                                     g = irisG8[s];
@@ -187,7 +197,9 @@
                         }
                         const bigX = x - shineX - irisR * .3, bigY = y - shineY + irisR * .34;
                         const smallX = x - shineX + irisR * .24, smallY = y - shineY - irisR * .3;
-                        if (bigX * bigX + bigY * bigY < big * big) {
+                        if (!glints) {
+                            // Nothing in it yet.
+                        } else if (bigX * bigX + bigY * bigY < big * big) {
                             tone = 255;
                             r = g = b = 255;
                         } else if (smallX * smallX + smallY * smallY < small * small) {
@@ -220,6 +232,7 @@
         drawnX = lookX;
         drawnY = lookY;
         drawnOpen = open;
+        drawnIris = irisIn;
     };
     // Wherever the iris was and now is, or the whole opening if a lid has moved.
     const paintChanges = () => {
@@ -240,6 +253,7 @@
         drawnX = lookX;
         drawnY = lookY;
         drawnOpen = open;
+        drawnIris = irisIn;
     };
 
     // There are frames only while something is moving, one every FRAME_MS; between them it
@@ -282,7 +296,21 @@
             }
             moving = true;
         }
-        if (open !== drawnOpen || Math.round(lookX) !== Math.round(drawnX) || Math.round(lookY) !== Math.round(drawnY)) paintChanges();
+        if (rouseAt >= 0) {
+            const age = now - rouseAt;
+            open = age < LIDS_MS ? lift(age) : 1;
+            irisIn = clamp((age - LIDS_MS) / IRIS_MS, 0, 1);
+            moving = true;
+            if (irisIn >= 1) {
+                // Whole: it blinks, and from here it is the eye it always was.
+                rouseAt = -1;
+                blinkAt = now;
+                shownAt = now - 700;
+                scheduleBlink();
+                scheduleRoam();
+            }
+        }
+        if (open !== drawnOpen || irisIn !== drawnIris || Math.round(lookX) !== Math.round(drawnX) || Math.round(lookY) !== Math.round(drawnY)) paintChanges();
         if (moving) frame = requestAnimationFrame(step);
         else lastDraw = 0;
     };
@@ -377,7 +405,8 @@
 
     window.portfolioY2k = {
         prepare: () => Promise.resolve(),
-        show() {
+        // `sleeping`: as the page first has it, shut and dim until rouse().
+        show({ sleeping = false } = {}) {
             reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
             if (!canvas) {
                 canvas = document.createElement('canvas');
@@ -392,7 +421,14 @@
             followUntil = 0;
             lastPress = -1e9;
             delete canvas.dataset.following;
-            open = 1;
+            asleep = sleeping && !reducedMotion.matches;
+            rouseAt = -1;
+            open = irisIn = asleep ? 0 : 1;
+            if (asleep) {
+                shownAt = Infinity;
+                canvas.dataset.asleep = '';
+            } else delete canvas.dataset.asleep;
+            canvas.style.opacity = asleep ? SLEEP_DIM : '';
             yaw = pitch = wantYaw = wantPitch = lookX = lookY = 0;
             // Brought in while a project is open (the frame monitor stepping the level), it
             // waits behind it like everything else.
@@ -406,13 +442,28 @@
             if (!reducedMotion.matches) {
                 window.addEventListener('pointermove', onPointerMove, { passive: true });
                 window.addEventListener('pointerdown', onPointerDown, { passive: true });
-                scheduleBlink();
-                scheduleRoam();
+                if (!asleep) {
+                    scheduleBlink();
+                    scheduleRoam();
+                }
             }
+        },
+        // The page was pressed while it slept.
+        rouse() {
+            if (!shown || !asleep) return;
+            asleep = false;
+            delete canvas.dataset.asleep;
+            rouseAt = performance.now();
+            canvas.style.opacity = '';
+            canvas.animate?.([{ opacity: SLEEP_DIM }, { opacity: 1 }], { duration: 900, easing: 'ease-out' });
+            wake();
         },
         release() {
             shown = false;
             underProject = false;
+            asleep = false;
+            rouseAt = -1;
+            irisIn = 1;
             if (frame) cancelAnimationFrame(frame);
             frame = 0;
             clearTimeout(gapTimer);
@@ -433,7 +484,7 @@
             canvas = null;
             context = null;
             image = null;
-            threshold = skinTone = whiteTone = tintR = tintG = tintB = edge = dimming = ballZ = ballShade = irisTone = irisR8 = irisG8 = irisB8 = null;
+            threshold = skinTone = whiteTone = tintR = tintG = tintB = edge = dimming = ballZ = ballShade = irisTone = irisR8 = irisG8 = irisB8 = irisKey = null;
         }
     };
 })();

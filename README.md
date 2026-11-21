@@ -51,7 +51,7 @@ The same portfolio has a different visual personality behind the star. **Click t
 
 A giant eye fills the background with moving iris fibres, lit veins, sparks, and a flowing aura. Visible dithering, separated color channels, and light bleeding across the image give it the feel of a glowing digital display. Purple glass controls and luminous lettering carry that palette into the portfolio itself.
 
-The eye assembles from its internal structure before waking up. It blinks and eases between small glances and wider looks on its own. **Double-click the eye** to tint its iris and let it follow your cursor for ten seconds; then its resting color returns and it goes back to looking around.
+The eye is the default backdrop and starts asleep, lids shut on a black page. Click the background once: a ripple spreads from the click, the lids open on a plain circle, and the eye assembles from its internal structure before waking up. It blinks and eases between small glances and wider looks on its own. **Double-click the eye** to tint its iris and let it follow your cursor for ten seconds; then its resting color returns and it goes back to looking around.
 
 *Try it: move the slider to High, then click the star.*
 

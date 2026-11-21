@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- The other skies -------------------------------------------------
     // Two quick presses on any stop of the slider go round that level's looks,
     // so anyone pressing about finds them. Every level
-    // has its stars and its eye, each built for what that level can spend, and the
+    // has its eye, which the page starts with, and its stars, each built for what that level can spend, and the
     // choice is one choice: an eye turned on at one level is on at all of them.
     // Medium has a pink desktop last of all, which only Medium can show; the other
     // two show whichever of the stars and the eye was on when it came up. A gap in
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261104-natural-gaze';
+    const SKY_VERSION = '20261121-sleeping-eye';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -544,8 +544,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // A look this machine could not show (no WebGL 2, say) is skipped from then on, so
     // it does not stand in the way of the one after it.
     const skippedSkies = new Set();
-    let eyeOn = false;
+    // The eye is what every level starts with; the stars come second, and Medium's desk last.
+    let eyeOn = true;
     let deskOn = false;
+    // And it starts asleep: shut and dim, the page all but black, until the page is pressed
+    // once anywhere that is not a control (rouseEye, below). Going round the looks ends it
+    // too; a change of level does not. Reduced motion has it awake and still from the start.
+    let eyeAsleep = !reducedMotion.matches;
     let skiesFound = false;
     const wantedSky = level => {
         if (level === 'medium' && deskOn && !skippedSkies.has('vapor')) return 'vapor';
@@ -659,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const layers = [];
         for (const element of document.body.children) {
             if (element === pageScrollProgress) break;
-            if (!element.classList.contains('switch-fx') && !element.classList.contains('warp-flash')) layers.push(element);
+            if (!element.matches('.switch-fx, .warp-flash, .eye-ripple')) layers.push(element);
         }
         return layers;
     };
@@ -1049,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const putSkyAway = () => {
         if (!showingSky) return;
         delete root.dataset[showingSky];
+        delete root.dataset.eyeAsleep;
         window[SKIES[showingSky].script]?.release();
         showingSky = '';
     };
@@ -1096,8 +1102,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 putSkyAway();
                 showingSky = want;
                 root.dataset[want] = '';
-                // From one level's eye to another's it is simply there, where that one was.
-                sky.show({ after: arrival, settled: Object.values(EYES).includes(from) });
+                // From one level's eye to another's it is simply there, where that one was:
+                // asleep still, if nobody has pressed the page yet.
+                const sleeping = eyeAsleep && want === EYES[effectsMode];
+                if (sleeping) root.dataset.eyeAsleep = '';
+                sky.show({ after: arrival, settled: Object.values(EYES).includes(from), sleeping });
                 stillSky.hide();
                 cosmos.hide();
                 darkensWhenIdle = false;
@@ -1116,6 +1125,73 @@ document.addEventListener('DOMContentLoaded', () => {
             } else targetSky = showingSky;
         }
     };
+    /* The eye the page starts with is asleep. One press on the page, anywhere that is not a
+       control or a card, sends a ripple out from where it landed and rouses it: the lids come
+       up on a plain ball, the skin draws back to leave just a circle, and from that it builds
+       itself and wakes as an eye a switch brings in does (the eyes' own rouse()). Low's ripple
+       is one ring, a small element scaled up; Medium's and High's are rings drawn on the
+       switch canvas, High's more of them with a flash where the press was. */
+    const ROUSE_IGNORES = 'a, button, input, select, textarea, label, summary, [role="button"], .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';
+    const ripple = (x, y) => {
+        if (effectsMode === 'low' || !Element.prototype.animate) {
+            const ring = document.createElement('span');
+            ring.className = 'eye-ripple';
+            ring.setAttribute('aria-hidden', 'true');
+            ring.style.left = `${Math.round(x)}px`;
+            ring.style.top = `${Math.round(y)}px`;
+            pageScrollProgress.before(ring);
+            if (!ring.animate) {
+                ring.remove();
+                return;
+            }
+            ring.animate([
+                { transform: 'scale(.02)', opacity: .95 },
+                { transform: 'scale(9)', opacity: 0 }
+            ], { duration: 1200, easing: 'cubic-bezier(.15, .7, .3, 1)', fill: 'both' }).finished.finally(() => ring.remove());
+            return;
+        }
+        const high = effectsMode === 'high';
+        const [w, h] = fx.size();
+        const reach = Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) * 1.05;
+        const rings = high ? 6 : 3, gap = .1;
+        fx.play(high ? 1900 : 1500, (context, t) => {
+            context.globalCompositeOperation = 'lighter';
+            if (high && t < .45) {
+                const k = t / .45, glow = context.createRadialGradient(x, y, 0, x, y, reach * (.08 + .3 * k));
+                glow.addColorStop(0, `rgba(255,236,250,${((1 - k) * .8).toFixed(3)})`);
+                glow.addColorStop(.4, `rgba(176,130,255,${((1 - k) * .3).toFixed(3)})`);
+                glow.addColorStop(1, 'rgba(120,70,220,0)');
+                context.fillStyle = glow;
+                context.fillRect(0, 0, w, h);
+            }
+            for (let i = 0; i < rings; i++) {
+                const k = (t - i * gap) / (1 - (rings - 1) * gap);
+                if (k <= 0 || k >= 1) continue;
+                const [r, g, b] = DOTS[i % DOTS.length === 0 ? 3 : i % DOTS.length];
+                context.strokeStyle = `rgba(${r},${g},${b},${((1 - k) ** 1.4 * (.7 - i * .08)).toFixed(3)})`;
+                context.lineWidth = 1 + (high ? 9 : 6) * (1 - k) / (1 + i * .5);
+                context.beginPath();
+                context.arc(x, y, reach * easeOut(k), 0, Math.PI * 2);
+                context.stroke();
+            }
+            context.globalCompositeOperation = 'source-over';
+        });
+    };
+    const rouseEye = (x, y) => {
+        const eye = EYES[effectsMode];
+        // Not up yet (still being fetched), or this machine cannot show it: it stays as it is.
+        if (!eyeAsleep || showingSky !== eye || warping || shiftPlaying) return;
+        eyeAsleep = false;
+        delete root.dataset.eyeAsleep;
+        // Its own build is not the machine struggling.
+        deferPerformanceSampling(9000);
+        ripple(x, y);
+        window[SKIES[eye].script]?.rouse?.();
+    };
+    document.addEventListener('click', event => {
+        if (!eyeAsleep || event.button || event.target.closest?.(ROUSE_IGNORES)) return;
+        rouseEye(event.clientX, event.clientY);
+    });
     // By when the press happened, not when the page got round to it: on a machine
     // that is struggling, quick presses can be answered slowly.
     const countSkyPress = (level, now, presses = SKY_PRESSES) => {
@@ -1136,10 +1212,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Once found, every look is fetched, so a switch from here on is at once.
         if (!skiesFound) Object.keys(SKIES).forEach(name => loadSky(name).catch(() => {}));
         skiesFound = true;
+        // An eye left asleep is not asleep when the looks come back round to it: it builds.
+        eyeAsleep = false;
+        // Round from the eye to the stars, at Medium on to the desk, and back to the eye.
         if (level === 'medium') {
-            if (deskOn) deskOn = eyeOn = false;
-            else if (eyeOn || skippedSkies.has('iris')) deskOn = true;
-            else eyeOn = true;
+            if (deskOn) {
+                deskOn = false;
+                eyeOn = true;
+            } else if (eyeOn && !skippedSkies.has('iris')) eyeOn = false;
+            else if (skippedSkies.has('vapor')) eyeOn = true;
+            else deskOn = true;
         } else {
             deskOn = false;
             eyeOn = !eyeOn;
