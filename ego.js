@@ -242,7 +242,7 @@
                 float fold = middle + (uSize.z + uGrid.y * 0.07) * pow(edge, 0.8);
                 tone = 0.05 + 0.2 * exp(-pow((y - top) / (uGrid.y * 0.16), 2.0)) + 0.16 * exp(-pow((y - foot) / (uGrid.y * 0.1), 2.0));
                 // Asleep it is all but black: only the shut lids' line, the crease and the fold.
-                tone *= 1.0 - 0.92 * uSleep;
+                tone *= 1.0 - uSleep;
                 tone += 0.46 * exp(-pow((y - crease) / (uGrid.y * 0.009 + 0.9), 2.0)) * min(1.0, edge * 2.6);
                 tone += 0.24 * exp(-pow((y - fold) / (uGrid.y * 0.007 + 0.8), 2.0)) * min(1.0, edge * 2.6);
                 float flow = fbm(cell * 0.016 + vec2(uTime * 0.05, -uTime * 0.035) + fbm(cell * 0.01 - uTime * 0.03) * 2.4);
@@ -278,14 +278,17 @@
                 color = mix(color, vec3(1.0, 0.78, 0.96), min(1.0, wave * 2.0));
             }
             bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
-            outColor = vec4(on ? color * (0.38 + 0.62 * dim) : vec3(0.0), 1.0);
+            // Asleep, what is left of it is barely there, and breathes: a hint of the lids in
+            // the black.
+            float faint = mix(1.0, 0.1 + 0.04 * sin(uTime * 0.9), uSleep);
+            outColor = vec4(on ? color * (0.38 + 0.62 * dim) * faint : vec3(0.0), 1.0);
         }`;
 
     const SCREEN = `#version 300 es
         precision highp float;
         uniform sampler2D uScene;
         uniform vec2 uGrid, uRes, uPupilAt;
-        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice;
+        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice, uSleep;
         out vec4 outColor;
         float hash(vec2 p) {
             p = fract(p * vec2(123.34, 456.21));
@@ -335,7 +338,7 @@
             vec2 onPage = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
             vec2 major = mod(onPage, uLattice), minor = mod(onPage, uLattice * 0.25);
             float lattice = (major.x < 1.0 || major.y < 1.0) ? 0.09 : (minor.x < 1.0 || minor.y < 1.0) ? 0.03 : 0.0;
-            color += vec3(0.57, 0.78, 1.0) * lattice * (1.0 - smoothstep(0.25, 0.85, uBirth));
+            color += vec3(0.57, 0.78, 1.0) * lattice * (1.0 - smoothstep(0.25, 0.85, uBirth)) * (1.0 - uSleep);
             color *= 0.955 + 0.045 * sin(gl_FragCoord.y * 2.2);
             vec2 edge = uv - 0.5;
             color *= 1.0 - dot(edge, edge) * 0.72;
@@ -380,7 +383,7 @@
         gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
         if (!gl) throw new Error('no WebGL 2');
         const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth', 'uBlank', 'uSkin', 'uSleep']);
-        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice']);
+        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice', 'uSleep']);
         eyeProgram = eye.program;
         eyeUniforms = eye.uniforms;
         screenProgram = screen.program;
@@ -615,6 +618,7 @@
         gl.uniform1f(s.uGlitch, t < glitchUntil && t >= wakeAt ? 1 : shocking ? Math.max(0, 1 - shock * 3) : born > 0 && born < 1 && Math.random() < .12 ? .5 : 0);
         gl.uniform1f(s.uBirth, born);
         gl.uniform1f(s.uLattice, lattice);
+        gl.uniform1f(s.uSleep, sleep);
         gl.uniform1f(s.uTall, tall);
         gl.uniform1f(s.uFollow, followAmount);
         gl.drawArrays(gl.TRIANGLES, 0, 3);

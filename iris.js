@@ -209,7 +209,7 @@
                 float fold = middle + (uSize.z + uGrid.y * 0.07) * pow(edge, 0.8);
                 tone = 0.05 + 0.2 * exp(-pow((y - top) / (uGrid.y * 0.16), 2.0)) + 0.16 * exp(-pow((y - foot) / (uGrid.y * 0.1), 2.0));
                 // Asleep it is all but black: only the shut lids' line, the crease and the fold.
-                tone *= 1.0 - 0.92 * uSleep;
+                tone *= 1.0 - uSleep;
                 tone += 0.46 * exp(-pow((y - crease) / (uGrid.y * 0.009 + 0.9), 2.0)) * min(1.0, edge * 2.6);
                 tone += 0.24 * exp(-pow((y - fold) / (uGrid.y * 0.007 + 0.8), 2.0)) * min(1.0, edge * 2.6);
                 float toLid = min(abs(y - top), abs(y - foot));
@@ -237,6 +237,8 @@
             // what Low's has no way to do.
             bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
             float alpha = on ? 0.38 + 0.62 * dim : min(0.34, tone * dim * 0.34) * (1.0 - uSleep);
+            // Asleep, what is left of it is barely there: a hint of the lids in the black.
+            alpha *= mix(1.0, 0.13, uSleep);
             outColor = vec4(color * alpha, alpha);
         }`;
 

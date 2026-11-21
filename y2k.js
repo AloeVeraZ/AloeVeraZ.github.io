@@ -40,7 +40,7 @@
     // Asleep until the page is pressed (portfolio.js calls rouse): the lids shut and the whole
     // of it dim. Roused, the lids come up heavily, with a flutter, on a plain ball with nothing
     // in it, the iris winds in from its rim to its middle, and it blinks and looks about.
-    const LIDS_MS = 1100, IRIS_MS = 1500, SLEEP_DIM = '.32';
+    const LIDS_MS = 1100, IRIS_MS = 1500, SLEEP_DIM = '.12';
     const lift = age => age < 150 ? 0 : age < 420 ? .3 * smooth(150, 420, age) : age < 540 ? .3 - .18 * smooth(420, 540, age) : .12 + .88 * smooth(540, 980, age);
     let asleep = false, rouseAt = -1, irisIn = 1, drawnIris = 1, irisKey = null;
 
