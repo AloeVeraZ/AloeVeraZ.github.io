@@ -37,11 +37,21 @@
     const following = () => performance.now() < followUntil;
     let yawVelocity = 0, pitchVelocity = 0;
     let lastX = 0, lastY = 0;
-    // Asleep until the page is pressed (portfolio.js calls rouse): the lids shut and the whole
-    // of it dim. Roused, the lids come up heavily, with a flutter, on a plain ball with nothing
-    // in it, the iris winds in from its rim to its middle, and it blinks and looks about.
-    const LIDS_MS = 1100, IRIS_MS = 1500, SLEEP_DIM = '.12';
+    // Asleep until the page is pressed (portfolio.js calls rouse), it does not show at all.
+    // Roused, it does what Medium's does (iris.js), worked out here cell by cell for the few
+    // seconds it lasts: the lids come up on a plain ball, the skin draws back to leave just a
+    // circle, and it builds itself: a wire skeleton, its pieces falling into place from where
+    // they were laid out round it, the iris winding in, the skin closing over it into lids,
+    // and the seams sealed. Then it blinks, starts out a little, and looks about.
+    const ROUSE_MS = 2000, BIRTH_MS = 4500, SLEEP_DIM = '0', TAU = Math.PI * 2;
     const lift = age => age < 150 ? 0 : age < 420 ? .3 * smooth(150, 420, age) : age < 540 ? .3 - .18 * smooth(420, 540, age) : .12 + .88 * smooth(540, 980, age);
+    const wedgeDue = Array.from({ length: 10 }, (_, w) => .18 + .3 * ((Math.sin(w * 91.7 + 7) * 43758.5453) % 1 + 1) % 1);
+    const wedgeApart = new Float32Array(10), wedgeX = new Float32Array(10), wedgeY = new Float32Array(10);
+    for (let w = 0; w < 10; w++) {
+        const mid = (w + .5) / 10 * TAU - Math.PI;
+        wedgeX[w] = Math.cos(mid);
+        wedgeY[w] = Math.sin(mid);
+    }
     let asleep = false, rouseAt = -1, irisIn = 1, drawnIris = 1, irisKey = null;
 
     const build = () => {
@@ -227,6 +237,92 @@
         }
         context.putImageData(image, 0, 0, x0, y0, x1 - x0, y1 - y0);
     };
+    // The whole of it while it builds itself, as iris.js's shader has it: `born` how far built,
+    // `blank` how much of the plain ball it opened on is left, `skin` how much of the skin it
+    // slept under.
+    const paintBuild = (born, blank, skin) => {
+        const data = image.data;
+        const wireIn = smooth(0, .2, born), wire = wireIn * (1 - smooth(.78, .96, born)), sealed = smooth(.86, .99, born);
+        const skinIn = Math.max(smooth(.66, .92, born), skin), bare = (1 - skinIn) * (1 - blank);
+        const lit = blank + (1 - blank) * (.15 + .85 * smooth(.12, .5, born));
+        const shownIris = smooth(.55, .84, born) * 1.1 * 255, lines = 16 * wireIn;
+        const fuseAt = 1.15 - sealed * 1.3, fuse = sealed * (1 - sealed) * 4;
+        const skinFrom = 1 - skinIn * 1.15;
+        const half = (spriteSize - 1) / 2, shade = rows * .06;
+        for (let w = 0; w < 10; w++) wedgeApart[w] = (1 - smooth(wedgeDue[w], wedgeDue[w] + .16, born)) * (1 - blank);
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                const i = y * cols + x, dim = dimming[i];
+                const opening = 2.6 + (edge[x] - 2.6) * skinIn;
+                const top = cy - open * upper * opening, foot = cy + open * lower * opening;
+                let tone = 0, r = tintR[i], g = tintG[i], b = tintB[i];
+                if (y > top && y < foot) {
+                    const dx = x - cx, dy = y - cy;
+                    const at = (Math.atan2(dy, dx) / TAU + .5) * 10, w = Math.min(9, at | 0), apart = wedgeApart[w];
+                    // Each piece is set out from the middle along its own line, and comes in.
+                    const px = dx - wedgeX[w] * apart * ball * .5, py = dy - wedgeY[w] * apart * ball * .5;
+                    const sx = Math.round(cx + px), sy = Math.round(cy + py);
+                    if (apart > 0 && px * wedgeX[w] + py * wedgeY[w] < 0) tone = 0;
+                    else if (sx < 0 || sy < 0 || sx >= cols || sy >= rows || !(ballZ[sy * cols + sx] > 0)) tone = 6 * dim;
+                    else {
+                        const j = sy * cols + sx, z = ballZ[j];
+                        tone = whiteTone[j];
+                        const ix = Math.round(half + px), iy = Math.round(half + py);
+                        if (ix >= 0 && iy >= 0 && ix < spriteSize && iy < spriteSize) {
+                            const s = iy * spriteSize + ix;
+                            if (irisTone[s] >= 0 && irisKey[s] <= shownIris) {
+                                tone = irisTone[s] * (.35 + .65 * dim) * ballShade[j];
+                                r = irisR8[s];
+                                g = irisG8[s];
+                                b = irisB8[s];
+                            }
+                        }
+                        // Before the skin, the flesh of it, scanned in lines.
+                        tone *= lit * (1 - .45 * bare * (y & 1 ? 1 : .5));
+                        const rr = Math.hypot(px, py) / ball;
+                        const part = at - (at | 0), seamAt = Math.min(part, 1 - part) * TAU / 10 * Math.hypot(dx, dy);
+                        let cyan = 0;
+                        if (wire > 0) {
+                            // The wire skeleton, drawn in line by line.
+                            const round = Math.atan2(py, px) / TAU + .5, away = Math.acos(z);
+                            const lon = round * 16, lat = away * 2.9;
+                            if ((lon <= lines && Math.abs(lon - Math.floor(lon) - .5) > .46) || (away / Math.PI * 9 <= lines && Math.abs(lat - Math.floor(lat) - .5) > .45)) cyan = wire * .95;
+                        }
+                        // A piece on its way in shows its cut edges lit; the seams stay open
+                        // till the end, when a ring of light runs in over them.
+                        const moving = apart * (1 - apart) * 4;
+                        if (moving > 0 && (seamAt < 1.1 || rr > .95)) cyan = Math.max(cyan, moving * .9);
+                        else if (blank < 1 && sealed < 1 && seamAt < .9) tone *= 1 - (1 - sealed) * (1 - blank) * .85;
+                        if (cyan > 0 && cyan * 255 * dim > tone) {
+                            tone = cyan * 255 * (.35 + .65 * dim);
+                            r = 128;
+                            g = 242;
+                            b = 255;
+                        }
+                        if (fuse > 0) tone += Math.exp(-(((rr - fuseAt) / .07) ** 2)) * fuse * 217 * dim;
+                    }
+                    const under = (y - top) / shade;
+                    if (under < 1) tone *= .2 + .8 * under;
+                } else if (skinIn > 0) {
+                    tone = skinTone[i];
+                    const toTop = Math.abs(y - top), toFoot = Math.abs(y - foot);
+                    if (edge[x] > .02 && (toTop < 1.3 || toFoot < .9)) tone = toTop < 1.3 ? 235 : 150;
+                    // The skin comes in from the edges of the screen.
+                    const fromEdge = Math.max(Math.abs(x / cols - .5), Math.abs(y / rows - .5)) * 2;
+                    tone *= smooth(skinFrom, skinFrom + .12, fromEdge) * skinIn;
+                }
+                const o = i * 4;
+                if (tone > threshold[i]) {
+                    data[o] = r;
+                    data[o + 1] = g;
+                    data[o + 2] = b;
+                    data[o + 3] = 96 + 159 * dim;
+                } else data[o + 3] = 0;
+            }
+        }
+        context.putImageData(image, 0, 0);
+        drawnOpen = -1;
+    };
     const whole = () => {
         paint(0, 0, cols, rows);
         drawnX = lookX;
@@ -298,17 +394,22 @@
         }
         if (rouseAt >= 0) {
             const age = now - rouseAt;
-            open = age < LIDS_MS ? lift(age) : 1;
-            irisIn = clamp((age - LIDS_MS) / IRIS_MS, 0, 1);
-            moving = true;
-            if (irisIn >= 1) {
-                // Whole: it blinks, and from here it is the eye it always was.
-                rouseAt = -1;
-                blinkAt = now;
-                shownAt = now - 700;
-                scheduleBlink();
-                scheduleRoam();
+            if (age < ROUSE_MS + BIRTH_MS) {
+                open = age < ROUSE_MS ? lift(age) : 1;
+                paintBuild(clamp((age - ROUSE_MS) / BIRTH_MS, 0, 1), 1 - smooth(0, 450, age - ROUSE_MS), 1 - smooth(1050, 1750, age));
+                frame = requestAnimationFrame(step);
+                return;
             }
+            // Whole: it blinks and starts out a little, and from here it is the eye it always was.
+            rouseAt = -1;
+            open = 1;
+            whole();
+            blinkAt = now;
+            shownAt = now - 700;
+            scheduleBlink();
+            scheduleRoam();
+            canvas.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.07)', offset: .25 }, { transform: 'scale(1)' }], { duration: 560, easing: 'cubic-bezier(.2, .9, .3, 1)' });
+            moving = true;
         }
         if (open !== drawnOpen || irisIn !== drawnIris || Math.round(lookX) !== Math.round(drawnX) || Math.round(lookY) !== Math.round(drawnY)) paintChanges();
         if (moving) frame = requestAnimationFrame(step);
@@ -423,7 +524,8 @@
             delete canvas.dataset.following;
             asleep = sleeping && !reducedMotion.matches;
             rouseAt = -1;
-            open = irisIn = asleep ? 0 : 1;
+            open = asleep ? 0 : 1;
+            irisIn = 1;
             if (asleep) {
                 shownAt = Infinity;
                 canvas.dataset.asleep = '';
@@ -455,7 +557,7 @@
             delete canvas.dataset.asleep;
             rouseAt = performance.now();
             canvas.style.opacity = '';
-            canvas.animate?.([{ opacity: SLEEP_DIM }, { opacity: 1 }], { duration: 900, easing: 'ease-out' });
+            canvas.animate?.([{ opacity: SLEEP_DIM }, { opacity: 1 }], { duration: 700, easing: 'ease-out' });
             wake();
         },
         release() {

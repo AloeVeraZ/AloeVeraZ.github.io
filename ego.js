@@ -219,7 +219,8 @@
                     if (abs(length(toEye) - uIris) < 0.7 || abs(length(toEye) - uIris * (0.36 + uPupil)) < 0.6) marks = step(0.5, fract(atan(toEye.y, toEye.x) * 12.0));
                     if ((abs(toEye.x) < 0.6 || abs(toEye.y) < 0.6) && length(toEye) < uBall) marks = max(marks, step(0.45, fract(length(toEye) * 0.25)));
                     float wire = max(max(wireLon, wireLat) * wireIn, marks * wireIn * 0.8) * wireOut;
-                    tone = max(tone * mix(0.15 + 0.85 * smoothstep(0.12, 0.5, born), 1.0, uBlank), wire * 0.95);
+                    // The plain ball it opens on is held down: all white, it filled the screen with light.
+                    tone = max(tone * mix(0.15 + 0.85 * smoothstep(0.12, 0.5, born), 0.42, uBlank), wire * 0.95);
                     color = mix(color, WIRE, wire * 0.85);
                     // A piece on its way in shows its cut edges lit, and the seams stay open
                     // till the end.
@@ -278,9 +279,8 @@
                 color = mix(color, vec3(1.0, 0.78, 0.96), min(1.0, wave * 2.0));
             }
             bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
-            // Asleep, what is left of it is barely there, and breathes: a hint of the lids in
-            // the black.
-            float faint = mix(1.0, 0.1 + 0.04 * sin(uTime * 0.9), uSleep);
+            // Asleep, nothing of it shows: the page has a soft light where it lies (portfolio.js).
+            float faint = 1.0 - uSleep;
             outColor = vec4(on ? color * (0.38 + 0.62 * dim) * faint : vec3(0.0), 1.0);
         }`;
 
@@ -288,7 +288,7 @@
         precision highp float;
         uniform sampler2D uScene;
         uniform vec2 uGrid, uRes, uPupilAt;
-        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice, uSleep;
+        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice, uSleep, uBlank;
         out vec4 outColor;
         float hash(vec2 p) {
             p = fract(p * vec2(123.34, 456.21));
@@ -320,7 +320,7 @@
             // Being born, it starts from the dark, and the aura comes up with it.
             base = mix(vec3(0.012, 0.008, 0.02), base, smoothstep(0.5, 0.95, uBirth));
             // Light bleeding out of the bright places.
-            vec3 bloom = (textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7) * (1.0 + (1.0 - uBirth) * 0.7);
+            vec3 bloom = (textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7) * (1.0 + (1.0 - uBirth) * 0.7) * (1.0 - 0.65 * uBlank);
             // Shafts coming off the pupil.
             vec3 shafts = vec3(0.0);
             vec2 toPupil = (uPupilAt - uv) / 9.0;
@@ -383,7 +383,7 @@
         gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
         if (!gl) throw new Error('no WebGL 2');
         const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth', 'uBlank', 'uSkin', 'uSleep']);
-        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice', 'uSleep']);
+        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice', 'uSleep', 'uBlank']);
         eyeProgram = eye.program;
         eyeUniforms = eye.uniforms;
         screenProgram = screen.program;
@@ -619,6 +619,7 @@
         gl.uniform1f(s.uBirth, born);
         gl.uniform1f(s.uLattice, lattice);
         gl.uniform1f(s.uSleep, sleep);
+        gl.uniform1f(s.uBlank, blank);
         gl.uniform1f(s.uTall, tall);
         gl.uniform1f(s.uFollow, followAmount);
         gl.drawArrays(gl.TRIANGLES, 0, 3);

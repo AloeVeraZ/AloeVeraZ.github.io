@@ -237,8 +237,8 @@
             // what Low's has no way to do.
             bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
             float alpha = on ? 0.38 + 0.62 * dim : min(0.34, tone * dim * 0.34) * (1.0 - uSleep);
-            // Asleep, what is left of it is barely there: a hint of the lids in the black.
-            alpha *= mix(1.0, 0.13, uSleep);
+            // Asleep, nothing of it shows: the page has a soft light where it lies (portfolio.js).
+            alpha *= 1.0 - uSleep;
             outColor = vec4(color * alpha, alpha);
         }`;
 

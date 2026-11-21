@@ -1644,6 +1644,27 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
     pointer-events: none;
     will-change: transform, opacity;
 }
+/* Where the sleeping eye lies (portfolio.js, setSlumber): a soft light in the black, with
+   no edge to it, breathing. Painted once; only its opacity moves. */
+.eye-slumber {
+    --eye-x: 56%;
+    --eye-y: 50%;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 34vmax 2.6vmax at var(--eye-x) var(--eye-y), rgba(226, 208, 255, .44), rgba(160, 112, 255, .16) 50%, transparent 100%),
+        radial-gradient(ellipse 52vmax 20vmax at var(--eye-x) var(--eye-y), rgba(104, 58, 226, .44), rgba(70, 40, 190, .16) 55%, transparent 78%);
+    animation: eye-slumber 5.5s ease-in-out infinite alternate;
+}
+@media (max-aspect-ratio: 10/11) {
+    .eye-slumber { --eye-x: 50%; --eye-y: 44%; }
+}
+@keyframes eye-slumber {
+    from { opacity: .35; }
+    to { opacity: 1; }
+}
 /* While the eye the page starts with sleeps, the colour behind it is out; it comes up as it
    is roused. */
 html:is([data-y2k], [data-iris]):not([data-eye-asleep]) .background-grid[data-look] { transition: opacity 1.8s ease; }

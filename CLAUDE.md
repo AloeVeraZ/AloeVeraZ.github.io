@@ -100,12 +100,15 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
   goes back to the default.
 - The eye is the default at every level (`y2k.*` Low, `iris.*` Medium, `ego.*` High), the space
   sky is second, and Medium has the pink desk (`vapor.*`) last. The choice carries across levels.
-- The page loads with the eye asleep: lids shut, everything else black (`eyeAsleep`,
-  `html[data-eye-asleep]`). One press on the page away from controls sends a ripple out from the
-  press (`ripple`, `rouseEye` in portfolio.js) and calls the eye's `rouse()`: the lids open on a
-  plain ball, the skin draws back to leave just a circle, and then the usual build and waking
-  play (Low has no build: its iris winds in and it blinks). Cycling the looks ends the sleep;
-  changing level does not. Reduced motion starts awake.
+- The page loads with the eye asleep (`eyeAsleep`, `html[data-eye-asleep]`): the eye itself does
+  not show, and the page is black with a soft violet light breathing where it lies
+  (`.eye-slumber`, `setSlumber`). Aloe found the shut lids drawn as dithered lines "cheap"; keep
+  the idle state soft, with no lines. One press on the page away from controls sends a ripple out
+  from the press (`ripple`, `rouseEye` in portfolio.js) and calls the eye's `rouse()`: the lids
+  open on a plain ball, the skin draws back to leave just a circle, and then the build and waking
+  play, at Low too (`paintBuild` in y2k.js, the same pieces falling into place). The plain ball
+  is held no brighter than the eye awake: at High it used to white the screen out. Cycling the
+  looks ends the sleep; changing level does not. Reduced motion starts awake.
 - Each look keeps to its level's budget: Low asks for almost nothing, Medium little, High what it
   must. Measure a change against the plain level before keeping it.
 - Every look has to hold up at any size and shape, from a folding phone to an ultrawide monitor.

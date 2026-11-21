@@ -558,6 +558,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return eyeOn && eye && !skippedSkies.has(eye) ? eye : '';
     };
     let showingSky = '';
+    // Asleep, the eye itself does not show. What the page has in its place is a soft light
+    // where it lies, breathing: painted once, and only its opacity moves (portfolio.css).
+    let slumber = null;
+    const setSlumber = on => {
+        if (on === !!slumber) return;
+        if (on) {
+            slumber = document.createElement('span');
+            slumber.className = 'eye-slumber';
+            slumber.setAttribute('aria-hidden', 'true');
+            pageScrollProgress.before(slumber);
+            return;
+        }
+        const leaving = slumber;
+        slumber = null;
+        if (!leaving.animate) {
+            leaving.remove();
+            return;
+        }
+        const from = getComputedStyle(leaving).opacity;
+        leaving.style.animation = 'none';
+        leaving.animate([{ opacity: from }, { opacity: 0 }], { duration: 900, easing: 'ease-out', fill: 'forwards' }).finished.finally(() => leaving.remove());
+    };
     // What the backdrop will be once every switch already on its way has played: '' for
     // the page's own sky, a look's name, or null for nothing, while a look put away for
     // another level's is still getting ready. A switch changes the page only partway
@@ -664,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const layers = [];
         for (const element of document.body.children) {
             if (element === pageScrollProgress) break;
-            if (!element.matches('.switch-fx, .warp-flash, .eye-ripple')) layers.push(element);
+            if (!element.matches('.switch-fx, .warp-flash, .eye-ripple, .eye-slumber')) layers.push(element);
         }
         return layers;
     };
@@ -1082,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // may have been asked for, and that one has the last word.
                 if (request !== skyRequest) return;
                 putSkyAway();
+                setSlumber(false);
                 showOwnBackdrop(effectsMode);
             }, animate, from, want);
             return;
@@ -1106,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // asleep still, if nobody has pressed the page yet.
                 const sleeping = eyeAsleep && want === EYES[effectsMode];
                 if (sleeping) root.dataset.eyeAsleep = '';
+                setSlumber(sleeping);
                 sky.show({ after: arrival, settled: Object.values(EYES).includes(from), sleeping });
                 stillSky.hide();
                 cosmos.hide();
@@ -1118,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // back if another level's was put away for this one.
             if (request !== skyRequest) return;
             skippedSkies.add(want);
+            setSlumber(false);
             delete root.dataset[want];
             if (!showingSky) {
                 targetSky = '';
@@ -1183,6 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!eyeAsleep || showingSky !== eye || warping || shiftPlaying) return;
         eyeAsleep = false;
         delete root.dataset.eyeAsleep;
+        setSlumber(false);
         // Its own build is not the machine struggling.
         deferPerformanceSampling(9000);
         ripple(x, y);
