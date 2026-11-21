@@ -558,55 +558,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return eyeOn && eye && !skippedSkies.has(eye) ? eye : '';
     };
     let showingSky = '';
-    // Asleep, the eye itself does not show. What the page has in its place is a beam of soft
-    // light across where it lies, breathing: painted once, and only its opacity moves
-    // (portfolio.css). Medium's is the beam as Aloe settled it. High's is the same, finer: a
-    // sharp core, a hot middle, and a glint that travels along it. Low's is the same in low
-    // definition: a few large dithered cells on a very small canvas, drawn the once and blown
-    // up with its pixels showing, as Low's eye is.
-    let slumber = null, slumberLevel = '';
-    const SLUMBER_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-    const paintLowSlumber = () => {
-        const w = Math.max(320, document.documentElement.clientWidth), h = Math.max(320, window.innerHeight);
-        // Twice the size of the eye's own cells (y2k.js).
-        const cell = Math.max(3, Math.sqrt(w * h / 100000)) * 2;
-        const cols = Math.ceil(w / cell), rows = Math.ceil(h / cell), vmax = Math.max(w, h) / cell;
-        const tall = h / w > 1.1, cx = cols * (tall ? .5 : .56), cy = rows * (tall ? .44 : .5);
-        const canvas = document.createElement('canvas');
-        canvas.width = cols;
-        canvas.height = rows;
-        const context = canvas.getContext('2d'), image = context.createImageData(cols, rows), data = image.data;
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
-                const dx = (x - cx) / vmax, dy = (y - cy) / vmax;
-                const beam = Math.exp(-((dx / .2) ** 2) - (dy / .012) ** 2), glow = Math.exp(-((dx / .3) ** 2) - (dy / .11) ** 2);
-                const tone = beam * .9 + glow * .2;
-                // An ordered dither, four by four.
-                const limit = (SLUMBER_BAYER[(y & 3) * 4 + (x & 3)] + .5) / 16;
-                if (tone <= limit) continue;
-                const at = (y * cols + x) * 4;
-                data[at] = 150 + 76 * beam;
-                data[at + 1] = 104 + 104 * beam;
-                data[at + 2] = 255;
-                data[at + 3] = 255 * Math.min(1, .3 + tone * .6);
-            }
-        }
-        context.putImageData(image, 0, 0);
-        return canvas;
+    // Asleep, the eye itself does not show. Low's page is simply black: Aloe found a light
+    // coming and going there out of place. Medium has a soft light across where the eye lies,
+    // breathing: painted once, and only its opacity moves (portfolio.css). High has a beam of
+    // light there that stops short of the screen's edges, its middle pulsing, and glints that
+    // run along it now and then, singly or a few together, each its own way and speed.
+    let slumber = null, slumberLevel = '', glintTimer = 0;
+    const spawnGlint = () => {
+        if (!slumber || slumberLevel !== 'high' || document.hidden || !slumber.animate) return;
+        const w = document.documentElement.clientWidth, h = window.innerHeight;
+        // Kept inside the beam (portfolio.css, --beam).
+        const reach = Math.min(Math.max(w, h) * .3, w * .38) * .82;
+        const way = Math.random() < .5 ? -1 : 1;
+        const from = (Math.random() * 2 - 1) * reach * .55;
+        const to = Math.max(-reach, Math.min(reach, from + way * reach * (.45 + .7 * Math.random())));
+        const peak = .45 + .5 * Math.random(), wide = .5 + Math.random();
+        const glint = document.createElement('i');
+        glint.className = 'eye-slumber-glint';
+        slumber.appendChild(glint);
+        glint.animate([
+            { transform: `translateX(${from.toFixed(0)}px) scaleX(${(wide * .4).toFixed(2)})`, opacity: 0 },
+            { opacity: peak, offset: .3 },
+            { opacity: peak * .8, offset: .65 },
+            { transform: `translateX(${to.toFixed(0)}px) scaleX(${wide.toFixed(2)})`, opacity: 0 }
+        ], { duration: 800 + Math.random() * 1500, easing: 'cubic-bezier(.3, .1, .3, 1)', fill: 'both' }).finished.finally(() => glint.remove());
+    };
+    const scheduleGlints = () => {
+        clearTimeout(glintTimer);
+        if (!slumber || slumberLevel !== 'high') return;
+        glintTimer = window.setTimeout(() => {
+            const together = Math.random() < .3 ? 2 + Math.floor(Math.random() * 2) : 1;
+            for (let i = 0; i < together; i++) window.setTimeout(spawnGlint, i * (130 + Math.random() * 240));
+            scheduleGlints();
+        }, 500 + Math.random() * 3400);
     };
     const setSlumber = on => {
+        if (effectsMode === 'low') on = false;
         if (on && slumber && slumberLevel === effectsMode) return;
         if (!on && !slumber) return;
         if (on) {
             // Another level's, still up: this level's takes its place at once.
             slumber?.remove();
             slumberLevel = effectsMode;
-            slumber = effectsMode === 'low' ? paintLowSlumber() : document.createElement('span');
+            slumber = document.createElement('span');
             slumber.className = 'eye-slumber';
             slumber.setAttribute('aria-hidden', 'true');
+            if (effectsMode === 'high') slumber.innerHTML = '<b class="eye-slumber-heart"></b>';
             pageScrollProgress.before(slumber);
+            scheduleGlints();
             return;
         }
+        clearTimeout(glintTimer);
         const leaving = slumber;
         slumber = null;
         if (!leaving.animate) {

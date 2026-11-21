@@ -1644,8 +1644,9 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
     pointer-events: none;
     will-change: transform, opacity;
 }
-/* Where the sleeping eye lies (portfolio.js, setSlumber): a soft light in the black, with
-   no edge to it, breathing. Painted once; only its opacity moves. */
+/* Where the sleeping eye lies (portfolio.js, setSlumber), at Medium and High; Low's page is
+   black. Medium's is a soft light lying across the screen, long and low with no edge to it,
+   breathing. Painted once; only its opacity moves. */
 .eye-slumber {
     --eye-x: 56%;
     --eye-y: 50%;
@@ -1654,51 +1655,54 @@ html[data-shift="off"]::view-transition-old(root) { z-index: 1; animation: shift
     z-index: 0;
     pointer-events: none;
     background:
-        radial-gradient(ellipse 34vmax 2.6vmax at var(--eye-x) var(--eye-y), rgba(226, 208, 255, .44), rgba(160, 112, 255, .16) 50%, transparent 100%),
-        radial-gradient(ellipse 52vmax 20vmax at var(--eye-x) var(--eye-y), rgba(104, 58, 226, .44), rgba(70, 40, 190, .16) 55%, transparent 78%);
+        radial-gradient(ellipse 44vmax 1.5vmax at var(--eye-x) var(--eye-y), rgba(226, 208, 255, .4), rgba(160, 112, 255, .14) 50%, transparent 100%),
+        radial-gradient(ellipse 66vmax 11vmax at var(--eye-x) var(--eye-y), rgba(104, 58, 226, .4), rgba(70, 40, 190, .14) 55%, transparent 80%);
     animation: eye-slumber 5.5s ease-in-out infinite alternate;
 }
 @media (max-aspect-ratio: 10/11) {
     .eye-slumber { --eye-x: 50%; --eye-y: 44%; }
 }
-/* Low's is a very small canvas of large dithered cells (paintLowSlumber), and breathes in
-   steps. */
-canvas.eye-slumber {
-    width: 100%;
-    height: 100%;
-    background: none;
-    image-rendering: pixelated;
-    animation-timing-function: steps(7);
-}
-/* High's is finer: a sharp core through it, a hot middle, and a glint that travels along it. */
-html[data-effects="high"] span.eye-slumber {
-    background:
-        radial-gradient(ellipse 56vmax .26vmax at var(--eye-x) var(--eye-y), rgba(255, 250, 255, .95), rgba(224, 204, 255, .5) 45%, transparent 100%),
-        radial-gradient(ellipse 42vmax 1.7vmax at var(--eye-x) var(--eye-y), rgba(214, 190, 255, .46), rgba(160, 112, 255, .16) 55%, transparent 100%),
-        radial-gradient(ellipse 10vmax 5vmax at var(--eye-x) var(--eye-y), rgba(196, 160, 255, .3), transparent 75%),
-        radial-gradient(ellipse 60vmax 22vmax at var(--eye-x) var(--eye-y), rgba(104, 58, 226, .46), rgba(70, 40, 190, .16) 55%, transparent 78%);
-}
-html[data-effects="high"] span.eye-slumber::after {
-    content: "";
-    position: absolute;
-    left: var(--eye-x);
-    top: var(--eye-y);
-    width: 16vmax;
-    height: .7vmax;
-    margin: -.35vmax 0 0 -8vmax;
-    background: radial-gradient(ellipse closest-side, rgba(255, 255, 255, .95), rgba(230, 214, 255, .4) 50%, transparent);
-    opacity: 0;
-    animation: eye-slumber-glint 6.5s ease-in-out infinite;
-}
-@keyframes eye-slumber-glint {
-    0% { transform: translateX(-26vmax) scaleX(.5); opacity: 0; }
-    25% { opacity: .9; }
-    75% { opacity: .9; }
-    100% { transform: translateX(26vmax) scaleX(.5); opacity: 0; }
-}
 @keyframes eye-slumber {
     from { opacity: .35; }
     to { opacity: 1; }
+}
+/* High's is a beam: a sharp core that stops short of the screen's edges (--beam is half its
+   length), the dark closing in round it, a middle that pulses (.eye-slumber-heart), and
+   glints portfolio.js sends along it at random (.eye-slumber-glint). */
+html[data-effects="high"] .eye-slumber {
+    --beam: min(30vmax, 38vw);
+    background:
+        radial-gradient(ellipse var(--beam) .26vmax at var(--eye-x) var(--eye-y), rgba(255, 250, 255, .95), rgba(224, 204, 255, .5) 45%, transparent 100%),
+        radial-gradient(ellipse calc(var(--beam) * .82) 1.7vmax at var(--eye-x) var(--eye-y), rgba(214, 190, 255, .46), rgba(160, 112, 255, .16) 55%, transparent 100%),
+        radial-gradient(ellipse 60vmax 22vmax at var(--eye-x) var(--eye-y), rgba(104, 58, 226, .46), rgba(70, 40, 190, .16) 55%, transparent 78%);
+}
+.eye-slumber-heart,
+.eye-slumber-glint {
+    position: absolute;
+    left: var(--eye-x);
+    top: var(--eye-y);
+    will-change: transform, opacity;
+}
+.eye-slumber-heart {
+    width: 13vmax;
+    height: 4.4vmax;
+    margin: -2.2vmax 0 0 -6.5vmax;
+    background: radial-gradient(ellipse closest-side, rgba(244, 232, 255, .8), rgba(186, 148, 255, .32) 45%, transparent);
+    animation: eye-slumber-heart 3.6s ease-in-out infinite;
+}
+@keyframes eye-slumber-heart {
+    0%, 100% { opacity: .12; transform: scale(.78); }
+    16% { opacity: .9; transform: scale(1.06); }
+    30% { opacity: .34; transform: scale(.9); }
+    42% { opacity: .66; transform: scale(1); }
+    70% { opacity: .2; transform: scale(.82); }
+}
+.eye-slumber-glint {
+    width: 9vmax;
+    height: .6vmax;
+    margin: -.3vmax 0 0 -4.5vmax;
+    background: radial-gradient(ellipse closest-side, rgba(255, 255, 255, .95), rgba(230, 214, 255, .4) 50%, transparent);
+    opacity: 0;
 }
 /* While the eye the page starts with sleeps, the colour behind it is out; it comes up as it
    is roused. */
