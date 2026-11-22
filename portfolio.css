@@ -375,8 +375,9 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 /* The opening line runs across two of the three columns and stops where the
    second card below it stops, instead of running ~115 characters to the far
    edge of the page. Once the cards go two-up the full width is a fair
-   measure again. */
-.bio-text { --lh: 1.45; line-height: var(--lh); width: 100%; max-width: calc((100% - var(--gutter) * 2) / 3 * 2 + var(--gutter)); color: #dedee0; font-size: clamp(1.18rem, 2.3vw, 1.55rem); }
+   measure again. On the widest screens two columns are themselves ~100
+   characters, so the line also stops at about 75 (40em of Inter). */
+.bio-text { --lh: 1.45; line-height: var(--lh); width: 100%; max-width: min(calc((100% - var(--gutter) * 2) / 3 * 2 + var(--gutter)), 40em); color: #dedee0; font-size: clamp(1.18rem, 2.3vw, 1.55rem); }
 @media (max-width: 1080px) { .bio-text { max-width: none; } }
 .about-highlights { margin-top: var(--rhythm-block); }
 .about-highlight p { --lh: 1.55; line-height: var(--lh); }
@@ -469,6 +470,13 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 .collection-toggle > i { justify-self: end; }
 .collection-toggle[aria-expanded="true"] > i { transform: rotate(180deg); }
 .collection-content { padding-bottom: var(--rhythm-block); }
+/* A folder opening used to put a screenful of cards on the page in one cut.
+   They fade in instead: opacity only, so nothing the carousel measures as it
+   sets itself up moves, and it costs Low nothing but one compositor fade.
+   Shutting stays instant; the folder is out of the way the moment it is
+   asked to be. Reduced motion takes the fade down to nothing (below). */
+.collection-content:not([hidden]) { animation: collection-open .24s var(--ease) backwards; }
+@keyframes collection-open { from { opacity: 0; } }
 .carousel-controls { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--rhythm-heading); color: var(--muted); font-size: var(--type-meta); }
 .carousel-controls > div { display: flex; }
 .carousel-arrow { --arrow-fill: var(--glass-surface); display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; background: var(--arrow-fill); color: rgba(247, 244, 237, .82); cursor: pointer; transition: transform .2s var(--ease), background .2s, color .2s; }
@@ -490,6 +498,12 @@ main { width: min(var(--site-max-width), calc(100% - var(--page-inline-start) - 
 
 .modal-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; align-items: center; padding: max(var(--space-4), var(--safe-area-top)) max(var(--space-4), var(--safe-area-right)) max(var(--space-4), var(--safe-area-bottom)) max(var(--space-4), var(--safe-area-left)); overflow-y: auto; background: rgba(5,6,8,.94); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
+/* The sheet rises into place as the dark comes up behind it, instead of
+   appearing already standing in the fade, and settles back a little faster
+   on the way out. Centred: it belongs to the window, not to the card that
+   opened it. */
+.modal-overlay > .modal-card { transform: translateY(.75rem) scale(.98); transition: transform .18s var(--ease); }
+.modal-overlay.active > .modal-card { transform: none; transition-duration: .32s; }
 .modal-card { position: relative; width: min(var(--modal-max-width), 100%); max-height: min(calc(var(--visual-viewport-height) - max(var(--space-4), var(--safe-area-top)) - max(var(--space-4), var(--safe-area-bottom))), var(--modal-max-height)); overscroll-behavior: contain; background: var(--surface); color: var(--ink); }
 .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 2; margin: 0; border: 1px solid var(--line); color: var(--ink); cursor: pointer; transition: transform .2s var(--ease), background .2s; }
 .modal-header { display: block; min-height: 2.625rem; padding-right: var(--space-8); margin-bottom: var(--rhythm-block); }
@@ -1330,6 +1344,7 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
     margin: 0;
 }
 .carousel-indicator {
+    position: relative;
     width: .625rem;
     height: .625rem;
     padding: 0;
@@ -1338,6 +1353,19 @@ html:is([data-effects="medium"], [data-effects="high"]) .circular-project-carous
     background: transparent;
     cursor: pointer;
     transition: width .38s var(--ease), background .38s ease, box-shadow .38s ease, transform .2s ease;
+}
+/* A dot is 10px, far too small to hit with a finger, so each one answers
+   over a taller area that reaches halfway to its neighbours: never past
+   them, so a tap lands on the dot it was meant for. On a touch screen the
+   dots also stand further apart, which widens every area with them. */
+.carousel-indicator::before {
+    content: "";
+    position: absolute;
+    inset: -.4375rem calc(-.5 * var(--indicator-gap, var(--space-2)));
+}
+@media (pointer: coarse) {
+    .carousel-indicators { --indicator-gap: var(--space-4); gap: var(--indicator-gap); min-height: var(--space-7); }
+    .carousel-indicator::before { inset-block: -.75rem; }
 }
 @media (hover: hover) {
     .carousel-indicator:hover { transform: scale(1.15); }
@@ -2217,6 +2245,11 @@ button:focus-visible,
 }
 .footer-links a:hover,
 .footer-links a:focus-visible { color: var(--blue); }
+/* The words stay where they are; a finger gets a 44px row to land on. */
+@media (pointer: coarse) {
+    .footer-links { row-gap: 0; }
+    .footer-links a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+}
 
 /* -------------------------------------------------------------- mobile nav */
 /* The links used to be hidden outright on narrow screens, which left phones with no
