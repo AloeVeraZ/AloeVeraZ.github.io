@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261122-eye-sleeps-again';
+    const SKY_VERSION = '20261122-trapped-eye-2';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -560,66 +560,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let showingSky = '';
     // Asleep, the eye itself does not show. Low's page is simply black: Aloe found a light
-    // coming and going there out of place. Medium has a soft light across where the eye lies,
-    // breathing: painted once, and only its opacity moves (portfolio.css). High has a beam of
-    // light there that stops short of the screen's edges, its middle pulsing, and glints that
-    // run along it now and then, singly or a few together, each its own way and speed.
-    let slumber = null, slumberLevel = '', glintTimer = 0;
-    const spawnGlint = () => {
-        if (!slumber || slumberLevel !== 'high' || document.hidden || !slumber.animate) return;
-        const w = document.documentElement.clientWidth, h = window.innerHeight;
-        // Kept inside the beam (portfolio.css, --beam).
-        const reach = Math.min(Math.max(w, h) * .3, w * .38) * .82;
-        const way = Math.random() < .5 ? -1 : 1;
-        const from = (Math.random() * 2 - 1) * reach * .55;
-        const to = Math.max(-reach, Math.min(reach, from + way * reach * (.45 + .7 * Math.random())));
-        const peak = .45 + .5 * Math.random(), wide = .5 + Math.random();
-        const glint = document.createElement('i');
-        glint.className = 'eye-slumber-glint';
-        slumber.appendChild(glint);
-        glint.animate([
-            { transform: `translateX(${from.toFixed(0)}px) scaleX(${(wide * .4).toFixed(2)})`, opacity: 0 },
-            { opacity: peak, offset: .3 },
-            { opacity: peak * .8, offset: .65 },
-            { transform: `translateX(${to.toFixed(0)}px) scaleX(${wide.toFixed(2)})`, opacity: 0 }
-        ], { duration: 800 + Math.random() * 1500, easing: 'cubic-bezier(.3, .1, .3, 1)', fill: 'both' }).finished.finally(() => glint.remove());
-    };
-    const scheduleGlints = () => {
-        clearTimeout(glintTimer);
-        if (!slumber || slumberLevel !== 'high') return;
-        glintTimer = window.setTimeout(() => {
-            const together = Math.random() < .3 ? 2 + Math.floor(Math.random() * 2) : 1;
-            for (let i = 0; i < together; i++) window.setTimeout(spawnGlint, i * (130 + Math.random() * 240));
-            scheduleGlints();
-        }, 500 + Math.random() * 3400);
-    };
-    const setSlumber = on => {
-        if (effectsMode === 'low') on = false;
-        if (on && slumber && slumberLevel === effectsMode) return;
-        if (!on && !slumber) return;
-        if (on) {
-            // Another level's, still up: this level's takes its place at once.
-            slumber?.remove();
-            slumberLevel = effectsMode;
-            slumber = document.createElement('span');
-            slumber.className = 'eye-slumber';
-            slumber.setAttribute('aria-hidden', 'true');
-            if (effectsMode === 'high') slumber.innerHTML = '<b class="eye-slumber-heart"></b>';
-            pageScrollProgress.before(slumber);
-            scheduleGlints();
-            return;
-        }
-        clearTimeout(glintTimer);
-        const leaving = slumber;
-        slumber = null;
-        if (!leaving.animate) {
-            leaving.remove();
-            return;
-        }
-        const from = getComputedStyle(leaving).opacity;
-        leaving.style.animation = 'none';
-        leaving.animate([{ opacity: from }, { opacity: 0 }], { duration: 900, easing: 'ease-out', fill: 'forwards' }).finished.finally(() => leaving.remove());
-    };
+    // coming and going there out of place. Medium's and High's eyes draw what lies where they
+    // sleep themselves, in characters like the rest of them (rest() in iris.js and ego.js):
+    // Medium a long low light, breathing; High a beam that stops short of the screen's edges,
+    // its middle pulsing and glints running along it.
     // What the backdrop will be once every switch already on its way has played: '' for
     // the page's own sky, a look's name, or null for nothing, while a look put away for
     // another level's is still getting ready. A switch changes the page only partway
@@ -726,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const layers = [];
         for (const element of document.body.children) {
             if (element === pageScrollProgress) break;
-            if (!element.matches('.switch-fx, .warp-flash, .eye-ripple, .eye-slumber')) layers.push(element);
+            if (!element.matches('.switch-fx, .warp-flash, .eye-ripple')) layers.push(element);
         }
         return layers;
     };
@@ -735,22 +679,95 @@ document.addEventListener('DOMContentLoaded', () => {
     // One canvas over the backdrop and under the page, put up only while a switch draws on
     // it. Each piece of drawing is given how far through it is, 0 to 1, and drawn at 1 on
     // its last frame, so the next piece takes over with nothing showing between them.
+    // Like the eyes, all of it shows in characters: the pieces draw on a picture one pixel to
+    // a character cell, and each cell is then drawn as the character that inks it about as
+    // much as it is bright, in its colour (portfolioGlyphs), the same size as this level's
+    // eye's; a few of them flicker to the one either side every frame. What is drawn black
+    // stays black behind them, so a switch can still black the screen out.
     const fx = (() => {
         let canvas = null, context = null, frame = 0, w = 0, h = 0, ratio = 1;
+        let source = null, pen = null, tint = null, tintPen = null, shade = null, shadePen = null, tintImage = null, shadeImage = null;
+        let glyphs = null, cols = 0, rows = 0;
         const jobs = new Set();
+        const open = () => {
+            canvas = document.createElement('canvas');
+            canvas.className = 'switch-fx';
+            canvas.setAttribute('aria-hidden', 'true');
+            w = document.documentElement.clientWidth;
+            h = window.innerHeight;
+            ratio = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(w * ratio);
+            canvas.height = Math.round(h * ratio);
+            context = canvas.getContext('2d');
+            const coarse = Math.max(3, Math.sqrt(w * h / 100000));
+            const tall = effectsMode === 'high' ? Math.max(7, coarse * 1.5) : effectsMode === 'medium' ? Math.max(8, coarse * 2) : Math.max(9, coarse * 3);
+            glyphs = window.portfolioGlyphs(tall * ratio);
+            cols = Math.ceil(canvas.width / glyphs.width);
+            rows = Math.ceil(canvas.height / glyphs.height);
+            const small = () => {
+                const made = document.createElement('canvas');
+                made.width = cols;
+                made.height = rows;
+                return made;
+            };
+            source = small();
+            pen = source.getContext('2d', { willReadFrequently: true });
+            tint = small();
+            tintPen = tint.getContext('2d');
+            shade = small();
+            shadePen = shade.getContext('2d');
+            tintImage = tintPen.createImageData(cols, rows);
+            shadeImage = shadePen.createImageData(cols, rows);
+            pageScrollProgress.before(canvas);
+        };
         const tick = now => {
             frame = 0;
-            context.setTransform(ratio, 0, 0, ratio, 0, 0);
-            context.clearRect(0, 0, w, h);
+            pen.setTransform(cols / w, 0, 0, rows / h, 0, 0);
+            pen.globalCompositeOperation = 'source-over';
+            pen.clearRect(0, 0, w, h);
             for (const job of jobs) {
                 const t = (now - job.start) / job.duration;
                 if (t < 0) continue;
-                job.draw(context, Math.min(1, t), w, h);
+                pen.save();
+                job.draw(pen, Math.min(1, t), w, h);
+                pen.restore();
                 if (t >= 1) {
                     jobs.delete(job);
                     job.done();
                 }
             }
+            // Into characters.
+            const data = pen.getImageData(0, 0, cols, rows).data, colour = tintImage.data, dark = shadeImage.data;
+            const gw = glyphs.width, gh = glyphs.height, steps = glyphs.count - 1;
+            context.globalCompositeOperation = 'source-over';
+            context.globalAlpha = 1;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0, o = 0; i < cols * rows; i++, o += 4) {
+                const a = data[o + 3];
+                dark[o + 3] = a;
+                if (a < 6) continue;
+                const r = data[o], g = data[o + 1], b = data[o + 2], most = Math.max(r, g, b, 1);
+                const lit = Math.min(1, Math.pow(most / 255 * a / 255 * 1.6, .8));
+                colour[o] = r * 255 / most;
+                colour[o + 1] = g * 255 / most;
+                colour[o + 2] = b * 255 / most;
+                colour[o + 3] = 255;
+                if (lit < .04) continue;
+                let index = Math.floor(lit * steps + Math.random() * .9);
+                if (Math.random() < .12) index += Math.random() < .5 ? -1 : 1;
+                index = Math.max(1, Math.min(steps, index));
+                context.globalAlpha = Math.min(1, .55 + .6 * lit);
+                context.drawImage(glyphs.image, index * gw, 0, gw, gh, (i % cols) * gw, ((i / cols) | 0) * gh, gw, gh);
+            }
+            context.globalAlpha = 1;
+            context.imageSmoothingEnabled = false;
+            tintPen.putImageData(tintImage, 0, 0);
+            shadePen.putImageData(shadeImage, 0, 0);
+            context.globalCompositeOperation = 'source-atop';
+            context.drawImage(tint, 0, 0, cols * gw, rows * gh);
+            context.globalCompositeOperation = 'destination-over';
+            context.drawImage(shade, 0, 0, cols * gw, rows * gh);
+            context.globalCompositeOperation = 'source-over';
             if (jobs.size) frame = requestAnimationFrame(tick);
             else {
                 canvas.remove();
@@ -759,18 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         return {
             play(duration, draw) {
-                if (!canvas) {
-                    canvas = document.createElement('canvas');
-                    canvas.className = 'switch-fx';
-                    canvas.setAttribute('aria-hidden', 'true');
-                    w = document.documentElement.clientWidth;
-                    h = window.innerHeight;
-                    ratio = Math.min(window.devicePixelRatio || 1, effectsMode === 'high' ? 1.5 : 1);
-                    canvas.width = Math.round(w * ratio);
-                    canvas.height = Math.round(h * ratio);
-                    context = canvas.getContext('2d');
-                    pageScrollProgress.before(canvas);
-                }
+                if (!canvas) open();
                 return new Promise(resolve => {
                     jobs.add({ start: performance.now(), duration, draw, done: resolve });
                     if (!frame) frame = requestAnimationFrame(tick);
@@ -802,9 +808,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // dots, thousands of them loose across the screen, are drawn in to its pupil, each on a
     // path of its own that tightens and quickens as it nears, so they make a whirlpool of dust
     // and never arms or any figure; coloured as its iris is -- pale pink at the middle, violet
-    // out through it, lavender beyond, some cold cyan -- and the last of them a flash in the
+    // out through it, lavender beyond, some cold blue-violet -- and the last of them a flash in the
     // pupil as the eye wakes.
-    const DOTS = [[158, 107, 255], [255, 92, 184], [107, 230, 255], [206, 190, 255], [120, 70, 220]];
+    const DOTS = [[158, 107, 255], [255, 92, 184], [140, 140, 255], [206, 190, 255], [120, 70, 220]];
     const mixed = (from, to, k) => from + (to - from) * k;
     // The iris's colours, by how far out from the pupil in irises.
     const irisColour = k => {
@@ -819,7 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const s = Math.min(1, (k - 1.3) / 2);
         return [mixed(189, 206, s), mixed(128, 190, s), 255];
     };
-    const CYAN = [107, 230, 255];
+    // The cold ones blue-violet: nothing of the eye's goes green or cyan.
+    const CYAN = [140, 140, 255];
     const pourIntoIris = ({ x: irisX, y: irisY, r: irisR, ms }) => {
         // A switch's own work is not the machine struggling: the frame monitor looks away.
         deferPerformanceSampling(ms + 800);
@@ -872,9 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             dots.putImageData(image, 0, 0);
             context.globalCompositeOperation = 'source-over';
-            context.imageSmoothingEnabled = false;
             context.drawImage(grid, 0, 0, cols * cell, rows * cell);
-            context.imageSmoothingEnabled = true;
             if (t > .7) {
                 const k = (t - .7) / .3;
                 context.globalCompositeOperation = 'lighter';
@@ -899,7 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Streaks of it dragged in after it.
         const streaks = Array.from({ length: 150 }, () => {
             const angle = Math.random() * Math.PI * 2;
-            return { angle, from: far * (.5 + Math.random() * .7), late: Math.random() * .35, rgb: Math.random() < .7 ? '220,228,255' : '255,214,170' };
+            return { angle, from: far * (.5 + Math.random() * .7), late: Math.random() * .35, rgb: Math.random() < .7 ? '226,216,255' : '196,160,255' };
         });
         await fx.play(fallFor, (context, t) => {
             context.globalCompositeOperation = 'lighter';
@@ -924,7 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
         outgoing.forEach(animation => animation.cancel());
         const sparks = Array.from({ length: 320 }, () => {
             const angle = Math.random() * Math.PI * 2;
-            return { dx: Math.cos(angle), dy: Math.sin(angle), speed: far * (.4 + Math.random() * 1.6), size: .8 + Math.random() * 2.2, rgb: ['255,250,240', '255,220,180', '200,215,255'][Math.floor(Math.random() * 3)] };
+            return { dx: Math.cos(angle), dy: Math.sin(angle), speed: far * (.4 + Math.random() * 1.6), size: .8 + Math.random() * 2.2, rgb: ['250,246,255', '214,190,255', '170,140,255'][Math.floor(Math.random() * 3)] };
         });
         await fx.play(bangFor, (context, t) => {
             context.globalCompositeOperation = 'source-over';
@@ -934,12 +939,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const core = 30 + far * 1.1 * easeOut(Math.min(1, t * 1.6));
             const flash = context.createRadialGradient(cx, cy, 0, cx, cy, core);
             flash.addColorStop(0, `rgba(255,255,255,${((1 - t) ** 1.6).toFixed(3)})`);
-            flash.addColorStop(.25, `rgba(255,232,200,${((1 - t) ** 2 * .7).toFixed(3)})`);
+            flash.addColorStop(.25, `rgba(226,208,255,${((1 - t) ** 2 * .7).toFixed(3)})`);
             flash.addColorStop(1, 'rgba(120,90,160,0)');
             context.fillStyle = flash;
             context.fillRect(0, 0, w, h);
             for (const [reach, alpha, width] of [[1.25, .85, 26], [.8, .4, 10]]) {
-                context.strokeStyle = `rgba(255,240,225,${((1 - t) ** 1.4 * alpha).toFixed(3)})`;
+                context.strokeStyle = `rgba(238,230,255,${((1 - t) ** 1.4 * alpha).toFixed(3)})`;
                 context.lineWidth = Math.max(1, width * (1 - t));
                 context.beginPath();
                 context.arc(cx, cy, far * reach * easeOut(t), 0, Math.PI * 2);
@@ -1144,7 +1149,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // may have been asked for, and that one has the last word.
                 if (request !== skyRequest) return;
                 putSkyAway();
-                setSlumber(false);
                 showOwnBackdrop(effectsMode);
             }, animate, from, want);
             return;
@@ -1169,7 +1173,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // asleep still, if nobody has pressed the page yet.
                 const sleeping = eyeAsleep && want === EYES[effectsMode];
                 if (sleeping) root.dataset.eyeAsleep = '';
-                setSlumber(sleeping);
                 sky.show({ after: arrival, settled: Object.values(EYES).includes(from), sleeping });
                 stillSky.hide();
                 cosmos.hide();
@@ -1182,7 +1185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // back if another level's was put away for this one.
             if (request !== skyRequest) return;
             skippedSkies.add(want);
-            setSlumber(false);
             delete root.dataset[want];
             if (!showingSky) {
                 targetSky = '';
@@ -1248,7 +1250,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!eyeAsleep || showingSky !== eye || warping || shiftPlaying) return;
         eyeAsleep = false;
         delete root.dataset.eyeAsleep;
-        setSlumber(false);
         // Its own build is not the machine struggling.
         deferPerformanceSampling(9000);
         ripple(x, y);
@@ -4757,3 +4758,68 @@ function setupModal() {
         }
     });
 }
+
+/* The characters every level's eye is drawn in (y2k.js, iris.js, ego.js): a strip of them,
+   white on clear, each in a cell `height` device pixels tall and three fifths of that wide,
+   from the empty one to the fullest. They are ranked by how much of their cell they ink,
+   in whatever monospace this machine has, and a few are kept at even steps of it, so a
+   brightness picks its character by a plain multiply. Plain Latin only, no lettering from
+   any other script (CLAUDE.md). Made once for each size asked for. */
+window.portfolioGlyphs = (() => {
+    const CANDIDATES = ' .`\',:;-~^_!i|l/\\()[]{}?+=<>1tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
+    const STEPS = 24;
+    const made = new Map();
+    // `wide`: how wide a cell is for its height; under the usual three fifths the characters
+    // stand packed close, as the sleeping eye's line has them.
+    return (height, wide = .6) => {
+        height = Math.max(4, Math.round(height));
+        const key = `${height}:${wide}`;
+        if (made.has(key)) return made.get(key);
+        const width = Math.max(3, Math.round(height * wide));
+        const font = `500 ${Math.round(height * .86)}px ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace`;
+        const scratch = document.createElement('canvas');
+        scratch.width = width;
+        scratch.height = height;
+        const pen = scratch.getContext('2d', { willReadFrequently: true });
+        const put = (context, character, x) => {
+            context.font = font;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillStyle = '#fff';
+            context.fillText(character, x + width / 2, height * .54);
+        };
+        const ink = [...CANDIDATES].map(character => {
+            pen.clearRect(0, 0, width, height);
+            put(pen, character, 0);
+            const data = pen.getImageData(0, 0, width, height).data;
+            let sum = 0;
+            for (let i = 3; i < data.length; i += 4) sum += data[i];
+            return { character, ink: sum };
+        }).sort((a, b) => a.ink - b.ink);
+        const most = ink[ink.length - 1].ink || 1;
+        // At even steps of ink, nearest first, none twice.
+        const kept = [ink[0]];
+        for (let step = 1; step < STEPS; step++) {
+            const want = most * step / (STEPS - 1);
+            let best = null;
+            for (const glyph of ink) {
+                if (kept.includes(glyph) || glyph.ink <= kept[kept.length - 1].ink) continue;
+                if (!best || Math.abs(glyph.ink - want) < Math.abs(best.ink - want)) best = glyph;
+            }
+            if (best) kept.push(best);
+        }
+        const atlas = document.createElement('canvas');
+        atlas.width = width * kept.length;
+        atlas.height = height;
+        const strip = atlas.getContext('2d');
+        kept.forEach((glyph, k) => put(strip, glyph.character, k * width));
+        const glyphs = { atlas, image: atlas, count: kept.length, width, height, characters: kept.map(glyph => glyph.character).join('') };
+        // For drawing it thousands of times a frame on a 2D canvas (y2k.js, the switches),
+        // `image` becomes a bitmap the graphics card holds once it is ready: drawn from the
+        // canvas itself, every character went up to the card afresh, and a screen full of
+        // them held a frame for a second.
+        window.createImageBitmap?.(atlas).then(bitmap => { glyphs.image = bitmap; }).catch(() => {});
+        made.set(key, glyphs);
+        return glyphs;
+    };
+})();

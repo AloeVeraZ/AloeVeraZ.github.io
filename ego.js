@@ -15,7 +15,7 @@
    It is two passes on the graphics card. The first draws the eye one dither cell at a
    time on a very small picture: moving fibres, waves going out from the pupil, veins
    that light up, sparks going round it, an aura that flows. The second lays that on the
-   screen with its pixels showing, its colours pulled apart, light bleeding from it and
+   screen in characters that never hold still, its colours pulled apart, light bleeding from it and
    shafts coming off the pupil, and tears it now and then. Not fetched until someone asks,
    and leaving it hands everything back. The glass in front is the page's own and frosts
    and bends this as it does the stars. */
@@ -88,6 +88,11 @@
         }
         void main() {
             vec2 cell = vec2(floor(gl_FragCoord.x), uGrid.y - 1.0 - floor(gl_FragCoord.y));
+            // Fast asleep, none of it: the beam where it lies is drawn over it (LETTERS).
+            if (uSleep > 0.999) {
+                outColor = vec4(0.0);
+                return;
+            }
             vec2 r = cell / uGrid;
             float x = cell.x, y = cell.y;
             // The lids go a little way with the ball, as lids do.
@@ -186,8 +191,9 @@
                         tone += 0.3 * exp(-pow((k - fract(uTime * 0.17 + 0.5) * 1.25) / 0.03, 2.0));
                         tone *= smoothstep(1.0, 0.9, k) * 0.9 + 0.1;
                         color = mix(vec3(1.0, 0.5 + k * 0.24, 0.84), vec3(0.74, 0.5, 1.0), smoothstep(0.42, 0.7, k));
-                        color = mix(color, vec3(0.42, 0.9, 1.0), 0.42 * (0.5 + 0.5 * sin(angle * 3.0 + uTime * 0.8)) * smoothstep(0.5, 0.92, k));
-                        color = mix(color, vec3(1.0, 0.32, 0.56), uFollow * 0.55);
+                        color = mix(color, vec3(0.55, 0.58, 1.0), 0.42 * (0.5 + 0.5 * sin(angle * 3.0 + uTime * 0.8)) * smoothstep(0.5, 0.92, k));
+                        // Pressed twice, it flushes a deeper violet, never another colour.
+                        color = mix(color, vec3(0.78, 0.36, 1.0), uFollow * 0.6);
                         tone += uFollow * 0.1;
                         if (k < pupil) tone = 0.0;
                         else tone = max(tone, 0.14 * smoothstep(pupil * 1.3, pupil, k));
@@ -278,60 +284,276 @@
                 tone += wave * 1.3;
                 color = mix(color, vec3(1.0, 0.78, 0.96), min(1.0, wave * 2.0));
             }
-            bool on = tone * (0.35 + 0.65 * dim) > bayer(cell);
-            // Asleep, nothing of it shows: the page has a soft light where it lies (portfolio.js).
+            // How bright each cell is, whole, for the screen to choose its character by
+            // (alpha), and its light as the dither used to give it on average, for the bloom
+            // and the shafts (colour).
+            float level = clamp(tone * (0.35 + 0.65 * dim), 0.0, 1.0);
+            // Asleep, nothing of it shows: the beam where it lies is drawn over it (LETTERS).
             float faint = 1.0 - uSleep;
-            outColor = vec4(on ? color * (0.38 + 0.62 * dim) * faint : vec3(0.0), 1.0);
+            outColor = vec4(color * (0.38 + 0.62 * dim) * faint * level, level * faint);
         }`;
 
-    const SCREEN = `#version 300 es
+    // The eye, in characters: the only thing on the screen that shows it. The screen is cut
+    // into character cells; each reads the brightest of the eye under it and is drawn in the
+    // character that inks its cell about as much, in the eye's own colours, its colours
+    // pulled apart and torn now and then. They never hold still: every cell ticks at its own
+    // pace and now and then steps to the character either side, a band of them scrambles as
+    // it sweeps across now and then, and while the eye builds itself, is struck or tears,
+    // they roll through any character at all. Drawn on a picture of its own, for the light
+    // to come off (SCREEN).
+    const LETTERS = `#version 300 es
         precision highp float;
-        uniform sampler2D uScene;
-        uniform vec2 uGrid, uRes, uPupilAt;
-        uniform float uTime, uGlitch, uTall, uFollow, uBirth, uLattice, uSleep, uBlank;
+        uniform sampler2D uScene, uGlyphs;
+        uniform vec2 uRes;
+        uniform vec3 uGlyph;
+        uniform float uTime, uGlitch, uScramble;
         out vec4 outColor;
         float hash(vec2 p) {
             p = fract(p * vec2(123.34, 456.21));
             p += dot(p, p + 45.32);
             return fract(p.x * p.y);
         }
-        vec3 cell(vec2 uv) {
-            ivec2 at = ivec2(clamp(uv, vec2(0.0), vec2(0.9999)) * uGrid);
-            return texelFetch(uScene, at, 0).rgb;
+        // One character of the strip (portfolio.js, portfolioGlyphs), at a pixel of its cell.
+        float glyph(float index, vec2 inCell) {
+            inCell = clamp(inCell, vec2(0.5), uGlyph.xy - 0.5);
+            return textureLod(uGlyphs, vec2((index * uGlyph.x + inCell.x) / (uGlyph.x * uGlyph.z), inCell.y / uGlyph.y), 0.0).a;
+        }
+        vec4 eyeAt(vec2 onPage) {
+            return textureLod(uScene, vec2(onPage.x, uRes.y - onPage.y) / uRes, 0.0);
+        }
+        // Asleep, where the eye lies: a beam of light that stops short of the screen's edges,
+        // the dark closing in round it, its middle pulsing and glints running along it now and
+        // then, singly or a few together, each its own way and speed; the whole of it breathing.
+        // In characters far smaller than the eye's, packed close (uRestGlyphs), so many of them
+        // make up one sharp line. Measured in the eye's cells: uEye where it lies, uRest how
+        // many cells make a hundredth of the screen's longer side and how far the beam reaches
+        // each way; uPx how many pixels make a cell, uSleepNow how far asleep it is.
+        uniform vec2 uRest, uEye;
+        uniform vec3 uPointer, uStrain;
+        uniform float uPx, uSleepNow;
+        uniform sampler2D uRestGlyphs;
+        uniform vec3 uRestGlyph;
+        float restScramble;
+        // How much happens: High strains harder, with more light and more going on round it.
+        const float TREMBLE = 0.9, BULGE = 7.5, RAYS = 0.22, RAYS_AT_REST = 0.1, RAY_LENGTH = 14.0, COUNTER = 0.35, SLAM = 1.8;
+        const int GLINTS = 6;
+        const bool SPARKS = true;
+        // How it lies, cell by cell: how bright (alpha) and in what colour.
+        vec4 rest(vec2 cell, float time) {
+            restScramble = 0.0;
+            vec2 d = cell - uEye;
+            float v = uRest.x;
+            // Trying to get out (uStrain, from strainAt in the script): x how hard it strains,
+            // y where along it, z the flash as it is slammed shut. Medium and High do the same,
+            // High harder and with more going on (the constants at the head of this shader).
+            // It trembles, harder the harder it strains.
+            float strain = uStrain.x;
+            d.y -= strain * (0.5 + 0.5 * sin(time * 53.0)) * sin(time * 37.0 + d.x * 0.4) * TREMBLE;
+            if (abs(d.y) > 22.0) return vec4(0.0);
+            // Its length breathing in and out.
+            float reach = uRest.y * (0.92 + 0.12 * sin(time * 0.55) + 0.05 * sin(time * 1.37 + 1.0));
+            float u = d.x / reach;
+            if (abs(u) >= 1.0) return vec4(0.0);
+            float taper = pow(1.0 - u * u, 0.9);
+            // Waves running along it, and every few seconds a pulse out from the middle both ways.
+            float wave = 0.5 + 0.5 * sin(u * 11.0 - time * 2.4) * sin(u * 4.3 + time * 0.9);
+            // At High a second set of waves runs the other way through the first.
+            wave = mix(wave, 0.5 + 0.5 * sin(u * 17.0 + time * 3.1), COUNTER);
+            float pulseAt = fract(time / 3.4) * 1.3;
+            float pulse = exp(-pow((abs(u) - pulseAt) / 0.045, 2.0)) * (1.0 - pulseAt / 1.3);
+            // Where a pointer is near, it opens a little toward it and sends ripples out from it.
+            float near = uPointer.z * exp(-abs(uPointer.y - uEye.y) / (30.0 * v));
+            float toward = near * exp(-pow((cell.x - uPointer.x) / (reach * 0.16), 2.0));
+            float rippleAt = fract(time * 0.9);
+            float ripple = near * exp(-pow((abs(cell.x - uPointer.x) - rippleAt * reach * 0.4) / (1.5 * v), 2.0)) * (1.0 - rippleAt);
+            float heart = 0.0, glint = 0.0;
+            {
+                // The middle, pulsing.
+                float p = fract(time / 3.6);
+                float beat = p < 0.16 ? mix(0.12, 0.9, smoothstep(0.0, 0.16, p))
+                    : p < 0.3 ? mix(0.9, 0.34, smoothstep(0.16, 0.3, p))
+                    : p < 0.42 ? mix(0.34, 0.66, smoothstep(0.3, 0.42, p))
+                    : p < 0.7 ? mix(0.66, 0.2, smoothstep(0.42, 0.7, p))
+                    : mix(0.2, 0.12, smoothstep(0.7, 1.0, p));
+                heart = beat * exp(-pow(u / 0.12, 2.0));
+                // Glints running along it, singly or a few together, each its own way and speed.
+                float along = reach * 0.82;
+                for (int i = 0; i < GLINTS; i++) {
+                    float slot = float(i);
+                    float every = 1.7 + 0.9 * slot;
+                    float at = time / every + hash(vec2(slot, 1.7));
+                    float n = floor(at);
+                    float h1 = hash(vec2(n, slot * 7.0 + 1.0)), h2 = hash(vec2(n, slot * 7.0 + 2.0)), h3 = hash(vec2(n, slot * 7.0 + 3.0));
+                    float h4 = hash(vec2(n, slot * 7.0 + 4.0)), h5 = hash(vec2(n, slot * 7.0 + 5.0));
+                    if (h1 < 0.3) continue;
+                    float lasts = min(0.95, (0.8 + 1.5 * h2) / every);
+                    float t = fract(at) / lasts;
+                    if (t >= 1.0) continue;
+                    float from = (h4 * 2.0 - 1.0) * along * 0.55;
+                    float to = clamp(from + (h3 < 0.5 ? -1.0 : 1.0) * along * (0.45 + 0.7 * h5), -along, along);
+                    float eased = 1.0 - pow(1.0 - t, 2.2);
+                    float shine = (0.45 + 0.5 * h2) * (t < 0.3 ? t / 0.3 : t < 0.65 ? mix(1.0, 0.8, (t - 0.3) / 0.35) : 0.8 * (1.0 - t) / 0.35);
+                    glint += shine * exp(-pow((d.x - mix(from, to, eased)) / (4.5 * v * (0.5 + h5) * mix(0.4, 1.0, eased)), 2.0));
+                }
+            }
+            // How far open it is here, in cells either side of its middle: a hair, swelling
+            // where the waves, the pulse, the pointer and the light in it push it open.
+            // Trying to get out: the whole of it strains a little wider, and around one place
+            // it bulges open, as far as it can before it is forced shut.
+            float at = (u - uStrain.y) * reach;
+            float bulge = strain * strain * exp(-pow((u - uStrain.y) / 0.22, 2.0)) * BULGE;
+            float open = (0.55 + 0.45 * wave + 1.4 * pulse + 2.4 * toward + 1.3 * ripple + 1.6 * heart + 1.1 * glint + 1.4 * strain * TREMBLE + 2.0 * uStrain.z) * taper + bulge * taper;
+            float across = abs(d.y) / max(open, 0.05);
+            vec3 tint = mix(vec3(0.74, 0.55, 1.0), vec3(1.0, 0.62, 0.92), 0.5 + 0.5 * sin(u * 3.0 + time * 0.45));
+            tint = mix(tint, vec3(0.6, 0.62, 1.0), (0.5 + 0.5 * sin(-u * 2.1 + time * 0.31 + 2.0)) * 0.6);
+            // Light forcing its way out of it while it strains: rays straight up and down.
+            float column = floor(cell.x / 2.0);
+            float rayAt = hash(vec2(column, floor(time * 6.0)));
+            float ray = 0.0;
+            // At High a few always flicker out of it, even at rest.
+            float pressing = max(strain, RAYS_AT_REST);
+            if (pressing > 0.08 && rayAt > 1.0 - pressing * RAYS && abs(u) < 0.85) {
+                float reachOut = (3.0 + RAY_LENGTH * hash(vec2(column, 3.1))) * pressing;
+                float past = abs(d.y) - open;
+                if (past > 0.0 && past < reachOut) ray = (1.0 - past / reachOut) * pressing;
+            }
+            if (ray > 0.0 && across >= 1.0) {
+                restScramble = 0.7;
+                return vec4(vec3(1.0, 0.94, 1.0), ray);
+            }
+            // At High, sparks of it drifting up and down off it.
+            if (SPARKS && across >= 1.0 && abs(u) < 0.9) {
+                float lane = floor(cell.x / 1.5);
+                float which = hash(vec2(lane, 9.7));
+                if (which > 0.72) {
+                    float rise = fract(time * (0.25 + 0.5 * hash(vec2(lane, 2.3))) + which * 7.0);
+                    float height = open + rise * (6.0 + 8.0 * which);
+                    if (abs(abs(d.y) - height) < 0.7 && (d.y < 0.0) == (which > 0.86)) {
+                        restScramble = 0.5;
+                        return vec4(mix(vec3(1.0), tint, rise), (1.0 - rise) * 0.55 * taper);
+                    }
+                }
+            }
+            // Round it, the faint haze the old line had, as a dust of the lightest characters.
+            if (across >= 1.0) return vec4(mix(tint, vec3(0.42, 0.25, 0.9), 0.5), 0.07 * taper * exp(-(abs(d.y) - open) / (1.5 + 1.5 * v)));
+            float core = 1.0 - across * across;
+            float bright = core * (0.8 + 0.3 * wave + 0.8 * pulse + 0.6 * toward + 0.8 * ripple + heart + glint + 1.2 * strain + SLAM * uStrain.z) * (0.35 + 0.65 * taper);
+            // Violet at its edges, drifting through lilac, pink and blue-violet along it, and
+            // white peering out where it is open and brightest.
+            vec3 color = mix(tint, vec3(1.0), smoothstep(0.2, 0.75, core * taper * (0.7 + 0.3 * wave) + pulse + 0.5 * toward + glint + 0.5 * heart));
+            // Its characters scramble where a wave front or a ripple passes.
+            // Where it bulges open, a glimpse of what is inside: the iris, pink to violet, round
+            // a pupil that is dark.
+            if (bulge > 1.2) {
+                float inside = length(vec2(at, d.y * 1.6)) / bulge;
+                if (inside < 0.38) bright *= 0.05 + inside;
+                else if (inside < 0.95) {
+                    color = mix(vec3(1.0, 0.5, 0.86), vec3(0.62, 0.42, 1.0), smoothstep(0.38, 0.95, inside));
+                    bright = max(bright, 0.55 + 0.4 * sin(atan(d.y, at) * 17.0 + time * 4.0));
+                }
+            }
+            restScramble = clamp(1.5 * pulse + ripple + 0.4 * toward + 0.6 * glint + 0.55 * strain + uStrain.z, 0.0, 0.95);
+            return vec4(color, clamp(bright, 0.0, 1.0));
+        }
+        vec3 sleepingLine() {
+            if (uSleepNow <= 0.001) return vec3(0.0);
+            vec2 g = uRestGlyph.xy;
+            vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+            vec2 ci = floor(px / g);
+            vec2 inCell = clamp(px - ci * g, vec2(0.5), g - 0.5);
+            vec4 r = rest((ci + 0.5) * g / uPx, uTime);
+            float lit = r.a * uSleepNow;
+            // The faintest of it is dust: only some cells, coming and going.
+            if (lit < 0.12 && hash(ci + floor(uTime * 3.0 + hash(ci) * 9.0) * 0.37) > lit * 5.0) lit = 0.0;
+            if (lit <= 0.03) return vec3(0.0);
+            float steps = uRestGlyph.z - 1.0;
+            float pace = hash(ci + 0.37);
+            float tick = floor(uTime * (3.0 + 7.0 * pace) + pace * 17.0);
+            // Every cell the line reaches has a character in it, so they pack into one.
+            float index = floor(lit * steps + 0.5);
+            if (hash(ci * 1.31 + tick) < 0.15) index += hash(ci + tick * 2.7) < 0.5 ? -1.0 : 1.0;
+            if (hash(ci * 2.9 + tick * 1.9) < restScramble) index = 1.0 + floor(hash(ci * 4.1 + tick) * steps);
+            index = clamp(index, 1.0, steps);
+            float ink = textureLod(uRestGlyphs, vec2((index * g.x + inCell.x) / (g.x * uRestGlyph.z), inCell.y / g.y), 0.0).a;
+            return r.rgb * ink * (0.9 + 0.6 * lit);
         }
         void main() {
+            vec3 line = sleepingLine();
+            // Fast asleep there is nothing of the eye to read.
+            if (uSleepNow >= 0.999) {
+                outColor = vec4(line, 1.0);
+                return;
+            }
             vec2 uv = gl_FragCoord.xy / uRes;
             float beat = floor(uTime * 24.0);
             float band = floor(uv.y * 44.0);
             float tear = (hash(vec2(band, beat)) - 0.5) * uGlitch * step(0.7, hash(vec2(band * 3.1, beat))) * 0.14;
-            vec2 at = uv + vec2(tear, 0.0);
-            float split = 0.0009 + 0.0012 * length(uv - 0.5) + 0.007 * uGlitch;
-            vec3 crisp = vec3(cell(at + vec2(split, 0.0)).r, cell(at).g, cell(at - vec2(split, 0.0)).b);
-            // The aura underneath, breathing.
-            float wide = uRes.x / uRes.y;
-            vec2 q = (uv - vec2(0.6, 0.52)) * vec2(wide, 1.0);
-            float breath = 0.86 + 0.14 * sin(uTime * 0.5);
+            vec2 px = vec2(gl_FragCoord.x + tear * uRes.x, uRes.y - gl_FragCoord.y);
+            vec2 ci = floor(px / uGlyph.xy);
+            vec2 inCell = px - ci * uGlyph.xy;
+            vec2 corner = ci * uGlyph.xy;
+            // Six looks across the cell, so a thin line through it is not missed.
+            float lit = 0.0, weight = 0.0;
+            vec3 hue = vec3(0.0);
+            for (int i = 0; i < 6; i++) {
+                vec4 t = eyeAt(corner + uGlyph.xy * vec2(float(i % 2) * 0.5 + 0.25, float(i / 2) / 3.0 + 1.0 / 6.0));
+                lit = max(lit, t.a);
+                hue += t.rgb;
+                weight += t.a;
+            }
+            if (lit <= 0.035) {
+                outColor = vec4(line, 1.0);
+                return;
+            }
+            hue /= max(weight, 0.001);
+            float steps = uGlyph.z - 1.0;
+            float pace = hash(ci + 0.37);
+            float tick = floor(uTime * (2.5 + 7.5 * pace) + pace * 17.0);
+            float index = floor(lit * steps + hash(ci * 0.71 + 3.3));
+            if (hash(ci * 1.31 + tick) < 0.17) index += hash(ci + tick * 2.7) < 0.5 ? -1.0 : 1.0;
+            float across = ci.x * uGlyph.x / uRes.x;
+            float sweep = exp(-pow((across - fract(uTime * 0.06) * 1.6 + 0.3) / 0.035, 2.0)) * 0.55;
+            if (hash(ci * 2.9 + tick * 1.9) < uScramble + sweep) index = 1.0 + floor(hash(ci * 4.1 + tick) * steps);
+            index = clamp(index, 1.0, steps);
+            // Whole characters, never pulled apart into their colours: on strokes this fine the
+            // red and blue slid off and left them green. They stay the eye's own violets.
+            outColor = vec4(hue * glyph(index, inCell) * (0.95 + 0.65 * lit) + line, 1.0);
+        }`;
+
+    // The screen: the characters, and every bit of light there is coming off them -- light
+    // bleeding out of the bright ones and shafts off those round the pupil -- on the dark,
+    // with the page's lattice before the eye is born, fine lines and a darker edge.
+    const SCREEN = `#version 300 es
+        precision highp float;
+        uniform sampler2D uLetters;
+        uniform vec2 uRes, uPupilAt;
+        uniform float uTime, uTall, uFollow, uBirth, uLattice, uSleep, uBlank, uShift;
+        out vec4 outColor;
+        float hash(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+        }
+        void main() {
+            vec2 uv = gl_FragCoord.xy / uRes;
+            vec3 crisp = texelFetch(uLetters, ivec2(gl_FragCoord.xy), 0).rgb;
             vec3 base = vec3(0.016, 0.008, 0.035);
-            base += vec3(0.33, 0.14, 0.84) * 0.56 * breath * exp(-dot(q, q) * 2.2);
-            vec2 w = (uv - vec2(0.9, 0.88)) * vec2(wide, 1.0);
-            base += vec3(0.84, 0.2, 0.78) * 0.3 * exp(-dot(w, w) * 4.5);
-            vec2 z = (uv - vec2(0.2, 0.08)) * vec2(wide, 1.0);
-            base += vec3(0.13, 0.27, 0.94) * 0.3 * exp(-dot(z, z) * 4.0);
-            // Being born, it starts from the dark, and the aura comes up with it.
-            base = mix(vec3(0.012, 0.008, 0.02), base, smoothstep(0.5, 0.95, uBirth));
-            // Light bleeding out of the bright places.
-            vec3 bloom = (textureLod(uScene, at, 2.0).rgb * 0.55 + textureLod(uScene, at, 4.0).rgb * 0.8 + textureLod(uScene, at, 5.5).rgb * 0.7) * (1.0 + (1.0 - uBirth) * 0.7) * (1.0 - 0.65 * uBlank);
-            // Shafts coming off the pupil.
+            // Light bleeding out of the bright characters: close round each one, so the dark
+            // between them stays dark and the light is plainly theirs, and only a little
+            // further out. Nothing under them would give the eye's shape away.
+            vec3 near = textureLod(uLetters, uv, max(0.0, uShift - 2.2)).rgb;
+            vec3 bloom = (near * 0.9 + textureLod(uLetters, uv, uShift - 1.0).rgb * 0.45 + textureLod(uLetters, uv, uShift + 1.5).rgb * 0.18) * (1.0 + (1.0 - uBirth) * 0.5) * (1.0 - 0.65 * uBlank);
+            // Shafts coming off the characters round the pupil.
             vec3 shafts = vec3(0.0);
             vec2 toPupil = (uPupilAt - uv) / 9.0;
             vec2 walk = uv + toPupil * hash(gl_FragCoord.xy + uTime);
             float fall = 1.0;
             for (int i = 0; i < 9; i++) {
-                shafts += textureLod(uScene, walk, 3.0).rgb * fall;
+                shafts += textureLod(uLetters, walk, uShift + 3.0).rgb * fall;
                 walk += toPupil;
                 fall *= 0.9;
             }
-            shafts *= 0.09 * (0.8 + 0.5 * uFollow);
+            shafts *= 0.06 * (0.8 + 0.5 * uFollow);
             float quiet = mix(0.38 + 0.62 * smoothstep(0.1, 0.66, uv.x), 0.6, uTall);
             vec3 color = base + crisp + (bloom * 0.62 + shafts) * quiet;
             // The page's own lattice, which is all there is to begin with, gone once it is born.
@@ -345,6 +567,43 @@
             outColor = vec4(color, 1.0);
         }`;
 
+    // Asleep it tries to get out (rest() in LETTERS): every few seconds it strains, trembling
+    // harder and harder, bulges open round one place far enough to glimpse its iris, light
+    // forcing out of it, and is slammed shut again with a flash and a jolt.
+    let strainFrom = 0, strainRise = 1.4, strainSpot = 0, nextStrain = 2, slamJolted = true;
+    const STRAIN_HOLD = .35, STRAIN_SLAM = .12, SLAM_FADE = .45;
+    const strainAt = t => {
+        if (!asleep || (reducedMotion && reducedMotion.matches)) return [0, 0, 0];
+        if (t >= nextStrain) {
+            strainFrom = t;
+            strainRise = 1.1 + Math.random() * .9;
+            strainSpot = (Math.random() * 2 - 1) * .45;
+            // Now and then straight back at it; otherwise a breath first.
+            nextStrain = t + strainRise + STRAIN_HOLD + STRAIN_SLAM + (Math.random() < .3 ? .5 : 1.8 + Math.random() * 2.6);
+            slamJolted = false;
+        }
+        const k = t - strainFrom, shut = strainRise + STRAIN_HOLD;
+        if (k < strainRise) return [(k / strainRise) ** 2, strainSpot, 0];
+        if (k < shut) return [1, strainSpot, 0];
+        if (!slamJolted) {
+            slamJolted = true;
+            canvas.animate?.([
+                { transform: 'translate(0, 0)' },
+                { transform: 'translate(-.5vmin, .35vmin)', offset: .2 },
+                { transform: 'translate(.4vmin, -.25vmin)', offset: .45 },
+                { transform: 'translate(-.15vmin, .1vmin)', offset: .7 },
+                { transform: 'translate(0, 0)' }
+            ], { duration: 260, easing: 'steps(5, end)' });
+        }
+        if (k < shut + STRAIN_SLAM) return [1 - (k - shut) / STRAIN_SLAM, strainSpot, 1];
+        return [0, strainSpot, Math.max(0, 1 - (k - shut - STRAIN_SLAM) / SLAM_FADE)];
+    };
+    let pointerAt = -1e9, restVmax = 1, restBeam = 1, restTexture = null, restGlyphs = null, cssWidth = 1;
+    const builtWidthOf = () => cssWidth;
+    let glyphTexture = null, glyphs = null, lettersProgram = null, lettersUniforms = null, lettersTexture = null, lettersTarget = null, lightShift = 0;
+    // High's eye is worked out on twice as many cells each way as Low's, and its characters
+    // are half the size, so it is the finest of the three.
+    const DETAIL = 2;
     let canvas = null, gl = null, scene = null, target = null, eyeProgram = null, screenProgram = null, eyeUniforms = null, screenUniforms = null, vao = null;
     let shown = false, frame = 0, lastFrame = 0, clock = 0, underProject = false, underProjectTimer = 0, resizeTimer = 0;
     let reducedMotion = null;
@@ -383,15 +642,22 @@
         gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'high-performance' });
         if (!gl) throw new Error('no WebGL 2');
         const eye = link(EYE, ['uGrid', 'uEye', 'uLookAt', 'uLid', 'uSize', 'uTurn', 'uBall', 'uCap', 'uIris', 'uTime', 'uOpen', 'uPupil', 'uShock', 'uTall', 'uFollow', 'uBirth', 'uBlank', 'uSkin', 'uSleep']);
-        const screen = link(SCREEN, ['uScene', 'uGrid', 'uRes', 'uPupilAt', 'uTime', 'uGlitch', 'uTall', 'uFollow', 'uBirth', 'uLattice', 'uSleep', 'uBlank']);
+        const letters = link(LETTERS, ['uScene', 'uGlyphs', 'uGlyph', 'uRes', 'uTime', 'uGlitch', 'uScramble', 'uRest', 'uEye', 'uPointer', 'uStrain', 'uPx', 'uSleepNow', 'uRestGlyphs', 'uRestGlyph']);
+        const screen = link(SCREEN, ['uLetters', 'uRes', 'uPupilAt', 'uTime', 'uTall', 'uFollow', 'uBirth', 'uLattice', 'uSleep', 'uBlank', 'uShift']);
         eyeProgram = eye.program;
         eyeUniforms = eye.uniforms;
+        lettersProgram = letters.program;
+        lettersUniforms = letters.uniforms;
         screenProgram = screen.program;
         screenUniforms = screen.uniforms;
         vao = gl.createVertexArray();
         gl.bindVertexArray(vao);
         scene = gl.createTexture();
         target = gl.createFramebuffer();
+        glyphTexture = gl.createTexture();
+        restTexture = gl.createTexture();
+        lettersTexture = gl.createTexture();
+        lettersTarget = gl.createFramebuffer();
     };
     const size = () => {
         const width = Math.max(320, document.documentElement.clientWidth), height = Math.max(320, window.innerHeight);
@@ -400,7 +666,8 @@
         // From wide to tall with no jump on the way, and the same few cells at any size or shape.
         tall = smooth(.9, 1.4, height / width);
         const shaped = (wide, narrow) => wide + (narrow - wide) * tall;
-        cell = Math.max(3, Math.sqrt(width * height / 100000));
+        const coarse = Math.max(3, Math.sqrt(width * height / 100000));
+        cell = coarse / DETAIL;
         cols = Math.ceil(width / cell);
         rows = Math.ceil(height / cell);
         cx = cols * shaped(.56, .5);
@@ -414,21 +681,55 @@
         ball = Math.max(A * .8, upper * 1.25, irisR * 2.1);
         // On a narrow screen it turns no further than keeps the iris in sight.
         mostYaw = Math.min(MOST_YAW, Math.asin(clamp((Math.min(cx, cols - cx) - irisR * .35) / ball, 0, 1)));
-        // The look of it is in its large pixels, so the screen needs no more than this.
-        const ratio = Math.min(window.devicePixelRatio || 1, document.documentElement.dataset.effectsPace ? 1 : 1.25);
+        // Its characters want the screen's own pixels, up to twice over; eased, one.
+        const ratio = Math.min(window.devicePixelRatio || 1, document.documentElement.dataset.effectsPace ? 1 : 2);
         canvas.width = Math.round(width * ratio);
         canvas.height = Math.round(height * ratio);
         // The page's lattice is three rem across.
         lattice = parseFloat(getComputedStyle(document.documentElement).fontSize) * 3 * (canvas.width / width);
         gl.bindTexture(gl.TEXTURE_2D, scene);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, cols, rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.bindFramebuffer(gl.FRAMEBUFFER, target);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, scene, 0);
+        // The characters, on the screen's pixels, with every size down to one for the light.
+        gl.bindTexture(gl.TEXTURE_2D, lettersTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, lettersTarget);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, lettersTexture, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // The light spreads as far on the screen as it did from Low's size of cell.
+        lightShift = Math.log2(coarse * canvas.width / width);
+        // The sleeping beam's measures (EYE, rest()): a hundredth of the longer side, and how
+        // far it reaches each way, short of the screen's edges.
+        restVmax = Math.max(width, height) / 100 / cell;
+        restBeam = Math.min(30 * restVmax, .38 * width / cell);
+        cssWidth = width;
+        // Its characters: tiny, as small as still reads as a character, and packed close.
+        restGlyphs = window.portfolioGlyphs(3.5 * canvas.width / width, .55);
+        gl.bindTexture(gl.TEXTURE_2D, restTexture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, restGlyphs.atlas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        // Its characters: three of its cells tall, half Low's, and never too small to read.
+        glyphs = window.portfolioGlyphs(Math.max(7, cell * 3) * (canvas.width / width));
+        gl.bindTexture(gl.TEXTURE_2D, glyphTexture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, glyphs.atlas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     };
 
     const following = () => performance.now() < followUntil;
@@ -603,19 +904,52 @@
         gl.uniform1f(e.uSkin, skin);
         gl.uniform1f(e.uSleep, sleep);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // The characters, from the eye.
+        gl.bindFramebuffer(gl.FRAMEBUFFER, lettersTarget);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.useProgram(lettersProgram);
+        const l = lettersUniforms;
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, scene);
+        gl.uniform1i(l.uScene, 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, glyphTexture);
+        gl.uniform1i(l.uGlyphs, 1);
+        gl.uniform3f(l.uGlyph, glyphs.width, glyphs.height, glyphs.count);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, restTexture);
+        gl.uniform1i(l.uRestGlyphs, 3);
+        gl.uniform3f(l.uRestGlyph, restGlyphs.width, restGlyphs.height, restGlyphs.count);
+        gl.uniform2f(l.uRest, restVmax, restBeam);
+        // Where the pointer is, in cells, and how lately it moved.
+        gl.uniform3f(l.uPointer, pointerX / cell, pointerY / cell, pointerSeen ? Math.exp(-(performance.now() - pointerAt) / 2500) : 0);
+        gl.uniform2f(l.uEye, cx, cy);
+        gl.uniform1f(l.uPx, cell * canvas.width / builtWidthOf());
+        gl.uniform1f(l.uSleepNow, sleep);
+        gl.uniform2f(l.uRes, canvas.width, canvas.height);
+        gl.uniform1f(l.uTime, t);
+        const [straining, where, slammed] = strainAt(t);
+        gl.uniform3f(l.uStrain, straining * sleep, where, slammed * sleep);
+        let glitch = t < glitchUntil && t >= wakeAt ? 1 : shocking ? Math.max(0, 1 - shock * 3) : born > 0 && born < 1 && Math.random() < .12 ? .5 : 0;
+        // As it slams shut the screen tears, and it tears a little at the height of a strain.
+        glitch = Math.max(glitch, slammed * .9 * sleep, straining > .85 && Math.random() < .25 ? .35 * sleep : 0);
+        gl.uniform1f(l.uGlitch, glitch);
+        // Its characters roll wildest as it is built, struck or torn, and while the plain
+        // ball it opened on is still there.
+        gl.uniform1f(l.uScramble, Math.max(born < 1 ? .1 + .45 * (1 - born) : 0, glitch * .6, blank * .3));
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        // And the screen: them, and the light off them.
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, lettersTexture);
         gl.generateMipmap(gl.TEXTURE_2D);
-        gl.viewport(0, 0, canvas.width, canvas.height);
         gl.useProgram(screenProgram);
         const s = screenUniforms;
-        gl.uniform1i(s.uScene, 0);
-        gl.uniform2f(s.uGrid, cols, rows);
+        gl.uniform1i(s.uLetters, 2);
         gl.uniform2f(s.uRes, canvas.width, canvas.height);
         gl.uniform2f(s.uPupilAt, (cx + lookX) / cols, 1 - (cy + lookY) / rows);
         gl.uniform1f(s.uTime, t);
-        gl.uniform1f(s.uGlitch, t < glitchUntil && t >= wakeAt ? 1 : shocking ? Math.max(0, 1 - shock * 3) : born > 0 && born < 1 && Math.random() < .12 ? .5 : 0);
+        gl.uniform1f(s.uShift, lightShift);
         gl.uniform1f(s.uBirth, born);
         gl.uniform1f(s.uLattice, lattice);
         gl.uniform1f(s.uSleep, sleep);
@@ -672,6 +1006,7 @@
         pointerX = event.clientX;
         pointerY = event.clientY;
         pointerSeen = true;
+        pointerAt = performance.now();
     };
     // Double presses on the visible eye answer; page controls keep their own behavior.
     const ANSWERS = 'a, button, input, select, textarea, label, .project-card, .about-highlight, .skill-group, .navbar, .modal-overlay, .collection-toggle';

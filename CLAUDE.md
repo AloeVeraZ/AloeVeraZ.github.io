@@ -86,6 +86,26 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
   swallowed by its pupil in about half a second (`pourIntoIris`, `GATHER_MS`), and it wakes and
   goes wild for half a second. Each dot keeps a path of its own: a spiral with arms read as a
   swastika once it shrank, so nothing in a switch may make arms or any figure.
+- Every eye is drawn in characters, at every level (Aloe's reference was ASCII-for-Nuke style
+  footage). The eye is still worked out a cell at a time on its small picture; each character
+  cell of the screen then takes the character that inks it about as much as the eye is bright
+  there, in the eye's own colours (`portfolioGlyphs` in portfolio.js ranks the characters; the
+  SCREEN passes in iris.js and ego.js, `drawGlyphs` in y2k.js). The characters never quite
+  hold still: some step to the one either side a few times a second, and they roll through
+  any character while the eye builds or is struck; at High a band of them also sweeps across.
+  The characters are the eye: nothing under them shows its shape (no aura behind it, the page
+  black), and High's bloom and shafts are made from the drawn characters and kept close round
+  them. Aloe saw an eye with letters laid over it otherwise. The higher the level, the finer:
+  Low's characters are three of its cells tall (at least 9px); Medium works the eye out on
+  1.5 times as many cells each way and High on twice as many (`DETAIL`), with characters three
+  of those cells tall (at least 8px and 7px), drawn on the screen's own pixels up to 2x.
+  Plain Latin characters only. Everything a switch or a waking draws on the shared canvas
+  (`fx` in portfolio.js: the ripple, the swirl into the iris, the Big Bang, the eye coming
+  apart) is turned into characters the same way, each frame, at the level's character size;
+  what is drawn black stays black behind them. Draw the character strip from `glyphs.image`
+  (a bitmap) on a 2D canvas, never the strip's own canvas: a screen of them stalled a second.
+  The eye and everything round it stay purple: no colour split on the characters (it left
+  them green), the press tint violet, nothing cyan or warm.
 - Every eye wakes without tracking the cursor and looks about for itself. Two presses on
   the visible eye (away from page controls) tint the iris and start tracking for ten seconds,
   then the resting color returns and tracking stops. This applies at Low, Medium and High. Medium and High play the
@@ -101,9 +121,24 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
 - The eye is the default at every level (`y2k.*` Low, `iris.*` Medium, `ego.*` High), the space
   sky is second, and Medium has the pink desk (`vapor.*`) last. The choice carries across levels.
 - The page loads with the eye asleep (`eyeAsleep`, `html[data-eye-asleep]`): the eye itself does
-  not show, and the page is black with a soft violet light breathing where it lies
-  (`.eye-slumber`, `setSlumber`). Aloe found the shut lids drawn as dithered lines "cheap"; keep
-  the idle state soft, with no lines. One press on the page away from controls sends a ripple out
+  not show, and the page is black with a closed eye's slit of light where it lies, stirring,
+  drawn by the eye itself (`rest()`, `sleepingLine()` in iris.js and ego.js) in characters far
+  smaller than the eye's (about 3.5-4px, packed close) so together they make one sharp line:
+  hair-thin and long, its length breathing, waves running along it and swelling it open at
+  points, a pulse out from the middle every few seconds, colour drifting through lilac, pink
+  and blue-violet with white peering out of the core, a dust of faint characters round it like
+  the old line's haze, characters scrambling where a wave or ripple passes, and opening toward
+  the pointer with ripples out from it, to invite the press, with its pulsing middle and four
+  glints running along it, the same length at Medium and High. At both the eye is trying to get
+  out (`strainAt`, `uStrain`): every few seconds it strains, trembling, bulges open round one
+  place far enough to glimpse its iris and dark pupil, rays of light forcing out, and is
+  slammed shut with a flash. Medium does it gently and less often (no tear, no jolt); High
+  harder, with a tear and a jolt as it slams, and more round it even at rest: sparks drifting
+  off it, rays always flickering, waves running both ways, six glints. One shader body in both
+  files with the amounts as constants at its head (TREMBLE, BULGE, RAYS...): Medium and High
+  differ in how much happens, not in what. Aloe wanted it thin, tiny-charactered and
+  enticing. Low plain black.
+  Aloe found the shut lids drawn as dithered lines "cheap"; keep the idle state soft. One press on the page away from controls sends a ripple out
   from the press (`ripple`, `rouseEye` in portfolio.js) and calls the eye's `rouse()`: the lids
   open on a plain ball, the skin draws back to leave just a circle, and then the build and waking
   play, at Low too (`paintBuild` in y2k.js, the same pieces falling into place). The plain ball

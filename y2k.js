@@ -1,7 +1,8 @@
 /* The eye: the whole backdrop of Low FX's hidden look.
 
-   One great eye in hard dither, the kind of picture a dialog box showed at the turn
-   of the century, drawn on a very small canvas and blown up with its pixels showing.
+   One great eye drawn in characters, as a terminal would show a picture: worked out a
+   cell at a time on a very small canvas, then each character cell of the screen takes the
+   character that inks it about as much as the eye is bright there, in the eye's colours.
    Double-pressing the eye tints its iris and lets it follow for ten seconds, narrowing toward
    the edge, and now and then it blinks. This is the one thing in Low's
    other look that runs, and it is built to ask almost nothing: everything that can
@@ -16,7 +17,8 @@
         0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
         3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21
     ];
-    const FRAME_MS = 60;
+    // Thirty frames a second while it moves: fewer read as choppy.
+    const FRAME_MS = 33;
     // How far the ball can turn, in radians: a long way to the sides, less up and down.
     const MOST_YAW = .72, MOST_PITCH = .3;
     const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -26,6 +28,16 @@
     };
 
     let canvas = null, context = null, image = null, shown = false;
+    // It is drawn in characters (portfolio.js, portfolioGlyphs). The eye is worked out a cell
+    // at a time as before, into `level` (how bright, for which character) and a very small
+    // picture of its colours (`tint`, never on the page); the characters are drawn from them
+    // on the page's canvas, only where something changed, and coloured by laying the small
+    // picture over them. Between movements a few of them change, a few times a second.
+    let tint = null, tintContext = null, level = null, glyphs = null, ratio = 1;
+    let buildPaintMs = 0;
+    let glyphCols = 0, glyphRows = 0, glyphAt = null, glyphNoise = null, shimmerTimer = 0, lastBuildPaint = 0;
+    // Twice as often, half as many at a time: the same work, flowing rather than ticking.
+    const SHIMMER_MS = 110, SHIMMER_SHARE = .0075;
     let cols = 0, rows = 0, cell = 4, cx = 0, cy = 0, A = 0, upper = 0, lower = 0, irisR = 0, ball = 1, spriteSize = 0;
     let threshold = null, skinTone = null, whiteTone = null, tintR = null, tintG = null, tintB = null, edge = null, dimming = null, ballZ = null, ballShade = null;
     let irisTone = null, irisR8 = null, irisG8 = null, irisB8 = null;
@@ -157,9 +169,23 @@
                 irisKey[i] = 255 * ((1 - k) * .85 + (angle / (Math.PI * 2) + .5) * .15);
             }
         }
-        canvas.width = cols;
-        canvas.height = rows;
-        image = context.createImageData(cols, rows);
+        tint.width = cols;
+        tint.height = rows;
+        image = tintContext.createImageData(cols, rows);
+        level = new Uint8ClampedArray(cols * rows);
+        // The characters want the screen's own pixels; the cheapest machines have no more
+        // than one to a pixel anyway.
+        ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        glyphs = window.portfolioGlyphs(Math.max(9, cell * 3) * ratio);
+        // Its colours are laid over the characters cell by cell, hard, which is also cheapest.
+        context.imageSmoothingEnabled = false;
+        glyphCols = Math.ceil(canvas.width / glyphs.width);
+        glyphRows = Math.ceil(canvas.height / glyphs.height);
+        glyphAt = new Uint8Array(glyphCols * glyphRows);
+        glyphNoise = new Float32Array(glyphCols * glyphRows);
+        for (let k = 0; k < glyphNoise.length; k++) glyphNoise[k] = Math.random();
         drawnX = drawnY = 1e9;
         drawnOpen = -1;
     };
@@ -227,15 +253,15 @@
                     if (edge[x] > .02 && (toTop < 1.3 || toFoot < .9)) tone = toTop < 1.3 ? 235 : 150;
                 }
                 const at = i * 4;
-                if (tone > threshold[i]) {
-                    data[at] = r;
-                    data[at + 1] = g;
-                    data[at + 2] = b;
-                    data[at + 3] = 96 + 159 * dimming[i];
-                } else data[at + 3] = 0;
+                data[at] = r;
+                data[at + 1] = g;
+                data[at + 2] = b;
+                data[at + 3] = 255;
+                level[i] = tone;
             }
         }
-        context.putImageData(image, 0, 0, x0, y0, x1 - x0, y1 - y0);
+        tintContext.putImageData(image, 0, 0, x0, y0, x1 - x0, y1 - y0);
+        drawGlyphs(x0, y0, x1, y1);
     };
     // The whole of it while it builds itself, as iris.js's shader has it: `born` how far built,
     // `blank` how much of the plain ball it opened on is left, `skin` how much of the skin it
@@ -312,16 +338,77 @@
                     tone *= smooth(skinFrom, skinFrom + .12, fromEdge) * skinIn;
                 }
                 const o = i * 4;
-                if (tone > threshold[i]) {
-                    data[o] = r;
-                    data[o + 1] = g;
-                    data[o + 2] = b;
-                    data[o + 3] = 96 + 159 * dim;
-                } else data[o + 3] = 0;
+                data[o] = r;
+                data[o + 1] = g;
+                data[o + 2] = b;
+                data[o + 3] = 255;
+                level[i] = tone;
             }
         }
-        context.putImageData(image, 0, 0);
+        tintContext.putImageData(image, 0, 0);
+        drawGlyphs(0, 0, cols, rows);
         drawnOpen = -1;
+    };
+    // The characters over the eye's cells x0..x1, y0..y1: each character cell reads the
+    // brightest of the eye under it and takes the character that inks its cell about as much,
+    // quieter where the page's words run, as the dither was; then the colours go over them.
+    const drawGlyphs = (x0, y0, x1, y1) => {
+        const scale = cell * ratio, gw = glyphs.width, gh = glyphs.height, steps = glyphs.count - 1;
+        const gx0 = Math.max(0, Math.floor(x0 * scale / gw)), gx1 = Math.min(glyphCols, Math.ceil(x1 * scale / gw));
+        const gy0 = Math.max(0, Math.floor(y0 * scale / gh)), gy1 = Math.min(glyphRows, Math.ceil(y1 * scale / gh));
+        if (gx1 <= gx0 || gy1 <= gy0) return;
+        context.clearRect(gx0 * gw, gy0 * gh, (gx1 - gx0) * gw, (gy1 - gy0) * gh);
+        for (let gy = gy0; gy < gy1; gy++) {
+            const ya = Math.min(rows - 1, ((gy + .25) * gh / scale) | 0), yb = Math.min(rows - 1, ((gy + .75) * gh / scale) | 0);
+            for (let gx = gx0; gx < gx1; gx++) {
+                const xa = Math.min(cols - 1, ((gx + .25) * gw / scale) | 0), xb = Math.min(cols - 1, ((gx + .75) * gw / scale) | 0);
+                const lit = Math.max(level[ya * cols + xa], level[ya * cols + xb], level[yb * cols + xa], level[yb * cols + xb]) / 255;
+                const k = gy * glyphCols + gx;
+                if (lit <= .035) {
+                    glyphAt[k] = 0;
+                    continue;
+                }
+                const index = Math.max(1, Math.min(steps, Math.floor(lit * steps + glyphNoise[k])));
+                glyphAt[k] = index;
+                context.globalAlpha = Math.min(1, (.38 + .62 * dimming[yb * cols + xb]) * (.8 + .4 * lit));
+                context.drawImage(glyphs.image, index * gw, 0, gw, gh, gx * gw, gy * gh, gw, gh);
+            }
+        }
+        colour(gx0 * gw, gy0 * gh, (gx1 - gx0) * gw, (gy1 - gy0) * gh);
+    };
+    // The eye's colours laid over what is drawn in the box, keeping its shapes.
+    const colour = (x, y, w, h) => {
+        const scale = cell * ratio;
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = 'source-atop';
+        context.drawImage(tint, x / scale, y / scale, w / scale, h / scale, x, y, w, h);
+        context.globalCompositeOperation = 'source-over';
+    };
+    // A few characters step to the one either side of them, a few times a second, so it
+    // never quite holds still; only those cells are drawn again.
+    const shimmer = () => {
+        clearTimeout(shimmerTimer);
+        shimmerTimer = 0;
+        if (!shown || asleep || rouseAt >= 0 || reducedMotion.matches) return;
+        shimmerTimer = window.setTimeout(() => {
+            shimmerTimer = 0;
+            if (!shown || frame || gapTimer || underProject || document.hidden) return;
+            const gw = glyphs.width, gh = glyphs.height, steps = glyphs.count - 1;
+            const tries = Math.ceil(glyphAt.length * SHIMMER_SHARE);
+            for (let n = 0; n < tries; n++) {
+                const k = (Math.random() * glyphAt.length) | 0, was = glyphAt[k];
+                if (!was) continue;
+                const index = Math.max(1, Math.min(steps, was + (Math.random() < .5 ? -1 : 1)));
+                if (index === was) continue;
+                glyphAt[k] = index;
+                const x = (k % glyphCols) * gw, y = ((k / glyphCols) | 0) * gh;
+                context.clearRect(x, y, gw, gh);
+                context.globalAlpha = .9;
+                context.drawImage(glyphs.image, index * gw, 0, gw, gh, x, y, gw, gh);
+                colour(x, y, gw, gh);
+            }
+            shimmer();
+        }, SHIMMER_MS);
     };
     const whole = () => {
         paint(0, 0, cols, rows);
@@ -396,7 +483,16 @@
             const age = now - rouseAt;
             if (age < ROUSE_MS + BIRTH_MS) {
                 open = age < ROUSE_MS ? lift(age) : 1;
-                paintBuild(clamp((age - ROUSE_MS) / BIRTH_MS, 0, 1), 1 - smooth(0, 450, age - ROUSE_MS), 1 - smooth(1050, 1750, age));
+                // Every character on the screen drawn again, thirty times a second, so the
+                // build flows as it does at the other levels.
+                // A slow machine takes longer over each, and then it waits that much longer
+                // between them, so it never holds the page up.
+                if (now - lastBuildPaint >= Math.max(30, buildPaintMs * 2.5)) {
+                    lastBuildPaint = now;
+                    const started = performance.now();
+                    paintBuild(clamp((age - ROUSE_MS) / BIRTH_MS, 0, 1), 1 - smooth(0, 450, age - ROUSE_MS), 1 - smooth(1050, 1750, age));
+                    buildPaintMs = buildPaintMs * .7 + (performance.now() - started) * .3;
+                }
                 frame = requestAnimationFrame(step);
                 return;
             }
@@ -413,7 +509,10 @@
         }
         if (open !== drawnOpen || irisIn !== drawnIris || Math.round(lookX) !== Math.round(drawnX) || Math.round(lookY) !== Math.round(drawnY)) paintChanges();
         if (moving) frame = requestAnimationFrame(step);
-        else lastDraw = 0;
+        else {
+            lastDraw = 0;
+            shimmer();
+        }
     };
     const wake = () => {
         if (!frame && !gapTimer && shown && !underProject && !document.hidden) frame = requestAnimationFrame(step);
@@ -514,6 +613,8 @@
                 canvas.className = 'y2k-eye';
                 canvas.setAttribute('aria-hidden', 'true');
                 context = canvas.getContext('2d');
+                tint = document.createElement('canvas');
+                tintContext = tint.getContext('2d');
                 document.querySelector('.background-grid')?.after(canvas);
             }
             yawVelocity = pitchVelocity = 0;
@@ -582,10 +683,13 @@
             document.removeEventListener('visibilitychange', onVisibility);
             document.removeEventListener('portfolio:modal-open', onModalOpen);
             document.removeEventListener('portfolio:modal-close', onModalClose);
+            clearTimeout(shimmerTimer);
+            shimmerTimer = 0;
             canvas?.remove();
             canvas = null;
             context = null;
             image = null;
+            tint = tintContext = level = glyphAt = glyphNoise = null;
             threshold = skinTone = whiteTone = tintR = tintG = tintB = edge = dimming = ballZ = ballShade = irisTone = irisR8 = irisG8 = irisB8 = irisKey = null;
         }
     };
