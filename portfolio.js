@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261122-no-torque';
+    const SKY_VERSION = '20261122-card-swipe';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -4381,6 +4381,28 @@ function setupCarousel(carousel, controls, options = {}) {
             carousel.scrollTo({ left: dragStartScrollLeft - horizontalDistance, behavior: 'auto' });
             updateCardDepth();
         }
+    }, { passive: false });
+    // A phone reads a finger's first few pixels before any pointermove has
+    // decided the direction, and if it takes the gesture for itself it cancels
+    // the pointer: the card jolted and snapped back. So a touch that is going
+    // more sideways than up or down is held back from the browser from its
+    // first move, and the swipe stays the track's; mostly vertical is still
+    // the page scrolling.
+    let touchStartX = 0;
+    let touchStartY = 0;
+    carousel.addEventListener('touchstart', event => {
+        const touch = event.touches[0];
+        if (!touch || event.touches.length > 1) return;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+    }, { passive: true });
+    carousel.addEventListener('touchmove', event => {
+        if (!isEnabled() || event.touches.length > 1 || !event.cancelable) return;
+        if (dragDirection === 'vertical') return;
+        const touch = event.touches[0];
+        const dx = Math.abs(touch.clientX - touchStartX);
+        const dy = Math.abs(touch.clientY - touchStartY);
+        if (dragDirection === 'horizontal' || dx > dy) event.preventDefault();
     }, { passive: false });
     const finishDrag = event => {
         if (!interactionActive || (event.pointerId !== undefined && event.pointerId !== dragPointerId)) return;

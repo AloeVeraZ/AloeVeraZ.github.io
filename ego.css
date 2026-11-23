@@ -79,15 +79,10 @@ html[data-effects="high"][data-ego] :is(.about-highlight, .skill-group, .project
 }
 html[data-effects="high"][data-ego] :is(.about-highlight, .skill-group, .project-card)::before { box-shadow: none; }
 
-/* A title bar made of what each card already holds. */
+/* A title bar made of what each card already holds, with no window controls. */
 html[data-effects="high"][data-ego] :is(.about-highlight > .about-highlight-label, .skill-group-title, .project-category-badge) {
     background-color: transparent;
-    background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23f4f0ff' stroke-width='1.4'%3E%3Cpath d='M2 2l8 8M10 2l-8 8'/%3E%3C/svg%3E"),
-        linear-gradient(var(--y2k-bar), var(--y2k-bar));
-    background-repeat: no-repeat;
-    background-size: 12px 12px, 100% 100%;
-    background-position: calc(100% - .7rem) 50%, 0 0;
+    background-image: linear-gradient(var(--y2k-bar), var(--y2k-bar));
     color: #ffffff;
     text-align: left;
     text-shadow: 0 0 .7em rgba(214, 190, 255, .7);
@@ -98,7 +93,7 @@ html[data-effects="high"][data-ego] :is(.about-highlight > .about-highlight-labe
 html[data-effects="high"][data-ego] .about-highlight > .about-highlight-label {
     --y2k-bar-height: 1.875rem;
     margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) max(var(--rhythm-label), calc(var(--rhythm-label) + var(--pad-card) + 1.55 * var(--type-eyebrow-sm) - var(--y2k-bar-height)));
-    padding: 0 2.25rem 0 var(--pad-card);
+    padding: 0 var(--pad-card);
     min-height: var(--y2k-bar-height);
     display: flex;
     align-items: center;
@@ -108,7 +103,7 @@ html[data-effects="high"][data-ego] .about-highlight > .about-highlight-label {
 }
 html[data-effects="high"][data-ego] .skill-group-title {
     margin: calc(var(--pad-card) * -1) calc(var(--pad-card) * -1) auto;
-    padding: 0 2.25rem 0 var(--pad-card);
+    padding: 0 var(--pad-card);
     min-height: 1.875rem;
     display: flex;
     align-items: center;
@@ -125,7 +120,7 @@ html[data-effects="high"][data-ego] .project-category-badge {
     right: 0;
     bottom: auto;
     left: 0;
-    padding: .34rem 2.25rem .34rem var(--pad-card);
+    padding: .34rem var(--pad-card);
     font-family: var(--font-display);
     font-size: .875rem;
     font-weight: 700;
