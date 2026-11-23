@@ -44,7 +44,7 @@ html[data-effects="medium"][data-vapor] {
     cursor: var(--vapor-arrow);
 }
 html[data-effects="medium"][data-vapor] body { background: var(--bg); }
-html[data-effects="medium"][data-vapor] :is(a, button, .btn, .link-btn, .project-card, .about-highlight-link, .collection-toggle, .carousel-arrow, .icon-control, .fx-slider, .modal-close, .modal-quick-link, .vapor-rings, .vapor-slider) {
+html[data-effects="medium"][data-vapor] :is(a, button, .btn, .link-btn, .project-card, .about-highlight-link, .collection-toggle, .carousel-arrow, .icon-control, .fx-slider, .modal-close, .modal-quick-link, .vapor-slider) {
     cursor: var(--vapor-hand);
 }
 
@@ -396,11 +396,9 @@ html[data-effects="medium"][data-vapor] .is-held, html[data-effects="medium"][da
 .vapor-win[data-win="infill"] { width: 17.6em; height: 25em; }
 .vapor-win[data-win="print"] { width: 17.6em; }
 .vapor-win[data-win="robot"] { width: 13.6em; height: 13em; }
-.vapor-win[data-win="torque"] { width: 12em; height: 13em; }
 .vapor-win.is-big[data-win="infill"] { width: 27em; height: 33em; }
 .vapor-win.is-big[data-win="print"] { width: 25.6em; }
 .vapor-win.is-big[data-win="robot"] { width: 20.8em; height: 22em; }
-.vapor-win.is-big[data-win="torque"] { width: 20em; height: 22em; }
 .vapor-popup { min-width: 16em; box-shadow: .4375em .4375em 0 var(--vapor-ink); }
 /* The wall at the back of the desk: the windows that do nothing, three depths of them over the
    whole screen, each a picture painted once (vapor.js), never pressed and never painted again.
@@ -548,7 +546,6 @@ html[data-effects="medium"][data-vapor] :is(.vapor-note[data-act="go"], .vapor-n
 }
 :is(.vapor-win:not(.vapor-note), .vapor-gremlin-win) .vapor-key:hover { background: #5ff0d8; }
 .vapor-key:active { box-shadow: none; transform: translate(.125em, .125em); }
-.vapor-rings { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
 .vapor-hearts {
     display: flex;
     gap: .35em;

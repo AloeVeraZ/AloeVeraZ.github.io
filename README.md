@@ -63,7 +63,7 @@ The eye is the default backdrop and starts asleep, lids shut on a black page. Cl
 
 Pink grid wallpaper sits behind a growing stack of lavender, teal, and hot-pink windows. Heavy black borders, hard offset shadows, pixel lettering, and blocky progress bars give the interface a late-90s desktop feel. The mischievous robot appears in glitching windows while digital static spills across the screen.
 
-The windows are part of the portfolio: project and section links become desktop items, alongside a print job, infill control, and torque window. Drag windows around, minimize them to the bottom bar, or poke the robot. The familiar name and page sections remain underneath the disorder.
+The windows are part of the portfolio: project and section links become desktop items, alongside a print job and an infill control. Drag windows around, minimize them to the bottom bar, or poke the robot. The familiar name and page sections remain underneath the disorder.
 
 *Try it: move the slider to Medium, then click the star to cycle past the eye to the desktop.*
 

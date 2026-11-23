@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261121-sleeping-eye';
+    const SKY_VERSION = '20261122-no-torque';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },

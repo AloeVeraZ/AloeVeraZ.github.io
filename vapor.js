@@ -7,8 +7,7 @@
 
    It is a desktop for this portfolio. The infill window's slider takes a part from 1%
    to solid. The print job takes that part and prints it, taking longer and using more
-   plastic the denser it is. The robot pulls a face when it is poked. Holding the torque
-   window winds it up. Close a window and it comes back in a while; minimise one and it
+   plastic the denser it is. The robot pulls a face when it is poked. Close a window and it comes back in a while; minimise one and it
    waits on the bar at the foot.
 
    Nothing is there to begin with. Then it comes down with what looks like a virus: in the
@@ -665,59 +664,6 @@
         };
         fill.addEventListener('animationend', () => printJob.finish());
 
-        /* Torque: hold it down and the rings wind up; let go and they run down. */
-        const torqueWin = makeWindow('torque', 'TORQUE', 'teal');
-        const rings = document.createElement('canvas');
-        rings.className = 'vapor-rings';
-        rings.dataset.act = 'wind';
-        torqueWin.pane.appendChild(rings);
-        let phase = 0, spin = 0, holding = false, ringFrame = 0, lastRing = 0, lastTitle = 0;
-        const drawRings = () => {
-            // As laid out, as the labyrinth is.
-            const width = rings.clientWidth, height = rings.clientHeight;
-            if (!width || !height) return;
-            const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
-            const px = Math.round(width * ratio), py = Math.round(height * ratio);
-            if (rings.width !== px || rings.height !== py) {
-                rings.width = px;
-                rings.height = py;
-            }
-            const c = rings.getContext('2d');
-            const cx = px / 2, cy = py / 2, R = Math.hypot(px, py) / 2;
-            const step = Math.max(6, Math.min(px, py) * .06);
-            c.fillStyle = '#ffffff';
-            c.fillRect(0, 0, px, py);
-            const offset = ((phase % 1) + 1) % 1;
-            let dark = Math.floor(R / step) % 2 === 0;
-            for (let r = R + step * (1 - offset); r > 0; r -= step, dark = !dark) {
-                c.fillStyle = dark ? (isTall() ? 'rgb(120,88,170)' : '#0c0a14') : '#ffffff';
-                c.beginPath();
-                c.arc(cx, cy, r, 0, Math.PI * 2);
-                c.fill();
-            }
-        };
-        const ringStep = now => {
-            ringFrame = 0;
-            const dt = lastRing ? Math.min(.05, (now - lastRing) / 1000) : 1 / 60;
-            lastRing = now;
-            spin = holding ? Math.min(9, spin + dt * 6) : spin * Math.pow(.14, dt);
-            phase += spin * dt;
-            drawRings();
-            if (now - lastTitle > 120) {
-                lastTitle = now;
-                torqueWin.win.setTitle(spin < .02 ? 'TORQUE' : `${(spin * 1.4).toFixed(1)} N-M`);
-            }
-            if (holding || spin > .02) ringFrame = requestAnimationFrame(ringStep);
-            else {
-                spin = 0;
-                lastRing = 0;
-                torqueWin.win.setTitle('TORQUE');
-            }
-        };
-        const windRings = () => {
-            if (!ringFrame) ringFrame = requestAnimationFrame(ringStep);
-        };
-
         /* Three hearts and a file, lying on the desk. */
         const hearts = document.createElement('div');
         hearts.className = 'vapor-hearts';
@@ -779,7 +725,7 @@
         const tray = document.createElement('div');
         tray.className = 'vapor-tray';
         over.appendChild(tray);
-        const windows = [robotWin.win, infillWin.win, printWin.win, torqueWin.win];
+        const windows = [robotWin.win, infillWin.win, printWin.win];
         const titleOf = win => win.getAttribute('aria-label');
         const addChip = win => {
             const chip = document.createElement('button');
@@ -839,7 +785,6 @@
             const queued = waiting.indexOf(item);
             if (queued > -1) waiting.splice(queued, 1);
             if (item === infillWin.win) askPattern();
-            if (item === torqueWin.win) drawRings();
         };
         const hide = win => {
             win.classList.add('is-gone');
@@ -940,13 +885,6 @@
         const onPointerDown = event => {
             const item = event.target.closest('[data-item]');
             if (item) raise(item);
-            // Only the main button winds it, as it is the only one that presses anything else here.
-            if (event.target.dataset.act === 'wind' && !event.button) {
-                holding = true;
-                event.target.setPointerCapture?.(event.pointerId);
-                windRings();
-                return;
-            }
             if (!item || event.button || event.target === slider) return;
             letGo();
             hold = {
@@ -963,7 +901,6 @@
             window.addEventListener('pointerup', letGo);
             window.addEventListener('pointercancel', letGo);
         };
-        const stopWinding = () => { holding = false; };
         const onClick = event => {
             if (swallowClick) {
                 swallowClick = false;
@@ -1004,7 +941,6 @@
             } else if (act === 'grow') {
                 win.classList.toggle('is-big');
                 if (win === infillWin.win) askPattern();
-                if (win === torqueWin.win) later(drawRings, 30);
             } else if (act === 'poke') {
                 drawFace((faceAt + 1) % FACES.length);
                 poke.classList.remove('is-poked');
@@ -1034,8 +970,6 @@
         };
         for (const surface of [root, over]) {
             surface.addEventListener('pointerdown', onPointerDown);
-            surface.addEventListener('pointerup', stopWinding);
-            surface.addEventListener('pointercancel', stopWinding);
             surface.addEventListener('click', onClick);
             // A long press on a phone asks for a menu. While holding something, it does not get one.
             surface.addEventListener('contextmenu', event => { if (hold) event.preventDefault(); });
@@ -1821,7 +1755,6 @@
             redraw() {
                 measureBar();
                 askPattern();
-                drawRings();
                 // A screen of a very different size or shape, a phone turned on its side, gets a
                 // wall of its own; a finished one at once.
                 const shape = window.innerWidth / window.innerHeight;
@@ -1844,7 +1777,6 @@
                 // And the projects' pictures still waiting their turn.
                 snapJobs.length = 0;
                 if (patternFrame) cancelAnimationFrame(patternFrame);
-                if (ringFrame) cancelAnimationFrame(ringFrame);
                 root.remove();
                 over.remove();
             }
