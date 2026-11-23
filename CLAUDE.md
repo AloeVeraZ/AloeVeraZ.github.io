@@ -108,7 +108,8 @@ never a bare pause, and the higher the level the more happens. Two tools in `por
   open on a plain ball, the skin draws back to leave just a circle, and then the build and waking
   play, at Low too (`paintBuild` in y2k.js, the same pieces falling into place). The plain ball
   is held no brighter than the eye awake: at High it used to white the screen out. Cycling the
-  looks ends the sleep; changing level does not. Reduced motion starts awake.
+  looks back round to the eye puts it to sleep again, as on first landing; changing level
+  leaves it as it is. Reduced motion starts awake.
 - Each look keeps to its level's budget: Low asks for almost nothing, Medium little, High what it
   must. Measure a change against the plain level before keeping it.
 - Every look has to hold up at any size and shape, from a folding phone to an ultrawide monitor.

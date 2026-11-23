@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261122-touch-capture';
+    const SKY_VERSION = '20261122-eye-sleeps-again';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -548,8 +548,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let eyeOn = true;
     let deskOn = false;
     // And it starts asleep: shut and dim, the page all but black, until the page is pressed
-    // once anywhere that is not a control (rouseEye, below). Going round the looks ends it
-    // too; a change of level does not. Reduced motion has it awake and still from the start.
+    // once anywhere that is not a control (rouseEye, below). Going round the looks back to
+    // the eye puts it to sleep again; a change of level leaves it as it is. Reduced motion
+    // has it awake and still from the start.
     let eyeAsleep = !reducedMotion.matches;
     let skiesFound = false;
     const wantedSky = level => {
@@ -1277,8 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Once found, every look is fetched, so a switch from here on is at once.
         if (!skiesFound) Object.keys(SKIES).forEach(name => loadSky(name).catch(() => {}));
         skiesFound = true;
-        // An eye left asleep is not asleep when the looks come back round to it: it builds.
-        eyeAsleep = false;
         // Round from the eye to the stars, at Medium on to the desk, and back to the eye.
         if (level === 'medium') {
             if (deskOn) {
@@ -1291,6 +1290,9 @@ document.addEventListener('DOMContentLoaded', () => {
             deskOn = false;
             eyeOn = !eyeOn;
         }
+        // Coming back round to the eye is coming back to the page as it first was: asleep,
+        // black, until the page is pressed. Any other look has no sleep of its own.
+        eyeAsleep = !reducedMotion.matches && wantedSky(level) === EYES[level];
         syncSkies(true);
     };
 
