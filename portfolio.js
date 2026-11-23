@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SKY_PRESS_GAP_MS = 500;
     const SKY_PRESSES = 2;
     const SKY_QUIET_MS = 700;
-    const SKY_VERSION = '20261122-card-swipe';
+    const SKY_VERSION = '20261122-touch-capture';
     const SKIES = {
         y2k: { level: 'low', script: 'portfolioY2k', file: 'y2k.js' },
         iris: { level: 'medium', script: 'portfolioIris', file: 'iris.js' },
@@ -3395,7 +3395,9 @@ function setupResponsiveCardSlider(container, options) {
     container.addEventListener('pointercancel', finishDrag, { passive: true });
     window.addEventListener('pointerup', finishDrag, { passive: true });
     window.addEventListener('pointercancel', finishDrag, { passive: true });
-    container.addEventListener('lostpointercapture', finishDrag);
+    container.addEventListener('lostpointercapture', event => {
+        if (event.target === container) finishDrag(event);
+    });
     window.addEventListener('blur', () => {
         if (drag) finishDrag({ pointerId: drag.id });
     });
@@ -4444,7 +4446,13 @@ function setupCarousel(carousel, controls, options = {}) {
     // autoplay and scroll snapping remain disabled until another click.
     window.addEventListener('pointerup', finishDrag, { passive: true });
     window.addEventListener('pointercancel', finishDrag, { passive: true });
-    carousel.addEventListener('lostpointercapture', finishDrag);
+    // Only the track's own capture ending ends the drag. A phone ties each
+    // finger to the card it lands on, and taking the finger over for the
+    // swipe makes that card lose it -- an event that bubbles up here, and
+    // used to end every touch swipe a few pixels in, snapping the card back.
+    carousel.addEventListener('lostpointercapture', event => {
+        if (event.target === carousel) finishDrag(event);
+    });
     window.addEventListener('blur', () => finishDrag({}));
     carousel.addEventListener('wheel', event => {
         if (!isEnabled()) return;
