@@ -615,6 +615,8 @@ footer { padding: var(--space-7) var(--page-inline-end) max(var(--space-7), var(
     .project-card:hover { border-color: var(--blue); box-shadow: none; --card-lift: var(--lift-card); }
     .project-card:hover .project-image { transform: scale(1.035); }
     .project-card:hover .project-image.is-motion-active { object-fit: contain; transform: none; background: transparent; }
+    /* A featured card's animation is its cover, so it keeps filling the frame. */
+    .project-card:hover .project-image.is-motion-active.is-motion-autoplay { object-fit: cover; transform: scale(1.035); }
 }
 /* 14px, not 12.5: the condensed face is the hardest one on the page to read
    small, and this is the one place it sat below its floor. */

@@ -107,6 +107,7 @@
                 "method": "What you did.",
                 "result": "How it turned out."
             },
+            "detailsHeading": "The heading over the detail sections, such as Building the Robot or How the Research Went.",
             "sections": [
                 {
                     "heading": "Design",

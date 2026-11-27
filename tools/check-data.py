@@ -48,7 +48,7 @@ FORMATS = {
                 ('summary', 'str'), ('cardSummary', 'str'), ('programSummary', 'str'),
                 ('image', 'str'), ('imageAlt', 'str'), ('imageSrcset', 'str'), ('imagePresentation', 'str'),
                 ('motionImage', 'str'), ('motionImageAlt', 'str'), ('tags', ['str']),
-                ('quickLink', 'link'), ('featureVideo', 'video'), ('overview', 'overview'),
+                ('quickLink', 'link'), ('featureVideo', 'video'), ('overview', 'overview'), ('detailsHeading', 'str'),
                 ('sections', ['part']), ('media', ['media']), ('links', ['link'])],
     'video': [('src', 'str'), ('label', 'str')],
     'overview': [('headings', ['str']), ('problem', 'str'), ('method', 'str'), ('result', 'str')],

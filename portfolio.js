@@ -3531,7 +3531,7 @@ function renderFeaturedProjects(projects) {
         .filter(project => project.featured)
         .sort((first, second) => (first.featuredOrder ?? Number.MAX_SAFE_INTEGER) - (second.featuredOrder ?? Number.MAX_SAFE_INTEGER))
         .slice(0, 3)
-        .forEach(project => container.appendChild(createProjectCard(project)));
+        .forEach(project => container.appendChild(createProjectCard(project, { autoplayMotion: true })));
     setupFeaturedCarousel(container);
 }
 
@@ -3650,25 +3650,42 @@ function createProjectCard(project, options = {}) {
     const cardDescription = buildProjectCardSummary(project);
     card.innerHTML = `<div class="project-image-wrapper">${cardMedia}<span class="project-category-badge">${text(project.category)}</span></div><div class="project-info"><div class="project-heading"><h3 class="project-title">${text(project.title)}</h3>${projectPeriod}</div><div class="project-copy"><p class="project-summary">${text(cardDescription)}</p></div><div class="project-tags">${(project.tags || []).map(tag => `<span class="tag">${text(tag)}</span>`).join('')}</div><div class="project-action-links">${buildLinkButtons(project.links)}</div></div>`;
     const motionImage = card.querySelector('[data-motion-src]');
-    if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        card.addEventListener('pointerenter', () => {
-            // srcset outranks src, so it has to go before the animation can show.
-            motionImage.removeAttribute('srcset');
-            motionImage.removeAttribute('sizes');
-            motionImage.src = motionImage.dataset.motionSrc;
-            // The picture changes, so the description has to change with it.
-            motionImage.alt = motionImage.dataset.motionAlt || motionImage.alt;
-            motionImage.classList.add('is-motion-active');
-        }, { passive: true });
-        card.addEventListener('pointerleave', () => {
-            motionImage.src = project.image;
-            if (motionImage.dataset.stillSrcset) {
-                motionImage.setAttribute('srcset', motionImage.dataset.stillSrcset);
-                motionImage.setAttribute('sizes', CARD_IMAGE_SIZES);
-            }
-            motionImage.alt = motionImage.dataset.stillAlt || motionImage.alt;
-            motionImage.classList.remove('is-motion-active');
-        }, { passive: true });
+    const showMotion = () => {
+        if (motionImage.classList.contains('is-motion-active')) return;
+        // srcset outranks src, so it has to go before the animation can show.
+        motionImage.removeAttribute('srcset');
+        motionImage.removeAttribute('sizes');
+        motionImage.src = motionImage.dataset.motionSrc;
+        // The picture changes, so the description has to change with it.
+        motionImage.alt = motionImage.dataset.motionAlt || motionImage.alt;
+        motionImage.classList.add('is-motion-active');
+    };
+    const showStill = () => {
+        if (!motionImage.classList.contains('is-motion-active')) return;
+        motionImage.src = project.image;
+        if (motionImage.dataset.stillSrcset) {
+            motionImage.setAttribute('srcset', motionImage.dataset.stillSrcset);
+            motionImage.setAttribute('sizes', CARD_IMAGE_SIZES);
+        }
+        motionImage.alt = motionImage.dataset.stillAlt || motionImage.alt;
+        motionImage.classList.remove('is-motion-active');
+    };
+    if (motionImage && options.autoplayMotion) {
+        // A featured card plays its animation as its cover whenever it is near
+        // the screen, and goes back to the still once it is scrolled well away,
+        // so the animation only costs frames while someone could see it.
+        motionImage.classList.add('is-motion-autoplay');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        let near = false;
+        const sync = () => (near && !reducedMotion.matches ? showMotion() : showStill());
+        new IntersectionObserver(entries => {
+            near = entries[entries.length - 1].isIntersecting;
+            sync();
+        }, { rootMargin: '200px 0px' }).observe(card);
+        reducedMotion.addEventListener?.('change', sync);
+    } else if (motionImage && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        card.addEventListener('pointerenter', showMotion, { passive: true });
+        card.addEventListener('pointerleave', showStill, { passive: true });
     }
     const activateCard = () => openModal(project);
     card._openProject = activateCard;
@@ -4670,6 +4687,12 @@ function openModal(project) {
             : '';
     }
     deepDiveHeading.hidden = isCoursework || !detailSections.length || overviewItems.length === 0;
+    // Each project names its own details heading: not everything on the site was built.
+    const deepDiveTitle = document.getElementById('modal-deep-dive-title');
+    if (deepDiveTitle) {
+        deepDiveTitle.dataset.fallback ??= deepDiveTitle.textContent;
+        deepDiveTitle.textContent = project.detailsHeading || deepDiveTitle.dataset.fallback;
+    }
     const details = document.getElementById('modal-details');
     details.innerHTML = isCoursework
         ? '<section class="modal-detail-section"><h4>Want to see more?</h4><p>The class README on GitHub has more details and all of the work I saved from the class.</p></section>'
